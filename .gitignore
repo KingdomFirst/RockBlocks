@@ -1,0 +1,22 @@
+######################################
+## KFS Rock Blocks REPO IGNORE FILE ##
+## @mattbaylor, @treydawg           ##
+## 2015-09-03                       ##
+######################################
+
+# Logs and databases #
+######################
+**/*.log
+**/*.sqlite
+
+# OS generated files #
+######################
+**/.DS_Store
+**/.DS_Store?
+**/._*
+**/.localized
+**/.Spotlight-V100
+**/.Trashes
+**/desktop.ini
+**/ehthumbs.db
+**/Thumbs.db
