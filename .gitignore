@@ -20,3 +20,7 @@
 **/desktop.ini
 **/ehthumbs.db
 **/Thumbs.db
+
+# Jobs Debug Files #
+####################
+**/[Dd]ebug/*
