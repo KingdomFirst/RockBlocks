@@ -28,7 +28,7 @@ namespace RockWeb.Blocks.Security
     /// Displays currently logged in user's name along with options to Login, Logout, or manage account.
     /// </summary>
     [DisplayName( "Login Logout" )]
-    [Category( "Security" )]
+    [Category( "KFS > Security" )]
     [Description( "Displays a Login or Logout Link for the current user." )]
 
     [BooleanField( "Show Login", "Flag indicating whether the Login link will be displayed.", true )]
