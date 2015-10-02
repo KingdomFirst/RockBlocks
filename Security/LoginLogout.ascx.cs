@@ -27,12 +27,14 @@ namespace RockWeb.Blocks.Security
     /// <summary>
     /// Displays currently logged in user's name along with options to Login, Logout, or manage account.
     /// </summary>
-    [DisplayName( "KFS Login Status" )]
-    [Category( "KFS > Security" )]
-    [Description( "Displays the currently logged in user's name along with options to Login, Logout, or manage account." )]
+    [DisplayName( "Login Logout" )]
+    [Category( "Security" )]
+    [Description( "Displays a Login or Logout Link for the current user." )]
 
-    [LinkedPage( "My Account Page", "Page for user to manage their account (if blank will use 'MyAccount' page route)" )]
-    public partial class LoginStatus : Rock.Web.UI.RockBlock
+    [BooleanField( "Show Login", "Flag indicating whether the Login link will be displayed.", true )]
+    [BooleanField( "Show Logout", "Flag indicating whether the Login link will be displayed.", true )]
+
+    public partial class LoginLogout : Rock.Web.UI.RockBlock
     {
         #region Base Control Methods
 
@@ -43,17 +45,6 @@ namespace RockWeb.Blocks.Security
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
-
-            var myAccountUrl = LinkedPageUrl( "MyAccountPage" );
-
-            if ( !string.IsNullOrWhiteSpace( myAccountUrl ) )
-            {
-                aMyAccount.HRef = myAccountUrl;
-            }
-            else
-            {
-                aMyAccount.Visible = false;
-            }
         }
 
         /// <summary>
@@ -64,34 +55,26 @@ namespace RockWeb.Blocks.Security
         {
             base.OnLoad( e );
 
+            var showLogin = GetAttributeValue( "ShowLogin" ).AsBoolean();
+            var showLogout = GetAttributeValue( "ShowLogout" ).AsBoolean();
+
             var currentPerson = CurrentPerson;
             if ( currentPerson != null )
             {
-                lHello.Text = string.Format( "<span>Hello {0}</span>", currentPerson.NickName );
-
-                var currentUser = CurrentUser;
-                if ( currentUser == null || !currentUser.IsAuthenticated )
+                if ( showLogout )
                 {
-                    aMyAccount.Visible = false;
-                    lbLogin.Visible = true;
+                    lbLoginLogout.Text = "Logout";
                 }
-
-                var queryParams = new Dictionary<string, string>();
-                queryParams.Add( "PersonId", currentPerson.Id.ToString() );
-
-                //divProfilePhoto.Attributes.Add( "style", String.Format( "background-image: url('{0}'); background-size: cover; background-repeat: no-repeat;", Rock.Model.Person.GetPhotoUrl( currentPerson.PhotoId, currentPerson.Age, currentPerson.Gender ) ) );
-
-                imgProvilePhoto.ImageUrl = Rock.Model.Person.GetPhotoUrl( currentPerson.PhotoId, currentPerson.Age, currentPerson.Gender );
-
-                lbLogin.Visible = false;
             }
             else
             {
-                phHello.Visible = false;
-                aMyAccount.Visible = false;
-
-                lbLogin.Visible = true;
+                if ( showLogin )
+                {
+                    lbLoginLogout.Text = "Login";
+                }
             }
+
+            hfActionType.Value = lbLoginLogout.Text;
         }
 
         #endregion
@@ -105,14 +88,44 @@ namespace RockWeb.Blocks.Security
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void lbLoginLogout_Click( object sender, EventArgs e )
         {
-            var site = RockPage.Layout.Site;
-            if ( site.LoginPageId.HasValue )
+            string action = hfActionType.Value;
+            if ( action == "Login" )
             {
-                site.RedirectToLoginPage( true );
+                var site = RockPage.Layout.Site;
+                if ( site.LoginPageId.HasValue )
+                {
+                    site.RedirectToLoginPage( true );
+                }
+                else
+                {
+                    FormsAuthentication.RedirectToLoginPage();
+                }
             }
             else
             {
-                FormsAuthentication.RedirectToLoginPage();
+                if ( CurrentUser != null )
+                {
+                    var transaction = new Rock.Transactions.UserLastActivityTransaction();
+                    transaction.UserId = CurrentUser.Id;
+                    transaction.LastActivityDate = RockDateTime.Now;
+                    transaction.IsOnLine = false;
+                    Rock.Transactions.RockQueue.TransactionQueue.Enqueue( transaction );
+                }
+
+                FormsAuthentication.SignOut();
+
+                // After logging out check to see if an anonymous user is allowed to view the current page.  If so
+                // redirect back to the current page, otherwise redirect to the site's default page
+                var currentPage = Rock.Web.Cache.PageCache.Read( RockPage.PageId );
+                if ( currentPage != null && currentPage.IsAuthorized( Authorization.VIEW, null ) )
+                {
+                    Response.Redirect( CurrentPageReference.BuildUrl() );
+                    Context.ApplicationInstance.CompleteRequest();
+                }
+                else
+                {
+                    RockPage.Layout.Site.RedirectToDefaultPage();
+                }
             }
         }
 
