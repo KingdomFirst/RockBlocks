@@ -23,6 +23,8 @@ using System.Linq;
 using Rock;
 using Rock.Attribute;
 using Rock.CheckIn;
+using Rock.Data;
+using Rock.Model;
 using Rock.Web.Cache;
 
 namespace RockWeb.Blocks.CheckIn
@@ -34,6 +36,7 @@ namespace RockWeb.Blocks.CheckIn
     [IntegerField( "Maximum Phone Number Length", "Maximum length for phone number searches (defaults to 10).", false, 10 )]
     [TextField("Search Regex", "Regular Expression to run the search input through before sending it to the workflow. Useful for stripping off characters.", false)]
     [DefinedValueField(Rock.SystemGuid.DefinedType.CHECKIN_SEARCH_TYPE, "Search Type", "The type of search to use for check-in (default is phone number).", true, false, Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_PHONE_NUMBER, order: 4 )]
+    [GroupField( "Group", "Either pick a specific group or choose <none> to have group be determined by the groupId page parameter when searching by group", false, "", "", 0, null )]
     public partial class Search : CheckInBlock
     {
         protected override void OnInit( EventArgs e )
@@ -58,6 +61,7 @@ namespace RockWeb.Blocks.CheckIn
 
                 // set search type
                 var searchTypeValue = GetAttributeValue( "SearchType" ).AsGuid();
+                var definedValue = DefinedValueCache.Read( searchTypeValue );
                 if ( searchTypeValue == Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_PHONE_NUMBER.AsGuid() )
                 {
                     pnlSearchName.Visible = false;
@@ -69,6 +73,13 @@ namespace RockWeb.Blocks.CheckIn
                     pnlSearchName.Visible = true;
                     pnlSearchPhone.Visible = false;
                     lPageTitle.Text = "Search By Name";
+                }
+                else if ( definedValue.Value == "Group" )
+                {
+                    pnlSearchName.Visible = false;
+                    pnlSearchPhone.Visible = false;
+
+                    SearchByGroup();
                 }
                 else
                 {
@@ -86,6 +97,7 @@ namespace RockWeb.Blocks.CheckIn
             {
                 // check search type
                 var searchTypeValue = GetAttributeValue( "SearchType" ).AsGuid();
+                var definedValue = DefinedValueCache.Read( searchTypeValue );
 
                 if ( searchTypeValue == Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_PHONE_NUMBER.AsGuid() )
                 {
@@ -94,6 +106,10 @@ namespace RockWeb.Blocks.CheckIn
                 else if ( searchTypeValue == Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_NAME.AsGuid() )
                 {
                     SearchByName();
+                }
+                else if ( definedValue.Value == "Group" )
+                {
+                    SearchByGroup();
                 }
                 else
                 {
@@ -159,6 +175,30 @@ namespace RockWeb.Blocks.CheckIn
 
                 maWarning.Show( errorMsg, Rock.Web.UI.Controls.ModalAlertType.Warning );
             }
+        }
+
+        private void SearchByGroup()
+        {
+            Guid groupGuid = GetAttributeValue( "Group" ).AsGuid();
+            int groupId = 0;
+
+            if ( groupGuid == Guid.Empty )
+            {
+                groupId = PageParameter( "GroupId" ).AsInteger();
+            }
+            else
+            {
+                var rockContext = new RockContext();
+                GroupService groupService = new GroupService( rockContext );
+                groupId = groupService.Get( groupGuid ).Id;
+            }
+
+            CurrentCheckInState.CheckIn.UserEnteredSearch = true;
+            CurrentCheckInState.CheckIn.ConfirmSingleFamily = true;
+            CurrentCheckInState.CheckIn.SearchType = DefinedValueCache.Read( GetAttributeValue( "SearchType" ).AsGuid() );
+            CurrentCheckInState.CheckIn.SearchValue = groupId.ToString();
+
+            ProcessSelection();
         }
 
         protected void ProcessSelection()
