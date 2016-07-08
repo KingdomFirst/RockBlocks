@@ -1,0 +1,331 @@
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="google" content="notranslate" />
+    <meta http-equiv="Content-Language" content="en_US" />
+</head>
+
+<body>
+    <style>
+        @media all {
+            .page-break,
+            .hidden {
+                display: none;
+            }
+            body {
+                font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+            }
+            th {
+                text-align: left;
+            }
+            .dollar {
+                text-align: right;
+                padding-right: 25px;
+            }
+            .spacerRow {
+                line-height: 2;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                -fs-table-paginate: paginate;
+            }
+            tr.batchTransactionsHeaders,
+            tr.accountSummaryAllHeaders,
+            tr.batchSummaryHeaders,
+            tr.contributionTypesHeaders {
+                background: #333399;
+                color: #fff;
+                line-height: 2;
+            }
+            tr.batchSummaryTotals td,
+            tr.batchTransactionsBatchTotal td,
+            tr.batchTransactionsBatchGrandTotal td,
+            td.contributionTypesTotal,
+            tr.contributionTypesGrandTotal td {
+                border-top: 2px solid black;
+                font-weight: bold;
+            }
+            tr.accountName,
+            tr.batchTransactionsBatchName,
+            tr.contributionTypesName {
+                background: #ccc;
+                font-size: large;
+                font-weight: bold;
+            }
+        }
+        
+        @media print {
+            .page-break {
+                display: block;
+                page-break-before: always;
+            }
+            body {
+                background: white;
+                font-size: 10pt;
+                margin: 0
+            }
+            #sidebar {
+                display: none
+            }
+            #header {
+                height: 75px
+            }
+            #content {
+                margin-left: 0;
+                float: none;
+                width: auto
+            }
+            .demo .red {
+                color: black;
+                font-weight: bold
+            }
+            #content a {
+                font-weight: bold;
+                color: #000066;
+                text-decoration: underline
+            }
+            #content {
+                margin-left: 0;
+                float: none;
+                width: auto
+            }
+            #footer,
+            .ad {
+                display: none
+            }
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6 {
+                page-break-after: avoid;
+                page-break-inside: avoid
+            }
+            h3 {
+                margin-left: 10px;
+                margin-bottom: 0px;
+                padding-bottom: 0px
+            }
+            blockquote,
+            table,
+            pre {
+                page-break-inside: avoid
+            }
+            ul,
+            ol,
+            dl {
+                page-break-before: avoid
+            }
+            img.centered {
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            img.right {
+                padding: 4px;
+                margin: 0 0 2px 7px;
+                display: inline;
+            }
+            img.left {
+                padding: 4px;
+                margin: 0 7px 2px 0;
+                display: inline;
+            }
+            .right {
+                float: right;
+            }
+            .left {
+                float: left
+            }
+            img {
+                page-break-inside: avoid;
+                page-break-after: avoid;
+            }
+            thead {
+                display: table-header-group;
+            }
+        }
+    </style>
+<!--  BEGIN SUMMARY BY BATCH  -->
+    {% assign controlAmountTotal = '0' %}{% assign transactionAmountTotal = '0' %}{% assign varianceTotal = '0' %}
+    <table class="batchSummary">
+        <thead>
+            <tr class="batchSummaryHeaders">
+                <th>Batch Name</th>
+                <th>Batch Date</th>
+                <th class="dollar">Control Amount</th>
+                <th class="dollar">Actual Amount</th>
+                <th class="dollar">Variance</th>
+            </tr>
+        </thead>
+        <tbody>{% for row in Rows %}
+            <tr class="batchSummaryRow">
+                <td>{{ row.Name }}</td>
+                <td>{{ row.BatchStartDateTime | Date:'MM/dd/yyyy' }}</td>
+                <td class="dollar">{{ row.ControlAmount | FormatAsCurrency }}</td>
+                <td class="dollar">{{ row.TransactionAmount | FormatAsCurrency }}</td>
+                <td class="dollar">{{ row.Variance | FormatAsCurrency }}</td>
+            </tr>{% assign controlAmountTotal = controlAmountTotal | Plus:row.ControlAmount %}{% assign transactionAmountTotal = transactionAmountTotal | Plus:row.TransactionAmount %}{% assign varianceTotal = varianceTotal | Plus:row.Variance %}{% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="batchSummaryTotals">
+                <td></td>
+                <td>Grand Total:</td>
+                <td class="dollar">{{ controlAmountTotal | FormatAsCurrency }}</td>
+                <td class="dollar">{{ transactionAmountTotal | FormatAsCurrency }}</td>
+                <td class="dollar">{{ varianceTotal | FormatAsCurrency }}</td>
+            </tr>
+        </tfoot>
+    </table>
+<!--  END SUMMARY BY BATCH  -->
+    <div class="page-break"></div>
+<!--  BEGIN SUMMARY BY ACCOUNT AND DATE  -->
+    <table class="accountSummaryAll">
+        <thead>
+            <tr class="accountSummaryAllHeaders">
+                <th>Account Name</th>
+                <th>GL Code</th>
+                <th>Received Date</th>
+                <th class="dollar">Account Total</th>
+            </tr>
+        </thead>
+        <tbody>{% assign transactionsGrandTotal = '0' %}{% for givingbyaccountanddate in GivingByAccountAndDate %}{% assign accountAmountTotal = '0' %}{% assign jsonObject = givingbyaccountanddate.TransactionDays | FromJSON %}
+            <tr class="accountName">
+                <td>{{ givingbyaccountanddate.AccountName }}</td>
+                <td>{{ givingbyaccountanddate.GlCode }}</td>
+                <td></td>
+                <td></td>
+            </tr>{% for Id in jsonObject %}
+            <tr class="accountDetails">
+                <td></td>
+                <td></td>
+                <td>{{ Id.TransactionDate | Date:'MM/dd/yyyy' }}</td>
+                <td class="dollar">{{ Id.AccountTransactionDateTotal | FormatAsCurrency }}</td>
+            </tr>{% assign accountAmountTotal = accountAmountTotal | Plus:Id.AccountTransactionDateTotal %}{% endfor %}
+            <tr class="batchTransactionsBatchTotal">
+                <td></td>
+                <td></td>
+                <td>{{ givingbyaccountanddate.AccountName }} Total:</td>
+                <td class="dollar">{{ accountAmountTotal | FormatAsCurrency }}</td>
+            </tr>{% assign transactionsGrandTotal = transactionsGrandTotal | Plus:accountAmountTotal %}{% endfor %}
+            <tr class="spacerRow"><td colspan="8">&nbsp;</td></tr>
+            <tr class="batchTransactionsBatchGrandTotal">
+                <td></td>
+                <td></td>
+                <td>Grand Total:</td>
+                <td class="dollar">{{ transactionsGrandTotal | FormatAsCurrency }}</td>
+            </tr>
+        </tbody>
+    </table>
+<!--  END SUMMARY BY ACCOUNT AND DATE  -->
+    <div class="page-break"></div>
+<!--  BEGIN DETAILED TRANSACTIONS BY BATCH  -->
+    <table class="batchTransactions">
+        <thead>
+            <tr class="batchTransactionsHeaders">
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Contribution Type</th>
+                <th>Check Number</th>
+                <th>Received Date</th>
+                <th>Account</th>
+                <th>Summary</th>
+                <th class="dollar">Amount</th>
+            </tr>
+        </thead>
+        <tbody>{% assign transactionsGrandTotal = '0' %}{% for row in Rows %}{% assign batchAmountTotal = '0' %}
+            <tr class="batchTransactionsBatchName">
+                <td colspan="8">{{ row.Name }}</td>
+            </tr>{% assign transactions = row.Transactions %}{% for transaction in transactions %}{% assign details = transaction.TransactionDetails %}{% for detail in details %}{% assign authorizedPerson = detail.Transaction.AuthorizedPersonAliasId | PersonByAliasId %}
+            <tr class="batchTransactionsBatchDetails">
+                <td>{{ authorizedPerson.FirstName }}</td>
+                <td>{{ authorizedPerson.LastName }}</td>
+                <td>{{ detail.Transaction.FinancialPaymentDetail.CurrencyTypeValue.Value }}</td>
+                <td>{{ detail.Transaction.TransactionCode }}</td>
+                <td>{{ detail.Transaction.TransactionDateTime | Date:'MM/dd/yyyy' }}</td>
+                <td>{{ detail.Account.Name }}</td>
+                <td>{{ detail.Transaction.Summary }}</td>
+                <td class="dollar">{{ detail.Amount }}</td>
+            </tr>{% assign batchAmountTotal = batchAmountTotal | Plus:detail.Amount %}{% endfor %}{% endfor %}
+            <tr class="batchTransactionsBatchTotal">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td>Batch Total (Actual):</td>
+                <td></td>
+                <td class="dollar">{{ batchAmountTotal | FormatAsCurrency }}</td>
+            </tr>{% assign transactionsGrandTotal = transactionsGrandTotal | Plus:batchAmountTotal %}{% endfor %}
+            <tr class="spacerRow"><td colspan="8">&nbsp;</td></tr>
+            <tr class="batchTransactionsBatchGrandTotal">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td>Grand Total (Actual):</td>
+                <td></td>
+                <td class="dollar">{{ transactionsGrandTotal | FormatAsCurrency }}</td>
+        </tbody>
+    </table>
+<!--  END DETAILED TRANSACTIONS BY BATCH  -->
+    <div class="page-break"></div>
+<!--  BEGIN SUMMARY BY TRANSACTION TYPE AND ACCOUNT  -->
+    {% capture jsonStringTransactionType %}
+    {
+        "AccountTransactionTypes": [{% for row in Rows %}{% assign transactions = row.Transactions %}{% for transaction in transactions %}{% assign details = transaction.TransactionDetails %}{% for detail in details %}
+        {
+            "Type": "{{ detail.Transaction.FinancialPaymentDetail.CurrencyTypeValue.Value }}",
+            "Account": "{{ detail.Account.Name }}",
+            "Amount": "{{ detail.Amount }}"
+        },{% endfor %}{% endfor %}{% endfor %}
+        ]
+    }
+    {% endcapture %}
+    {% assign jsonObjectTransactionType = jsonStringTransactionType | ReplaceLast:',', '' | FromJSON %}
+    <table class="contributionTypes">
+        <thead>
+            <tr class="contributionTypesHeaders">
+                <th style="width:25%;">Transaction Type</th>
+                <th style="width:50%;">Account Name</th>
+                <th style="width:25%;" class="dollar">Account Total</th>
+            </tr>
+        </thead>
+        <tbody>{% assign transactionGrandTotal = '0' %}{% assign transactionTypes = CurrencyTypes.DefinedValues %}{% for transactionType in transactionTypes %}{% assign transactionTypeName = transactionType.Value %}{% assign transactionTypeTotal = '0' %}{% assign tableHidden = ' hidden' %}{% for account in Accounts %}{% assign transactionAccountName = account.Name %}{% for AccountTransactionType in jsonObjectTransactionType.AccountTransactionTypes %}{% if AccountTransactionType.Type == transactionTypeName and AccountTransactionType.Account == transactionAccountName %}{% assign transactionTypeTotal = transactionTypeTotal | Plus:AccountTransactionType.Amount %}{% endif %}{% endfor %}{% if transactionTypeTotal != 0 %}{% assign tableHidden = '' %}{% endif %}{% endfor %}
+            <tr>
+                <td colspan="3">
+                    <table class="nestedContributionTypeTable{{ tableHidden }}">
+                        <tr class="contributionTypesName">
+                            <td style="width:25%;">{{ transactionTypeName }}</td>
+                            <td style="width:50%;"></td>
+                            <td style="width:25%;"></td>
+                        </tr>{% for account in Accounts %}{% assign accountTotal = '0' %}{% assign transactionAccountName = account.Name %}{% for AccountTransactionType in jsonObjectTransactionType.AccountTransactionTypes %}{% if AccountTransactionType.Type == transactionTypeName and AccountTransactionType.Account == transactionAccountName %}{% assign accountTotal = accountTotal | Plus:AccountTransactionType.Amount %}{% endif %}{% endfor %}{% if accountTotal != 0 %}
+                        <tr>
+                            <td style="width:25%;"></td>
+                            <td style="width:50%;">{{ transactionAccountName }}</td>
+                            <td style="width:25%;" class="dollar">{{ accountTotal }}</td>
+                        </tr>{% endif %}{% endfor %}
+                        <tr>
+                            <td style="width:25%;"></td>
+                            <td style="width:50%;" class="contributionTypesTotal">{{ transactionTypeName }} Total:</td>
+                            <td style="width:25%;" class="dollar contributionTypesTotal">{{ transactionTypeTotal | FormatAsCurrency }}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>{% assign transactionGrandTotal = transactionGrandTotal | Plus:transactionTypeTotal %}{% endfor %}
+            <tr class="spacerRow"><td colspan="3">&nbsp;</td></tr>
+            <tr class="contributionTypesGrandTotal">
+                <td style="width:25%;"></td>
+                <td style="width:50%;">Grand Total:</td>
+                <td style="width:25%;" class="dollar">{{ transactionGrandTotal | FormatAsCurrency }}</td>
+            </tr>
+        </tbody>
+    </table>
+<!--  END SUMMARY BY TRANSACTION TYPE AND ACCOUNT  -->
+</body>
+
+</html>
