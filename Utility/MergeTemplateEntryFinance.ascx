@@ -1,4 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="MergeTemplateEntryFinance.ascx.cs" Inherits="RockWeb.Blocks.KFS.Utility.MergeTemplateEntryFinance" %>
+<%@ Reference Control="~/Blocks/Core/MergeTemplateEntry.ascx" %>
 
 <asp:UpdatePanel ID="upnlContent" runat="server">
     <Triggers>

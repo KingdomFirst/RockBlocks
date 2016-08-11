@@ -106,6 +106,7 @@ namespace RockWeb.Blocks.KFS.Utility
             var entitySetService = new EntitySetService( rockContext );
             var entitySetItemsService = new EntitySetItemService( rockContext );
             var entitySet = entitySetService.Get( entitySetId );
+            bool isFinancialBatchEntitySet = false;
             if ( entitySet == null )
             {
                 nbWarningMessage.Text = "Merge Records not found";
@@ -119,11 +120,25 @@ namespace RockWeb.Blocks.KFS.Utility
             {
                 bool isPersonEntitySet = entitySet.EntityTypeId.Value == EntityTypeCache.GetId<Rock.Model.Person>();
                 bool isGroupMemberEntitySet = entitySet.EntityTypeId.Value == EntityTypeCache.GetId<Rock.Model.GroupMember>();
+                isFinancialBatchEntitySet = entitySet.EntityTypeId.Value == EntityTypeCache.GetId<Rock.Model.FinancialBatch>();
                 cbCombineFamilyMembers.Visible = isPersonEntitySet || isGroupMemberEntitySet;
             }
             else
             {
                 cbCombineFamilyMembers.Visible = false;
+            }
+
+            if ( !isFinancialBatchEntitySet )
+            {
+                pnlEntry.Visible = false;
+                return;
+            }
+            else
+            {
+                foreach ( RockWeb.Blocks.Core.MergeTemplateEntry block in RockPage.RockBlocks.Where( a => a is RockWeb.Blocks.Core.MergeTemplateEntry ) )
+                {
+                    block.Visible = false;
+                }
             }
 
             int itemsCount = entitySetItemsService.Queryable().Where( a => a.EntitySetId == entitySetId ).Count();
