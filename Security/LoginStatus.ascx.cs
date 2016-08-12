@@ -81,7 +81,7 @@ namespace RockWeb.Blocks.Security
 
                 //divProfilePhoto.Attributes.Add( "style", String.Format( "background-image: url('{0}'); background-size: cover; background-repeat: no-repeat;", Rock.Model.Person.GetPhotoUrl( currentPerson.PhotoId, currentPerson.Age, currentPerson.Gender ) ) );
 
-                imgProvilePhoto.ImageUrl = Rock.Model.Person.GetPhotoUrl( currentPerson.PhotoId, currentPerson.Age, currentPerson.Gender );
+                imgProvilePhoto.ImageUrl = Rock.Model.Person.GetPhotoUrl( currentPerson.PhotoId, currentPerson.Age, currentPerson.Gender, null, null );
 
                 lbLogin.Visible = false;
             }
