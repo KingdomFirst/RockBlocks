@@ -130,7 +130,7 @@ namespace RockWeb.Blocks.Event
             // Grab events
             // NOTE: Do not use AsNoTracking() so that things can be lazy loaded if needed
             var qry = eventItemOccurrenceService
-                    .Queryable( "EventItem, EventItem.EventItemAudiences,Schedule" )
+                    .Queryable()
                     .Where( m =>
                         m.EventItem.EventCalendarItems.Any( i => i.EventCalendarId == eventCalendar.Id ) &&
                         m.EventItem.IsActive );
@@ -177,7 +177,7 @@ namespace RockWeb.Blocks.Event
 
             CalendarEventDates = new List<DateTime>();
 
-            var eventOccurrenceSummaries = new List<EventOccurrenceSummary>();
+            var eventOccurrenceSummaries = new List<EventOccurrenceSummaryKFS>();
             foreach ( var occurrenceDates in occurrencesWithDates )
             {
                 var eventItemOccurrence = occurrenceDates.EventItemOccurrence;
@@ -187,10 +187,12 @@ namespace RockWeb.Blocks.Event
 
                     if ( datetime >= dateRange.Start.Value && datetime < dateRange.End.Value )
                     {
-                        eventOccurrenceSummaries.Add( new EventOccurrenceSummary
+                        var eventAudiences = eventItemOccurrence.EventItem.EventItemAudiences;
+                        eventOccurrenceSummaries.Add( new EventOccurrenceSummaryKFS
                         {
                             EventItemOccurrence = eventItemOccurrence,
                             EventItem = eventItemOccurrence.EventItem,
+                            EventItemAudiences = eventAudiences.Select( o => DefinedValueCache.Read( o.DefinedValueId ).Value ).ToList(),
                             Name = eventItemOccurrence.EventItem.Name,
                             DateTime = datetime,
                             Date = datetime.ToShortDateString(),
@@ -242,8 +244,8 @@ namespace RockWeb.Blocks.Event
         /// <summary>
         /// A class to store event item occurrence data for liquid
         /// </summary>
-        [DotLiquid.LiquidType( "EventItem", "EventItemOccurrence", "DateTime", "Name", "Date", "Time", "Location", "Description", "Summary", "DetailPage" )]
-        public class EventOccurrenceSummary
+        [DotLiquid.LiquidType( "EventItem", "EventItemAudiences", "EventItemOccurrence", "DateTime", "Name", "Date", "Time", "Location", "Description", "Summary", "DetailPage" )]
+        public class EventOccurrenceSummaryKFS
         {
             /// <summary>
             /// Gets or sets the event item.
@@ -252,7 +254,15 @@ namespace RockWeb.Blocks.Event
             /// The event item.
             /// </value>
             public EventItem EventItem { get; set; }
-            
+
+            /// <summary>
+            /// Gets or sets the event item.
+            /// </summary>
+            /// <value>
+            /// The event item.
+            /// </value>
+            public ICollection<string> EventItemAudiences { get; set; }
+
             /// <summary>
             /// Gets or sets the event item occurrence.
             /// </summary>
