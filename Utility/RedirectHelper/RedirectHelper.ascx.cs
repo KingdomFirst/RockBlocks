@@ -63,6 +63,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Utility
                 }
                 string url = string.Concat( baseUrl, originalUrl );
 
+                System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls11 | System.Net.SecurityProtocolType.Tls;
+
                 System.Net.HttpWebRequest req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create( url );
                 req.UserAgent = GetAttributeValue( "UserAgent" );
 
