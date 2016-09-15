@@ -60,7 +60,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Utility
                     if ( redirectRef.QueryString == null )
                     {
                         redirectRef.QueryString = new System.Collections.Specialized.NameValueCollection();
-                    }string orignalUrl = Request.RawUrl.IndexOf( '/' ) == 0 ? Request.RawUrl.Substring( 1 ) : Request.RawUrl;
+                    }
+                    string orignalUrl = Request.RawUrl.IndexOf( '/' ) == 0 ? Request.RawUrl.Substring( 1 ) : Request.RawUrl;
                     redirectRef.QueryString.Add( "originalUrl", orignalUrl );
 
                     Response.Redirect( redirectRef.BuildUrl(), false );
