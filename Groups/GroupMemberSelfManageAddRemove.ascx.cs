@@ -20,7 +20,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
     /// Template block for developers to use to start a new block.
     /// </summary>
     [DisplayName( "Group Member Self Manage/Add/Remove" )]
-    [Category( "Groups" )]
+    [Category( "KFS > Groups" )]
     [Description( "Can Add/Remove a person from a group based on inputs from the URL query string (GroupId, PersonGuid) or let them manage their group membership." )]
     [GroupField( "Default Group", "The default group to use if one is not passed through the query string (optional).", false, order: 0 )]
     [CodeEditorField( "Remove Success Message", "Lava template to display when person has been removed from the group.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, true, @"<div class='alert alert-success'>
@@ -138,8 +138,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
 
                 _action = Request.QueryString["action"] != string.Empty && Request.QueryString["action"] != null ? Request.QueryString["action"] : string.Empty;
 
-                // hide alert
-                divAlert.Visible = false;
 
                 // get status
                 var groupMemberStatus = this.GetAttributeValue( "GroupMemberStatus" ).ConvertToEnum<GroupMemberStatus>( GroupMemberStatus.Active );
@@ -151,10 +149,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                 mergeFields.Add( "CurrentPerson", CurrentPerson );
                 mergeFields.Add( "GroupMemberStatus", groupMemberStatus.ToString() );
 
+                var groupMemberService = new GroupMemberService( rockContext );
+
                 if ( _action == "unsubscribe" )
                 {
-                    var groupMemberService = new GroupMemberService( rockContext );
-
                     var groupMemberList = groupMemberService.Queryable()
                                             .Where( m => m.GroupId == group.Id && m.PersonId == person.Id )
                                             .ToList();
@@ -217,24 +215,39 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
 
                     mergeFields.Add( "Role", groupMemberRole );
 
+                    var groupMemberList = groupMemberService.Queryable()
+                                            .Where( m => m.PersonId == person.Id && m.GroupRoleId == groupMemberRole.Id )
+                                            .ToList();
+
                     // ensure that the person is not already in the group
-                    if ( group.Members.Where( m => m.PersonId == person.Id && m.GroupRoleId == groupMemberRole.Id ).Count() != 0 )
+                    if ( groupMemberList.Count() != 0 )
                     {
-                        string templateInGroup = GetAttributeValue( "AlreadyInGroupMessage" );
-                        lContent.Text = templateInGroup.ResolveMergeFields( mergeFields );
-                        return;
+                        foreach ( var groupMemberExisting in groupMemberList )
+                        {
+                            if ( GetAttributeValue( "Inactivate" ).AsBoolean() )
+                            {
+                                groupMemberExisting.GroupMemberStatus = groupMemberStatus;
+                            }
+                            else
+                            {
+                                string templateInGroup = GetAttributeValue( "AlreadyInGroupMessage" );
+                                lContent.Text = templateInGroup.ResolveMergeFields( mergeFields );
+                                divAlert.Visible = false;
+                                return;
+                            }
+                        }
 
                     }
-
-
-                    // add person to group
-                    GroupMember groupMember = new GroupMember();
-                    groupMember.GroupId = group.Id;
-                    groupMember.PersonId = person.Id;
-                    groupMember.GroupRoleId = groupMemberRole.Id;
-                    groupMember.GroupMemberStatus = groupMemberStatus;
-                    group.Members.Add( groupMember );
-
+                    else
+                    {
+                        // add person to group
+                        GroupMember groupMember = new GroupMember();
+                        groupMember.GroupId = group.Id;
+                        groupMember.PersonId = person.Id;
+                        groupMember.GroupRoleId = groupMemberRole.Id;
+                        groupMember.GroupMemberStatus = groupMemberStatus;
+                        group.Members.Add( groupMember );
+                    }
                     try
                     {
                         rockContext.SaveChanges();
@@ -249,6 +262,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                     lContent.Text = templateSuccess.ResolveMergeFields( mergeFields );
 
                 }
+                // hide alert
+                divAlert.Visible = false;
+
                 // show debug info?
                 bool enableDebug = GetAttributeValue( "EnableDebug" ).AsBoolean();
                 if ( enableDebug && IsUserAuthorized( Authorization.EDIT ) )
