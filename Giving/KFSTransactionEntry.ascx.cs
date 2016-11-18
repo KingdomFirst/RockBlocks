@@ -39,9 +39,9 @@ namespace RockWeb.Plugins.com_kfs.Giving
     /// <summary>
     /// Add a new one-time or scheduled transaction
     /// </summary>
-    [DisplayName( "Transaction Entry" )]
-    [Category( "Finance" )]
-    [Description( "Creates a new financial transaction or scheduled transaction." )]
+    [DisplayName( "KFS Transaction Entry" )]
+    [Category( "KFS > Giving" )]
+    [Description( "Creates a new financial transaction or scheduled transaction. Supports Managed Missions transactions." )]
     [FinancialGatewayField( "Credit Card Gateway", "The payment gateway to use for Credit Card transactions", false, "", "", 0, "CCGateway" )]
     [FinancialGatewayField( "ACH Gateway", "The payment gateway to use for ACH (bank account) transactions", false, "", "", 1, "ACHGateway" )]
     [TextField( "Batch Name Prefix", "The batch prefix name to use when creating a new batch", false, "Online Giving", "", 2 )]
@@ -97,13 +97,15 @@ namespace RockWeb.Plugins.com_kfs.Giving
         CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, @"
 ", "Text Options", 23 )]
     [TextField( "Save Account Title", "The text to display as heading of section for saving payment information.", false, "Make Giving Even Easier", "Text Options", 24 )]
-    [DefinedValueField( "2E6540EA-63F0-40FE-BE50-F2A84735E600", "Connection Status", "The connection status to use for new individuals (default: 'Web Prospect'.)", true, false, "368DD475-242C-49C4-A42C-7278BE690CC2", "", 25 )]
-    [DefinedValueField( "8522BADD-2871-45A5-81DD-C76DA07E2E7E", "Record Status", "The record status to use for new individuals (default: 'Pending'.)", true, false, "283999EC-7346-42E3-B807-BCE9B2BABB49", "", 26 )]
+    [CodeEditorField( "Invalid Fund Message", "Display this text (HTML) as an error alert if an invalid 'account' or 'glaccount' is passed through the URL.",
+        CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "Text Options", 25 )]
+    [DefinedValueField( "2E6540EA-63F0-40FE-BE50-F2A84735E600", "Connection Status", "The connection status to use for new individuals (default: 'Web Prospect'.)", true, false, "368DD475-242C-49C4-A42C-7278BE690CC2", "", 26 )]
+    [DefinedValueField( "8522BADD-2871-45A5-81DD-C76DA07E2E7E", "Record Status", "The record status to use for new individuals (default: 'Pending'.)", true, false, "283999EC-7346-42E3-B807-BCE9B2BABB49", "", 27 )]
 
-    [SystemEmailField( "Receipt Email", "The system email to use to send the receipt.", false, "", "Email Templates", 27 )]
-    [TextField( "Payment Comment", "The comment to include with the payment transaction when sending to Gateway", false, "Online Contribution", "", 28 )]
-    [BooleanField( "Enable Comment Entry", "Allows the guest to enter the the value that's put into the comment field (will be appended to the 'Payment Comment' setting)", false, "", 29 )]
-    [TextField( "Comment Entry Label", "The label to use on the comment edit field (e.g. Trip Name to give to a specific trip).", false, "Comment", "", 30 )]
+    [SystemEmailField( "Receipt Email", "The system email to use to send the receipt.", false, "", "Email Templates", 28 )]
+    [TextField( "Payment Comment", "The comment to include with the payment transaction when sending to Gateway", false, "Online Contribution", "", 29 )]
+    [BooleanField( "Enable Comment Entry", "Allows the guest to enter the the value that's put into the comment field (will be appended to the 'Payment Comment' setting)", false, "", 30 )]
+    [TextField( "Comment Entry Label", "The label to use on the comment edit field (e.g. Trip Name to give to a specific trip).", false, "Comment", "", 31 )]
     #endregion
 
     public partial class KFSTransactionEntry : Rock.Web.UI.RockBlock
@@ -119,6 +121,9 @@ namespace RockWeb.Plugins.com_kfs.Giving
         private bool _gatewaysIncompatible = false;
         private string _ccSavedAccountFreqSupported = "both";
         private string _achSavedAccountFreqSupported = "both";
+        private List<int> _accountParameter;
+        private List<string> _glAccountParameter;
+        private List<FinancialAccount> _parameterAccounts = new List<FinancialAccount>();
 
         protected bool FluidLayout = false;
 
@@ -266,6 +271,55 @@ namespace RockWeb.Plugins.com_kfs.Giving
             pnlDupWarning.Visible = false;
             nbSaveAccount.Visible = false;
 
+            string accountParameterType = string.Empty;
+            using ( var rockContext = new RockContext() )
+            {
+                if ( !string.IsNullOrWhiteSpace( PageParameter( "account" ) ) )
+                {
+                    List<int> accountParameter = new List<int>();
+                    accountParameterType = "invalid";
+                    foreach ( string acctId in PageParameter( "account" ).Split( ',' ) )
+                    {
+                        int id = 0;
+                        if ( int.TryParse( acctId, out id ) )
+                        {
+                            accountParameter.Add( id );
+                        }
+                    }
+                    _parameterAccounts = new FinancialAccountService( rockContext ).Queryable()
+                        .Where( f =>
+                        accountParameter.Contains( f.Id ) &&
+                        f.IsActive &&
+                        (f.StartDate == null || f.StartDate <= RockDateTime.Today) &&
+                        (f.EndDate == null || f.EndDate >= RockDateTime.Today) ).ToList();
+                    if ( _parameterAccounts.Count > 0 )
+                    {
+                        accountParameterType = "valid";
+                    }
+                }
+                if ( !string.IsNullOrWhiteSpace( PageParameter( "glaccount" ) ) )
+                {
+                    List<string> glAccountParameter = PageParameter( "glaccount" ).Split( ',' ).ToList();
+                    _parameterAccounts.AddRange ( new FinancialAccountService( rockContext ).Queryable()
+                        .Where( f =>
+                        glAccountParameter.Contains( f.GlCode ) &&
+                        f.IsActive &&
+                        (f.StartDate == null || f.StartDate <= RockDateTime.Today) &&
+                        (f.EndDate == null || f.EndDate >= RockDateTime.Today) ).ToList() );
+                    if ( _parameterAccounts.Count > 0 )
+                    {
+                        accountParameterType = "valid";
+                    }
+                }
+            }
+
+            if ( accountParameterType == "invalid" && !string.IsNullOrEmpty( GetAttributeValue( "InvalidFundMessage" ) ) )
+            {
+                SetPage( 0 );
+                ShowMessage( NotificationBoxType.Danger, "Invalid Account Provided", GetAttributeValue( "InvalidFundMessage" ) );
+                return;
+            }
+
             if ( _ccGateway == null && _achGateway == null )
             {
                 SetPage( 0 );
@@ -322,7 +376,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             }
 
             // Show or Hide the Credit card entry panel based on if a saved account exists and it's selected or not.
-            divNewPayment.Style[HtmlTextWriterStyle.Display] = (rblSavedAccount.Items.Count == 0 || rblSavedAccount.Items[rblSavedAccount.Items.Count - 1].Selected) ? "block" : "none";
+            divNewPayment.Style[HtmlTextWriterStyle.Display] = ( rblSavedAccount.Items.Count == 0 || rblSavedAccount.Items[rblSavedAccount.Items.Count - 1].Selected ) ? "block" : "none";
 
             if ( hfPaymentTab.Value == "ACH" )
             {
@@ -372,7 +426,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnAddAccount_SelectionChanged( object sender, EventArgs e )
         {
-            var selected = AvailableAccounts.Where( a => a.Id == (btnAddAccount.SelectedValueAsId() ?? 0) ).ToList();
+            var selected = AvailableAccounts.Where( a => a.Id == ( btnAddAccount.SelectedValueAsId() ?? 0 ) ).ToList();
             AvailableAccounts = AvailableAccounts.Except( selected ).ToList();
             SelectedAccounts.AddRange( selected );
 
@@ -383,13 +437,13 @@ namespace RockWeb.Plugins.com_kfs.Giving
         protected void btnFrequency_SelectionChanged( object sender, EventArgs e )
         {
             int oneTimeFrequencyId = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME ).Id;
-            bool oneTime = (btnFrequency.SelectedValueAsInt() ?? 0) == oneTimeFrequencyId;
+            bool oneTime = ( btnFrequency.SelectedValueAsInt() ?? 0 ) == oneTimeFrequencyId;
 
             dtpStartDate.Label = oneTime ? "When" : "First Gift";
 
-            if ( !oneTime && (!dtpStartDate.SelectedDate.HasValue || dtpStartDate.SelectedDate.Value.Date <= RockDateTime.Today) )
+            if ( !oneTime && ( !dtpStartDate.SelectedDate.HasValue || dtpStartDate.SelectedDate.Value.Date <= RockDateTime.Today ) )
             {
-                dtpStartDate.SelectedDate = RockDateTime.Today.AddDays( 1 );
+                dtpStartDate.SelectedDate = RockDateTime.Today.AddDays( 1 ); 
             }
 
             using ( var rockContext = new RockContext() )
@@ -416,7 +470,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
                     if ( ProcessStep1( out errorMessage ) )
                     {
                         this.AddHistory( "GivingDetail", "1", null );
-                        if ( rblSavedAccount.Items.Count > 0 && (rblSavedAccount.SelectedValueAsId() ?? 0) > 0 )
+                        if ( rblSavedAccount.Items.Count > 0 && ( rblSavedAccount.SelectedValueAsId() ?? 0 ) > 0 )
                         {
                             hfStep2AutoSubmit.Value = "true";
                         }
@@ -772,7 +826,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             _achSavedAccountFreqSupported = GetSavedAcccountFreqSupported( _achGatewayComponent );
 
             bool allowScheduled = GetAttributeValue( "AllowScheduled" ).AsBoolean();
-            if ( allowScheduled && (ccEnabled || achEnabled) )
+            if ( allowScheduled && ( ccEnabled || achEnabled ) )
             {
                 var supportedFrequencies = ccEnabled ? _ccGatewayComponent.SupportedPaymentSchedules : _achGatewayComponent.SupportedPaymentSchedules;
 
@@ -806,7 +860,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
         }
 
-        private string GetSavedAcccountFreqSupported( GatewayComponent component )
+        private string GetSavedAcccountFreqSupported ( GatewayComponent component )
         {
             if ( component != null )
             {
@@ -845,7 +899,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         }
 
         private GatewayComponent GetGatewayComponent( RockContext rockContext, FinancialGateway gateway )
-        {
+        { 
             if ( gateway != null )
             {
                 gateway.LoadAttributes( rockContext );
@@ -883,8 +937,8 @@ namespace RockWeb.Plugins.com_kfs.Giving
                 var ccSavedAccountIds = new List<int>();
                 var ccCurrencyType = DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_CREDIT_CARD ) );
                 if ( _ccGateway != null &&
-                    _ccGatewayComponent != null &&
-                    _ccGatewayComponent.SupportsSavedAccount( !oneTime ) &&
+                    _ccGatewayComponent != null && 
+                    _ccGatewayComponent.SupportsSavedAccount( !oneTime ) && 
                     _ccGatewayComponent.SupportsSavedAccount( ccCurrencyType ) )
                 {
                     ccSavedAccountIds = savedAccounts
@@ -939,7 +993,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         }
 
 
-        private void SetControlOptions( )
+        private void SetControlOptions()
         {
             FluidLayout = GetAttributeValue( "LayoutStyle" ) == "Fluid";
 
@@ -1063,7 +1117,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         /// <summary>
         /// Gets the accounts.
         /// </summary>
-        private void GetAccounts( )
+        private void GetAccounts()
         {
             var rockContext = new RockContext();
             var selectedGuids = GetAttributeValues( "Accounts" ).Select( Guid.Parse ).ToList();
@@ -1074,32 +1128,44 @@ namespace RockWeb.Plugins.com_kfs.Giving
             SelectedAccounts = new List<AccountItem>();
             AvailableAccounts = new List<AccountItem>();
 
-            // Enumerate through all active accounts that are public
-            foreach ( var account in new FinancialAccountService( rockContext ).Queryable()
-                .Where( f =>
-                    f.IsActive &&
-                    f.IsPublic.HasValue &&
-                    f.IsPublic.Value &&
-                    (f.StartDate == null || f.StartDate <= RockDateTime.Today) &&
-                    (f.EndDate == null || f.EndDate >= RockDateTime.Today) )
-                .OrderBy( f => f.Order ) )
+            // Limit selections to accounts passed through URL
+            if ( _parameterAccounts.Count > 0 )
             {
-                var accountItem = new AccountItem( account.Id, account.Order, account.Name, account.CampusId, account.PublicName );
-                if ( showAll )
+                foreach ( var acct in _parameterAccounts )
                 {
+                    var accountItem = new AccountItem( acct.Id, acct.Order, acct.Name, acct.CampusId, acct.PublicName );
                     SelectedAccounts.Add( accountItem );
                 }
-                else
+            }
+            else
+            {
+                // Enumerate through all active accounts that are public
+                foreach ( var account in new FinancialAccountService( rockContext ).Queryable()
+                    .Where( f =>
+                        f.IsActive &&
+                        f.IsPublic.HasValue &&
+                        f.IsPublic.Value &&
+                        (f.StartDate == null || f.StartDate <= RockDateTime.Today) &&
+                        (f.EndDate == null || f.EndDate >= RockDateTime.Today) )
+                    .OrderBy( f => f.Order ) )
                 {
-                    if ( selectedGuids.Contains( account.Guid ) )
+                    var accountItem = new AccountItem( account.Id, account.Order, account.Name, account.CampusId, account.PublicName );
+                    if ( showAll )
                     {
                         SelectedAccounts.Add( accountItem );
                     }
                     else
                     {
-                        if ( additionalAccounts )
+                        if ( selectedGuids.Contains( account.Guid ) )
                         {
-                            AvailableAccounts.Add( accountItem );
+                            SelectedAccounts.Add( accountItem );
+                        }
+                        else
+                        {
+                            if ( additionalAccounts )
+                            {
+                                AvailableAccounts.Add( accountItem );
+                            }
                         }
                     }
                 }
@@ -1109,7 +1175,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         /// <summary>
         /// Binds the accounts.
         /// </summary>
-        private void BindAccounts( )
+        private void BindAccounts()
         {
             rptAccountList.DataSource = SelectedAccounts.ToList();
             rptAccountList.DataBind();
@@ -1315,7 +1381,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
             if ( !_using3StepGateway )
             {
-                if ( rblSavedAccount.Items.Count <= 0 || (rblSavedAccount.SelectedValueAsInt() ?? 0) <= 0 )
+                if ( rblSavedAccount.Items.Count <= 0 || ( rblSavedAccount.SelectedValueAsInt() ?? 0 ) <= 0 )
                 {
                     bool isACHTxn = hfPaymentTab.Value == "ACH";
                     if ( isACHTxn )
@@ -1414,7 +1480,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             }
 
             tdWhenConfirm.Description = schedule != null ? schedule.ToString() : "Today";
-
+            
             return true;
         }
 
@@ -1429,7 +1495,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
             bool isACHTxn = hfPaymentTab.Value == "ACH";
             var financialGateway = isACHTxn ? _achGateway : _ccGateway;
-            var gateway = (isACHTxn ? _achGatewayComponent : _ccGatewayComponent) as ThreeStepGatewayComponent;
+            var gateway = ( isACHTxn ? _achGatewayComponent : _ccGatewayComponent ) as ThreeStepGatewayComponent;
 
             if ( gateway == null )
             {
@@ -1482,10 +1548,10 @@ namespace RockWeb.Plugins.com_kfs.Giving
         /// Gets the payment information.
         /// </summary>
         /// <returns></returns>
-        private PaymentInfo GetPaymentInfo( )
+        private PaymentInfo GetPaymentInfo()
         {
             PaymentInfo paymentInfo = null;
-            if ( rblSavedAccount.Items.Count > 0 && (rblSavedAccount.SelectedValueAsId() ?? 0) > 0 )
+            if ( rblSavedAccount.Items.Count > 0 && ( rblSavedAccount.SelectedValueAsId() ?? 0 ) > 0 )
             {
                 paymentInfo = GetReferenceInfo( rblSavedAccount.SelectedValueAsId().Value );
             }
@@ -1518,7 +1584,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         /// Gets the credit card information.
         /// </summary>
         /// <returns></returns>
-        private CreditCardPaymentInfo GetCCInfo( )
+        private CreditCardPaymentInfo GetCCInfo()
         {
             var cc = new CreditCardPaymentInfo( txtCreditCard.Text, txtCVV.Text, mypExpiration.SelectedDate ?? DateTime.MinValue );
             cc.NameOnCard = _ccGatewayComponent != null && _ccGatewayComponent.SplitNameOnCard ? txtCardFirstName.Text : txtCardName.Text;
@@ -1550,7 +1616,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         /// Gets the ACH information.
         /// </summary>
         /// <returns></returns>
-        private ACHPaymentInfo GetACHInfo( )
+        private ACHPaymentInfo GetACHInfo()
         {
             return new ACHPaymentInfo( txtAccountNumber.Text, txtRoutingNumber.Text, rblAccountType.SelectedValue == "Savings" ? BankAccountType.Savings : BankAccountType.Checking );
         }
@@ -1575,7 +1641,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         /// Gets the payment schedule.
         /// </summary>
         /// <returns></returns>
-        private PaymentSchedule GetSchedule( )
+        private PaymentSchedule GetSchedule()
         {
             // Figure out if this is a one-time transaction or a future scheduled transaction
             if ( GetAttributeValue( "AllowScheduled" ).AsBoolean() )
@@ -1694,7 +1760,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
             bool isACHTxn = hfPaymentTab.Value == "ACH";
             var financialGateway = isACHTxn ? _achGateway : _ccGateway;
-            var gateway = (isACHTxn ? _achGatewayComponent : _ccGatewayComponent) as ThreeStepGatewayComponent;
+            var gateway = ( isACHTxn ? _achGatewayComponent : _ccGatewayComponent ) as ThreeStepGatewayComponent;
 
             if ( gateway == null )
             {
@@ -1952,9 +2018,18 @@ namespace RockWeb.Plugins.com_kfs.Giving
             batch.ControlAmount = newControlAmount;
 
             transaction.BatchId = batch.Id;
+            transaction.LoadAttributes( rockContext );
+            foreach ( KeyValuePair<string, AttributeValueCache> attr in transaction.AttributeValues )
+            {
+                if ( PageParameters().ContainsKey ( attr.Key ) )
+                {
+                    attr.Value.Value = PageParameter( attr.Key );
+                }
+            }
             batch.Transactions.Add( transaction );
 
             rockContext.SaveChanges();
+            transaction.SaveAttributeValues();
 
             HistoryService.SaveChanges(
                 rockContext,
@@ -2012,7 +2087,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
             // If there was a transaction code returned and this was not already created from a previous saved account,
             // show the option to save the account.
-            if ( !(paymentInfo is ReferencePaymentInfo) && !string.IsNullOrWhiteSpace( TransactionCode ) && gatewayComponent.SupportsSavedAccount( paymentInfo.CurrencyTypeValue ) )
+            if ( !( paymentInfo is ReferencePaymentInfo ) && !string.IsNullOrWhiteSpace( TransactionCode ) && gatewayComponent.SupportsSavedAccount( paymentInfo.CurrencyTypeValue ) )
             {
                 cbSaveAccount.Visible = true;
                 pnlSaveAccount.Visible = true;
@@ -2061,8 +2136,8 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
             pnlPayment.Visible = true;
             rblSavedAccount.Visible = page == 1 && rblSavedAccount.Items.Count > 0;
-            bool usingSavedAccount = rblSavedAccount.Items.Count > 0 && (rblSavedAccount.SelectedValueAsId() ?? 0) > 0;
-            divNewPayment.Visible = (page == 1 && !_using3StepGateway) || (page == 2 && !usingSavedAccount);
+            bool usingSavedAccount = rblSavedAccount.Items.Count > 0 && ( rblSavedAccount.SelectedValueAsId() ?? 0 ) > 0;
+            divNewPayment.Visible = ( page == 1 && !_using3StepGateway ) || ( page == 2 && !usingSavedAccount );
             pnlPayment.Visible = rblSavedAccount.Visible || divNewPayment.Visible;
 
             btnPaymentInfoNext.Visible = page == 1;
@@ -2104,7 +2179,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         /// <summary>
         /// Registers the startup script.
         /// </summary>
-        private void RegisterScript( )
+        private void RegisterScript()
         {
             RockPage.AddScriptLink( ResolveUrl( "~/Scripts/jquery.creditCardTypeDetector.js" ) );
 
@@ -2251,7 +2326,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
     }});
 
 ";
-            string script = string.Format(
+            string script = string.Format( 
                 scriptFormat,
                 divCCPaymentInfo.ClientID,      // {0} 
                 hfPaymentTab.ClientID,          // {1}
@@ -2274,7 +2349,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
                 txtCardFirstName.ClientID,      // {18}
                 txtCardLastName.ClientID,       // {19}
                 txtCardName.ClientID            // {20}
-            );
+            ); 
 
             ScriptManager.RegisterStartupScript( upPayment, this.GetType(), "giving-profile", script, true );
 
