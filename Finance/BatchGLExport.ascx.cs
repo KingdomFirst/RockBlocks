@@ -238,6 +238,43 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     .Where( b => batchesSelected.Contains( b.Id ) )
                     .ToList();
 
+                var batchesToUpdateDetail = batchService.Queryable()
+                     .Where( b => batchesSelected.Contains( b.Id ) )
+                     .Select( b => new {
+                         Id = b.Id,
+                         Name = b.Name,
+                         AccountingSystemCode = b.AccountingSystemCode,
+                         TransactionCount = b.Transactions.Count(),
+                         TransactionAmount = b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M,
+                         ControlAmount = b.ControlAmount,
+                         AccountSummaryList = b.Transactions
+                             .SelectMany( t => t.TransactionDetails )
+                             .Select( d => new
+                             {
+                                 BankAccount = d.GetAttributeValue( "GeneralLedgerExport_BankAccount" ),
+                                 CompanyNumber = d.GetAttributeValue( "GeneralLedgerExport_Company" ),
+                                 Fund = d.GetAttributeValue( "GeneralLedgerExport_Fund" ),
+                                 RevenueAccount = d.GetAttributeValue( "GeneralLedgerExport_RevenueAccount" ),
+                                 RevenueDepartment = d.GetAttributeValue( "GeneralLedgerExport_RevenueDepartment" ),
+                                 d.AccountId,
+                                 obj = d
+                             } )
+                             .OrderBy( s => s.obj.Account.Order )
+                             .ToList()
+                     } )
+                     .ToList();
+
+                var anotherObj = batchesToUpdateDetail
+                    .GroupBy( f => f.AccountSummaryList
+                        .Select( g => new { g.BankAccount, g.CompanyNumber, g.Fund, g.RevenueAccount, g.RevenueDepartment } ) )
+                    .Select( h => new
+                    {
+                        Id = h.Max( i => i.Id ),
+                        Name = h.Max( i => i.Name ),
+                        TransactionAmount = h.Max( i => i.TransactionAmount ),
+                        AccountSummaryList = h.Max( i => i.AccountSummaryList )
+                    } );
+
                 List<GLExportLineItem> items = GenerateLineItems( batchesToUpdate, "Contributions", ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
 
                 StringBuilder stringBuilder = new StringBuilder();
@@ -333,18 +370,31 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                             }
                         }
                     }
+                    var transactionDetails = transaction.TransactionDetails
+                        .Select( t => new
+                        {
+                            BankAccount = t.GetAttributeValue( "GeneralLedgerExport_BankAccount"),
+                            CompanyNumber = t.GetAttributeValue( "GeneralLedgerExport_Company" ),
+                            Fund = t.GetAttributeValue( "GeneralLedgerExport_Fund" ),
+                            RevenueAccount = t.GetAttributeValue( "GeneralLedgerExport_RevenueAccount" ),
+                            RevenueDepartment = t.GetAttributeValue( "GeneralLedgerExport_RevenueDepartment" ),
+                            t.AccountId,
+                            t.Account,
+                            t.Amount
+                        } )
+                        .OrderBy( s => s.Account.Order ).ToList();
 
                     GLExportLineItem generalLedgerExportLineItem = new GLExportLineItem()
                     {
                         AccountingPeriod = accountingPeriod,
                         AccountNumber = "", //row["gl_bank_account"].ToString(),
                         Amount = ( decimal ) transaction.TotalAmount,
-                        CompanyNumber = "",//row["gl_company"].ToString(),
+                        CompanyNumber = "COMPANYNUMBER",//row["gl_company"].ToString(),
                         Date = selectedDate,
                         DepartmentNumber = "",
                         Description1 = description,
                         Description2 = string.Empty,
-                        FundNumber = "",//row["gl_fund"].ToString(),
+                        FundNumber = "FUNDNUM",//row["gl_fund"].ToString(),
                         JournalNumber = 0,
                         JournalType = journalType,
                         ProjectCode = projectCode//row["project_code"].ToString()
@@ -354,14 +404,14 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     GLExportLineItem generalLedgerExportLineItem1 = new GLExportLineItem()
                     {
                         AccountingPeriod = accountingPeriod,
-                        AccountNumber = "",//row["gl_revenue_account"].ToString(),
+                        AccountNumber = "REVENUEACCOUNT",//row["gl_revenue_account"].ToString(),
                         Amount = new decimal( 10, 0, 0, true, 1 ) * ( decimal ) transaction.TotalAmount,
-                        CompanyNumber = "",//row["gl_company"].ToString(),
+                        CompanyNumber = "COMPANYNUMBER",//row["gl_company"].ToString(),
                         Date = selectedDate,
-                        DepartmentNumber = "",//row["gl_revenue_department"].ToString(),
+                        DepartmentNumber = "REVDEPT",//row["gl_revenue_department"].ToString(),
                         Description1 = description,
                         Description2 = string.Empty,
-                        FundNumber = "",//row["gl_fund"].ToString(),
+                        FundNumber = "FUNDNUM",//row["gl_fund"].ToString(),
                         JournalNumber = 0,
                         JournalType = journalType,
                         ProjectCode = projectCode//row["project_code"].ToString()
