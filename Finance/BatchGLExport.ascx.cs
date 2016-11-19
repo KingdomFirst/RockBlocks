@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Data.Entity;
 using System.IO;
 using System.Linq;
@@ -234,27 +235,34 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 var rockContext = new RockContext();
                 var batchService = new FinancialBatchService( rockContext );
                 var batchesToUpdate = batchService.Queryable()
-                    .Where( b =>
-                        batchesSelected.Contains( b.Id ) )
+                    .Where( b => batchesSelected.Contains( b.Id ) )
                     .ToList();
 
-                foreach ( var batch in batchesToUpdate )
+                List<GLExportLineItem> items = GenerateLineItems( batchesToUpdate, "Contributions", ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
+
+                StringBuilder stringBuilder = new StringBuilder();
+                int num = 0;
+                foreach ( GLExportLineItem lineitem in items )
                 {
-                    batch.LoadAttributes();
-                    foreach ( var transaction in batch.Transactions )
+                    if ( num > 0 )
                     {
-                        transaction.LoadAttributes();
-                        output += batch.Name+batch.BatchStartDateTime+" "+transaction.TotalAmount;
-                        output += "\r\n";
+                        stringBuilder.Append( Environment.NewLine );
                     }
+                    stringBuilder.Append( convertGLItemToStr( lineitem ) );
+                    num++;
                 }
-                MemoryStream ms = new MemoryStream( Encoding.ASCII.GetBytes( output ) );
-                Response.ClearContent();
-                Response.ClearHeaders();
-                Response.ContentType = "application/text";
-                Response.AddHeader( "Content-Disposition", "attachment; filename=GLTRN2000.txt" );
-                ms.WriteTo( Response.OutputStream );
-                Response.End();
+                if (items.Count > 0 && nbResult.NotificationBoxType  != NotificationBoxType.Warning)
+                {
+                    output = stringBuilder.ToString();
+
+                    MemoryStream ms = new MemoryStream( Encoding.ASCII.GetBytes( output ) );
+                    Response.ClearContent();
+                    Response.ClearHeaders();
+                    Response.ContentType = "application/text";
+                    Response.AddHeader( "Content-Disposition", "attachment; filename=GLTRN2000.txt" );
+                    ms.WriteTo( Response.OutputStream );
+                    Response.End();
+                } 
             }
             else
             {
@@ -265,9 +273,109 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
         }
 
+        private string convertGLItemToStr( GLExportLineItem item )
+        {
+            string[] str = new string[] { "", "".PadLeft( 5, '0' ), null, null, null, null, null, null, null, null };
+            string[] strArrays = new string[] { item.CompanyNumber.ToString().PadLeft( 3, '0' ), item.FundNumber.ToString().PadLeft( 3, '0' ), item.AccountingPeriod.ToString().PadLeft( 2, '0' ), item.JournalType, null };
+            int journalNumber = item.JournalNumber;
+            strArrays[4] = journalNumber.ToString().PadLeft( 5, '0' );
+            str[2] = string.Concat( strArrays );
+            str[3] = "".PadLeft( 3, '0' );
+            str[4] = item.Date.HasValue ? item.Date.Value.ToString( "MMddyy" ) : "<not available>";
+            str[5] = item.Description1.Substring( 0, ( item.Description1.Length <= 30 ? item.Description1.Length : 30 ) );
+            str[6] = item.Description1.Substring( 0, ( item.Description2.Length <= 30 ? item.Description2.Length : 30 ) );
+            str[7] = string.Concat( item.DepartmentNumber.ToString().PadLeft( 3, '0' ), item.AccountNumber.ToString().PadLeft( 9, '0' ) );
+            decimal amount = item.Amount;
+            str[8] = amount.ToString( "0.00" ).Replace( ".", "" );
+            str[9] = item.ProjectCode;
+            StringBuilder stringBuilder = new StringBuilder();
+            int num = 0;
+            string[] strArrays1 = str;
+            for ( int i = 0; i < ( int ) strArrays1.Length; i++ )
+            {
+                string str1 = strArrays1[i];
+                if ( num > 0 )
+                {
+                    stringBuilder.AppendFormat( "\"{0}\",", str1.Replace( "\"", "" ) );
+                }
+                num++;
+            }
+            string str2 = stringBuilder.ToString();
+            if ( str2 != "" )
+            {
+                str2 = str2.Substring( 0, str2.Length - 1 );
+            }
+            return str2;
+        }
+
+        private List<GLExportLineItem> GenerateLineItems( List<FinancialBatch> batchesToUpdate, string description, string journalType, string accountingPeriod, DateTime? selectedDate )
+        {
+            List<GLExportLineItem> returnList = new List<GLExportLineItem>();
+            foreach ( var batch in batchesToUpdate )
+            {
+                batch.LoadAttributes();
+                foreach ( var transaction in batch.Transactions )
+                {
+                    transaction.LoadAttributes();
+
+                    string projectCode = String.Empty;
+
+                    var transactionProject = transaction.GetAttributeValue( "Project" );
+                    if ( !String.IsNullOrWhiteSpace( transactionProject ) )
+                    {
+                        var dt = DefinedValueCache.Read( transactionProject );
+                        var projects = DefinedTypeCache.Read( dt.DefinedTypeId );
+                        if ( projects != null )
+                        {
+                            foreach ( var project in projects.DefinedValues.OrderByDescending( a => a.Value.AsInteger() ).Where( p => p.Guid.ToString().ToLower() == transactionProject.ToString().ToLower() ) )
+                            {
+                                projectCode = project.GetAttributeValue( "Code" );
+                            }
+                        }
+                    }
+
+                    GLExportLineItem generalLedgerExportLineItem = new GLExportLineItem()
+                    {
+                        AccountingPeriod = accountingPeriod,
+                        AccountNumber = "", //row["gl_bank_account"].ToString(),
+                        Amount = ( decimal ) transaction.TotalAmount,
+                        CompanyNumber = "",//row["gl_company"].ToString(),
+                        Date = selectedDate,
+                        DepartmentNumber = "",
+                        Description1 = description,
+                        Description2 = string.Empty,
+                        FundNumber = "",//row["gl_fund"].ToString(),
+                        JournalNumber = 0,
+                        JournalType = journalType,
+                        ProjectCode = projectCode//row["project_code"].ToString()
+                    };
+                    if ( ValidateObject( generalLedgerExportLineItem ) )
+                        returnList.Add( generalLedgerExportLineItem );
+                    GLExportLineItem generalLedgerExportLineItem1 = new GLExportLineItem()
+                    {
+                        AccountingPeriod = accountingPeriod,
+                        AccountNumber = "",//row["gl_revenue_account"].ToString(),
+                        Amount = new decimal( 10, 0, 0, true, 1 ) * ( decimal ) transaction.TotalAmount,
+                        CompanyNumber = "",//row["gl_company"].ToString(),
+                        Date = selectedDate,
+                        DepartmentNumber = "",//row["gl_revenue_department"].ToString(),
+                        Description1 = description,
+                        Description2 = string.Empty,
+                        FundNumber = "",//row["gl_fund"].ToString(),
+                        JournalNumber = 0,
+                        JournalType = journalType,
+                        ProjectCode = projectCode//row["project_code"].ToString()
+                    };
+                    if ( ValidateObject( generalLedgerExportLineItem1 ) )
+                        returnList.Add( generalLedgerExportLineItem1 );
+                }
+            }
+            return returnList;
+        }
+
         #endregion
 
-            #region Methods
+        #region Methods
 
         private void SetVisibilityOption()
         {
@@ -525,6 +633,30 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             return sortedQry;
         }
 
+        private bool ValidateObject( GLExportLineItem model )
+        {
+
+            List<ValidationResult> errors = new List<ValidationResult>();
+            ValidationContext context = new ValidationContext( model, null, null );
+
+            if ( !Validator.TryValidateObject( model, context, errors, true ) )
+            {
+                nbResult.Text = string.Format( "Error exporting: <br>" );
+                nbResult.NotificationBoxType = NotificationBoxType.Warning;
+                nbResult.Visible = true;
+
+                foreach ( ValidationResult e in errors )
+                {
+                    nbResult.Text += e.ErrorMessage;
+                    nbResult.Text += "<br>";
+                }
+                return false;
+            }
+
+            return true;
+
+        }
+
         #endregion
 
         #region Helper Class
@@ -636,17 +768,30 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
         public class GLExportLineItem
         {
+            [StringLength( 2, ErrorMessage = "AccountingPeriod cannot have more than 2 characters in length." )]
+            [RegularExpression( "([0-9]+)", ErrorMessage = "AccountingPeriod must be numeric." )]
             public string AccountingPeriod { get; set; }
+            [StringLength( 9, ErrorMessage = "AccountNumber cannot have more than 9 characters in length." )]
+            [RegularExpression( "([0-9]+)", ErrorMessage = "AccountNumber must be numeric." )]
             public string AccountNumber { get; set; }
             public decimal Amount { get; set; }
+            [StringLength( 4, ErrorMessage = "CompanyNumber cannot have more than 4 characters in length." )]
+            [RegularExpression( "([0-9]+)", ErrorMessage = "CompanyNumber must be numeric." )]
             public string CompanyNumber { get; set; }
-            public DateTime Date { get; set; }
+            public DateTime? Date { get; set; }
+            [StringLength( 3, ErrorMessage = "DepartmentNumber cannot have more than 3 characters in length." )]
+            [RegularExpression( "([0-9]+)", ErrorMessage = "DepartmentNumber must be numeric." )]
             public string DepartmentNumber { get; set; }
             public string Description1 { get; set; }
             public string Description2 { get; set; }
+            [StringLength( 5, ErrorMessage = "FundNumber cannot have more than 5 characters in length." )]
+            [RegularExpression( "([0-9]+)", ErrorMessage = "FundNumber must be numeric." )]
             public string FundNumber { get; set; }
+            [Range( 0, 99999, ErrorMessage = "JournalNumber cannot have more than 5 characters in length." )]
             public int JournalNumber { get; set; }
+            [StringLength( 2, ErrorMessage = "JournalType cannot have more than 2 characters in length." )]
             public string JournalType { get; set; }
+            [StringLength( 50, ErrorMessage = "ProjectCode cannot have more than 50 characters in length." )]
             public string ProjectCode { get; set; }
         }
 
