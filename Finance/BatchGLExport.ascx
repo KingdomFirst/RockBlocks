@@ -50,7 +50,7 @@
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
                                 <Rock:RockBoundField DataField="Notes" HeaderText="Note" HtmlEncode="false" ColumnPriority="Desktop" />
-                                <Rock:AttributeField DataField="GLExport_BatchExported" HeaderText="Date Exported" />
+                                <Rock:DateTimeField DataField="batchExportedDT" HeaderText="Date Exported" />
                             </Columns>
                         </Rock:Grid>
                     </div>

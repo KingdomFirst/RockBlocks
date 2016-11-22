@@ -220,7 +220,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             gfBatchFilter.SaveUserPreference( "Status", ddlStatus.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Campus", campCampus.SelectedValue );
-            gfBatchFilter.SaveUserPreference( "BatchExported", ddlBatchExported.SelectedValue );
+            gfBatchFilter.SaveUserPreference( "Batch Exported", ddlBatchExported.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Contains Transaction Type", ddlTransactionType.SelectedValue );
 
             BindGrid();
@@ -313,6 +313,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     setExported( batchesToUpdate, rockContext );
 
                     output = stringBuilder.ToString();
+
+                    //ScriptManager.RegisterStartupScript( this, this.GetType(), "reloadbatch", "window.location.reload();", true );
 
                     MemoryStream ms = new MemoryStream( Encoding.ASCII.GetBytes( output ) );
                     Response.ClearContent();
@@ -587,6 +589,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             campCampus.SetValue( gfBatchFilter.GetUserPreference( "Campus" ) );
 
             drpBatchDate.DelimitedValues = gfBatchFilter.GetUserPreference( "Date Range" );
+
+            ddlBatchExported.SetValue( gfBatchFilter.GetUserPreference( "Batch Exported" ) );
+
         }
 
         /// <summary>
@@ -641,6 +646,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     Status = b.Status,
                     UnMatchedTxns = b.Transactions.Any( t => !t.AuthorizedPersonAliasId.HasValue ),
                     BatchNote = b.Note,
+                    batch = b,
                     AccountSummaryList = b.Transactions
                         .SelectMany( t => t.TransactionDetails )
                         .GroupBy( d => d.AccountId )
@@ -655,7 +661,16 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         .ToList()
                 } );
 
-                gBatchList.SetLinqDataSource( batchRowQry.AsNoTracking() );
+                var attributeBatchRowList = batchRowQry.ToList();
+
+                foreach (var batchRow in attributeBatchRowList )
+                {
+                    batchRow.batch.LoadAttributes();
+                    batchRow.batchExportedDT = batchRow.batch.GetAttributeValue( "GLExport_BatchExported" );
+                }
+
+                gBatchList.DataSource = attributeBatchRowList; 
+                //gBatchList.SetLinqDataSource( batchRowQry.AsNoTracking() );
                 gBatchList.EntityTypeId = EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id;
                 gBatchList.DataBind();
 
@@ -742,6 +757,32 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             if ( campus != null )
             {
                 qry = qry.Where( b => b.CampusId == campus.Id );
+            }
+
+            string batchExported = gfBatchFilter.GetUserPreference( "Batch Exported" );
+            if ( !string.IsNullOrEmpty( batchExported ) )
+            {
+                var attributeValueService = new AttributeValueService( rockContext );
+                var attributeService = new AttributeService( rockContext );
+                var attributes = attributeService.GetByEntityTypeId( _entityTypeId );
+                var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == "GLExport_BatchExported" );
+
+                var attribute = AttributeCache.Read( exported.Id );
+
+                var attributeValues = attributeValueService
+                        .Queryable()
+                        .Where( v => v.Attribute.Id == attribute.Id );
+
+                attributeValues = attributeValues.Where( d => d.ValueAsDateTime != null );
+
+                if ( batchExported == "No" )
+                {
+                    qry = qry.Where( b => !attributeValues.Select( v => v.EntityId ).Contains( b.Id ) );
+                }
+                else 
+                {
+                    qry = qry.Where( b => attributeValues.Select( v => v.EntityId ).Contains( b.Id ) );
+                }
             }
 
             IOrderedQueryable<FinancialBatch> sortedQry = null;
@@ -850,6 +891,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             public BatchStatus Status { get; set; }
             public bool UnMatchedTxns { get; set; }
             public string BatchNote { get; set; }
+            
+            public FinancialBatch batch { get; set; }
+            public string batchExportedDT { get; set; }
 
             public decimal Variance
             {
