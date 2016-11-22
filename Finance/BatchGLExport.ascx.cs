@@ -34,6 +34,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         private string _entityQualifierValue = string.Empty;
 
         protected RockContext rockContext = new RockContext();
+        private FinancialBatchService batchService = null;
+        private AttributeService attributeService = null;
+
 
         #endregion
 
@@ -46,6 +49,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
+
+            batchService = new FinancialBatchService( rockContext );
+            attributeService = new AttributeService( rockContext );
 
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlContent );
@@ -68,12 +74,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             IQueryable<Rock.Model.Attribute> attributeQuery = null;
 
-            AttributeService attributeService = new AttributeService( rockContext );
             if ( _entityTypeId != null )
             {
                 attributeQuery = attributeService.Get( _entityTypeId, _entityQualifierColumn, _entityQualifierValue );
             }
-            if (attributeQuery.Count() == 0)
+            if ( attributeQuery.Count() == 0 )
             {
                 Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
                 edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.DATE_TIME ).Id;
@@ -266,9 +271,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             gBatchList.SelectedKeys.ToList().ForEach( b => batchesSelected.Add( b.ToString().AsInteger() ) );
 
-            var batchService = new FinancialBatchService( rockContext );
+            var attributeValues = generateAttributeFilters();
+
             var batchesToUpdate = batchService.Queryable()
                 .Where( b => batchesSelected.Contains( b.Id ) )
+                .Where( b => !attributeValues.Select( v => v.EntityId ).Contains( b.Id ) )
                 .ToList();
 
             string output = String.Empty;
@@ -289,9 +296,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             if ( batchesSelected.Any() )
             {
-                var batchService = new FinancialBatchService( rockContext );
+                var attributeValues = generateAttributeFilters();
+
                 var batchesToUpdate = batchService.Queryable()
                     .Where( b => batchesSelected.Contains( b.Id ) )
+                    .Where( b => !attributeValues.Select( v => v.EntityId ).Contains( b.Id ) )
                     .ToList();
 
                 string output = String.Empty;
@@ -314,8 +323,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
                     output = stringBuilder.ToString();
 
-                    //ScriptManager.RegisterStartupScript( this, this.GetType(), "reloadbatch", "window.location.reload();", true );
-
                     MemoryStream ms = new MemoryStream( Encoding.ASCII.GetBytes( output ) );
                     Response.ClearContent();
                     Response.ClearHeaders();
@@ -323,6 +330,12 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     Response.AddHeader( "Content-Disposition", "attachment; filename=GLTRN2000.txt" );
                     ms.WriteTo( Response.OutputStream );
                     Response.End();
+                }
+                else
+                {
+                    nbResult.Text = string.Format( "There were not any batches that were exportable selected." );
+                    nbResult.NotificationBoxType = NotificationBoxType.Warning;
+                    nbResult.Visible = true;
                 }
             }
             else
@@ -337,28 +350,46 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         #endregion
 
         #region Methods
-    
+
+        protected IQueryable<AttributeValue> generateAttributeFilters()
+        {
+            var attributeValueService = new AttributeValueService( rockContext );
+            var attributes = attributeService.GetByEntityTypeId( _entityTypeId );
+            var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == "GLExport_BatchExported" );
+
+            var attribute = AttributeCache.Read( exported.Id );
+
+            var attributeValues = attributeValueService
+                    .Queryable()
+                    .Where( v => v.Attribute.Id == attribute.Id );
+
+            attributeValues = attributeValues.Where( d => d.ValueAsDateTime != null );
+
+            return attributeValues;
+        }
+
         private void setExported( List<FinancialBatch> batchesToUpdate )
         {
             foreach ( var batch in batchesToUpdate )
             {
                 batch.LoadAttributes();
-                //var newStatus = ddlAction.SelectedValue == "OPEN" ? BatchStatus.Open : BatchStatus.Closed;
+                var newStatus = BatchStatus.Closed;
                 var newDateExported = RockDateTime.Now;
 
                 var changes = new List<string>();
-                //History.EvaluateChange( changes, "Status", batch.Status, newStatus );
-                //batch.Status = newStatus;
-                History.EvaluateChange( changes, "Batch Exported", batch.GetAttributeValue("GLExport_BatchExported"), newDateExported.ToString() );
+                History.EvaluateChange( changes, "Status", batch.Status, newStatus );
+                batch.Status = newStatus;
+                History.EvaluateChange( changes, "Batch Exported", batch.GetAttributeValue( "GLExport_BatchExported" ), newDateExported.ToString() );
                 batch.SetAttributeValue( "GLExport_BatchExported", newDateExported );
 
                 if ( !batch.IsValid )
                 {
-                    //string message = string.Format( "Unable to update status for the selected batches.<br/><br/>{0}", batch.ValidationResults.AsDelimited( "<br/>" ) );
-                    string message = string.Format( "Unable to update batch export date for the selected batches.<br/><br/>{0}", batch.ValidationResults.AsDelimited( "<br/>" ) );
+                    string message = string.Format( "Unable to update status or batch export date for the selected batches.<br/><br/>{0}", batch.ValidationResults.AsDelimited( "<br/>" ) );
                     maWarningDialog.Show( message, ModalAlertType.Warning );
                     return;
                 }
+
+                int? modifiedByPersonAliasId = batch.ModifiedAuditValuesAlreadyUpdated ? batch.ModifiedByPersonAliasId : ( int? ) null;
 
                 HistoryService.SaveChanges(
                     rockContext,
@@ -367,18 +398,18 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     batch.Id,
                     changes,
                     false,
-                    CurrentPersonAliasId );
+                    modifiedByPersonAliasId );
 
                 batch.SaveAttributeValues( rockContext );
             }
 
             rockContext.SaveChanges();
 
-            //nbResult.Text = string.Format(
-            //    "{0} batches were {1}.",
-            //    batchesToUpdate.Count().ToString( "N0" ),
-            //    newStatus == BatchStatus.Open ? "opened" : "closed" );
             nbResult.Text = string.Format(
+                "{0} batches were {1}. <br>",
+                batchesToUpdate.Count().ToString( "N0" ),
+                "closed" );
+            nbResult.Text += string.Format(
                 "{0} batches were {1}.",
                 batchesToUpdate.Count().ToString( "N0" ),
                 "exported" );
@@ -450,11 +481,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             List<GLExportLineItem> returnList = new List<GLExportLineItem>();
             foreach ( var transaction in transactionItems )
             {
-                //transaction.LoadAttributes();
-
                 string projectCode = String.Empty;
 
-                //var transactionProject = transaction.GetAttributeValue( "Project" );
                 if ( !String.IsNullOrWhiteSpace( transaction.projectCode ) )
                 {
                     var dt = DefinedValueCache.Read( transaction.projectCode );
@@ -663,14 +691,13 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
                 var attributeBatchRowList = batchRowQry.ToList();
 
-                foreach (var batchRow in attributeBatchRowList )
+                foreach ( var batchRow in attributeBatchRowList )
                 {
                     batchRow.batch.LoadAttributes();
                     batchRow.batchExportedDT = batchRow.batch.GetAttributeValue( "GLExport_BatchExported" );
                 }
 
-                gBatchList.DataSource = attributeBatchRowList; 
-                //gBatchList.SetLinqDataSource( batchRowQry.AsNoTracking() );
+                gBatchList.DataSource = attributeBatchRowList;
                 gBatchList.EntityTypeId = EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id;
                 gBatchList.DataBind();
 
@@ -697,7 +724,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         /// <returns></returns>
         private IOrderedQueryable<FinancialBatch> GetQuery()
         {
-            var batchService = new FinancialBatchService( rockContext );
             rockContext.Database.CommandTimeout = 90;
             var qry = batchService.Queryable()
                 .Where( b => b.BatchStartDateTime.HasValue );
@@ -761,24 +787,13 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             string batchExported = gfBatchFilter.GetUserPreference( "Batch Exported" );
             if ( !string.IsNullOrEmpty( batchExported ) )
             {
-                var attributeValueService = new AttributeValueService( rockContext );
-                var attributeService = new AttributeService( rockContext );
-                var attributes = attributeService.GetByEntityTypeId( _entityTypeId );
-                var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == "GLExport_BatchExported" );
-
-                var attribute = AttributeCache.Read( exported.Id );
-
-                var attributeValues = attributeValueService
-                        .Queryable()
-                        .Where( v => v.Attribute.Id == attribute.Id );
-
-                attributeValues = attributeValues.Where( d => d.ValueAsDateTime != null );
+                var attributeValues = generateAttributeFilters();
 
                 if ( batchExported == "No" )
                 {
                     qry = qry.Where( b => !attributeValues.Select( v => v.EntityId ).Contains( b.Id ) );
                 }
-                else 
+                else
                 {
                     qry = qry.Where( b => attributeValues.Select( v => v.EntityId ).Contains( b.Id ) );
                 }
@@ -890,7 +905,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             public BatchStatus Status { get; set; }
             public bool UnMatchedTxns { get; set; }
             public string BatchNote { get; set; }
-            
+
             public FinancialBatch batch { get; set; }
             public string batchExportedDT { get; set; }
 

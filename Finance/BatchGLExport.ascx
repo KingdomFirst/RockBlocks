@@ -81,7 +81,7 @@
                                 <Rock:RockTextBox ID="tbAccountingPeriod" runat="server" label="Accounting Period" Required="true" Width="50"></Rock:RockTextBox>
                                 <Rock:DatePicker ID="dpExportDate" runat="server" Label="Date" Required="true"></Rock:DatePicker>
                             <div class="actions">
-                                <asp:LinkButton ID="btnExport" runat="server" CssClass="btn btn-primary" Text="Export" OnClick="btnExport_Click" />
+                                <asp:LinkButton ID="btnExport" runat="server" CssClass="btn btn-primary" Text="Export" OnClick="btnExport_Click" OnClientClick="setTimeout(function () { window.location.reload(1);}, 5000);" />
                                 <asp:LinkButton ID="btnPreview" runat="server" CssClass="btn btn-default" Text="Preview" OnClick="btnPreview_Click" />
                             </div>
                         </div>
