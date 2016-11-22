@@ -283,6 +283,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
         }
 
+        #endregion
+
+        #region Methods
+
         private List<GLExportLineItem> getExportLineItems( List<int> batchesSelected )
         {
             var rockContext = new RockContext();
@@ -345,6 +349,68 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             return items;
         }
 
+        private List<GLExportLineItem> GenerateLineItems( List<GLTransaction> transactionItems, string description, string journalType, string accountingPeriod, DateTime? selectedDate )
+        {
+            List<GLExportLineItem> returnList = new List<GLExportLineItem>();
+            foreach ( var transaction in transactionItems )
+            {
+                //transaction.LoadAttributes();
+
+                string projectCode = String.Empty;
+
+                //var transactionProject = transaction.GetAttributeValue( "Project" );
+                if ( !String.IsNullOrWhiteSpace( transaction.projectCode ) )
+                {
+                    var dt = DefinedValueCache.Read( transaction.projectCode );
+                    var projects = DefinedTypeCache.Read( dt.DefinedTypeId );
+                    if ( projects != null )
+                    {
+                        foreach ( var project in projects.DefinedValues.OrderByDescending( a => a.Value.AsInteger() ).Where( p => p.Guid.ToString().ToLower() == transaction.projectCode.ToString().ToLower() ) )
+                        {
+                            projectCode = project.GetAttributeValue( "Code" );
+                        }
+                    }
+                }
+
+                GLExportLineItem generalLedgerExportLineItem = new GLExportLineItem()
+                {
+                    AccountingPeriod = accountingPeriod,
+                    AccountNumber = transaction.glBankAccount,
+                    Amount = ( decimal ) transaction.total,
+                    CompanyNumber = transaction.glCompany,
+                    Date = selectedDate,
+                    DepartmentNumber = "",
+                    Description1 = description,
+                    Description2 = string.Empty,
+                    FundNumber = transaction.glFund,
+                    JournalNumber = 0,
+                    JournalType = journalType,
+                    ProjectCode = projectCode
+                };
+                nbResult.Text += "<strong>" + transaction.transactionDetail.Account.Name + "</strong><br>";
+                if ( ValidateObject( generalLedgerExportLineItem ) )
+                    returnList.Add( generalLedgerExportLineItem );
+                GLExportLineItem generalLedgerExportLineItem1 = new GLExportLineItem()
+                {
+                    AccountingPeriod = accountingPeriod,
+                    AccountNumber = transaction.glRevenueAccount,
+                    Amount = new decimal( 10, 0, 0, true, 1 ) * ( decimal ) transaction.total,
+                    CompanyNumber = transaction.glCompany,
+                    Date = selectedDate,
+                    DepartmentNumber = transaction.glRevenueDepartment,
+                    Description1 = description,
+                    Description2 = string.Empty,
+                    FundNumber = transaction.glFund,
+                    JournalNumber = 0,
+                    JournalType = journalType,
+                    ProjectCode = projectCode
+                };
+                if ( ValidateObject( generalLedgerExportLineItem1 ) )
+                    returnList.Add( generalLedgerExportLineItem1 );
+            }
+            return returnList;
+        }
+
         private string convertGLItemToStr( GLExportLineItem item )
         {
             string[] str = new string[] { "", "".PadLeft( 5, '0' ), null, null, null, null, null, null, null, null };
@@ -379,72 +445,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             }
             return str2;
         }
-
-        private List<GLExportLineItem> GenerateLineItems( List<GLTransaction> transactionItems, string description, string journalType, string accountingPeriod, DateTime? selectedDate )
-        {
-            List<GLExportLineItem> returnList = new List<GLExportLineItem>();
-            foreach ( var transaction in transactionItems )
-            {
-                //transaction.LoadAttributes();
-
-                string projectCode = String.Empty;
-
-                //var transactionProject = transaction.GetAttributeValue( "Project" );
-                if ( !String.IsNullOrWhiteSpace( transaction.projectCode ) )
-                {
-                    var dt = DefinedValueCache.Read( transaction.projectCode );
-                    var projects = DefinedTypeCache.Read( dt.DefinedTypeId );
-                    if ( projects != null )
-                    {
-                        foreach ( var project in projects.DefinedValues.OrderByDescending( a => a.Value.AsInteger() ).Where( p => p.Guid.ToString().ToLower() == transaction.projectCode.ToString().ToLower() ) )
-                        {
-                            projectCode = project.GetAttributeValue( "Code" );
-                        }
-                    }
-                }
-
-                GLExportLineItem generalLedgerExportLineItem = new GLExportLineItem()
-                {
-                    AccountingPeriod = accountingPeriod,
-                    AccountNumber = transaction.glBankAccount, //row["gl_bank_account"].ToString(),
-                    Amount = ( decimal ) transaction.total,
-                    CompanyNumber = transaction.glCompany,//row["gl_company"].ToString(),
-                    Date = selectedDate,
-                    DepartmentNumber = "",
-                    Description1 = description,
-                    Description2 = string.Empty,
-                    FundNumber = transaction.glFund,//row["gl_fund"].ToString(),
-                    JournalNumber = 0,
-                    JournalType = journalType,
-                    ProjectCode = projectCode//row["project_code"].ToString()
-                };
-                nbResult.Text += "<strong>" + transaction.transactionDetail.Account.Name + "</strong><br>";
-                if ( ValidateObject( generalLedgerExportLineItem ) )
-                    returnList.Add( generalLedgerExportLineItem );
-                GLExportLineItem generalLedgerExportLineItem1 = new GLExportLineItem()
-                {
-                    AccountingPeriod = accountingPeriod,
-                    AccountNumber = transaction.glRevenueAccount,//row["gl_revenue_account"].ToString(),
-                    Amount = new decimal( 10, 0, 0, true, 1 ) * ( decimal ) transaction.total,
-                    CompanyNumber = transaction.glCompany,//row["gl_company"].ToString(),
-                    Date = selectedDate,
-                    DepartmentNumber = transaction.glRevenueDepartment,//row["gl_revenue_department"].ToString(),
-                    Description1 = description,
-                    Description2 = string.Empty,
-                    FundNumber = transaction.glFund,//row["gl_fund"].ToString(),
-                    JournalNumber = 0,
-                    JournalType = journalType,
-                    ProjectCode = projectCode//row["project_code"].ToString()
-                };
-                if ( ValidateObject( generalLedgerExportLineItem1 ) )
-                    returnList.Add( generalLedgerExportLineItem1 );
-            }
-            return returnList;
-        }
-
-        #endregion
-
-        #region Methods
 
         private void SetVisibilityOption()
         {
