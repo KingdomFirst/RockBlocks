@@ -33,6 +33,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         private string _entityQualifierColumn = string.Empty;
         private string _entityQualifierValue = string.Empty;
 
+        protected RockContext rockContext = new RockContext();
+
         #endregion
 
         #region Base Control Methods
@@ -66,7 +68,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             IQueryable<Rock.Model.Attribute> attributeQuery = null;
 
-            AttributeService attributeService = new AttributeService( new RockContext() );
+            AttributeService attributeService = new AttributeService( rockContext );
             if ( _entityTypeId != null )
             {
                 attributeQuery = attributeService.Get( _entityTypeId, _entityQualifierColumn, _entityQualifierValue );
@@ -264,7 +266,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             gBatchList.SelectedKeys.ToList().ForEach( b => batchesSelected.Add( b.ToString().AsInteger() ) );
 
-            var rockContext = new RockContext();
             var batchService = new FinancialBatchService( rockContext );
             var batchesToUpdate = batchService.Queryable()
                 .Where( b => batchesSelected.Contains( b.Id ) )
@@ -288,7 +289,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             if ( batchesSelected.Any() )
             {
-                var rockContext = new RockContext();
                 var batchService = new FinancialBatchService( rockContext );
                 var batchesToUpdate = batchService.Queryable()
                     .Where( b => batchesSelected.Contains( b.Id ) )
@@ -310,7 +310,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 }
                 if ( items.Count > 0 && nbResult.NotificationBoxType != NotificationBoxType.Warning )
                 {
-                    setExported( batchesToUpdate, rockContext );
+                    setExported( batchesToUpdate );
 
                     output = stringBuilder.ToString();
 
@@ -338,7 +338,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
         #region Methods
     
-        private void setExported( List<FinancialBatch> batchesToUpdate, RockContext rockContext )
+        private void setExported( List<FinancialBatch> batchesToUpdate )
         {
             foreach ( var batch in batchesToUpdate )
             {
@@ -697,7 +697,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         /// <returns></returns>
         private IOrderedQueryable<FinancialBatch> GetQuery()
         {
-            var rockContext = new RockContext();
             var batchService = new FinancialBatchService( rockContext );
             rockContext.Database.CommandTimeout = 90;
             var qry = batchService.Queryable()
