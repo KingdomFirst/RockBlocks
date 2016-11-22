@@ -294,11 +294,16 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         glRevenueAccount = t.Key.glRevenueAccount,
                         glRevenueDepartment = t.Key.glRevenueDepartment,
                         projectCode = t.Key.projectCode,
-                        total = t.Sum( f => ( decimal? ) f.total ) ?? 0.0M
+                        total = t.Sum( f => ( decimal? ) f.total ) ?? 0.0M,
+
+                        batch = t.FirstOrDefault().batch,
+                        transaction = t.FirstOrDefault().transaction,
+                        transactionDetail = t.FirstOrDefault().transactionDetail
+
                     } )
                     .ToList();
 
-                List<GLExportLineItem> items = GenerateLineItems( batchTransactions, "Contributions", ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
+                List<GLExportLineItem> items = GenerateLineItems( groupedTransactions, "Contributions", ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
 
                 StringBuilder stringBuilder = new StringBuilder();
                 int num = 0;
@@ -823,7 +828,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             }
         }
 
-        public class GLTransaction : IEquatable<GLTransaction>
+        public class GLTransaction
         {
             public string glCompany { get; set; }
             public string glFund { get; set; }
@@ -836,35 +841,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             public FinancialBatch batch { get; set; }
             public FinancialTransaction transaction { get; set; }
             public FinancialTransactionDetail transactionDetail { get; set; }
-
-            public bool Equals( GLTransaction obj )
-            {
-                if ( ReferenceEquals( null, obj ) )
-                    return false;
-                if ( ReferenceEquals( this, obj ) )
-                    return true;
-                if ( obj.GetType() != this.GetType() )
-                    return false;
-                return string.Equals( glCompany, obj.glCompany )
-                    && string.Equals( glFund, obj.glFund )
-                    && string.Equals( glBankAccount, obj.glBankAccount )
-                    && string.Equals( glRevenueDepartment, obj.glRevenueDepartment )
-                    && string.Equals( glRevenueAccount, obj.glRevenueAccount )
-                    && string.Equals( projectCode, obj.projectCode );
-            }
-
-            public override int GetHashCode()
-            {
-                int hashglCompany = glCompany == null ? 0 : glCompany.GetHashCode();
-                int hashglFund = glFund == null ? 0 : glFund.GetHashCode();
-                int hashglBankAccount = glBankAccount == null ? 0 : glBankAccount.GetHashCode();
-                int hashglRevenueDepartment = glRevenueDepartment == null ? 0 : glRevenueDepartment.GetHashCode();
-                int hashglRevenueAccount = glRevenueAccount == null ? 0 : glRevenueAccount.GetHashCode();
-                int hashprojectCode = projectCode == null ? 0 : projectCode.GetHashCode();
-
-                return hashglCompany ^ hashglFund ^ hashglBankAccount ^ hashglRevenueDepartment ^ hashglRevenueAccount ^ hashprojectCode;
-            }
-
         }
 
         public class GLExportLineItem
