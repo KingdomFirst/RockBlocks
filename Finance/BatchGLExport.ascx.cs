@@ -22,7 +22,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
     [DisplayName( "Batch GL Export" )]
     [Category( "KFS > Finance" )]
     [Description( "Lists all financial batches and provides GL Export capability" )]
-    [LinkedPage( "Detail Page", order: 0 )]
     [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
     public partial class BatchGLExport : Rock.Web.UI.RockBlock
     {
@@ -443,8 +442,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         transactionItem.projectCode = transaction.GetAttributeValue( "Project" );
                         transactionItem.total = transactionDetail.Amount;
 
-                        transactionItem.batch = batch;
-                        transactionItem.transaction = transaction;
                         transactionItem.transactionDetail = transactionDetail;
 
                         batchTransactions.Add( transactionItem );
@@ -464,8 +461,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     projectCode = t.Key.projectCode,
                     total = t.Sum( f => ( decimal? ) f.total ) ?? 0.0M,
 
-                    batch = t.FirstOrDefault().batch,
-                    transaction = t.FirstOrDefault().transaction,
                     transactionDetail = t.FirstOrDefault().transactionDetail
 
                 } )
@@ -1000,8 +995,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             public string projectCode { get; set; }
             public decimal total { get; set; }
 
-            public FinancialBatch batch { get; set; }
-            public FinancialTransaction transaction { get; set; }
             public FinancialTransactionDetail transactionDetail { get; set; }
         }
 
