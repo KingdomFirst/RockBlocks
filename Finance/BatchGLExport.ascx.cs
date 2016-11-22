@@ -223,7 +223,23 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             BindGrid( e.IsExporting );
         }
 
-        public void btnExport_Click ( object sender, EventArgs e)
+        public void btnPreview_Click( object sender, EventArgs e )
+        {
+            var batchesSelected = new List<int>();
+
+            gBatchList.SelectedKeys.ToList().ForEach( b => batchesSelected.Add( b.ToString().AsInteger() ) );
+
+            string output = String.Empty;
+            List<GLExportLineItem> items = getExportLineItems( batchesSelected );
+            BatchExportList.ShowFooter = false;
+            BatchExportList.Actions.ShowExcelExport = false;
+            BatchExportList.Actions.ShowMergeTemplate = false;
+            BatchExportList.PagerSettings.Visible = false;
+            BatchExportList.DataSource = new BindingList<GLExportLineItem>( items );
+            BatchExportList.DataBind();
+        }
+
+        public void btnExport_Click( object sender, EventArgs e )
         {
             var batchesSelected = new List<int>();
 
@@ -232,78 +248,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             if ( batchesSelected.Any() )
             {
                 string output = String.Empty;
-                var rockContext = new RockContext();
-                var batchService = new FinancialBatchService( rockContext );
-                var batchesToUpdate = batchService.Queryable()
-                    .Where( b => batchesSelected.Contains( b.Id ) )
-                    .ToList();
-
-                var batchesToUpdateDetail = batchService.Queryable()
-                     .Where( b => batchesSelected.Contains( b.Id ) )
-                     .Select( b => new {
-                         Id = b.Id,
-                         Name = b.Name,
-                         AccountingSystemCode = b.AccountingSystemCode,
-                         TransactionCount = b.Transactions.Count(),
-                         TransactionAmount = b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M,
-                         ControlAmount = b.ControlAmount,
-                         AccountSummaryList = b.Transactions
-                             .SelectMany( t => t.TransactionDetails )
-                             .OrderBy( s => s.Account.Order )
-                             .ToList()
-                     } )
-                     .ToList();
-
-                List<GLTransaction> batchTransactions = new List<GLTransaction>();
-
-                foreach ( var batch in batchesToUpdate )
-                {
-                    batch.LoadAttributes();
-                    foreach ( var transaction in batch.Transactions )
-                    {
-                        transaction.LoadAttributes();
-                        foreach (var transactionDetail in transaction.TransactionDetails)
-                        {
-                            transactionDetail.Account.LoadAttributes();
-
-                            GLTransaction transactionItem = new GLTransaction();
-                            transactionItem.glCompany = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_Company" );
-                            transactionItem.glFund = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_Fund" );
-                            transactionItem.glBankAccount = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_BankAccount" );
-                            transactionItem.glRevenueAccount = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_RevenueAccount" );
-                            transactionItem.glRevenueDepartment = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_RevenueDepartment" );
-                            transactionItem.projectCode = transaction.GetAttributeValue( "Project" );
-                            transactionItem.total = transactionDetail.Amount;
-
-                            transactionItem.batch = batch;
-                            transactionItem.transaction = transaction;
-                            transactionItem.transactionDetail = transactionDetail;
-
-                            batchTransactions.Add( transactionItem );
-
-                        }
-                    }
-                }
-
-                var groupedTransactions = batchTransactions.GroupBy( d => new { d.glBankAccount, d.glCompany, d.glFund, d.glRevenueAccount, d.glRevenueDepartment, d.projectCode } )
-                    .Select( t => new GLTransaction
-                    {
-                        glBankAccount = t.Key.glBankAccount,
-                        glCompany = t.Key.glCompany,
-                        glFund = t.Key.glFund,
-                        glRevenueAccount = t.Key.glRevenueAccount,
-                        glRevenueDepartment = t.Key.glRevenueDepartment,
-                        projectCode = t.Key.projectCode,
-                        total = t.Sum( f => ( decimal? ) f.total ) ?? 0.0M,
-
-                        batch = t.FirstOrDefault().batch,
-                        transaction = t.FirstOrDefault().transaction,
-                        transactionDetail = t.FirstOrDefault().transactionDetail
-
-                    } )
-                    .ToList();
-
-                List<GLExportLineItem> items = GenerateLineItems( groupedTransactions, "Contributions", ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
+                List<GLExportLineItem> items = getExportLineItems( batchesSelected );
 
                 StringBuilder stringBuilder = new StringBuilder();
                 int num = 0;
@@ -316,7 +261,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     stringBuilder.Append( convertGLItemToStr( lineitem ) );
                     num++;
                 }
-                if (items.Count > 0 && nbResult.NotificationBoxType  != NotificationBoxType.Warning)
+                if ( items.Count > 0 && nbResult.NotificationBoxType != NotificationBoxType.Warning )
                 {
                     output = stringBuilder.ToString();
 
@@ -327,7 +272,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     Response.AddHeader( "Content-Disposition", "attachment; filename=GLTRN2000.txt" );
                     ms.WriteTo( Response.OutputStream );
                     Response.End();
-                } 
+                }
             }
             else
             {
@@ -336,6 +281,68 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 nbResult.Visible = true;
             }
 
+        }
+
+        private List<GLExportLineItem> getExportLineItems( List<int> batchesSelected )
+        {
+            var rockContext = new RockContext();
+            var batchService = new FinancialBatchService( rockContext );
+            var batchesToUpdate = batchService.Queryable()
+                .Where( b => batchesSelected.Contains( b.Id ) )
+                .ToList();
+
+            List<GLTransaction> batchTransactions = new List<GLTransaction>();
+
+            foreach ( var batch in batchesToUpdate )
+            {
+                batch.LoadAttributes();
+                foreach ( var transaction in batch.Transactions )
+                {
+                    transaction.LoadAttributes();
+                    foreach ( var transactionDetail in transaction.TransactionDetails )
+                    {
+                        transactionDetail.Account.LoadAttributes();
+
+                        GLTransaction transactionItem = new GLTransaction();
+                        transactionItem.glCompany = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_Company" );
+                        transactionItem.glFund = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_Fund" );
+                        transactionItem.glBankAccount = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_BankAccount" );
+                        transactionItem.glRevenueAccount = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_RevenueAccount" );
+                        transactionItem.glRevenueDepartment = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_RevenueDepartment" );
+                        transactionItem.projectCode = transaction.GetAttributeValue( "Project" );
+                        transactionItem.total = transactionDetail.Amount;
+
+                        transactionItem.batch = batch;
+                        transactionItem.transaction = transaction;
+                        transactionItem.transactionDetail = transactionDetail;
+
+                        batchTransactions.Add( transactionItem );
+
+                    }
+                }
+            }
+
+            var groupedTransactions = batchTransactions.GroupBy( d => new { d.glBankAccount, d.glCompany, d.glFund, d.glRevenueAccount, d.glRevenueDepartment, d.projectCode } )
+                .Select( t => new GLTransaction
+                {
+                    glBankAccount = t.Key.glBankAccount,
+                    glCompany = t.Key.glCompany,
+                    glFund = t.Key.glFund,
+                    glRevenueAccount = t.Key.glRevenueAccount,
+                    glRevenueDepartment = t.Key.glRevenueDepartment,
+                    projectCode = t.Key.projectCode,
+                    total = t.Sum( f => ( decimal? ) f.total ) ?? 0.0M,
+
+                    batch = t.FirstOrDefault().batch,
+                    transaction = t.FirstOrDefault().transaction,
+                    transactionDetail = t.FirstOrDefault().transactionDetail
+
+                } )
+                .ToList();
+
+            List<GLExportLineItem> items = GenerateLineItems( groupedTransactions, "Contributions", ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
+
+            return items;
         }
 
         private string convertGLItemToStr( GLExportLineItem item )
@@ -534,7 +541,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     Name = b.Name,
                     AccountingSystemCode = b.AccountingSystemCode,
                     TransactionCount = b.Transactions.Count(),
-                    TransactionAmount = b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M,
+                    TransactionAmount = b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M,
                     ControlAmount = b.ControlAmount,
                     CampusName = b.Campus != null ? b.Campus.Name : "",
                     Status = b.Status,
@@ -548,7 +555,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                             AccountId = s.Key,
                             AccountOrder = s.Max( d => d.Account.Order ),
                             AccountName = s.Max( d => d.Account.Name ),
-                            Amount = s.Sum( d => (decimal?)d.Amount ) ?? 0.0M
+                            Amount = s.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M
                         } )
                         .OrderBy( s => s.AccountOrder )
                         .ToList()
@@ -563,7 +570,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 {
                     a.Key.Name,
                     a.Key.Order,
-                    TotalAmount = (decimal?)a.Sum( d => d.Amount )
+                    TotalAmount = ( decimal? ) a.Sum( d => d.Amount )
                 } ).OrderBy( a => a.Order );
 
             }
@@ -668,11 +675,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         {
                             if ( sortProperty.Direction == SortDirection.Ascending )
                             {
-                                sortedQry = qry.OrderBy( b => b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M );
+                                sortedQry = qry.OrderBy( b => b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M );
                             }
                             else
                             {
-                                sortedQry = qry.OrderByDescending( b => b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M );
+                                sortedQry = qry.OrderByDescending( b => b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M );
                             }
 
                             break;
@@ -793,9 +800,12 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 {
                     switch ( Status )
                     {
-                        case BatchStatus.Closed: return "label label-default";
-                        case BatchStatus.Open: return "label label-info";
-                        case BatchStatus.Pending: return "label label-warning";
+                        case BatchStatus.Closed:
+                            return "label label-default";
+                        case BatchStatus.Open:
+                            return "label label-info";
+                        case BatchStatus.Pending:
+                            return "label label-warning";
                     }
 
                     return string.Empty;

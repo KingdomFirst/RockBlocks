@@ -77,6 +77,7 @@
                                 <Rock:DatePicker ID="dpExportDate" runat="server" Label="Date" Required="true"></Rock:DatePicker>
                             <div class="actions">
                                 <asp:LinkButton ID="btnExport" runat="server" CssClass="btn btn-primary" Text="Export" OnClick="btnExport_Click" />
+                                <asp:LinkButton ID="btnPreview" runat="server" CssClass="btn btn-default" Text="Preview" OnClick="btnPreview_Click" />
                             </div>
                         </div>
 
@@ -86,21 +87,18 @@
                 <div class="col-md-7 margin-t-md">
                     <div class="panel panel-block">
                 <div class="panel-heading">
-                    <h1 class="panel-title"><i class="fa fa-archive"></i>&nbsp;Batch List</h1>
+                    <h1 class="panel-title">Preview</h1>
                 </div>
                 <div class="panel-body">
                     <div class="grid grid-panel">
-                        <Rock:Grid ID="Grid1" runat="server" RowItemText="Batch" AllowSorting="false" CssClass="js-grid-batch-list">
-                            <Columns>
-                                <Rock:SelectField />
-                                <Rock:RockBoundField DataField="Id" HeaderText="Id" SortExpression="Id" ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
-                                <Rock:DateField DataField="BatchStartDateTime" HeaderText="Date" SortExpression="BatchStartDateTime" />
-                                <Rock:RockBoundField DataField="Name" HeaderText="Title" SortExpression="Name" />
-                                <Rock:RockBoundField DataField="AccountingSystemCode" HeaderText="Accounting Code" SortExpression="AccountingSystemCode" />
-                                <Rock:RockBoundField DataField="TransactionCount" HeaderText="<span class='hidden-print'>Transaction Count</span><span class='visible-print-inline'>Txns</span>" HtmlEncode="false" SortExpression="TransactionCount" DataFormatString="{0:N0}" ItemStyle-HorizontalAlign="Right" />
-                                <Rock:CurrencyField DataField="TransactionAmount" HeaderText="<span class='hidden-print'>Transaction Total</span><span class='visible-print-inline'>Txn Total</span>" HtmlEncode="false" SortExpression="TransactionAmount" ItemStyle-HorizontalAlign="Right" />
-                                <Rock:RockBoundField DataField="AccountSummaryHtml" HeaderText="Accounts" HtmlEncode="false" />
-                                <Rock:RockBoundField DataField="CampusName" HeaderText="Campus" SortExpression="Campus.Name" ColumnPriority="Desktop" />
+                        <Rock:Grid ID="BatchExportList" runat="server" RowItemText="Transaction" AllowSorting="false" CssClass="js-grid-batch-list">
+                            <Columns> 
+                                <Rock:RockBoundField DataField="CompanyNumber" HeaderText="Company" SortExpression="CompanyNumber" />
+                                <Rock:RockBoundField DataField="FundNumber" HeaderText="Fund" SortExpression="FundNumber" />
+                                <Rock:RockBoundField DataField="AccountNumber" HeaderText="Account" SortExpression="AccountNumber" ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
+                                <Rock:RockBoundField DataField="DepartmentNumber" HeaderText="Dept" SortExpression="DepartmentNumber" />
+                                <Rock:RockBoundField DataField="ProjectCode" HeaderText="Proj" />
+                                <Rock:CurrencyField DataField="Amount" HeaderText="Amount" SortExpression="Amount" ItemStyle-HorizontalAlign="Right" />
                             </Columns>
                         </Rock:Grid>
                     </div>
