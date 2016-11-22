@@ -249,33 +249,56 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                          ControlAmount = b.ControlAmount,
                          AccountSummaryList = b.Transactions
                              .SelectMany( t => t.TransactionDetails )
-                             .Select( d => new
-                             {
-                                 BankAccount = d.GetAttributeValue( "GeneralLedgerExport_BankAccount" ),
-                                 CompanyNumber = d.GetAttributeValue( "GeneralLedgerExport_Company" ),
-                                 Fund = d.GetAttributeValue( "GeneralLedgerExport_Fund" ),
-                                 RevenueAccount = d.GetAttributeValue( "GeneralLedgerExport_RevenueAccount" ),
-                                 RevenueDepartment = d.GetAttributeValue( "GeneralLedgerExport_RevenueDepartment" ),
-                                 d.AccountId,
-                                 obj = d
-                             } )
-                             .OrderBy( s => s.obj.Account.Order )
+                             .OrderBy( s => s.Account.Order )
                              .ToList()
                      } )
                      .ToList();
 
-                var anotherObj = batchesToUpdateDetail
-                    .GroupBy( f => f.AccountSummaryList
-                        .Select( g => new { g.BankAccount, g.CompanyNumber, g.Fund, g.RevenueAccount, g.RevenueDepartment } ) )
-                    .Select( h => new
-                    {
-                        Id = h.Max( i => i.Id ),
-                        Name = h.Max( i => i.Name ),
-                        TransactionAmount = h.Max( i => i.TransactionAmount ),
-                        AccountSummaryList = h.Max( i => i.AccountSummaryList )
-                    } );
+                List<GLTransaction> batchTransactions = new List<GLTransaction>();
 
-                List<GLExportLineItem> items = GenerateLineItems( batchesToUpdate, "Contributions", ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
+                foreach ( var batch in batchesToUpdate )
+                {
+                    batch.LoadAttributes();
+                    foreach ( var transaction in batch.Transactions )
+                    {
+                        transaction.LoadAttributes();
+                        foreach (var transactionDetail in transaction.TransactionDetails)
+                        {
+                            transactionDetail.Account.LoadAttributes();
+
+                            GLTransaction transactionItem = new GLTransaction();
+                            transactionItem.glCompany = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_Company" );
+                            transactionItem.glFund = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_Fund" );
+                            transactionItem.glBankAccount = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_BankAccount" );
+                            transactionItem.glRevenueAccount = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_RevenueAccount" );
+                            transactionItem.glRevenueDepartment = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_RevenueDepartment" );
+                            transactionItem.projectCode = transaction.GetAttributeValue( "Project" );
+                            transactionItem.total = transactionDetail.Amount;
+
+                            transactionItem.batch = batch;
+                            transactionItem.transaction = transaction;
+                            transactionItem.transactionDetail = transactionDetail;
+
+                            batchTransactions.Add( transactionItem );
+
+                        }
+                    }
+                }
+
+                var groupedTransactions = batchTransactions.GroupBy( d => new { d.glBankAccount, d.glCompany, d.glFund, d.glRevenueAccount, d.glRevenueDepartment, d.projectCode } )
+                    .Select( t => new GLTransaction
+                    {
+                        glBankAccount = t.Key.glBankAccount,
+                        glCompany = t.Key.glCompany,
+                        glFund = t.Key.glFund,
+                        glRevenueAccount = t.Key.glRevenueAccount,
+                        glRevenueDepartment = t.Key.glRevenueDepartment,
+                        projectCode = t.Key.projectCode,
+                        total = t.Sum( f => ( decimal? ) f.total ) ?? 0.0M
+                    } )
+                    .ToList();
+
+                List<GLExportLineItem> items = GenerateLineItems( batchTransactions, "Contributions", ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
 
                 StringBuilder stringBuilder = new StringBuilder();
                 int num = 0;
@@ -345,80 +368,64 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             return str2;
         }
 
-        private List<GLExportLineItem> GenerateLineItems( List<FinancialBatch> batchesToUpdate, string description, string journalType, string accountingPeriod, DateTime? selectedDate )
+        private List<GLExportLineItem> GenerateLineItems( List<GLTransaction> transactionItems, string description, string journalType, string accountingPeriod, DateTime? selectedDate )
         {
             List<GLExportLineItem> returnList = new List<GLExportLineItem>();
-            foreach ( var batch in batchesToUpdate )
+            foreach ( var transaction in transactionItems )
             {
-                batch.LoadAttributes();
-                foreach ( var transaction in batch.Transactions )
+                //transaction.LoadAttributes();
+
+                string projectCode = String.Empty;
+
+                //var transactionProject = transaction.GetAttributeValue( "Project" );
+                if ( !String.IsNullOrWhiteSpace( transaction.projectCode ) )
                 {
-                    transaction.LoadAttributes();
-
-                    string projectCode = String.Empty;
-
-                    var transactionProject = transaction.GetAttributeValue( "Project" );
-                    if ( !String.IsNullOrWhiteSpace( transactionProject ) )
+                    var dt = DefinedValueCache.Read( transaction.projectCode );
+                    var projects = DefinedTypeCache.Read( dt.DefinedTypeId );
+                    if ( projects != null )
                     {
-                        var dt = DefinedValueCache.Read( transactionProject );
-                        var projects = DefinedTypeCache.Read( dt.DefinedTypeId );
-                        if ( projects != null )
+                        foreach ( var project in projects.DefinedValues.OrderByDescending( a => a.Value.AsInteger() ).Where( p => p.Guid.ToString().ToLower() == transaction.projectCode.ToString().ToLower() ) )
                         {
-                            foreach ( var project in projects.DefinedValues.OrderByDescending( a => a.Value.AsInteger() ).Where( p => p.Guid.ToString().ToLower() == transactionProject.ToString().ToLower() ) )
-                            {
-                                projectCode = project.GetAttributeValue( "Code" );
-                            }
+                            projectCode = project.GetAttributeValue( "Code" );
                         }
                     }
-                    var transactionDetails = transaction.TransactionDetails
-                        .Select( t => new
-                        {
-                            BankAccount = t.GetAttributeValue( "GeneralLedgerExport_BankAccount"),
-                            CompanyNumber = t.GetAttributeValue( "GeneralLedgerExport_Company" ),
-                            Fund = t.GetAttributeValue( "GeneralLedgerExport_Fund" ),
-                            RevenueAccount = t.GetAttributeValue( "GeneralLedgerExport_RevenueAccount" ),
-                            RevenueDepartment = t.GetAttributeValue( "GeneralLedgerExport_RevenueDepartment" ),
-                            t.AccountId,
-                            t.Account,
-                            t.Amount
-                        } )
-                        .OrderBy( s => s.Account.Order ).ToList();
-
-                    GLExportLineItem generalLedgerExportLineItem = new GLExportLineItem()
-                    {
-                        AccountingPeriod = accountingPeriod,
-                        AccountNumber = "", //row["gl_bank_account"].ToString(),
-                        Amount = ( decimal ) transaction.TotalAmount,
-                        CompanyNumber = "COMPANYNUMBER",//row["gl_company"].ToString(),
-                        Date = selectedDate,
-                        DepartmentNumber = "",
-                        Description1 = description,
-                        Description2 = string.Empty,
-                        FundNumber = "FUNDNUM",//row["gl_fund"].ToString(),
-                        JournalNumber = 0,
-                        JournalType = journalType,
-                        ProjectCode = projectCode//row["project_code"].ToString()
-                    };
-                    if ( ValidateObject( generalLedgerExportLineItem ) )
-                        returnList.Add( generalLedgerExportLineItem );
-                    GLExportLineItem generalLedgerExportLineItem1 = new GLExportLineItem()
-                    {
-                        AccountingPeriod = accountingPeriod,
-                        AccountNumber = "REVENUEACCOUNT",//row["gl_revenue_account"].ToString(),
-                        Amount = new decimal( 10, 0, 0, true, 1 ) * ( decimal ) transaction.TotalAmount,
-                        CompanyNumber = "COMPANYNUMBER",//row["gl_company"].ToString(),
-                        Date = selectedDate,
-                        DepartmentNumber = "REVDEPT",//row["gl_revenue_department"].ToString(),
-                        Description1 = description,
-                        Description2 = string.Empty,
-                        FundNumber = "FUNDNUM",//row["gl_fund"].ToString(),
-                        JournalNumber = 0,
-                        JournalType = journalType,
-                        ProjectCode = projectCode//row["project_code"].ToString()
-                    };
-                    if ( ValidateObject( generalLedgerExportLineItem1 ) )
-                        returnList.Add( generalLedgerExportLineItem1 );
                 }
+
+                GLExportLineItem generalLedgerExportLineItem = new GLExportLineItem()
+                {
+                    AccountingPeriod = accountingPeriod,
+                    AccountNumber = transaction.glBankAccount, //row["gl_bank_account"].ToString(),
+                    Amount = ( decimal ) transaction.total,
+                    CompanyNumber = transaction.glCompany,//row["gl_company"].ToString(),
+                    Date = selectedDate,
+                    DepartmentNumber = "",
+                    Description1 = description,
+                    Description2 = string.Empty,
+                    FundNumber = transaction.glFund,//row["gl_fund"].ToString(),
+                    JournalNumber = 0,
+                    JournalType = journalType,
+                    ProjectCode = projectCode//row["project_code"].ToString()
+                };
+                nbResult.Text += "<strong>" + transaction.transactionDetail.Account.Name + "</strong><br>";
+                if ( ValidateObject( generalLedgerExportLineItem ) )
+                    returnList.Add( generalLedgerExportLineItem );
+                GLExportLineItem generalLedgerExportLineItem1 = new GLExportLineItem()
+                {
+                    AccountingPeriod = accountingPeriod,
+                    AccountNumber = transaction.glRevenueAccount,//row["gl_revenue_account"].ToString(),
+                    Amount = new decimal( 10, 0, 0, true, 1 ) * ( decimal ) transaction.total,
+                    CompanyNumber = transaction.glCompany,//row["gl_company"].ToString(),
+                    Date = selectedDate,
+                    DepartmentNumber = transaction.glRevenueDepartment,//row["gl_revenue_department"].ToString(),
+                    Description1 = description,
+                    Description2 = string.Empty,
+                    FundNumber = transaction.glFund,//row["gl_fund"].ToString(),
+                    JournalNumber = 0,
+                    JournalType = journalType,
+                    ProjectCode = projectCode//row["project_code"].ToString()
+                };
+                if ( ValidateObject( generalLedgerExportLineItem1 ) )
+                    returnList.Add( generalLedgerExportLineItem1 );
             }
             return returnList;
         }
@@ -691,7 +698,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             if ( !Validator.TryValidateObject( model, context, errors, true ) )
             {
-                nbResult.Text = string.Format( "Error exporting: <br>" );
+                nbResult.Text = string.Format( "Error exporting batch: <br>" );
                 nbResult.NotificationBoxType = NotificationBoxType.Warning;
                 nbResult.Visible = true;
 
@@ -816,6 +823,50 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             }
         }
 
+        public class GLTransaction : IEquatable<GLTransaction>
+        {
+            public string glCompany { get; set; }
+            public string glFund { get; set; }
+            public string glBankAccount { get; set; }
+            public string glRevenueDepartment { get; set; }
+            public string glRevenueAccount { get; set; }
+            public string projectCode { get; set; }
+            public decimal total { get; set; }
+
+            public FinancialBatch batch { get; set; }
+            public FinancialTransaction transaction { get; set; }
+            public FinancialTransactionDetail transactionDetail { get; set; }
+
+            public bool Equals( GLTransaction obj )
+            {
+                if ( ReferenceEquals( null, obj ) )
+                    return false;
+                if ( ReferenceEquals( this, obj ) )
+                    return true;
+                if ( obj.GetType() != this.GetType() )
+                    return false;
+                return string.Equals( glCompany, obj.glCompany )
+                    && string.Equals( glFund, obj.glFund )
+                    && string.Equals( glBankAccount, obj.glBankAccount )
+                    && string.Equals( glRevenueDepartment, obj.glRevenueDepartment )
+                    && string.Equals( glRevenueAccount, obj.glRevenueAccount )
+                    && string.Equals( projectCode, obj.projectCode );
+            }
+
+            public override int GetHashCode()
+            {
+                int hashglCompany = glCompany == null ? 0 : glCompany.GetHashCode();
+                int hashglFund = glFund == null ? 0 : glFund.GetHashCode();
+                int hashglBankAccount = glBankAccount == null ? 0 : glBankAccount.GetHashCode();
+                int hashglRevenueDepartment = glRevenueDepartment == null ? 0 : glRevenueDepartment.GetHashCode();
+                int hashglRevenueAccount = glRevenueAccount == null ? 0 : glRevenueAccount.GetHashCode();
+                int hashprojectCode = projectCode == null ? 0 : projectCode.GetHashCode();
+
+                return hashglCompany ^ hashglFund ^ hashglBankAccount ^ hashglRevenueDepartment ^ hashglRevenueAccount ^ hashprojectCode;
+            }
+
+        }
+
         public class GLExportLineItem
         {
             [StringLength( 2, ErrorMessage = "AccountingPeriod cannot have more than 2 characters in length." )]
@@ -827,6 +878,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             public decimal Amount { get; set; }
             [StringLength( 4, ErrorMessage = "CompanyNumber cannot have more than 4 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "CompanyNumber must be numeric." )]
+            [Required()]
             public string CompanyNumber { get; set; }
             public DateTime? Date { get; set; }
             [StringLength( 3, ErrorMessage = "DepartmentNumber cannot have more than 3 characters in length." )]
@@ -836,6 +888,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             public string Description2 { get; set; }
             [StringLength( 5, ErrorMessage = "FundNumber cannot have more than 5 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "FundNumber must be numeric." )]
+            [Required()]
             public string FundNumber { get; set; }
             [Range( 0, 99999, ErrorMessage = "JournalNumber cannot have more than 5 characters in length." )]
             public int JournalNumber { get; set; }
