@@ -20,7 +20,11 @@
                             <Rock:RockDropDownList ID="ddlTransactionType" runat="server"  Label="Contains Transaction Type" />
                             <Rock:RockTextBox ID="tbTitle" runat="server" Label="Title"></Rock:RockTextBox>
                             <Rock:RockTextBox ID="tbAccountingCode" runat="server" Label="Accounting Code"></Rock:RockTextBox>
-                            <Rock:RockDropDownList ID="ddlBatchExported" runat="server"  Label="Batch Exported" />
+                            <Rock:RockDropDownList ID="ddlBatchExported" runat="server"  Label="Batch Exported">
+                                <asp:ListItem Text="" Value="" Selected="True" />
+                                <asp:ListItem Text="No" Value="No" />
+                                <asp:ListItem Text="Yes" Value="Yes" />
+                            </Rock:RockDropDownList>
                         </Rock:GridFilter>
 
                         <Rock:ModalAlert ID="mdGridWarning" runat="server" />
@@ -46,6 +50,7 @@
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
                                 <Rock:RockBoundField DataField="Notes" HeaderText="Note" HtmlEncode="false" ColumnPriority="Desktop" />
+                                <Rock:AttributeField DataField="GLExport_BatchExported" HeaderText="Date Exported" />
                             </Columns>
                         </Rock:Grid>
                     </div>
