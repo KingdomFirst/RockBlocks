@@ -1,5 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupMemberSelfManageAddRemove.ascx.cs" Inherits="RockWeb.Plugins.com_kingdomfirstsolutions.Groups.GroupMemberSelfManageAddRemove" %>
-
+<link rel="stylesheet" href ="/Plugins/com_kingdomfirstsolutions/Groups/css/SelfJoinGroups.css" />
 <asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
 

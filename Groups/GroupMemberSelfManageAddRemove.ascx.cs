@@ -22,8 +22,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
     [DisplayName( "Group Member Self Manage/Add/Remove" )]
     [Category( "KFS > Groups" )]
     [Description( "Can Add/Remove a person from a group based on inputs from the URL query string (GroupId, PersonGuid) or let them manage their group membership." )]
-    [GroupTypeField( "Group Type", "", true, "" )]
-    [GroupField( "Default Group", "The default group to use if one is not passed through the query string (optional).", false, order: 0 )]
+    [GroupField( "Parent Group", "This is the parent group whose first level descendents will be used to populate the list.", true, order: 0 )]
+    [CodeEditorField( "Success Message", "Lava template to display when person saves their selections.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, true, @"<div class='alert alert-success'>
+    {{ Person.NickName }}, your selections have been successfully submitted.
+</div>", order: 0 )]
     [CodeEditorField( "Remove Success Message", "Lava template to display when person has been removed from the group.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, true, @"<div class='alert alert-success'>
     {{ Person.NickName }} has been removed from the group '{{ Group.Name }}'.
 </div>", order: 1 )]
@@ -32,22 +34,19 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
 </div>", order: 2 )]
     [BooleanField( "Warn When Not In Group", "Determines if the 'Not In Group Message'should be shown if the person is not in the group. Otherwise the success message will be shown", true, order: 3 )]
     [BooleanField( "Inactivate Instead of Remove", "Inactivates the person in the group instead of removing them.", false, key: "Inactivate", order: 4 )]
-    [GroupRoleField( "", "Default Group Member Role", "The default role to use if one is not passed through the query string (optional).", false )]
+    [GroupRoleField( "", "Default Group Member Role", "The default role to use if one is not passed through the query string (optional).", false, order: 5 )]
     [CodeEditorField( "Add Success Message", "Lava template to display when person has been added to the group.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, true, @"<div class='alert alert-success'>
     {{ Person.NickName }} has been added to the group '{{ Group.Name }}' with the role of {{ Role.Name }}.
-</div>" )]
+</div>", order: 6 )]
     [CodeEditorField( "Already In Group Message", "Lava template to display when person is already in the group with that role.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, true, @"<div class='alert alert-warning'>
     {{ Person.NickName }} is already in the group '{{ Group.Name }}' with the role of {{ Role.Name }}.
-</div>" )]
-    [EnumField( "Group Member Status", "The status to use when adding a person to the group.", typeof( GroupMemberStatus ), true, "Active" )]
-    [BooleanField( "Show Details", "Display detail information about the group beneath its checkbox when clicked." )]
-    [BooleanField( "Expand Description", "Flag to determine whether to expand the description panel by default." )]
-    [BooleanField( "None of the above", "Include a none of the above option when creating choices." )]
-    [CodeEditorField( "Success Message", "Lava template to display when person saves their selections.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, true, @"<div class='alert alert-success'>
-    {{ Person.NickName }}, your selections have been successfully submitted.
-</div>" )]
+</div>", order: 7 )]
+    [EnumField( "Group Member Status", "The status to use when adding a person to the group.", typeof( GroupMemberStatus ), true, "Active", order: 8 )]
+    [BooleanField( "Show Details", "Display detail information about the group beneath its checkbox when clicked.", order: 9 )]
+    [BooleanField( "Expand Description", "Flag to determine whether to expand the description panel by default.", order: 10 )]
+    [BooleanField( "None of the above", "Include a none of the above option when creating choices.", order: 11 )]
 
-    [BooleanField( "Enable Debug", "Shows the Lava variables available for this block" )]
+    [BooleanField( "Enable Debug", "Shows the Lava variables available for this block", order: 13 )]
     public partial class GroupMemberSelfManageAddRemove : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -114,6 +113,14 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
             }
             _person = person;
 
+            bool ExpandDescriptionSetting = GetAttributeValue( "ExpandDescription" ).AsBoolean();
+            if ( !ExpandDescriptionSetting )
+            {
+                LiteralControl expandDescriptions = new LiteralControl( "<script src='/Plugins/com_kingdomfirstsolutions/Groups/js/expandDescription.js'></script>" );
+                this.Page.Header.Controls.Add( expandDescriptions );
+            }
+
+
             if ( !Page.IsPostBack )
             {
 
@@ -141,10 +148,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                 else
                 {
                     Guid groupGuid = Guid.Empty;
-                    if ( Guid.TryParse( GetAttributeValue( "DefaultGroup" ), out groupGuid ) )
+                    if ( Guid.TryParse( GetAttributeValue( "ParentGroup" ), out groupGuid ) )
                     {
                         group = new GroupService( rockContext ).Queryable().Where( g => g.Guid == groupGuid ).FirstOrDefault();
-                        ;
                     }
                 }
 
@@ -154,8 +160,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                     return;
                 }
 
-
-                _action = Request.QueryString["action"] != string.Empty && Request.QueryString["action"] != null ? Request.QueryString["action"] : string.Empty;
+                    _action = Request.QueryString["action"] != string.Empty && Request.QueryString["action"] != null ? Request.QueryString["action"] : string.Empty;
 
 
                 // get status
@@ -508,20 +513,15 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
 
         protected void loadProfiles()
         {
-            // Get the group types that we're interested in
-            Guid? groupTypeGuid = GetAttributeValue( "GroupType" ).AsGuidOrNull();
-            if ( !groupTypeGuid.HasValue )
-            {
-                ShowError( "Error", "A valid Group Type is required." );
-                return;
-            }
-
             // Get query of groups of the selected group type
             var rockContext = new RockContext();
             var groupService = new GroupService( rockContext );
+            Guid groupGuid = Guid.Empty;
+            Guid.TryParse( GetAttributeValue( "ParentGroup" ), out groupGuid );
+
             var groupQry = groupService
                 .Queryable()
-                .Where( g => g.IsActive && g.GroupType.Guid.Equals( groupTypeGuid.Value ) && g.IsPublic );
+                .Where( g => g.IsActive && g.ParentGroup.Guid == groupGuid && g.IsPublic );
 
             List<Group> groups = null;
 
