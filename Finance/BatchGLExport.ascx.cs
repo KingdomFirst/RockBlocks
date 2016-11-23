@@ -31,6 +31,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         private int? _entityTypeId = null;
         private string _entityQualifierColumn = string.Empty;
         private string _entityQualifierValue = string.Empty;
+        private List<string> _errorMessage = new List<string>();
 
         protected RockContext rockContext = new RockContext();
         private FinancialBatchService batchService = null;
@@ -289,6 +290,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
         public void btnExport_Click( object sender, EventArgs e )
         {
+            nbResult.Text = string.Empty;
+
             var batchesSelected = new List<int>();
 
             gBatchList.SelectedKeys.ToList().ForEach( b => batchesSelected.Add( b.ToString().AsInteger() ) );
@@ -330,7 +333,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     ms.WriteTo( Response.OutputStream );
                     Response.End();
                 }
-                else
+                else if ( nbResult.NotificationBoxType != NotificationBoxType.Warning )
                 {
                     nbResult.Text = string.Format( "There were not any batches that were exportable selected." );
                     nbResult.NotificationBoxType = NotificationBoxType.Warning;
@@ -442,6 +445,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         transactionItem.projectCode = transaction.GetAttributeValue( "Project" );
                         transactionItem.total = transactionDetail.Amount;
 
+                        transactionItem.batch = batch;
                         transactionItem.transactionDetail = transactionDetail;
 
                         batchTransactions.Add( transactionItem );
@@ -461,17 +465,18 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     projectCode = t.Key.projectCode,
                     total = t.Sum( f => ( decimal? ) f.total ) ?? 0.0M,
 
+                    batch = t.FirstOrDefault().batch,
                     transactionDetail = t.FirstOrDefault().transactionDetail
 
                 } )
                 .ToList();
 
-            List<GLExportLineItem> items = GenerateLineItems( groupedTransactions, "Contributions", ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
+            List<GLExportLineItem> items = GenerateLineItems( groupedTransactions, ddlJournalType.SelectedValue, tbAccountingPeriod.Text, dpExportDate.SelectedDate );
 
             return items;
         }
 
-        private List<GLExportLineItem> GenerateLineItems( List<GLTransaction> transactionItems, string description, string journalType, string accountingPeriod, DateTime? selectedDate )
+        private List<GLExportLineItem> GenerateLineItems( List<GLTransaction> transactionItems, string journalType, string accountingPeriod, DateTime? selectedDate )
         {
             List<GLExportLineItem> returnList = new List<GLExportLineItem>();
             foreach ( var transaction in transactionItems )
@@ -499,15 +504,14 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     CompanyNumber = transaction.glCompany,
                     Date = selectedDate,
                     DepartmentNumber = "",
-                    Description1 = description,
+                    Description1 = string.Format( "{0}: {1}", transaction.batch.Id, transaction.batch.Name ), 
                     Description2 = string.Empty,
                     FundNumber = transaction.glFund,
                     JournalNumber = 0,
                     JournalType = journalType,
                     ProjectCode = projectCode
                 };
-                nbResult.Text += "<strong>" + transaction.transactionDetail.Account.Name + "</strong><br>";
-                if ( ValidateObject( generalLedgerExportLineItem ) )
+                if ( ValidateObject( generalLedgerExportLineItem, transaction.transactionDetail.Account.Name ) )
                     returnList.Add( generalLedgerExportLineItem );
                 GLExportLineItem generalLedgerExportLineItem1 = new GLExportLineItem()
                 {
@@ -517,16 +521,24 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     CompanyNumber = transaction.glCompany,
                     Date = selectedDate,
                     DepartmentNumber = transaction.glRevenueDepartment,
-                    Description1 = description,
+                    Description1 = string.Format( "{0}: {1}", transaction.batch.Id, transaction.batch.Name ),
                     Description2 = string.Empty,
                     FundNumber = transaction.glFund,
                     JournalNumber = 0,
                     JournalType = journalType,
                     ProjectCode = projectCode
                 };
-                if ( ValidateObject( generalLedgerExportLineItem1 ) )
+                if ( ValidateObject( generalLedgerExportLineItem1, transaction.transactionDetail.Account.Name ) )
                     returnList.Add( generalLedgerExportLineItem1 );
             }
+
+            if ( _errorMessage.Count > 0 )
+            {
+                nbResult.Text = string.Join("", _errorMessage.ToArray() );
+                nbResult.NotificationBoxType = NotificationBoxType.Warning;
+                nbResult.Visible = true;
+            }
+
             return returnList;
         }
 
@@ -846,7 +858,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             return sortedQry;
         }
 
-        private bool ValidateObject( GLExportLineItem model )
+        private bool ValidateObject( GLExportLineItem model, string accountName )
         {
 
             List<ValidationResult> errors = new List<ValidationResult>();
@@ -854,15 +866,18 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             if ( !Validator.TryValidateObject( model, context, errors, true ) )
             {
-                nbResult.Text = string.Format( "Error exporting batch: <br>" );
-                nbResult.NotificationBoxType = NotificationBoxType.Warning;
-                nbResult.Visible = true;
+                string tempMessage = string.Empty;
 
                 foreach ( ValidationResult e in errors )
                 {
-                    nbResult.Text += e.ErrorMessage;
-                    nbResult.Text += "<br>";
-                }
+                    tempMessage = string.Format( "Error with {0}: {1}<br>", accountName, e.ErrorMessage );
+
+                    if ( !_errorMessage.Contains( tempMessage ) )
+                    {
+                        _errorMessage.Add( tempMessage );
+                    }
+                }  
+
                 return false;
             }
 
@@ -995,6 +1010,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             public string projectCode { get; set; }
             public decimal total { get; set; }
 
+            public FinancialBatch batch { get; set; }
             public FinancialTransactionDetail transactionDetail { get; set; }
         }
 
@@ -1005,6 +1021,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             public string AccountingPeriod { get; set; }
             [StringLength( 9, ErrorMessage = "AccountNumber cannot have more than 9 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "AccountNumber must be numeric." )]
+            [Required()]
             public string AccountNumber { get; set; }
             public decimal Amount { get; set; }
             [StringLength( 4, ErrorMessage = "CompanyNumber cannot have more than 4 characters in length." )]
