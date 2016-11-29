@@ -21,7 +21,7 @@
 
             <Rock:NotificationBox ID="nbError" runat="server" Visible="false" NotificationBoxType="Danger"></Rock:NotificationBox>
 
-            <div id="divActions" runat="server" class="actions">
+            <div id="divActions" runat="server" class="actions" Visible="false">
                 <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
             </div>
 

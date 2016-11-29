@@ -302,7 +302,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                 }
 
             }
-            loadProfiles();
+            if (_action != "unsubscribe" && _action != "subscribe")
+            {
+                loadProfiles();
+                divActions.Visible = true;
+            }
         }
 
         #endregion
