@@ -66,6 +66,17 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             gBatchList.GridRebind += gBatchList_GridRebind;
             gBatchList.RowDataBound += gBatchList_RowDataBound;
 
+            object journalType = Session["JournalType"];
+            if ( journalType != null )
+            {
+                ddlJournalType.SetValue( journalType.ToString() );
+            }
+            object accountingPeriod = Session["AccountingPeriod"];
+            if ( accountingPeriod != null )
+            {
+                tbAccountingPeriod.Text = accountingPeriod.ToString();
+            }
+
             dpExportDate.SelectedDate = RockDateTime.Today;
 
             Rock.Model.Attribute attribute = null;
@@ -291,6 +302,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         public void btnExport_Click( object sender, EventArgs e )
         {
             nbResult.Text = string.Empty;
+            Session["JournalType"] = ddlJournalType.SelectedValue;
+            Session["AccountingPeriod"] = tbAccountingPeriod.Text;
 
             var batchesSelected = new List<int>();
 
@@ -325,13 +338,18 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
                     output = stringBuilder.ToString();
 
-                    MemoryStream ms = new MemoryStream( Encoding.ASCII.GetBytes( output ) );
-                    Response.ClearContent();
-                    Response.ClearHeaders();
-                    Response.ContentType = "application/text";
-                    Response.AddHeader( "Content-Disposition", "attachment; filename=GLTRN2000.txt" );
-                    ms.WriteTo( Response.OutputStream );
-                    Response.End();
+                    Session["GLExportLineItems"] = output;
+
+                    var url = "/Plugins/com_kingdomfirstsolutions/Finance/GLExport.aspx";
+                    ScriptManager.RegisterClientScriptBlock( this, typeof( UserControl ), "batchexport", string.Format( "window.open('{0}');", url ), true );
+
+                    //MemoryStream ms = new MemoryStream( Encoding.ASCII.GetBytes( output ) );
+                    //Response.ClearContent();
+                    //Response.ClearHeaders();
+                    //Response.ContentType = "application/text";
+                    //Response.AddHeader( "Content-Disposition", "attachment; filename=GLTRN2000.txt" );
+                    //ms.WriteTo( Response.OutputStream );
+                    //Response.End();
                 }
                 else if ( nbResult.NotificationBoxType != NotificationBoxType.Warning )
                 {
@@ -625,7 +643,13 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             drpBatchDate.DelimitedValues = gfBatchFilter.GetUserPreference( "Date Range" );
 
-            ddlBatchExported.SetValue( gfBatchFilter.GetUserPreference( "Batch Exported" ) );
+            string batchExportedFilter = gfBatchFilter.GetUserPreference( "Batch Exported" );
+            if ( string.IsNullOrWhiteSpace( batchExportedFilter ) )
+            {
+                batchExportedFilter = "No";
+            }
+            ddlBatchExported.SetValue( batchExportedFilter );
+
 
         }
 

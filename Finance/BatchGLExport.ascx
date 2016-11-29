@@ -21,14 +21,14 @@
                             <Rock:RockTextBox ID="tbTitle" runat="server" Label="Title"></Rock:RockTextBox>
                             <Rock:RockTextBox ID="tbAccountingCode" runat="server" Label="Accounting Code"></Rock:RockTextBox>
                             <Rock:RockDropDownList ID="ddlBatchExported" runat="server"  Label="Batch Exported">
-                                <asp:ListItem Text="" Value="" Selected="True" />
-                                <asp:ListItem Text="No" Value="No" />
+                                <asp:ListItem Text="" Value="" />
+                                <asp:ListItem Text="No" Value="No" Selected="True" />
                                 <asp:ListItem Text="Yes" Value="Yes" />
                             </Rock:RockDropDownList>
                         </Rock:GridFilter>
 
                         <Rock:ModalAlert ID="mdGridWarning" runat="server" />
-                        <Rock:Grid ID="gBatchList" runat="server" RowItemText="Batch" AllowSorting="true" CssClass="js-grid-batch-list">
+                        <Rock:Grid ID="gBatchList" runat="server" RowItemText="Batch" AllowSorting="true" CssClass="js-grid-batch-list" ValidateRequestMode="Disabled">
                             <Columns>
                                 <Rock:SelectField />
                                 <Rock:RockBoundField DataField="Id" HeaderText="Id" SortExpression="Id" ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
@@ -64,7 +64,7 @@
                             <h1 class="panel-title">GL File Export</h1>
                         </div>
                         <div class="panel-body">
-                                <Rock:RockDropDownList ID="ddlJournalType" runat="server" Label="Journal Type" Required="true">
+                                <Rock:RockDropDownList ID="ddlJournalType" runat="server" Label="Journal Type" Required="true" ValidationGroup="KFSGLExport">
                                     <asp:ListItem Text="" Value="" Selected="True"></asp:ListItem>
                                     <asp:ListItem Text="Cash Receipts" Value="CR"></asp:ListItem>
                                     <asp:ListItem Text="Accounts Payable" Value="AP"></asp:ListItem>
@@ -78,11 +78,11 @@
                                     <asp:ListItem Text="Gifts" Value="GF"></asp:ListItem>
                                     <asp:ListItem Text="Expense Amortization" Value="AM"></asp:ListItem>
                                 </Rock:RockDropDownList>
-                                <Rock:RockTextBox ID="tbAccountingPeriod" runat="server" label="Accounting Period" Required="true" Width="50"></Rock:RockTextBox>
-                                <Rock:DatePicker ID="dpExportDate" runat="server" Label="Date" Required="true"></Rock:DatePicker>
+                                <Rock:RockTextBox ID="tbAccountingPeriod" runat="server" label="Accounting Period" Required="true" Width="50" ValidationGroup="KFSGLExport"></Rock:RockTextBox>
+                                <Rock:DatePicker ID="dpExportDate" runat="server" Label="Date" Required="true" ValidationGroup="KFSGLExport"></Rock:DatePicker>
                             <div class="actions">
-                                <asp:LinkButton ID="btnExport" runat="server" CssClass="btn btn-primary" Text="Export" OnClick="btnExport_Click" OnClientClick="setTimeout(function () { window.location.reload(1);}, 5000);" />
-                                <asp:LinkButton ID="btnPreview" runat="server" CssClass="btn btn-default" Text="Preview" OnClick="btnPreview_Click" />
+                                <asp:LinkButton ID="btnExport" runat="server" CssClass="btn btn-primary" Text="Export" OnClick="btnExport_Click" ValidationGroup="KFSGLExport" />
+                                <asp:LinkButton ID="btnPreview" runat="server" CssClass="btn btn-default" Text="Preview" OnClick="btnPreview_Click" ValidationGroup="KFSGLExport" />
                             </div>
                         </div>
 
