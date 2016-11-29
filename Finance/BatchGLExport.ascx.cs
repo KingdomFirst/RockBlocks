@@ -341,15 +341,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     Session["GLExportLineItems"] = output;
 
                     var url = "/Plugins/com_kingdomfirstsolutions/Finance/GLExport.aspx";
-                    ScriptManager.RegisterClientScriptBlock( this, typeof( UserControl ), "batchexport", string.Format( "window.open('{0}');", url ), true );
+                    ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "batchexport", string.Format( "window.open('{0}');", url ), true );
 
-                    //MemoryStream ms = new MemoryStream( Encoding.ASCII.GetBytes( output ) );
-                    //Response.ClearContent();
-                    //Response.ClearHeaders();
-                    //Response.ContentType = "application/text";
-                    //Response.AddHeader( "Content-Disposition", "attachment; filename=GLTRN2000.txt" );
-                    //ms.WriteTo( Response.OutputStream );
-                    //Response.End();
                 }
                 else if ( nbResult.NotificationBoxType != NotificationBoxType.Warning )
                 {

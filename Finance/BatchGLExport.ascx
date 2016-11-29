@@ -114,7 +114,4 @@
             <Rock:NotificationBox ID="nbResult" runat="server" Visible="false" Dismissable="true"></Rock:NotificationBox>
         </asp:Panel>
     </ContentTemplate>
-    <Triggers>
-        <asp:PostBackTrigger ControlID="btnExport" />
-    </Triggers>
 </asp:UpdatePanel>
