@@ -19,7 +19,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
     /// <summary>
     /// Template block for developers to use to start a new block.
     /// </summary>
-    [DisplayName( "Group Member Self Manage/Add/Remove" )]
+    [DisplayName( "KFS Self Join Groups" )]
     [Category( "KFS > Groups" )]
     [Description( "Can Add/Remove a person from a group based on inputs from the URL query string (GroupId, PersonGuid) or let them manage their group membership." )]
     [GroupField( "Parent Group", "This is the parent group whose first level descendents will be used to populate the list.", true, order: 0 )]
@@ -47,7 +47,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
     [BooleanField( "None of the above", "Include a none of the above option when creating choices.", order: 11 )]
 
     [BooleanField( "Enable Debug", "Shows the Lava variables available for this block", order: 13 )]
-    public partial class GroupMemberSelfManageAddRemove : Rock.Web.UI.RockBlock
+    public partial class KFSSelfJoinGroups : Rock.Web.UI.RockBlock
     {
         #region Fields
 
@@ -545,6 +545,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                 var groupMemberList = groupMemberService.Queryable()
                                             .Where( m => m.GroupId == g.Id && m.PersonId == _person.Id )
                                             .ToList();
+                var gm = (GroupMember)null;
 
                 if ( groupMemberList.Count > 0 )
                 {
