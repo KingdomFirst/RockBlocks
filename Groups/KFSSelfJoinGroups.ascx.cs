@@ -229,6 +229,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                         {
                             groupMemberRole = new GroupTypeRoleService( rockContext ).Get( groupMemberRoleGuid );
                         }
+                        if ( groupMemberRole == null && group != null && group.GroupType.DefaultGroupRoleId.HasValue )
+                        {
+                            groupMemberRole = group.GroupType.DefaultGroupRole;
+                        }
                     }
 
                     if ( groupMemberRole == null )
@@ -240,7 +244,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                     mergeFields.Add( "Role", groupMemberRole );
 
                     var groupMemberList = groupMemberService.Queryable()
-                                            .Where( m => m.PersonId == person.Id && m.GroupRoleId == groupMemberRole.Id )
+                                            .Where( m => m.PersonId == person.Id && m.Group.Id == group.Id && m.GroupRoleId == groupMemberRole.Id )
                                             .ToList();
 
                     // ensure that the person is not already in the group
