@@ -696,7 +696,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         .ToList()
                 } );
 
-                var attributeBatchRowList = batchRowQry.ToList();
+                var attributeBatchRowList = batchRowQry.Skip( gBatchList.PageIndex * gBatchList.PageSize ).Take( gBatchList.PageSize ).ToList();
 
                 foreach ( var batchRow in attributeBatchRowList )
                 {
@@ -704,6 +704,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     batchRow.batchExportedDT = batchRow.batch.GetAttributeValue( "GLExport_BatchExported" );
                 }
 
+                gBatchList.SetLinqDataSource( batchRowQry );
                 gBatchList.DataSource = attributeBatchRowList;
                 gBatchList.EntityTypeId = EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id;
                 gBatchList.DataBind();
