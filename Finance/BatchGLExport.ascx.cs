@@ -418,14 +418,18 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             rockContext.SaveChanges();
 
+            string batchCompleteNotice = "batch was";
+            if ( batchesToUpdate.Count() > 1 )
+            {
+                batchCompleteNotice = "batches were";
+            }
+
             nbResult.Text = string.Format(
-                "{0} batches were {1}. <br>",
-                batchesToUpdate.Count().ToString( "N0" ),
-                "closed" );
+                "{0} {1} {2}. <br>",
+                batchesToUpdate.Count().ToString( "N0" ), batchCompleteNotice, "closed" );
             nbResult.Text += string.Format(
-                "{0} batches were {1}.",
-                batchesToUpdate.Count().ToString( "N0" ),
-                "exported" );
+                "{0} {1} {2}.",
+                batchesToUpdate.Count().ToString( "N0" ), batchCompleteNotice, "exported" );
 
             nbResult.NotificationBoxType = NotificationBoxType.Success;
             nbResult.Visible = true;
