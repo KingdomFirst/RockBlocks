@@ -32,6 +32,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         private string _entityQualifierColumn = string.Empty;
         private string _entityQualifierValue = string.Empty;
         private List<string> _errorMessage = new List<string>();
+        private string attributeKey = "GLExport_BatchExported";
 
         protected RockContext rockContext = new RockContext();
         private FinancialBatchService batchService = null;
@@ -88,13 +89,14 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             if ( _entityTypeId != null )
             {
                 attributeQuery = attributeService.Get( _entityTypeId, _entityQualifierColumn, _entityQualifierValue );
+                attributeQuery = attributeQuery.Where( a => a.Key == attributeKey );
             }
             if ( attributeQuery.Count() == 0 )
             {
                 Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
                 edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.DATE_TIME ).Id;
                 edtAttribute.Name = "Batch Exported";
-                edtAttribute.Key = "GLExport_BatchExported";
+                edtAttribute.Key = attributeKey;
 
                 attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, _entityTypeId, _entityQualifierColumn, _entityQualifierValue );
                 // Attribute will be null if it was not valid
@@ -368,7 +370,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         {
             var attributeValueService = new AttributeValueService( rockContext );
             var attributes = attributeService.GetByEntityTypeId( _entityTypeId );
-            var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == "GLExport_BatchExported" );
+            var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == attributeKey );
 
             var attribute = AttributeCache.Read( exported.Id );
 
@@ -392,8 +394,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 var changes = new List<string>();
                 History.EvaluateChange( changes, "Status", batch.Status, newStatus );
                 batch.Status = newStatus;
-                History.EvaluateChange( changes, "Batch Exported", batch.GetAttributeValue( "GLExport_BatchExported" ), newDateExported.ToString() );
-                batch.SetAttributeValue( "GLExport_BatchExported", newDateExported );
+                History.EvaluateChange( changes, "Batch Exported", batch.GetAttributeValue( attributeKey ), newDateExported.ToString() );
+                batch.SetAttributeValue( attributeKey, newDateExported );
 
                 if ( !batch.IsValid )
                 {
@@ -722,7 +724,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 foreach ( var batchRow in attributeBatchRowList )
                 {
                     batchRow.batch.LoadAttributes();
-                    batchRow.batchExportedDT = batchRow.batch.GetAttributeValue( "GLExport_BatchExported" );
+                    batchRow.batchExportedDT = batchRow.batch.GetAttributeValue( attributeKey );
                 }
 
                 gBatchList.SetLinqDataSource( batchRowQry );
