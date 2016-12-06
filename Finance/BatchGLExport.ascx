@@ -115,3 +115,4 @@
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>
+<iframe width="1" height="1" src="#" id="downloadIframe" name="downloadIframe"></iframe>

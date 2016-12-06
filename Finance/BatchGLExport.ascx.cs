@@ -77,8 +77,15 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             {
                 tbAccountingPeriod.Text = accountingPeriod.ToString();
             }
-
-            dpExportDate.SelectedDate = RockDateTime.Today;
+            var exportDate = Session["ExportDate"];
+            if ( exportDate != null )
+            {
+                dpExportDate.SelectedDate = DateTime.Parse( exportDate.ToString() );
+            }
+            else
+            {
+                dpExportDate.SelectedDate = RockDateTime.Today;
+            }
 
             Rock.Model.Attribute attribute = null;
 
@@ -306,6 +313,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             nbResult.Text = string.Empty;
             Session["JournalType"] = ddlJournalType.SelectedValue;
             Session["AccountingPeriod"] = tbAccountingPeriod.Text;
+            Session["ExportDate"] = dpExportDate.SelectedDate;
 
             var batchesSelected = new List<int>();
 
@@ -343,7 +351,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     Session["GLExportLineItems"] = output;
 
                     var url = "/Plugins/com_kingdomfirstsolutions/Finance/GLExport.aspx";
-                    ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "batchexport", string.Format( "window.open('{0}');", url ), true );
+                    ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "batchexport", string.Format( "window.downloadIframe.location = '{0}';", url ), true );
 
                 }
                 else if ( nbResult.NotificationBoxType != NotificationBoxType.Warning )
@@ -521,7 +529,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     CompanyNumber = transaction.glCompany,
                     Date = selectedDate,
                     DepartmentNumber = "",
-                    Description1 = string.Format( "{0}: {1}", transaction.batch.Id, transaction.batch.Name ), 
+                    Description1 = string.Format( "{0}: {1}", transaction.batch.Id, transaction.batch.Name ),
                     Description2 = string.Empty,
                     FundNumber = transaction.glFund,
                     JournalNumber = 0,
@@ -551,7 +559,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             if ( _errorMessage.Count > 0 )
             {
-                nbResult.Text = string.Join("", _errorMessage.ToArray() );
+                nbResult.Text = string.Join( "", _errorMessage.ToArray() );
                 nbResult.NotificationBoxType = NotificationBoxType.Warning;
                 nbResult.Visible = true;
             }
@@ -900,7 +908,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     {
                         _errorMessage.Add( tempMessage );
                     }
-                }  
+                }
 
                 return false;
             }
