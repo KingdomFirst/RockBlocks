@@ -519,10 +519,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                             projectCode = project.GetAttributeValue( "Code" );
                         }
                     }
-                    if (projectCode == null || projectCode == String.Empty)
-                    {
-                        _errorMessage.Add( string.Format( "Project code cannot be empty. Batch id: {0}, Account: {1}<br>", transaction.batch.Id, transaction.glBankAccount ) );
-                    }
                 }
 
                 GLExportLineItem generalLedgerExportLineItem = new GLExportLineItem()
@@ -1079,6 +1075,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             [StringLength( 2, ErrorMessage = "JournalType cannot have more than 2 characters in length." )]
             public string JournalType { get; set; }
             [StringLength( 50, ErrorMessage = "ProjectCode cannot have more than 50 characters in length." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "Project Code cannot be null." )]
             public string ProjectCode { get; set; }
         }
 
