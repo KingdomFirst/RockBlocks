@@ -331,19 +331,19 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 string output = String.Empty;
                 List<GLExportLineItem> items = getExportLineItems( batchesToUpdate );
 
-                StringBuilder stringBuilder = new StringBuilder();
-                int num = 0;
-                foreach ( GLExportLineItem lineitem in items )
-                {
-                    if ( num > 0 )
-                    {
-                        stringBuilder.Append( Environment.NewLine );
-                    }
-                    stringBuilder.Append( convertGLItemToStr( lineitem ) );
-                    num++;
-                }
                 if ( items.Count > 0 && nbResult.NotificationBoxType != NotificationBoxType.Warning )
                 {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    int num = 0;
+                    foreach ( GLExportLineItem lineitem in items )
+                    {
+                        if ( num > 0 )
+                        {
+                            stringBuilder.Append( Environment.NewLine );
+                        }
+                        stringBuilder.Append( convertGLItemToStr( lineitem ) );
+                        num++;
+                    }
                     setExported( batchesToUpdate );
 
                     output = stringBuilder.ToString();
@@ -518,6 +518,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         {
                             projectCode = project.GetAttributeValue( "Code" );
                         }
+                    }
+                    if (projectCode == null || projectCode == String.Empty)
+                    {
+                        _errorMessage.Add( string.Format( "Project code cannot be empty. Batch id: {0}, Account: {1}<br>", transaction.batch.Id, transaction.glBankAccount ) );
                     }
                 }
 
