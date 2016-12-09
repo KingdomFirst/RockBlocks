@@ -67,6 +67,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             gBatchList.GridRebind += gBatchList_GridRebind;
             gBatchList.RowDataBound += gBatchList_RowDataBound;
 
+            BatchExportList.ShowFooter = false;
+            BatchExportList.Actions.ShowExcelExport = false;
+            BatchExportList.Actions.ShowMergeTemplate = false;
+            BatchExportList.PagerSettings.Visible = false;
+
             object journalType = Session["JournalType"];
             if ( journalType != null )
             {
@@ -298,12 +303,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 .Where( b => !attributeValues.Select( v => v.EntityId ).Contains( b.Id ) )
                 .ToList();
 
-            string output = String.Empty;
             List<GLExportLineItem> items = getExportLineItems( batchesToUpdate );
-            BatchExportList.ShowFooter = false;
-            BatchExportList.Actions.ShowExcelExport = false;
-            BatchExportList.Actions.ShowMergeTemplate = false;
-            BatchExportList.PagerSettings.Visible = false;
+
+            batchPreviewHdr.InnerText = "Preview - " + dpExportDate.SelectedDate.Value.ToShortDateString();
             BatchExportList.DataSource = new BindingList<GLExportLineItem>( items );
             BatchExportList.DataBind();
         }
@@ -344,6 +346,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         stringBuilder.Append( convertGLItemToStr( lineitem ) );
                         num++;
                     }
+
+                    batchPreviewHdr.InnerText = "Exported Preview - " + dpExportDate.SelectedDate.Value.ToShortDateString();
+                    BatchExportList.DataSource = new BindingList<GLExportLineItem>( items );
+                    BatchExportList.DataBind();
+
                     setExported( batchesToUpdate );
 
                     output = stringBuilder.ToString();
@@ -518,6 +525,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         {
                             projectCode = project.GetAttributeValue( "Code" );
                         }
+                    }
+                    if ( String.IsNullOrWhiteSpace( projectCode ) )
+                    {
+                        _errorMessage.Add( string.Format( "Project code cannot be empty. Batch id: {0}, Account: {1}<br>", transaction.batch.Id, transaction.glBankAccount ) );
                     }
                 }
 
@@ -1050,32 +1061,40 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         {
             [StringLength( 2, ErrorMessage = "AccountingPeriod cannot have more than 2 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "AccountingPeriod must be numeric." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "AccountingPeriod cannot be null." )]
             public string AccountingPeriod { get; set; }
             [StringLength( 9, ErrorMessage = "AccountNumber cannot have more than 9 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "AccountNumber must be numeric." )]
             [Required()]
             public string AccountNumber { get; set; }
+            [Required( AllowEmptyStrings = true, ErrorMessage = "Amount cannot be null." )]
             public decimal Amount { get; set; }
             [StringLength( 4, ErrorMessage = "CompanyNumber cannot have more than 4 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "CompanyNumber must be numeric." )]
             [Required()]
             public string CompanyNumber { get; set; }
+            [Required( AllowEmptyStrings = true, ErrorMessage = "Date Code cannot be null." )]
             public DateTime? Date { get; set; }
             [StringLength( 3, ErrorMessage = "DepartmentNumber cannot have more than 3 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "DepartmentNumber must be numeric." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "DepartmentNumber cannot be null." )]
             public string DepartmentNumber { get; set; }
+            [Required( AllowEmptyStrings = true, ErrorMessage = "Description1 cannot be null." )]
             public string Description1 { get; set; }
+            [Required( AllowEmptyStrings = true, ErrorMessage = "Description2 cannot be null." )]
             public string Description2 { get; set; }
             [StringLength( 5, ErrorMessage = "FundNumber cannot have more than 5 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "FundNumber must be numeric." )]
             [Required()]
             public string FundNumber { get; set; }
             [Range( 0, 99999, ErrorMessage = "JournalNumber cannot have more than 5 characters in length." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "JournalNumber cannot be null." )]
             public int JournalNumber { get; set; }
             [StringLength( 2, ErrorMessage = "JournalType cannot have more than 2 characters in length." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "JournalType cannot be null." )]
             public string JournalType { get; set; }
             [StringLength( 50, ErrorMessage = "ProjectCode cannot have more than 50 characters in length." )]
-            [Required( AllowEmptyStrings = true, ErrorMessage = "Project Code cannot be null." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "ProjectCode cannot be null." )]
             public string ProjectCode { get; set; }
         }
 
