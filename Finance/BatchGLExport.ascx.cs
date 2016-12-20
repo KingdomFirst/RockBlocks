@@ -75,32 +75,32 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportCompanyAttribute" ) ) )
             {
-                AttributeStr_Company = GetAttributeValue( "ExportCompanyAttribute" );
+                AttributeStr_Company = getAttributeKey( GetAttributeValue( "ExportCompanyAttribute" ).AsGuidOrNull() );
             }
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportFundAttribute" ) ) )
             {
-                AttributeStr_Fund = GetAttributeValue( "ExportFundAttribute" );
+                AttributeStr_Fund = getAttributeKey( GetAttributeValue( "ExportFundAttribute" ).AsGuidOrNull() );
             }
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportBankAccountAttribute" ) ) )
             {
-                AttributeStr_BankAccount = GetAttributeValue( "ExportBankAccountAttribute" ).ToString();
+                AttributeStr_BankAccount = getAttributeKey( GetAttributeValue( "ExportBankAccountAttribute" ).AsGuidOrNull() );
             }
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportRevenueAccountAttribute" ) ) )
             {
-                AttributeStr_RevenueAccount = GetAttributeValue( "ExportRevenueAccountAttribute" );
+                AttributeStr_RevenueAccount = getAttributeKey( GetAttributeValue( "ExportRevenueAccountAttribute" ).AsGuidOrNull() );
             }
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportRevenueDepartmentAttribute" ) ) )
             {
-                AttributeStr_RevenueDepartment = GetAttributeValue( "ExportRevenueDepartmentAttribute" );
+                AttributeStr_RevenueDepartment = getAttributeKey( GetAttributeValue( "ExportRevenueDepartmentAttribute" ).AsGuidOrNull() );
             }
 
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportProjectAttribute" ) ) )
             {
-                AttributeStr_Project = GetAttributeValue( "ExportProjectAttribute" );
+                AttributeStr_Project = getAttributeKey( GetAttributeValue( "ExportProjectAttribute" ).AsGuidOrNull() );
             }
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportProjectCodeAttribute" ) ) )
             {
-                AttributeStr_ProjectCode = GetAttributeValue( "ExportProjectCodeAttribute" );
+                AttributeStr_ProjectCode = getAttributeKey( GetAttributeValue( "ExportProjectCodeAttribute" ).AsGuidOrNull() );
             }
 
             gfBatchFilter.ApplyFilterClick += gfBatchFilter_ApplyFilterClick;
@@ -168,6 +168,20 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             }
 
 
+        }
+
+        private string getAttributeKey( Guid? v )
+        {
+            string attributeKey = String.Empty;
+            if ( v.HasValue )
+            {
+                var attribute = AttributeCache.Read( v.Value, rockContext );
+                if ( attribute != null )
+                {
+                    attributeKey = attribute.Key;
+                }
+            }
+            return attributeKey;
         }
 
         /// <summary>
