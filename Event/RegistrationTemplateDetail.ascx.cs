@@ -34,10 +34,10 @@ using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using Attribute = Rock.Model.Attribute;
 
-namespace RockWeb.Blocks.Event
+namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
 {
-    [DisplayName( "Registration Template Detail" )]
-    [Category( "Event" )]
+    [DisplayName( "KFS Registration Template Detail" )]
+    [Category( "KFS > Event" )]
     [Description( "Displays the details of the given registration template." )]
 
     [CodeEditorField( "Default Confirmation Email", "The default Confirmation Email Template value to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"
@@ -242,7 +242,9 @@ namespace RockWeb.Blocks.Event
 
 {{ 'Global' | Attribute:'EmailFooter' }}
 ", "", 3 )]
-    public partial class RegistrationTemplateDetail : RockBlock
+
+    [GroupTypeField( "Associated Group Type", "Select a Group Type to trigger the creation of a new group of selected type upon creating a new Registration Template. The new Template's 'AssociatedGroup' attribute will be set to the new Group.", false, "", "", 0, "GroupTypeSetting", "" )]
+    public partial class KFSRegistrationTemplateDetail : RockBlock
     {
 
         #region Properties
@@ -989,10 +991,70 @@ namespace RockWeb.Blocks.Event
                     var staffUsers = groupService.Get( Rock.SystemGuid.Group.GROUP_STAFF_MEMBERS.AsGuid() );
                     RegistrationTemplate.AllowSecurityRole( Authorization.EDIT, staffUsers, rockContext );
                 }
+                RegistrationTemplate = new RegistrationTemplateService( new RockContext() ).Get( RegistrationTemplate.Id );
+
+                Guid groupTypeGuid;
+                if ( Guid.TryParse( this.GetAttributeValue( "GroupTypeSetting" ), out groupTypeGuid ) )
+                {
+                    string attributeKey = "AssociatedGroup";
+                    VerifyCategoryAttribute( rockContext, attributeKey );
+                    RegistrationTemplate.LoadAttributes();
+                    if ( RegistrationTemplate.GetAttributeValue( attributeKey ) == null )
+                    {
+                        Group parentGroup = null;
+                        GroupTypeService groupTypeService = new GroupTypeService( rockContext );
+                        Category templateCategory = RegistrationTemplate.Category;
+                        if ( templateCategory != null )
+                        {
+                            templateCategory.LoadAttributes();
+                            if ( templateCategory.GetAttributeValue( attributeKey ) != null )
+                            {
+                                parentGroup = groupService.Get( Guid.Parse( templateCategory.GetAttributeValue( attributeKey ) ) );
+                            }
+                        }
+                        if ( parentGroup != null )
+                        {
+                            Group newGroup = new Group();
+                            newGroup.Name = RegistrationTemplate.Name;
+                            newGroup.ParentGroup = parentGroup;
+                            newGroup.GroupType = groupTypeService.Get( groupTypeGuid );
+                            groupService.Add( newGroup );
+                            rockContext.SaveChanges();
+
+                            newGroup = new GroupService( new RockContext() ).Get( newGroup.Guid );
+                            RegistrationTemplate.AttributeValues[attributeKey].Value = newGroup.Guid.ToString();
+                            RegistrationTemplate.SaveAttributeValues();
+                        }
+                    }
+                }
 
                 var qryParams = new Dictionary<string, string>();
                 qryParams["RegistrationTemplateId"] = RegistrationTemplate.Id.ToString();
                 NavigateToPage( RockPage.Guid, qryParams );
+            }
+        }
+
+        private static void VerifyCategoryAttribute( RockContext rockContext, string attributeKey )
+        {
+            int? registrationTemplateEntityTypeId = null;
+            AttributeService attributeService = new AttributeService( rockContext );
+            Rock.Model.Attribute attribute = null;
+            registrationTemplateEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.RegistrationTemplate ) ).Id;
+            IQueryable<Rock.Model.Attribute> attributeQuery = null;
+            if ( registrationTemplateEntityTypeId != null )
+            {
+                attributeQuery = attributeService.Get( registrationTemplateEntityTypeId, string.Empty, string.Empty );
+                attributeQuery = attributeQuery.Where( a => a.Key == attributeKey );
+            }
+            if ( attributeQuery.Count() == 0 )
+            {
+                Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
+                edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id;
+                edtAttribute.Name = "Associated Group";
+                edtAttribute.Key = attributeKey;
+                attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, registrationTemplateEntityTypeId, string.Empty, string.Empty );
+
+                AttributeCache.FlushEntityAttributes();
             }
         }
 
