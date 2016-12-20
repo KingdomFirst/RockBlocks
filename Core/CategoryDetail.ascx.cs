@@ -35,8 +35,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
 {
     #region Block Attributes
 
-    [DisplayName( "Category Detail" )]
-    [Category( "Core" )]
+    [DisplayName( "KFS Category Detail" )]
+    [Category( "KFS > Core" )]
     [Description( "Displays the details of a given category." )]
 
     [EntityTypeField( "Entity Type", "The type of entity to associate category with" )]
@@ -45,6 +45,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
 
     [CategoryField( "Root Category", "Select the root category to use as a starting point for the parent category picker.", false, required:false, category: "CustomSetting" )]
     [CategoryField( "Exclude Categories", "Select any category that you need to exclude from the parent category picker", true, required:false, category: "CustomSetting" )]
+
+    [GroupTypeField( "Associated Group Type", "Select a Group Type to trigger the creation of a new group of selected type upon creating a new Category. The new Category's 'AssociatedGroup' attribute will be set to the new Group.", false, "", "", 0, "GroupTypeSetting", "" )]
 
     #endregion
 
@@ -292,9 +294,71 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
             rockContext.SaveChanges();
             CategoryCache.Flush( category.Id );
 
+            category = new CategoryService( new RockContext() ).Get( category.Id );
+
+            Guid groupTypeGuid;
+            if ( Guid.TryParse( this.GetAttributeValue( "GroupTypeSetting" ), out groupTypeGuid ) )
+            {
+                string attributeKey = "AssociatedGroup";
+                VerifyCategoryAttribute( rockContext, attributeKey );
+                category.LoadAttributes();
+                if( category.GetAttributeValue( attributeKey ) == null )
+                {
+                    Group parentGroup = null;
+                    GroupService groupService = new GroupService( rockContext );
+                    GroupTypeService groupTypeService = new GroupTypeService( rockContext );
+                    Category parentCategory = category.ParentCategory;
+                    if( parentCategory != null )
+                    {
+                        parentCategory.LoadAttributes();
+                        if ( parentCategory.GetAttributeValue( attributeKey ) != null )
+                        {
+                            parentGroup = groupService.Get( Guid.Parse( category.ParentCategory.GetAttributeValue( attributeKey ) ) );
+                        }
+                    }
+                    Group newGroup = new Group();
+                    newGroup.Name = category.Name;
+                    if( parentGroup != null )
+                    {
+                        newGroup.ParentGroup = parentGroup;
+                    }
+                    newGroup.GroupType = groupTypeService.Get( groupTypeGuid );
+                    groupService.Add( newGroup );
+                    rockContext.SaveChanges();
+
+                    newGroup = new GroupService( new RockContext() ).Get( newGroup.Guid );
+                    category.AttributeValues[attributeKey].Value = newGroup.Guid.ToString();
+                    category.SaveAttributeValues();
+                }
+            }
+
             var qryParams = new Dictionary<string, string>();
             qryParams["CategoryId"] = category.Id.ToString();
             NavigateToPage( RockPage.Guid, qryParams );
+        }
+
+        private static void VerifyCategoryAttribute( RockContext rockContext, string attributeKey )
+        {
+            int? categoryEntityTypeId = null;
+            AttributeService attributeService = new AttributeService( rockContext );
+            Rock.Model.Attribute attribute = null;
+            categoryEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Category ) ).Id;
+            IQueryable<Rock.Model.Attribute> attributeQuery = null;
+            if ( categoryEntityTypeId != null )
+            {
+                attributeQuery = attributeService.Get( categoryEntityTypeId, string.Empty, string.Empty );
+                attributeQuery = attributeQuery.Where( a => a.Key == attributeKey );
+            }
+            if ( attributeQuery.Count() == 0 )
+            {
+                Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
+                edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id;
+                edtAttribute.Name = "Associated Group";
+                edtAttribute.Key = attributeKey;
+                attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, categoryEntityTypeId, string.Empty, string.Empty );
+
+                AttributeCache.FlushEntityAttributes();
+            }
         }
 
         #endregion
