@@ -22,7 +22,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
     [DisplayName( "Batch GL Export" )]
     [Category( "KFS > Finance" )]
     [Description( "Lists all financial batches and provides GL Export capability" )]
-    [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "Base settings", 1 )]
+    [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
+    [BooleanField( "Show Actions", "Should the grid display merge template and export to excel actions?", false )]
     [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Company", "Choose the financial account attribute for the General Ledger Export Company.", false, false, "", "Export Account Attributes" )]
     [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Fund", "Choose the financial account attribute for the General Ledger Export Fund.", false, false, "", "Export Account Attributes" )]
     [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Bank Account", "Choose the financial account attribute for the General Ledger Export Bank Account.", false, false, "", "Export Account Attributes" )]
@@ -107,9 +108,16 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             gfBatchFilter.ClearFilterClick += gfBatchFilter_ClearFilterClick;
             gfBatchFilter.DisplayFilterValue += gfBatchFilter_DisplayFilterValue;
 
+            bool showActions = GetAttributeValue( "ShowActions" ).AsBoolean();
+
+            if (showActions)
+            {
+                rockContext.Configuration.ProxyCreationEnabled = false;
+            }
+
             gBatchList.DataKeyNames = new string[] { "Id" };
-            gBatchList.Actions.ShowExcelExport = false;
-            gBatchList.Actions.ShowMergeTemplate = false;
+            gBatchList.Actions.ShowExcelExport = showActions;
+            gBatchList.Actions.ShowMergeTemplate = showActions;
             gBatchList.GridRebind += gBatchList_GridRebind;
             gBatchList.RowDataBound += gBatchList_RowDataBound;
 
