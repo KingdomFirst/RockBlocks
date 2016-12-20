@@ -22,14 +22,14 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
     [DisplayName( "Batch GL Export" )]
     [Category( "KFS > Finance" )]
     [Description( "Lists all financial batches and provides GL Export capability" )]
-    [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Export Company Attribute", "Choose the financial account attribute for the General Ledger Export Company.", false )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Export Fund Attribute", "Choose the financial account attribute for the General Ledger Export Fund.", false )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Export Bank Account Attribute", "Choose the financial account attribute for the General Ledger Export Bank Account.", false )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Export Revenue Account Attribute", "Choose the financial account attribute for the General Ledger Export Revenue Account.", false )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Export Revenue Department Attribute", "Choose the financial account attribute for the General Ledger Export Revenue Department.", false )]
-    [AttributeField( "2C1CB26B-AB22-42D0-8164-AEDEE0DAE667", "Export Project Attribute", "Choose the financial transaction attribute for the Project.", false )]
-    [TextField( "Export Project Code Attribute", "Project defined type attribute key name for Code", false, "Code" )]
+    [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "Base settings", 1 )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Company", "Choose the financial account attribute for the General Ledger Export Company.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Fund", "Choose the financial account attribute for the General Ledger Export Fund.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Bank Account", "Choose the financial account attribute for the General Ledger Export Bank Account.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Account", "Choose the financial account attribute for the General Ledger Export Revenue Account.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Department", "Choose the financial account attribute for the General Ledger Export Revenue Department.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "2C1CB26B-AB22-42D0-8164-AEDEE0DAE667", "Project Attribute", "Choose the financial transaction attribute for the Project.", false, false, "", "Export Project Attributes" )]
+    [TextField( "Project Code Attribute", "Project defined type attribute key name for Code", false, "Code", "Export Project Attributes" )]
     public partial class BatchGLExport : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -73,34 +73,34 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlContent );
 
-            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportCompanyAttribute" ) ) )
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "Company" ) ) )
             {
-                AttributeStr_Company = getAttributeKey( GetAttributeValue( "ExportCompanyAttribute" ).AsGuidOrNull() );
+                AttributeStr_Company = getAttributeKey( GetAttributeValue( "Company" ).AsGuidOrNull() );
             }
-            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportFundAttribute" ) ) )
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "Fund" ) ) )
             {
-                AttributeStr_Fund = getAttributeKey( GetAttributeValue( "ExportFundAttribute" ).AsGuidOrNull() );
+                AttributeStr_Fund = getAttributeKey( GetAttributeValue( "Fund" ).AsGuidOrNull() );
             }
-            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportBankAccountAttribute" ) ) )
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "BankAccount" ) ) )
             {
-                AttributeStr_BankAccount = getAttributeKey( GetAttributeValue( "ExportBankAccountAttribute" ).AsGuidOrNull() );
+                AttributeStr_BankAccount = getAttributeKey( GetAttributeValue( "BankAccount" ).AsGuidOrNull() );
             }
-            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportRevenueAccountAttribute" ) ) )
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "RevenueAccount" ) ) )
             {
-                AttributeStr_RevenueAccount = getAttributeKey( GetAttributeValue( "ExportRevenueAccountAttribute" ).AsGuidOrNull() );
+                AttributeStr_RevenueAccount = getAttributeKey( GetAttributeValue( "RevenueAccount" ).AsGuidOrNull() );
             }
-            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportRevenueDepartmentAttribute" ) ) )
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "RevenueDepartment" ) ) )
             {
-                AttributeStr_RevenueDepartment = getAttributeKey( GetAttributeValue( "ExportRevenueDepartmentAttribute" ).AsGuidOrNull() );
+                AttributeStr_RevenueDepartment = getAttributeKey( GetAttributeValue( "RevenueDepartment" ).AsGuidOrNull() );
             }
 
-            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportProjectAttribute" ) ) )
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ProjectAttribute" ) ) )
             {
-                AttributeStr_Project = getAttributeKey( GetAttributeValue( "ExportProjectAttribute" ).AsGuidOrNull() );
+                AttributeStr_Project = getAttributeKey( GetAttributeValue( "ProjectAttribute" ).AsGuidOrNull() );
             }
-            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ExportProjectCodeAttribute" ) ) )
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ProjectCodeAttribute" ) ) )
             {
-                AttributeStr_ProjectCode = getAttributeKey( GetAttributeValue( "ExportProjectCodeAttribute" ).AsGuidOrNull() );
+                AttributeStr_ProjectCode = getAttributeKey( GetAttributeValue( "ProjectCodeAttribute" ).AsGuidOrNull() );
             }
 
             gfBatchFilter.ApplyFilterClick += gfBatchFilter_ApplyFilterClick;
