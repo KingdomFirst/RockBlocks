@@ -112,7 +112,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             }
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ProjectCodeAttribute" ) ) )
             {
-                AttributeStr_ProjectCode = getAttributeKey( GetAttributeValue( "ProjectCodeAttribute" ).AsGuidOrNull() );
+                AttributeStr_ProjectCode = GetAttributeValue( "ProjectCodeAttribute" );
             }
 
             gfBatchFilter.ApplyFilterClick += gfBatchFilter_ApplyFilterClick;
