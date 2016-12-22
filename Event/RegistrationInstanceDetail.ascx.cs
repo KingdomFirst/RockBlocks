@@ -65,6 +65,21 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         private List<Registration> PaymentRegistrations;
         private bool _instanceHasCost = false;
         private Dictionary<int, Location>  _homeAddresses = new Dictionary<int, Location>();
+        string _templateAttributeKey = "AssociatedGroup";
+        string _attributeKeyParent = "AssociatedGroupParent";
+        string _attributeNameParent = "Parent Group";
+        string _attributeKeyLodging = "AssociatedGroupLodging";
+        string _attributeNameLodging = "Lodging Group";
+        string _groupNameLodging = "Lodging";
+        string _attributeKeyTeams = "AssociatedGroupTeams";
+        string _attributeNameTeams = "Teams Group";
+        string _groupNameTeams = "Teams";
+        string _attributeKeyActivities = "AssociatedGroupActivities";
+        string _attributeNameActivities = "Activities Group";
+        string _groupNameActivites = "Activities";
+        string _attributeKeyTransportation = "AssociatedGroupTransportation";
+        string _attributeNameTransportation = "Transportation Group";
+        string _groupNameTransportation = "Transportation";
         #endregion
 
         #region Properties
@@ -437,35 +452,88 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 Guid parentGroupTypeGuid;
                 if ( Guid.TryParse( this.GetAttributeValue( "GroupTypeParentSetting" ), out parentGroupTypeGuid ) )
                 {
-                    string attributeKey = "AssociatedGroupParent";
-                    VerifyCategoryAttribute( rockContext, attributeKey );
+                    Group templateGroup = null;
+                    int parentGroupId = 0;
+                    //VerifyEntityAttribute( rockContext, _attributeKeyParent, _attributeNameParent, instance );
                     instance.LoadAttributes();
-                    if ( instance.GetAttributeValue( attributeKey ) == null )
+                    GroupService groupService = new GroupService( rockContext );
+                    GroupTypeService groupTypeService = new GroupTypeService( rockContext );
+                    if ( instance.GetAttributeValue( _attributeKeyParent ) == null )
                     {
-                        Group parentGroup = null;
-                        GroupService groupService = new GroupService( rockContext );
-                        GroupTypeService groupTypeService = new GroupTypeService( rockContext );
                         RegistrationTemplate template = instance.RegistrationTemplate;
                         if ( template != null )
                         {
                             template.LoadAttributes();
-                            if ( template.GetAttributeValue( attributeKey ) != null )
+                            if ( template.GetAttributeValue( _templateAttributeKey ) != null )
                             {
-                                parentGroup = groupService.Get( Guid.Parse( template.GetAttributeValue( attributeKey ) ) );
+                                templateGroup = groupService.Get( Guid.Parse( template.GetAttributeValue( _templateAttributeKey ) ) );
                             }
                         }
-                        if ( parentGroup != null )
+                        if ( templateGroup != null )
                         {
-                            Group newGroup = new Group();
-                            newGroup.Name = template.Name;
-                            newGroup.ParentGroup = parentGroup;
-                            newGroup.GroupType = groupTypeService.Get( parentGroupTypeGuid );
-                            groupService.Add( newGroup );
-                            rockContext.SaveChanges();
+                            parentGroupId = CreateGroup( instance, rockContext, parentGroupTypeGuid, templateGroup.Id, _attributeKeyParent, instance.Name, groupService, groupTypeService );
+                            //newGroup = new Group();
+                            //newGroup.Name = instance.Name;
+                            //newGroup.ParentGroup = parentGroup;
+                            //newGroup.GroupType = groupTypeService.Get( parentGroupTypeGuid );
+                            //groupService.Add( newGroup );
+                            //rockContext.SaveChanges();
 
-                            newGroup = new GroupService( new RockContext() ).Get( newGroup.Guid );
-                            instance.AttributeValues[attributeKey].Value = newGroup.Guid.ToString();
-                            instance.SaveAttributeValues();
+                            //newGroup = new GroupService( new RockContext() ).Get( newGroup.Guid );
+                            //instance.AttributeValues[_attributeKeyParent].Value = newGroup.Guid.ToString();
+                            //instance.SaveAttributeValues();
+                        }
+                    }
+                    else
+                    {
+                        parentGroupId = groupService.Get( Guid.Parse( instance.GetAttributeValue( _attributeKeyParent ) ) ).Id;
+                    }
+                    if ( parentGroupId > 0 )
+                    {
+                        Guid subGroupTypeGuid;
+                        instance.LoadAttributes();
+                        foreach ( ListItem li in ddlSubGroups.Items )
+                        {
+                            if ( li.Selected )
+                            {
+                                switch ( li.Value )
+                                {
+                                    case "1":
+                                        subGroupTypeGuid = Guid.Parse( this.GetAttributeValue( "GroupTypeLodgingSetting" ) );
+                                        //VerifyEntityAttribute( rockContext, _attributeKeyLodging, _attributeNameLodging, instance );
+                                        if ( instance.GetAttributeValue( _attributeKeyLodging ) == null )
+                                        {
+                                            CreateGroup( instance, rockContext, subGroupTypeGuid, parentGroupId, _attributeKeyLodging, _groupNameLodging, groupService, groupTypeService );
+                                        }
+                                        break;
+                                    case "2":
+                                        subGroupTypeGuid = Guid.Parse( this.GetAttributeValue( "GroupTypeTeamsSetting" ) );
+                                        //VerifyEntityAttribute( rockContext, _attributeKeyTeams, _attributeNameTeams, instance );
+                                        if ( instance.GetAttributeValue( _attributeKeyTeams ) == null )
+                                        {
+                                            CreateGroup( instance, rockContext, subGroupTypeGuid, parentGroupId, _attributeKeyTeams, _groupNameTeams, groupService, groupTypeService );
+                                        }
+                                        break;
+                                    case "3":
+                                        subGroupTypeGuid = Guid.Parse( this.GetAttributeValue( "GroupTypeActivitiesSetting" ) );
+                                        //VerifyEntityAttribute( rockContext, _attributeKeyActivities, _attributeNameActivities, instance );
+                                        if ( instance.GetAttributeValue( _attributeKeyActivities ) == null )
+                                        {
+                                            CreateGroup( instance, rockContext, subGroupTypeGuid, parentGroupId, _attributeKeyActivities, _groupNameActivites, groupService, groupTypeService );
+                                        }
+                                        break;
+                                    case "4":
+                                        subGroupTypeGuid = Guid.Parse( this.GetAttributeValue( "GroupTypeTransportationSetting" ) );
+                                        //VerifyEntityAttribute( rockContext, _attributeKeyTransportation, _attributeNameTransportation, instance );
+                                        if ( instance.GetAttributeValue( _attributeKeyTransportation ) == null )
+                                        {
+                                            CreateGroup( instance, rockContext, subGroupTypeGuid, parentGroupId, _attributeKeyTransportation, _groupNameTransportation, groupService, groupTypeService );
+                                        }
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
                         }
                     }
                 }
@@ -500,25 +568,45 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             }
         }
 
-        private static void VerifyCategoryAttribute( RockContext rockContext, string attributeKey )
+        private int CreateGroup( RegistrationInstance instance, RockContext rockContext, Guid groupTypeGuid, int parentGroupId, string attributeKey, string groupName, GroupService groupService, GroupTypeService groupTypeService )
         {
-            int? registrationTemplateEntityTypeId = null;
+            int result = 0;
+            Group subGroup = new Group();
+            if ( parentGroupId > 0  )
+            {
+                subGroup.Name = groupName;
+                subGroup.ParentGroupId = parentGroupId;
+                subGroup.GroupType = groupTypeService.Get( groupTypeGuid );
+                groupService.Add( subGroup );
+                rockContext.SaveChanges();
+
+                subGroup = new GroupService( new RockContext() ).Get( subGroup.Guid );
+                instance.AttributeValues[attributeKey].Value = subGroup.Guid.ToString();
+                instance.SaveAttributeValues();
+                result = subGroup.Id;
+            }
+            return result;
+        }
+
+        private static void VerifyEntityAttribute( RockContext rockContext, string attributeKey, string attributeName, Object entity )
+        {
+            int? entityTypeId = null;
             AttributeService attributeService = new AttributeService( rockContext );
             Rock.Model.Attribute attribute = null;
-            registrationTemplateEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.RegistrationTemplate ) ).Id;
+            entityTypeId = EntityTypeCache.Read( entity.GetType() ).Id;
             IQueryable<Rock.Model.Attribute> attributeQuery = null;
-            if ( registrationTemplateEntityTypeId != null )
+            if ( entityTypeId != null )
             {
-                attributeQuery = attributeService.Get( registrationTemplateEntityTypeId, string.Empty, string.Empty );
+                attributeQuery = attributeService.Get( entityTypeId, string.Empty, string.Empty );
                 attributeQuery = attributeQuery.Where( a => a.Key == attributeKey );
             }
             if ( attributeQuery.Count() == 0 )
             {
                 Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
                 edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id;
-                edtAttribute.Name = "Associated Group";
+                edtAttribute.Name = attributeName;
                 edtAttribute.Key = attributeKey;
-                attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, registrationTemplateEntityTypeId, string.Empty, string.Empty );
+                attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, entityTypeId, string.Empty, string.Empty );
 
                 AttributeCache.FlushEntityAttributes();
             }
@@ -1780,7 +1868,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 lWizardInstanceName.Text = instance.Name;
             }
 
-            SetEditMode( true );
+            SetEditMode( true, instance );
 
             rieDetails.SetValue( instance );
         }
@@ -1791,7 +1879,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         /// <param name="RegistrationInstance">The registration template.</param>
         private void ShowReadonlyDetails( RegistrationInstance RegistrationInstance )
         {
-            SetEditMode( false );
+            SetEditMode( false, RegistrationInstance );
 
             hfRegistrationInstanceId.SetValue( RegistrationInstance.Id );
 
@@ -1847,28 +1935,44 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         /// Sets the edit mode.
         /// </summary>
         /// <param name="editable">if set to <c>true</c> [editable].</param>
-        private void SetEditMode( bool editable )
+        private void SetEditMode( bool editable, RegistrationInstance instance )
         {
             pnlEditDetails.Visible = editable;
             fieldsetViewDetails.Visible = !editable;
             pnlTabs.Visible = !editable;
+            ddlSubGroups.Items.Clear();
             if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeParentSetting" ) ) )
             {
+                RockContext rockContext = new RockContext();
+                VerifyEntityAttribute( rockContext, _attributeKeyParent, _attributeNameParent, instance );
+                VerifyEntityAttribute( rockContext, _attributeKeyLodging, _attributeNameLodging, instance );
+                VerifyEntityAttribute( rockContext, _attributeKeyTeams, _attributeNameTeams, instance );
+                VerifyEntityAttribute( rockContext, _attributeKeyActivities, _attributeNameActivities, instance );
+                VerifyEntityAttribute( rockContext, _attributeKeyTransportation, _attributeNameTransportation, instance );
+                instance.LoadAttributes();
                 if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeLodgingSetting" ) ) )
                 {
-                    ddlSubGroups.Items.Add( new ListItem( "Lodging", "1" ) );
+                    ListItem li = new ListItem( "Lodging", "1" );
+                    ddlSubGroups.Items.Add( li );
+                    li.Selected = !string.IsNullOrWhiteSpace( instance.AttributeValues[_attributeKeyLodging].Value );
                 }
                 if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeTeamsSetting" ) ) )
                 {
-                    ddlSubGroups.Items.Add( new ListItem( "Teams", "2" ) );
+                    ListItem li = new ListItem( "Teams", "2" );
+                    ddlSubGroups.Items.Add( li );
+                    li.Selected = !string.IsNullOrWhiteSpace( instance.AttributeValues[_attributeKeyTeams].Value );
                 }
                 if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeActivitiesSetting" ) ) )
                 {
-                    ddlSubGroups.Items.Add( new ListItem( "Activities", "3" ) );
+                    ListItem li = new ListItem( "Activities", "3" );
+                    ddlSubGroups.Items.Add( li );
+                    li.Selected = !string.IsNullOrWhiteSpace( instance.AttributeValues[_attributeKeyActivities].Value );
                 }
                 if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeTransportationSetting" ) ) )
                 {
-                    ddlSubGroups.Items.Add( new ListItem( "Transportation", "4" ) );
+                    ListItem li = new ListItem( "Transportation", "4" );
+                    ddlSubGroups.Items.Add( li );
+                    li.Selected = !string.IsNullOrWhiteSpace( instance.AttributeValues[_attributeKeyTransportation].Value );
                 }
             }
             pnlSubGroups.Visible = ddlSubGroups.Items.Count > 0;
