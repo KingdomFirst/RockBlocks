@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationInstanceDetail.ascx.cs" Inherits="RockWeb.Blocks.Event.RegistrationInstanceDetail" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationInstanceDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kingdomfirstsolutions.Event.KFSRegistrationInstanceDetail" %>
 
 <script type="text/javascript">
     Sys.Application.add_load(function () {
@@ -72,7 +72,11 @@
                     <asp:ValidationSummary ID="vsDetails" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
 
                     <div id="pnlEditDetails" runat="server">
-
+                        <div id="pnlSubGroups" runat="server" class="row">
+                            <div class="col-md-6">
+                                <Rock:RockCheckBoxList ID="ddlSubGroups" runat="server" Label="Additional Groupings" />
+                            </div>
+                        </div>
                         <Rock:RegistrationInstanceEditor ID="rieDetails" runat="server" />
 
                         <div class="actions">

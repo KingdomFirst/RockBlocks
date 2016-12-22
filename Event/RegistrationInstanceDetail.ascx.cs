@@ -34,13 +34,13 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Blocks.Event
+namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
 {
     /// <summary>
     /// Template block for developers to use to start a new block.
     /// </summary>
-    [DisplayName( "Registration Instance Detail" )]
-    [Category( "Event" )]
+    [DisplayName( "KFS Registration Instance Detail" )]
+    [Category( "KFS > Event" )]
     [Description( "Template block for editing an event registration instance." )]
     [AccountField( "Default Account", "The default account to use for new registration instances", false, "2A6F9E5F-6859-44F1-AB0E-CE9CF6B08EE5", "", 0 )]
     [LinkedPage( "Registration Page", "The page for editing registration and registrant information", true, "", "", 1 )]
@@ -51,7 +51,13 @@ namespace RockWeb.Blocks.Event
     [LinkedPage( "Transaction Detail Page", "The page for viewing details about a payment", true, "", "", 6 )]
     [LinkedPage( "Payment Reminder Page", "The page for manually sending payment reminders.", false, "", "", 7 )]
     [BooleanField( "Display Discount Codes", "Display the discount code used with a payment", false, "", 8 )]
-    public partial class RegistrationInstanceDetail : Rock.Web.UI.RockBlock, IDetailBlock
+
+    [GroupTypeField( "Associated Group Type - Parent", "Select a Group Type to trigger the creation of a new group of selected type upon creating a new Registration Instance. The new Instances's 'AssociatedGroupParent' attribute will be set to the new Group.", false, "", "", 0, "GroupTypeParentSetting", "" )]
+    [GroupTypeField( "Associated Group Type - Lodging", "Select a Group Type to trigger the creation of a new group of selected type beneath the group created by the '- Parent' Group Type setting upon creating a new Registration Instance. The new Instances's 'AssociatedGroupLodging' attribute will be set to the new Group.", false, "", "", 0, "GroupTypeLodgingSetting", "" )]
+    [GroupTypeField( "Associated Group Type - Team", "Select a Group Type to trigger the creation of a new group of selected type beneath the group created by the '- Parent' Group Type setting upon creating a new Registration Instance. The new Instances's 'AssociatedGroupTeam' attribute will be set to the new Group.", false, "", "", 0, "GroupTypeTeamsSetting", "" )]
+    [GroupTypeField( "Associated Group Type - Activities", "Select a Group Type to trigger the creation of a new group of selected type beneath the group created by the '- Parent' Group Type setting upon creating a new Registration Instance. The new Instances's 'AssociatedGroupActivities' attribute will be set to the new Group.", false, "", "", 0, "GroupTypeActivitiesSetting", "" )]
+    [GroupTypeField( "Associated Group Type - Transportation", "Select a Group Type to trigger the creation of a new group of selected type beneath the group created by the '- Parent' Group Type setting upon creating a new Registration Instance. The new Instances's 'AssociatedGroupLodging' attribute will be set to the new Group.", false, "", "", 0, "GroupTypeTransportationSetting", "" )]
+    public partial class KFSRegistrationInstanceDetail : Rock.Web.UI.RockBlock, IDetailBlock
     {
         #region Fields
 
@@ -425,6 +431,44 @@ namespace RockWeb.Blocks.Event
                 }
 
                 rockContext.SaveChanges();
+
+                instance = new RegistrationInstanceService( new RockContext() ).Get( instance.Id );
+
+                Guid parentGroupTypeGuid;
+                if ( Guid.TryParse( this.GetAttributeValue( "GroupTypeParentSetting" ), out parentGroupTypeGuid ) )
+                {
+                    string attributeKey = "AssociatedGroupParent";
+                    VerifyCategoryAttribute( rockContext, attributeKey );
+                    instance.LoadAttributes();
+                    if ( instance.GetAttributeValue( attributeKey ) == null )
+                    {
+                        Group parentGroup = null;
+                        GroupService groupService = new GroupService( rockContext );
+                        GroupTypeService groupTypeService = new GroupTypeService( rockContext );
+                        RegistrationTemplate template = instance.RegistrationTemplate;
+                        if ( template != null )
+                        {
+                            template.LoadAttributes();
+                            if ( template.GetAttributeValue( attributeKey ) != null )
+                            {
+                                parentGroup = groupService.Get( Guid.Parse( template.GetAttributeValue( attributeKey ) ) );
+                            }
+                        }
+                        if ( parentGroup != null )
+                        {
+                            Group newGroup = new Group();
+                            newGroup.Name = template.Name;
+                            newGroup.ParentGroup = parentGroup;
+                            newGroup.GroupType = groupTypeService.Get( parentGroupTypeGuid );
+                            groupService.Add( newGroup );
+                            rockContext.SaveChanges();
+
+                            newGroup = new GroupService( new RockContext() ).Get( newGroup.Guid );
+                            instance.AttributeValues[attributeKey].Value = newGroup.Guid.ToString();
+                            instance.SaveAttributeValues();
+                        }
+                    }
+                }
             }
 
             if ( newInstance )
@@ -453,6 +497,30 @@ namespace RockWeb.Blocks.Event
                 {
                     btnSendPaymentReminder.Visible = false;
                 }
+            }
+        }
+
+        private static void VerifyCategoryAttribute( RockContext rockContext, string attributeKey )
+        {
+            int? registrationTemplateEntityTypeId = null;
+            AttributeService attributeService = new AttributeService( rockContext );
+            Rock.Model.Attribute attribute = null;
+            registrationTemplateEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.RegistrationTemplate ) ).Id;
+            IQueryable<Rock.Model.Attribute> attributeQuery = null;
+            if ( registrationTemplateEntityTypeId != null )
+            {
+                attributeQuery = attributeService.Get( registrationTemplateEntityTypeId, string.Empty, string.Empty );
+                attributeQuery = attributeQuery.Where( a => a.Key == attributeKey );
+            }
+            if ( attributeQuery.Count() == 0 )
+            {
+                Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
+                edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id;
+                edtAttribute.Name = "Associated Group";
+                edtAttribute.Key = attributeKey;
+                attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, registrationTemplateEntityTypeId, string.Empty, string.Empty );
+
+                AttributeCache.FlushEntityAttributes();
             }
         }
 
@@ -1784,6 +1852,26 @@ namespace RockWeb.Blocks.Event
             pnlEditDetails.Visible = editable;
             fieldsetViewDetails.Visible = !editable;
             pnlTabs.Visible = !editable;
+            if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeParentSetting" ) ) )
+            {
+                if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeLodgingSetting" ) ) )
+                {
+                    ddlSubGroups.Items.Add( new ListItem( "Lodging", "1" ) );
+                }
+                if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeTeamsSetting" ) ) )
+                {
+                    ddlSubGroups.Items.Add( new ListItem( "Teams", "2" ) );
+                }
+                if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeActivitiesSetting" ) ) )
+                {
+                    ddlSubGroups.Items.Add( new ListItem( "Activities", "3" ) );
+                }
+                if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeTransportationSetting" ) ) )
+                {
+                    ddlSubGroups.Items.Add( new ListItem( "Transportation", "4" ) );
+                }
+            }
+            pnlSubGroups.Visible = ddlSubGroups.Items.Count > 0;
         }
 
         /// <summary>
