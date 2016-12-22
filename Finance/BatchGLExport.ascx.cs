@@ -29,7 +29,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
     [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Bank Account", "Choose the financial account attribute for the General Ledger Export Bank Account.", false, false, "", "Export Account Attributes" )]
     [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Account", "Choose the financial account attribute for the General Ledger Export Revenue Account.", false, false, "", "Export Account Attributes" )]
     [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Department", "Choose the financial account attribute for the General Ledger Export Revenue Department.", false, false, "", "Export Account Attributes" )]
-    [AttributeField( "2C1CB26B-AB22-42D0-8164-AEDEE0DAE667", "Project Attribute", "Choose the financial transaction attribute for the Project.", false, false, "", "Export Project Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Default Project Attribute", "Choose the financial account attribute for the default project.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "2C1CB26B-AB22-42D0-8164-AEDEE0DAE667", "Transaction Project Attribute", "Choose the financial transaction attribute for the Project.", false, false, "", "Export Transaction Detail Attributes" )]
+    [AttributeField( "AC4AC28B-8E7E-4D7E-85DB-DFFB4F3ADCCE", "Transaction Detail Project Attribute", "Choose the financial transaction detail attribute for the Project.", false, false, "", "Export Transaction Attributes" )]
     [TextField( "Project Code Attribute", "Project defined type attribute key name for Code", false, "Code", "Export Project Attributes" )]
     public partial class BatchGLExport : Rock.Web.UI.RockBlock
     {
@@ -47,14 +49,15 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         private AttributeService attributeService = null;
 
         // Define default attribute names as strings before they get overridden by block settings
-        private string AttributeStr_Project = "Project";
+        private string AttributeStr_TransactionProject = "Project";
+        private string AttributeStr_TransactionDetailProject = "Project";
         private string AttributeStr_ProjectCode = "Code";
         private string AttributeStr_Company = "GeneralLedgerExport_Company";
         private string AttributeStr_Fund = "GeneralLedgerExport_Fund";
         private string AttributeStr_BankAccount = "GeneralLedgerExport_BankAccount";
         private string AttributeStr_RevenueAccount = "GeneralLedgerExport_RevenueAccount";
         private string AttributeStr_RevenueDepartment = "GeneralLedgerExport_RevenueDepartment";
-
+        private string AttributeStr_DefaultProject = "Project";
 
         #endregion
 
@@ -94,10 +97,18 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             {
                 AttributeStr_RevenueDepartment = getAttributeKey( GetAttributeValue( "RevenueDepartment" ).AsGuidOrNull() );
             }
-
-            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ProjectAttribute" ) ) )
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "DefaultProjectAttribute" ) ) )
             {
-                AttributeStr_Project = getAttributeKey( GetAttributeValue( "ProjectAttribute" ).AsGuidOrNull() );
+                AttributeStr_DefaultProject = getAttributeKey( GetAttributeValue( "DefaultProjectAttribute" ).AsGuidOrNull() );
+            }
+
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "TransactionProjectAttribute" ) ) )
+            {
+                AttributeStr_TransactionProject = getAttributeKey( GetAttributeValue( "TransactionProjectAttribute" ).AsGuidOrNull() );
+            }
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "TransactionDetailProjectAttribute" ) ) )
+            {
+                AttributeStr_TransactionDetailProject = getAttributeKey( GetAttributeValue( "TransactionDetailProjectAttribute" ).AsGuidOrNull() );
             }
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ProjectCodeAttribute" ) ) )
             {
@@ -535,6 +546,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     foreach ( var transactionDetail in transaction.TransactionDetails )
                     {
                         transactionDetail.Account.LoadAttributes();
+                        transactionDetail.LoadAttributes();
 
                         GLTransaction transactionItem = new GLTransaction();
                         transactionItem.glCompany = transactionDetail.Account.GetAttributeValue( AttributeStr_Company );
@@ -542,7 +554,20 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         transactionItem.glBankAccount = transactionDetail.Account.GetAttributeValue( AttributeStr_BankAccount );
                         transactionItem.glRevenueAccount = transactionDetail.Account.GetAttributeValue( AttributeStr_RevenueAccount );
                         transactionItem.glRevenueDepartment = transactionDetail.Account.GetAttributeValue( AttributeStr_RevenueDepartment );
-                        transactionItem.projectCode = transaction.GetAttributeValue( AttributeStr_Project );
+
+                        if ( !string.IsNullOrWhiteSpace( transactionDetail.GetAttributeValue( AttributeStr_TransactionDetailProject )) )
+                        {
+                            transactionItem.projectCode = transactionDetail.GetAttributeValue( AttributeStr_TransactionDetailProject );
+                        }
+                        else if ( !string.IsNullOrWhiteSpace( transaction.GetAttributeValue( AttributeStr_TransactionProject ) ) )
+                        {
+                            transactionItem.projectCode = transaction.GetAttributeValue( AttributeStr_TransactionProject );
+                        }
+                        else
+                        {
+                            transactionItem.projectCode = transactionDetail.Account.GetAttributeValue( AttributeStr_DefaultProject );
+                        }
+
                         transactionItem.total = transactionDetail.Amount;
 
                         transactionItem.batch = batch;
