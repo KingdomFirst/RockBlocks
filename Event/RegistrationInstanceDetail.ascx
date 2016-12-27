@@ -119,7 +119,7 @@
 
             <asp:Panel ID="pnlTabs" runat="server" Visible="false">
 
-                <ul class="nav nav-pills margin-b-md">
+                <ul id="ulTabs" runat="server" class="nav nav-pills margin-b-md">
                     <li id="liRegistrations" runat="server" class="active">
                         <asp:LinkButton ID="lbRegistrations" runat="server" Text="Registrations" OnClick="lbTab_Click" />
                     </li>
