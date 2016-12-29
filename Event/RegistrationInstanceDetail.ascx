@@ -74,7 +74,7 @@
                     <div id="pnlEditDetails" runat="server">
                         <div id="pnlSubGroups" runat="server" class="row">
                             <div class="col-md-6">
-                                <Rock:RockCheckBoxList ID="ddlSubGroups" runat="server" Label="Additional Groupings" />
+                                <Rock:RockCheckBoxList ID="cblSubGroups" runat="server" Label="Additional Groupings" />
                             </div>
                         </div>
                         <Rock:RegistrationInstanceEditor ID="rieDetails" runat="server" />
@@ -358,6 +358,16 @@
                         </div>
                     </div>
                 </asp:Panel>
+                <asp:Repeater ID="rpGroupPanels" runat="server">
+                    <ItemTemplate>
+                        <asp:Panel ID="pnlAssociatedGroup" runat="server" Visible="false" CssClass="panel panel-block">
+                            <asp:Panel ID="pnlGroupHeading" runat="server" CssClass="panel-heading">
+                            </asp:Panel>
+                            <asp:Panel ID="pnlGroupBody" runat="server" CssClass="panel-body">
+                            </asp:Panel>
+                        </asp:Panel>
+                    </ItemTemplate>
+                </asp:Repeater>
             </asp:Panel>
         </asp:Panel>
     </ContentTemplate>
