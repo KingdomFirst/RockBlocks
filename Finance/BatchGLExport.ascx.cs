@@ -374,8 +374,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             var batchesSelected = new List<int>();
 
             gBatchList.SelectedKeys.ToList().ForEach( b => batchesSelected.Add( b.ToString().AsInteger() ) );
+            rockContext = new RockContext();
 
             var attributeValues = generateAttributeFilters();
+            batchService = new FinancialBatchService( rockContext );
 
             var batchesToUpdate = batchService.Queryable()
                 .Where( b => batchesSelected.Contains( b.Id ) )
@@ -402,7 +404,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             if ( batchesSelected.Any() )
             {
+                rockContext = new RockContext();
                 var attributeValues = generateAttributeFilters();
+                batchService = new FinancialBatchService( rockContext );
 
                 var batchesToUpdate = batchService.Queryable()
                     .Where( b => batchesSelected.Contains( b.Id ) )
