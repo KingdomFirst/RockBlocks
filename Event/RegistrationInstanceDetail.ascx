@@ -1,4 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationInstanceDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kingdomfirstsolutions.Event.KFSRegistrationInstanceDetail" %>
+<<%@ Reference Control="~/Plugins/KFS/Event/GroupPanel.ascx"  %>
 
 <script type="text/javascript">
     Sys.Application.add_load(function () {
@@ -358,16 +359,69 @@
                         </div>
                     </div>
                 </asp:Panel>
+                <asp:HiddenField ID="hfActiveTabParentGroup" runat="server" />
+                <asp:HiddenField ID="hfEditGroup" runat="server" />
                 <asp:Repeater ID="rpGroupPanels" runat="server">
                     <ItemTemplate>
                         <asp:Panel ID="pnlAssociatedGroup" runat="server" Visible="false" CssClass="panel panel-block">
                             <asp:Panel ID="pnlGroupHeading" runat="server" CssClass="panel-heading">
+                                <asp:PlaceHolder ID="phGroupHeading" runat="server"></asp:PlaceHolder>
+                                <div class="pull-right">
+                                    <span class="label label-success">Vacancy</span>
+                                    <span class="label label-warning">Full</span>
+                                    <span class="label label-danger">Overfilled</span>
+                                </div>
                             </asp:Panel>
                             <asp:Panel ID="pnlGroupBody" runat="server" CssClass="panel-body">
+                                <asp:LinkButton ID="lbAddSubGroup" runat="server" CssClass="btn btn-action btn-xs">
+                                    <i class="fa fa-plus-circle"></i>
+                                </asp:LinkButton><br /><br />
+                                <asp:HiddenField ID="hfParentGroupId" runat="server" />
+                                <asp:PlaceHolder ID="phGroupControl" runat="server"></asp:PlaceHolder>
                             </asp:Panel>
                         </asp:Panel>
                     </ItemTemplate>
                 </asp:Repeater>
+                <Rock:ModalDialog ID="mdlAddSubGroup" runat="server" OnSaveClick="mdlAddSubGroup_SaveClick" ValidationGroup="vgAddGroup" >
+                    <Content>
+                        <asp:ValidationSummary ID="vsSubGroup" runat="server" ValidationGroup="vgAddGroup" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+                        <fieldset>
+                            <div class="col-md-6">
+                                <Rock:DataTextBox ID="tbName" runat="server" SourceTypeName="Rock.Model.Group, Rock" PropertyName="Name" ValidationGroup="vgAddGroup" />
+                            </div>
+                            <div class="col-md-6">
+                                <Rock:RockCheckBox ID="cbIsActive" runat="server" CssClass="js-isactivegroup" Text="Active" ValidationGroup="vgAddGroup" />
+                            </div>
+                            <div class="col-md-12">
+                                <Rock:DataTextBox ID="tbDescription" runat="server" SourceTypeName="Rock.Model.Group, Rock" PropertyName="Description" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroup" />
+                            </div>
+                            <div class="col-md-6">
+                                <Rock:NumberBox ID="nbGroupCapacity" runat="server" Label="Capacity" NumberType="Integer" ValidationGroup="vgAddGroup" />
+                            </div>
+                        </fieldset>
+                    </Content>
+                </Rock:ModalDialog>
+                <Rock:ModalDialog ID="mdlAddSubGroupMember" runat="server" OnSaveClick="mdlAddSubGroupMember_SaveClick" ValidationGroup="vgAddGroupMemmber" >
+                    <Content>
+                        <asp:HiddenField ID="hfSubGroupId" runat="server" />
+                        <asp:HiddenField ID="hfSubGroupMemberId" runat="server" />
+                        <asp:ValidationSummary ID="vsSubGroupMember" runat="server" ValidationGroup="vgAddGroupMemmber" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+                        <fieldset>
+                            <div class="col-md-6">
+                                <Rock:RockDropDownList ID="ddlRegistrantList" runat="server" Label="Registrant" Required="true" ValidationGroup="vgAddGroupMemmber" />
+                                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMemmber" />
+                            </div>
+                            <div class="col-md-6">
+                                <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMemmber" />
+                                <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMemmber"/>
+                            </div>
+                            <div class="col-md-12">
+                                <asp:PlaceHolder ID="phAttributes" runat="server" EnableViewState="false"></asp:PlaceHolder>
+                                <asp:PlaceHolder ID="phAttributesReadOnly" runat="server" EnableViewState="false"></asp:PlaceHolder>
+                            </div>
+                        </fieldset>
+                    </Content>
+                </Rock:ModalDialog>
             </asp:Panel>
         </asp:Panel>
     </ContentTemplate>
