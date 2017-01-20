@@ -4,6 +4,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web;
 using System.Web.UI;
+using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 
 using Newtonsoft.Json;
@@ -24,10 +25,18 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
     {
         private Group _group;
 
+        private bool _expanded = false;
+
         public Group Group
         {
             get { return _group; }
             set { _group = value; }
+        }
+
+        public bool Expanded
+        {
+            get { return _expanded; }
+            set { _expanded = value; }
         }
 
         public event EventHandler AddButtonClick;
@@ -50,6 +59,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             pnlGroupDescription.Visible = !string.IsNullOrWhiteSpace( group.Description );
             lblGroupDescription.Text = group.Description;
             BuildSubgroupHeading( group );
+            pnlSubGroup.Expanded = _expanded;
+            hfGroupId.Value = group.Id.ToString();
 
             // Set up Member Grid
             RockContext rockContext = new RockContext();

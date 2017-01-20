@@ -361,6 +361,7 @@
                 </asp:Panel>
                 <asp:HiddenField ID="hfActiveTabParentGroup" runat="server" />
                 <asp:HiddenField ID="hfEditGroup" runat="server" />
+                <Rock:HiddenFieldWithClass ID="hfExpandedGroups" runat="server" CssClass="hf-expanded-groups" />
                 <asp:Repeater ID="rpGroupPanels" runat="server">
                     <ItemTemplate>
                         <asp:Panel ID="pnlAssociatedGroup" runat="server" Visible="false" CssClass="panel panel-block">

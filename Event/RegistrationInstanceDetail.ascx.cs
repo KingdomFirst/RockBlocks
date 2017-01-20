@@ -16,10 +16,12 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -61,6 +63,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
 
         private List<FinancialTransactionDetail> RegistrationPayments;
         private List<Registration> PaymentRegistrations;
+        private List<string> _expandedGroupPanels = new List<string>();
         private bool _instanceHasCost = false;
         private Dictionary<int, Location>  _homeAddresses = new Dictionary<int, Location>();
         private List<GroupType> _associatedGroupsUsed = new List<GroupType>();
@@ -137,6 +140,20 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
+
+            if ( Page.IsPostBack )
+            {
+                NameValueCollection httpForm = Request.Form;
+                foreach ( string key in httpForm.AllKeys )
+                {
+                    if ( httpForm[key] == "True" && key.Contains( "hfExpanded") )
+                    {
+                        _expandedGroupPanels.Add( key );
+                    }
+
+                }
+            }
+
 
             fRegistrations.ApplyFilterClick += fRegistrations_ApplyFilterClick;
             gRegistrations.DataKeyNames = new string[] { "Id" };
@@ -286,13 +303,30 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         });
     });
 
-    //$('a.js-delete-subGroup').click(function( e ){
-    //    e.preventDefault();
-    //    Rock.dialogs.confirm('Are you sure you want to delete this group? All of the members will also be deleted from the group!', function (result) {
-    //        if (result) {
-    //            window.location = e.target.href ? e.target.href : e.target.parentElement.href;
-    //        }
-    //    });
+    //$('.rock-panel-widget > header').click(function (e) {
+    //    $expanded = $(this).children('input.filter-expanded');
+    //    if (window.sessionStorage) {
+    //        sessionStorage.setItem('dropselvalue', dropselvalue);
+    //    }
+    //    $hfexpandedgroups = $('.hf-expanded-groups');
+    //    var groupid = $(this).parent().siblings('.panel-widget-groupid').val();
+    //    if( $expanded.val() == 'True') {
+    //        $hfexpandedgroups.val() = $hfexpandedgroups.val().split(',').filter(function(elem) {
+    //            return elem != groupid;
+    //        });
+    //    }
+    //    if( $expanded.val() == 'False' ) {
+    //        var groupsarray = $hfexpandedgroups.val().split(',').push( groupid );
+    //        $hfexpandedgroups.val( groupsarray.join(',') );
+    //    }
+    //    alert( $hfexpandedgroups.val() );
+    //    //if ( $(this).find('.js-header-controls').length ) {
+    //    //    $(this).find('.js-header-title').slideToggle();
+    //    //    $(this).find('.js-header-controls').slideToggle();
+    //    //}
+
+    //    //$expanded = $(this).children('input.filter-expanded');
+    //    //$expanded.val($expanded.val() == 'True' ? 'False' : 'True');
     //});
 ";
             ScriptManager.RegisterStartupScript( btnDelete, btnDelete.GetType(), "deleteInstanceScript", deleteScript, true );
@@ -3758,9 +3792,16 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         {
             foreach ( Group g in subGroups )
             {
-
                 KFSGroupPanel gp = ( KFSGroupPanel )LoadControl( "~/Plugins/KFS/Event/GroupPanel.ascx" );
                 gp.ID = string.Format( "groupPanel_{0}", g.Id );
+                foreach ( string control in _expandedGroupPanels )
+                {
+                    if ( control.Contains( gp.ID ) )
+                    {
+                        gp.Expanded = true;
+                        break;
+                    }
+                }
                 gp.AddButtonClick += Button_Click;
                 gp.BuildControl( g );
                 phGroupControl.Controls.Add( gp );
