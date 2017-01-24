@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<document xsi:schemaLocation="http://www.cete.com http://www.cete.com/schemas/DPLX60.xsd" version="6.0" author="" keywords="" subject="" title="Cornerstone Church" id="MainReport" xmlns="http://www.cete.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<report id="OuterReport" leftMargin="72" topMargin="18" rightMargin="72" bottomMargin="18">
+		<query id="OuterQuery">
+			<eventDriven connectionString=""></eventDriven>
+		</query>
+		<template id="Template1"/>
+		<header id="ReportHeader"/>
+		<detail id="PersonDetail" autoSplit="true" height="360">
+			<subReport id="InnerReport" width="72" x="389" y="345.5">
+				<query id="InnerQuery">
+					<eventDriven connectionString=""></eventDriven>
+				</query>
+				<header id="TranListHeader" height="1">
+				</header>
+				<detail autoSplit="true" id="TranListDetail" height="1">
+					<subReport id="TransactionDetailReport" x="0" y="0" width="72">
+						<query id="qryTransactionDetails">
+							<eventDriven connectionString=""></eventDriven>
+						</query>
+						<header id="Header2"/>
+						<detail id="Detail1" height="1">
+						</detail>
+						<footer id="Footer2"/>
+					</subReport>
+				</detail>
+				<footer id="TranListFooter">
+				</footer>
+			</subReport>
+			<recordArea id="raToAddress" height="60" fontSize="11" width="278" x="0" y="153">
+				<text>#AddressPersonNames#
+#Street1##IIF(len(trim(Street2)),"
+")##Street2#
+#City##IIF(len(trim(City)),",")# #State# #PostalCode#</text>
+			</recordArea>
+			<subReport id="OrganizationInfoReport" width="467.928" x="0" y="0">
+				<query id="OrgInfoQuery">
+					<eventDriven connectionString=""></eventDriven>
+				</query>
+				<header id="Header1"/>
+				<detail id="OrgDetail" height="108">
+					<recordArea width="252" id="raOrganizationAddress" height="42" fontSize="10" x="0" y="54">
+						<text>Cornerstone Church
+#Street1#
+#City#, #State# #PostalCode#</text>
+					</recordArea>
+					<image path="logo.jpg" height="50" width="150" x="0" y="0" id="imgLogo"/>
+				</detail>
+				<footer id="Footer1" height="1"/>
+			</subReport>
+			<recordArea fontSize="11" width="468" font="HelveticaBold" align="center" vAlign="center" height="18" y="262.8" x="0" id="raHeaderCNStatement">
+				<text>CONTRIBUTION STATEMENT</text>
+			</recordArea>
+			<subReport id="AccountSummaryReport" width="288" y="306" x="90">
+				<query id="AccountSummaryQuery">
+					<eventDriven connectionString=""></eventDriven>
+				</query>
+				<header id="AccountSummaryHeader" height="1">
+				</header>
+				<detail id="AccountSummaryDetail" height="14">
+					<recordBox dataFormat="" width="100" id="raAccountSummaryAccountName" field="AccountName" fontSize="9" y="0" height="12" x="0"/>
+					<recordBox width="90" id="raAccountSummaryAmount" field="Amount" align="right" y="0" height="12" fontSize="9" dataFormat="$#,##0.00" x="198"/>
+				</detail>
+				<footer id="AccountSummaryFooter"/>
+			</subReport>
+			<label width="100" text="Total" font="HelveticaBold" height="18" fontSize="10" id="lblBottomTotal" y="324" x="90"/>
+			<recordBox field="Sum(Amount, InnerReport, InnerQuery)" fontSize="10" font="HelveticaBold" align="right" id="rbBottomTotal" dataFormat="$#,##0.00" height="16.5" width="144" y="324" x="234"/>
+			<line id="Line1" width="2" x1="0" x2="468" y1="252" y2="252"/>
+			<recordBox id="RecordBox1" dataFormat="" field="Format( CurrentDateTime( ), &quot;MM/dd/yyyy&quot; )" height="18.5" align="right" width="144" x="324" y="153"/>
+			<pageBreak id="PageBreak1" y="350"/>
+			<recordArea fontSize="11" x="0" width="468" font="HelveticaBold" align="center" vAlign="center" y="280.8" height="18" id="raDateRange">
+				<text>#Format(StartDate, "MM/dd/yyyy")# to #Format(EndDate, "MM/dd/yyyy")#</text>
+			</recordArea>
+		</detail>
+		<footer id="ReportFooter" height="162"><formattedRecordArea id="FormattedRecordArea1" x="0" y="0" width="468" height="18" vAlign="center"><initialStyle><font/><line/><paragraph align="right"/></initialStyle><text><![CDATA[<P Align="Center"><FONT PointSize="10"><B>Thank you for your generous support to the work of Jesus Christ through Cornerstone!</B></FONT></P>]]></text></formattedRecordArea><formattedRecordArea id="FormattedRecordArea2" y="18" vAlign="center" height="72" width="432" x="18"><initialStyle><font/><line/><paragraph align="center"/></initialStyle><text><![CDATA[<P><FONT PointSize="10">This statement of your contributions has been prepared according to our records. If you have any concerns about the accuracy of this information, please let us know.</FONT></P><P><FONT PointSize="10">To help ensure accurate recording during the year, please use the memo line on your check to state your fund choices. If contributing cash, please write your full name legibly on the giving envelope and indicate your fund allocations on the lines indicated.</FONT></P>]]></text></formattedRecordArea><formattedRecordArea id="FormattedRecordArea3" height="28.8" width="468" x="0" vAlign="center" y="90"><initialStyle><font/><line/><paragraph align="center"/></initialStyle><text><![CDATA[<P><FONT PointSize="9"><I>This contribution statement will serve as notification of contributions to Cornerstone as required by the IRS.</I></FONT></P><P><FONT PointSize="9"><I>No goods or services were provided in exchange for your contributions, only intangible religious benefits.</I></FONT></P>]]></text></formattedRecordArea><line id="Line2" x1="0" x2="468" y1="121.6" y2="121.6"/><line x1="0" x2="468" id="Line3" y1="125.2" y2="125.2"/><recordArea id="RecordArea1" width="468" x="0" align="center" y="126" fontSize="10" height="36" vAlign="center"><text>Cornerstone Church, 205 CSAH 34, Litchfield, MN 55355     (320) 593-7971
+www.cornerstonchurchmn.org</text></recordArea></footer>
+	</report>
+</document>
