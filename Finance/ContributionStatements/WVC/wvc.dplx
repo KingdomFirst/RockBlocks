@@ -1,13 +1,22 @@
 <?xml version="1.0"?>
-<document xsi:schemaLocation="http://www.cete.com http://www.cete.com/schemas/DPLX60.xsd" version="6.0" author="" keywords="" subject="" title="Rock Standard" id="MainReport" xmlns="http://www.cete.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-	<report id="OuterReport">
+<document xsi:schemaLocation="http://www.cete.com http://www.cete.com/schemas/DPLX60.xsd" version="6.0" author="" keywords="" subject="" id="MainReport" title="Woodmen Valley" xmlns="http://www.cete.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<report id="OuterReport" bottomMargin="18" leftMargin="36" rightMargin="36" topMargin="36">
 		<query id="OuterQuery">
 			<eventDriven connectionString=""></eventDriven>
 		</query>
 		<template id="Template1"/>
-		<header id="ReportHeader"/>
-		<detail id="PersonDetail" autoSplit="true" height="430">
-			<subReport id="InnerReport" width="501" x="1.5" y="251.5">
+		<header id="ReportHeader" height="126"><image x="0" y="0" height="50" width="150" path="logo.jpg" id="Image1"/>
+			<recordArea width="252" height="36" y="0" x="288" align="right" fontSize="11" id="RecordArea1">
+				<text>#Street1#
+#City#, #State# #PostalCode#
+</text>
+			</recordArea>
+			<recordArea height="36" width="540" x="0" align="center" vAlign="bottom" y="68.4" fontSize="11" id="RecordArea2">
+				<text>719.388.5000  •  WOODMENVALLEY.ORG  •  FEIN: 84-0996424</text>
+			</recordArea>
+			<line x1="0" x2="540" y1="108" y2="108" color="gray" id="lnPageHeader" width="3"/></header>
+		<detail id="PersonDetail" autoSplit="true" height="346.5">
+			<subReport id="InnerReport" width="504" x="18" y="288">
 				<query id="InnerQuery">
 					<eventDriven connectionString=""></eventDriven>
 				</query>
@@ -16,7 +25,7 @@
 					<label font="HelveticaBold" width="72" height="14" fontSize="10" text="Type" id="lblCurrencyTypeValueName" y="3" x="57"/>
 					<label font="HelveticaBold" height="14" fontSize="10" id="lblAccounts" text="Account(s)" y="2.5" width="207.5" x="284.5"/>
 					<label font="HelveticaBold" id="lblAmount" height="14" align="right" fontSize="10" width="99.1" text="Total Amount" y="2.5" x="171"/>
-					<line id="HeaderLine" y1="19" x2="499.5" y2="19" x1="0"/>
+					<line id="HeaderLine" y1="19" x2="499.5" y2="19" x1="0" color="gray"/>
 				</header>
 				<detail autoSplit="true" id="TranListDetail" height="15">
 					<recordBox height="14" field="TransactionDateTime" id="rbTransactionDateTime" fontSize="9" dataFormat="M/dd/yyyy" align="right" x="0" y="2" width="50"/>
@@ -34,62 +43,53 @@
 						<footer id="Footer2"/>
 					</subReport>
 				</detail>
-				<footer id="TranListFooter" height="3">
-					<line id="FooterLine" x2="498" x1="0" y1="2" y2="2"/>
+				<footer id="TranListFooter" height="20.016">
+					<line id="FooterLine" x2="498" x1="0" y1="2" y2="2" color="gray"/>
+					<label width="100" font="HelveticaBold" height="18" fontSize="10" id="Label2" y="3.6" text="Contribution Total" x="284.976"/>
+					<recordBox height="14" field="Sum(Amount, InnerReport, InnerQuery)" fontSize="10" font="HelveticaBold" align="right" dataFormat="$#,##0.00" id="RecordBox3" y="3.6" width="94.032" x="400.968"/>
 				</footer>
 			</subReport>
-			<pageBreak id="PageBreak1" y="426"/>
-			<recordArea x="0" width="252" id="raToAddress" y="144" height="60" fontSize="11">
+			<pageBreak id="PageBreak1" y="270"/>
+			<recordArea x="0" id="raToAddress" fontSize="11" height="72" width="234" y="0">
 				<text>#AddressPersonNames#
 #Street1##IIF(len(trim(Street2)),"
 ")##Street2#
 #City##IIF(len(trim(City)),",")# #State# #PostalCode#</text>
 			</recordArea>
-			<subReport id="OrganizationInfoReport" x="0" y="0" width="250">
+			<subReport id="OrganizationInfoReport" width="540" x="0" y="0">
 				<query id="OrgInfoQuery">
 					<eventDriven connectionString=""></eventDriven>
 				</query>
-				<header id="Header1"/>
-				<detail id="OrgDetail" height="100">
-					<image x="0" id="imgLogo" y="0" height="50" width="150" path="logo.jpg"/>
-					<recordArea x="0" width="252" id="raOrganizationAddress" height="42" y="54" fontSize="10">
-						<text>#Street1#, #City# #State# #PostalCode#
-</text>
-					</recordArea>
-					<contentGroup id="ContentGroup1" height="55" width="200" x="162" y="66"/>
+				<header id="Header1" height="1"/>
+				<detail id="OrgDetail" height="0">
 				</detail>
 				<footer id="Footer1"/>
 			</subReport>
-			<recordArea y="0" align="right" id="raRightTop" x="144" width="366" height="78" fontSize="11">
-				<text>Contribution Summary for #AddressPersonNames#
-#Format(StartDate, "MM/dd/yyyy")# - #Format(EndDate, "MM/dd/yyyy")#
-        </text>
+			<recordArea id="raRightTop" fontSize="11" height="30.1" width="540" x="0" align="center" y="144">
+				<text>CONTRIBUTION DETAIL FROM #ToUpper(Format(StartDate, "MMMM d, yyyy"))# THROUGH #ToUpper(Format(EndDate, "MMMM d, yyyy"))#</text>
 			</recordArea>
-			<recordArea width="246" id="raCustomArea1" x="258" y="84" height="120" fontSize="11">
-				<text>#CustomMessage1#</text>
+			<recordArea id="raCustomArea1" height="108" fontSize="9" width="306" x="234" y="0">
+				<text>Thank you for your gifts and continuing contributions that support the ministries of Woodmen Valley Chapel. We rejoice and celebrate in God's bounty expressed by your partnership with our church community. Listed below are the contributions you have made. As we see God's amazing work accomplished through Woodmen, know that you are a vital part of the financial support that sustains this ministry. We are grateful for you!
+
+If you should have any questions, please feel free to call the Finance Department at 719.388.5000.</text>
 			</recordArea>
-			<recordArea width="510" id="raCustomArea2" fontSize="10" x="1" height="56.6" y="355">
-				<text>#CustomMessage2#</text>
-			</recordArea>
-			<subReport id="AccountSummaryReport" width="282" x="2" y="325">
+			<subReport id="AccountSummaryReport" width="288" x="126" y="205.2">
 				<query id="AccountSummaryQuery">
 					<eventDriven connectionString=""></eventDriven>
 				</query>
 				<header id="AccountSummaryHeader" height="15">
-					<label font="HelveticaBold" fontSize="10" id="lblAccountSummary" text="Account Totals" y="0" x="6" width="246" height="12"/>
-				</header>
-				<detail id="AccountSummaryDetail" height="14">
-					<recordBox dataFormat="" width="100" id="raAccountSummaryAccountName" field="AccountName" fontSize="9" x="6" y="0" height="12"/>
+					<label font="HelveticaBold" fontSize="10" id="lblAccountSummary" y="0" x="6" height="12" text="Account" width="144"/>
+					<label font="HelveticaBold" fontSize="10" y="0" height="12" id="Label1" width="90" x="192.24" align="right" text="Amount"/>
+					<line x1="0" x2="288" y1="13.32" y2="13.32" color="gray" id="lnAccountHeader"/></header>
+				<detail id="AccountSummaryDetail" height="13.32">
+					<recordBox dataFormat="" id="raAccountSummaryAccountName" field="AccountName" fontSize="9" x="6" y="0" height="12" width="144"/>
 					<recordBox width="90" id="raAccountSummaryAmount" field="Amount" align="right" y="0" height="12" x="192" fontSize="9" dataFormat="$#,##0.00"/>
 				</detail>
-				<footer id="AccountSummaryFooter"/>
+				<footer id="AccountSummaryFooter" height="18"><recordBox height="14" fontSize="10" font="HelveticaBold" align="right" dataFormat="$#,##0.00" id="RecordBox1" field="Sum(Amount, AccountSummaryReport, AccountSummaryQuery)" width="90" x="192.24" y="1.8"/>
+					<recordArea id="RecordArea3" width="90" height="13.968" fontSize="10" font="HelveticaBold" x="5.976" y="1.8"><text>Total</text></recordArea><line x1="0" x2="288" y1="0" y2="0" color="gray" id="lnAccountFooter"/></footer>
 			</subReport>
-			<label width="100" text="Total" font="HelveticaBold" height="18" fontSize="10" id="lblBottomTotal" x="8" y="295"/>
-			<recordBox height="14" field="Sum(Amount, InnerReport, InnerQuery)" fontSize="10" font="HelveticaBold" align="right" width="264" id="rbBottomTotal" dataFormat="$#,##0.00" x="236" y="295"/>
-			<rectangle fillColor="lightGrey" width="501" height="26" id="rectHeader" x="0.5" y="209"/>
-			<recordBox height="18" width="108" font="HelveticaBold" align="right" fontSize="10" field="Sum(Amount, InnerReport, InnerQuery)" dataFormat="$#,##0.00" id="rbSumAmount" x="392" y="216.5"/>
-			<recordArea width="288" height="18" font="HelveticaBold" fontSize="10" id="raTotalCashGifts" x="12" y="217">
-				<text>Total Cash Gifts This Period</text>
+			<recordArea height="18" id="raCustomArea2" font="HelveticaBold" fontSize="9" width="306" x="234" y="108">
+				<text>No goods or services have been rendered for these contributions.</text>
 			</recordArea>
 		</detail>
 		<footer id="ReportFooter"/>
