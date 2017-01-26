@@ -1,0 +1,316 @@
+{% capture pageTitle %}{{ 'Global' | Attribute:'OrganizationName' }} | Contribution Statement{%endcapture%}
+{{ pageTitle | SetPageTitle }}
+
+<style>
+    @media all {
+        .page-break,
+        .hidden {
+            display: none;
+        }
+        body {
+            font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+        }
+        th {
+            text-align: left;
+        }
+        .dollar {
+            text-align: right;
+            padding-right: 25px;
+        }
+        .spacerRow {
+            line-height: 2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            -fs-table-paginate: paginate;
+        }
+        tr.batchTransactionsHeaders,
+        tr.accountSummaryAllHeaders,
+        tr.batchSummaryHeaders,
+        tr.contributionTypesHeaders {
+            background: #333399;
+            color: #fff;
+            line-height: 2;
+        }
+        tr.batchSummaryTotals td,
+        tr.batchTransactionsBatchTotal td,
+        tr.batchTransactionsBatchGrandTotal td,
+        td.contributionTypesTotal,
+        tr.contributionTypesGrandTotal td {
+            border-top: 2px solid black;
+            font-weight: bold;
+        }
+        tr.accountName,
+        tr.batchTransactionsBatchName,
+        tr.contributionTypesName {
+            background: #ccc;
+            font-size: large;
+            font-weight: bold;
+        }
+        p, tr {
+            font-size: 12px;
+            line-height: initial;
+        }
+    }
+    
+    @media print {
+        .page-break {
+            display: block;
+            page-break-before: always;
+        }
+        body {
+            background: white;
+            font-size: 10pt;
+            margin: 0
+        }
+        #sidebar {
+            display: none
+        }
+        #header {
+            height: 75px
+        }
+        #content {
+            margin-left: 0;
+            float: none;
+            width: auto
+        }
+        .demo .red {
+            color: black;
+            font-weight: bold
+        }
+        #content a {
+            font-weight: bold;
+            color: #000066;
+            text-decoration: underline
+        }
+        #content {
+            margin-left: 0;
+            float: none;
+            width: auto
+        }
+        #footer,
+        .ad {
+            display: none
+        }
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            page-break-after: avoid;
+            page-break-inside: avoid
+        }
+        h3 {
+            margin-left: 10px;
+            margin-bottom: 0px;
+            padding-bottom: 0px
+        }
+        blockquote,
+        table,
+        pre {
+            page-break-inside: avoid
+        }
+        ul,
+        ol,
+        dl {
+            page-break-before: avoid
+        }
+        img.centered {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        img.right {
+            padding: 4px;
+            margin: 0 0 2px 7px;
+            display: inline;
+        }
+        img.left {
+            padding: 4px;
+            margin: 0 7px 2px 0;
+            display: inline;
+        }
+        .right {
+            float: right;
+        }
+        .left {
+            float: left
+        }
+        img {
+            page-break-inside: avoid;
+            page-break-after: avoid;
+        }
+        thead {
+            display: table-header-group;
+        }
+    }
+
+    .churchAddress {
+        margin-top: 46px;
+    }
+
+    body {
+        background: white !important;
+    }
+</style>
+
+<div class="row">
+    <div class="col-xs-6">
+        <div class="pull-left">
+            <img src="{{ 'Global' | Attribute:'WVCLogoWideBlack' }}" width="400" />
+        </div>
+    </div>
+    <div class="col-xs-6">
+        <div class="text-right pull-right">
+            <div class="churchAddress">290 E Woodmen Rd<br />Colorado Springs, CO 80919-1359</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xs-12 text-center h5">{{ 'Global' | Attribute:'ContributionStatementHeader' }}<hr /></div>
+</div>
+
+<div class="row">
+    <div class="col-xs-4">
+        <p>{{ Salutation }} <br />{{ StreetAddress1 }} <br />{% if StreetAddress2 and StreetAddress2 != '' %}{{ StreetAddress2 }} <br />{% endif %}{{ City }}, {{ State }} {{ PostalCode }}</p>
+    </div>
+    <div class="col-xs-7 col-xs-offset-1">
+        {{ 'Global' | Attribute:'ContributionStatementCustomText' }}
+    </div>
+</div>
+
+
+<div class="clearfix">
+    <div class="pull-right">
+        <a href="#" class="btn btn-primary hidden-print" onClick="window.print();"><i class="fa fa-print"></i> Print Statement</a> 
+    </div>
+</div>
+
+<hr style="opacity: .5;" />
+
+<div class="row">
+    <div class="text-center">
+        <h5 class="margin-t-md margin-b-md">SUMMARY OF CONTRIBUTIONS FROM {{ StatementStartDate | Date:'MMMM d, yyyy' | Upcase }} THROUGH {{ StatementEndDate | Date:'MMMM d, yyyy' | Upcase }}</h5>
+    </div>
+</div>
+<div class="row">
+    <div class="col-xs-6 col-xs-offset-3">
+        
+        <div class="row">
+            <div class="col-xs-6">
+                <strong>Account</strong>
+            </div>
+            <div class="col-xs-6 text-right">
+                <strong>Total Amount</strong>
+            </div>
+        </div>
+        {% assign summaryAmountTotal = '0' %}
+        {% for accountsummary in AccountSummary %}
+            <div class="row">
+                <div class="col-xs-6">{{ accountsummary.AccountName }}</div>
+                <div class="col-xs-6 text-right">{{ accountsummary.Total | FormatAsCurrency }}</div>
+            </div>
+        {% assign summaryAmountTotal = summaryAmountTotal | Plus:accountsummary.Total %}
+         {% endfor %}
+         <hr style="opacity: .5;" />
+         <div class="row">
+            <div class="col-xs-6">
+                <h5>Total<h5>
+            </div>
+            <div class="col-xs-6 text-right">
+                <h5>{{ summaryAmountTotal | FormatAsCurrency }}<h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% assign pledgeCount = Pledges | Size %}
+
+{% if pledgeCount > 0 %}
+    <hr style="opacity: .5;" />
+    <div class="row">
+        <div class="text-center">
+            <h5 class="margin-t-md margin-b-md">PLEDGE SUMMARY AS OF {{ StatementEndDate }}</h5>
+        </div>
+    </div>
+ 
+    {% for pledge in Pledges %}
+        <div class="row">
+            <div class="col-xs-4 col-xs-offset-2">
+                <strong>{{ pledge.AccountName }}</strong>
+                
+                <p>
+                    Amt Pledged: {{ 'Global' | Attribute:'CurrencySymbol' }}{{ pledge.AmountPledged }} <br />
+                    Amt Given: {{ 'Global' | Attribute:'CurrencySymbol' }}{{ pledge.AmountGiven }} <br />
+                    Amt Remaining: {{ 'Global' | Attribute:'CurrencySymbol' }}{{ pledge.AmountRemaining }}
+                </p>
+            </div>
+            <div class="col-xs-4 padding-t-md">
+                <div class="hidden-print">
+                    Pledge Progress
+                    <div class="progress">
+                      <div class="progress-bar" role="progressbar" aria-valuenow="{{ pledge.PercentComplete }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ pledge.PercentComplete }}%;">
+                        {{ pledge.PercentComplete }}%
+                      </div>
+                    </div>
+                </div>
+                <div class="visible-print-block">
+                    Percent Complete <br />
+                    {{ pledge.PercentComplete }}%
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="page-break"></div>
+<div class="row visible-print-block">
+    <div class="col-xs-6">
+        <div class="pull-left">
+            <img src="{{ 'Global' | Attribute:'WVCLogoWideBlack' }}" width="400" />
+        </div>
+    </div>
+    <div class="col-xs-6">
+        <div class="text-right pull-right">
+            <div class="churchAddress">290 E Woodmen Rd<br />Colorado Springs, CO 80919-1359</div>
+        </div>
+    </div>
+</div>
+
+<div class="row visible-print-block">
+    <div class="col-xs-12 text-center h5">{{ 'Global' | Attribute:'ContributionStatementHeader' }}<hr /></div>
+</div>
+
+<div class="row">
+    <div class="text-center">
+        <h5 class="margin-t-md margin-b-md">CONTRIBUTION DETAIL FROM {{ StatementStartDate | Date:'MMMM d, yyyy' | Upcase }} THROUGH {{ StatementEndDate | Date:'MMMM d, yyyy' | Upcase }}</h5>
+    </div>
+</div>
+
+<table class="table table-bordered table-striped table-condensed">
+    <tr>
+        <th>Date</th>
+        <th>Giving Area</th>
+        <th>Check/Trans #</th>
+        <th align="right">Amount</th>
+    </tr>
+    
+    {% assign transactionAmountTotal = '0' %}
+    {% for transaction in TransactionDetails %}
+        <tr>
+            <td>{{ transaction.Transaction.TransactionDateTime | Date:'M/d/yyyy' }}</td>
+            <td>{{ transaction.Account.Name }}</td>
+            <td>{{ transaction.Transaction.TransactionCode }}</td>
+            <td align="right">{{ transaction.Amount | FormatAsCurrency }}</td>
+        </tr>
+    {% assign transactionAmountTotal = transactionAmountTotal | Plus:transaction.Amount %}
+    {% endfor %}
+    <tr>
+        <td class="text-right" colspan="3"><h5>TOTAL</h5></td>
+        <td class="text-right"><h5>{{ transactionAmountTotal | FormatAsCurrency }}</h5></td>
+    </tr>
+    
+</table>
