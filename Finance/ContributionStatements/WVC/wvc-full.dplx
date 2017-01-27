@@ -42,13 +42,11 @@ Colorado Springs, CO 80919</text>
 						<footer id="Footer2"/>
 					</subReport>
 				</detail>
-				<footer id="TranListFooter" height="20.016">
+				<footer id="TranListFooter">
 					<line id="FooterLine" x2="498" x1="0" y1="2" y2="2" color="gray"/>
-					<label width="100" font="HelveticaBold" height="18" fontSize="10" id="Label2" y="3.6" text="Contribution Total" x="284.976"/>
-					<recordBox height="14" field="Sum(Amount, InnerReport, InnerQuery)" fontSize="10" font="HelveticaBold" align="right" dataFormat="$#,##0.00" id="RecordBox3" y="3.6" width="94.032" x="400.968"/>
 				</footer>
 			</subReport>
-			<pageBreak y="252" id="pbEndOfSummary"/>
+			<pageBreak id="pbEndOfSummary" y="252"/>
 			<recordArea x="0" id="raToAddress" fontSize="11" height="72" width="234" y="0">
 				<text>#AddressPersonNames#
 #Street1##IIF(len(trim(Street2)),"
@@ -72,7 +70,7 @@ Colorado Springs, CO 80919</text>
 
 If you should have any questions, please feel free to call the Finance Department at 719.388.5000.</text>
 			</recordArea>
-			<subReport id="AccountSummaryReport" width="288" x="126" y="198">
+			<subReport id="AccountSummaryReport" width="288" y="198" x="126">
 				<query id="AccountSummaryQuery">
 					<eventDriven connectionString=""></eventDriven>
 				</query>
@@ -84,8 +82,7 @@ If you should have any questions, please feel free to call the Finance Departmen
 					<recordBox dataFormat="" id="raAccountSummaryAccountName" field="AccountName" fontSize="9" x="6" y="0" height="12" width="144"/>
 					<recordBox width="90" id="raAccountSummaryAmount" field="Amount" align="right" y="0" height="12" x="192" fontSize="9" dataFormat="$#,##0.00"/>
 				</detail>
-				<footer id="AccountSummaryFooter" height="18"><recordBox height="14" fontSize="10" font="HelveticaBold" align="right" dataFormat="$#,##0.00" id="RecordBox1" field="Sum(Amount, AccountSummaryReport, AccountSummaryQuery)" width="90" x="192.24" y="1.8"/>
-					<recordArea id="RecordArea3" width="90" height="13.968" fontSize="10" font="HelveticaBold" x="5.976" y="1.8"><text>Total</text></recordArea><line x1="0" x2="288" y1="0" y2="0" color="gray" id="lnAccountFooter"/></footer>
+				<footer id="AccountSummaryFooter"><line x1="0" x2="288" y1="0" y2="0" color="gray" id="lnAccountFooter"/></footer>
 			</subReport>
 			<recordArea height="18" id="raCustomArea2" font="HelveticaBold" fontSize="9" width="306" x="234" y="108">
 				<text>No goods or services have been rendered for these contributions.</text>
@@ -93,7 +90,10 @@ If you should have any questions, please feel free to call the Finance Departmen
 			<recordArea fontSize="11" height="30.1" width="540" x="0" align="center" id="raContributionDetailDate" y="270">
 				<text>CONTRIBUTION DETAIL FROM #ToUpper(Format(StartDate, "MMMM d, yyyy"))# THROUGH #ToUpper(Format(EndDate, "MMMM d, yyyy"))#</text>
 			</recordArea>
-			<pageBreak y="378" id="pbEndOfRecord"/></detail>
+			<pageBreak id="pbEndOfRecord" y="378"/><recordArea width="90" height="13.968" fontSize="10" font="HelveticaBold" x="131.976" id="raAccountTotalTitle" y="230.4"><text>Total</text></recordArea><recordBox height="14" fontSize="10" font="HelveticaBold" align="right" dataFormat="$#,##0.00" field="Sum(Amount, AccountSummaryReport, AccountSummaryQuery)" width="90" x="318.24" id="raAccountTotalSum" y="230.4"/>
+			<recordBox height="14" field="Sum(Amount, InnerReport, InnerQuery)" fontSize="10" font="HelveticaBold" align="right" dataFormat="$#,##0.00" width="94.032" x="418.968" y="345.6" id="raContributionTotal"/>
+			<label width="100" font="HelveticaBold" height="18" fontSize="10" text="Contribution Total" x="304.92" y="345.6" id="lblContributionTotal"/>
+		</detail>
 		<footer id="ReportFooter"/>
 	</report>
 </document>

@@ -42,10 +42,8 @@ Colorado Springs, CO 80919</text>
 						<footer id="Footer2"/>
 					</subReport>
 				</detail>
-				<footer id="TranListFooter" height="20.016">
+				<footer id="TranListFooter">
 					<line id="FooterLine" x2="498" x1="0" y1="2" y2="2" color="gray"/>
-					<label width="100" font="HelveticaBold" height="18" fontSize="10" id="Label2" y="3.6" text="Contribution Total" x="284.976"/>
-					<recordBox height="14" field="Sum(Amount, InnerReport, InnerQuery)" fontSize="10" font="HelveticaBold" align="right" dataFormat="$#,##0.00" id="RecordBox3" y="3.6" width="94.032" x="400.968"/>
 				</footer>
 			</subReport>
 			<recordArea x="0" id="raToAddress" fontSize="11" height="72" width="234" y="0">
@@ -74,7 +72,9 @@ If you should have any questions, please feel free to call the Finance Departmen
 			<recordArea fontSize="11" height="30.1" width="540" x="0" align="center" id="raContributionDetailDate" y="162">
 				<text>CONTRIBUTION DETAIL FROM #ToUpper(Format(StartDate, "MMMM d, yyyy"))# THROUGH #ToUpper(Format(EndDate, "MMMM d, yyyy"))#</text>
 			</recordArea>
-			<pageBreak y="270" id="pbEndOfRecord"/></detail>
+			<pageBreak y="270" id="pbEndOfRecord"/><label width="100" font="HelveticaBold" height="18" fontSize="10" text="Contribution Total" x="304.92" y="237.6" id="lblContributionTotal"/>
+			<recordBox height="14" field="Sum(Amount, InnerReport, InnerQuery)" fontSize="10" font="HelveticaBold" align="right" dataFormat="$#,##0.00" width="94.032" x="418.968" y="237.6" id="raContributionTotal"/>
+		</detail>
 		<footer id="ReportFooter"/>
 	</report>
 </document>
