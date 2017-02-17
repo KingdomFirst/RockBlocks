@@ -646,14 +646,15 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     {
                         groupMember = new GroupMember { Id = 0 };
                         groupMember.GroupId = group.Id;
+                        groupMember.PersonId = personId.Value;
                     }
                     else
                     {
                         // load existing group member
                         groupMember = groupMemberService.Get( groupMemberId );
+                        groupMember.GroupId = ddlSubGroup.SelectedValue.AsInteger();
                     }
 
-                    groupMember.PersonId = personId.Value;
                     groupMember.GroupRoleId = role.Id;
                     groupMember.Note = tbNote.Text;
                     groupMember.GroupMemberStatus = rblStatus.SelectedValueAsEnum<GroupMemberStatus>();
@@ -3803,6 +3804,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     }
                 }
                 gp.AddButtonClick += Button_Click;
+                gp.EditMemberButtonClick += EditMemberButton_Click;
                 gp.BuildControl( g );
                 phGroupControl.Controls.Add( gp );
             }
@@ -3836,46 +3838,88 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         private void Button_Click( object sender, EventArgs e )
         {
             RockContext rockContext = new RockContext();
-            KFSGroupPanel panel = ( KFSGroupPanel )sender; ddlRegistrantList.Items.Clear();
+            KFSGroupPanel panel = ( KFSGroupPanel )sender;
             Group group = panel.Group;
+            RenderMemberModal( rockContext, group, null );
+        }
+
+        private void EditMemberButton_Click( object sender, EventArgs e )
+        {
+            RowEventArgs re = ( RowEventArgs )e;
+            int groupMemberId = re.RowKeyId;
+            if ( groupMemberId > 0 )
+            {
+                RockContext rockContext = new RockContext();
+                GroupMemberService memberService = new GroupMemberService( rockContext );
+                GroupMember member = memberService.Queryable().Where( m => m.Id == groupMemberId ).FirstOrDefault();
+                Group group = member.Group;
+                RenderMemberModal( rockContext, group, member );
+            }
+        }
+
+        private void RenderMemberModal( RockContext rockContext, Group group, GroupMember groupMember )
+        {
+            // Clear modal controls
+            ddlRegistrantList.Items.Clear();
             ddlGroupRole.Items.Clear();
             tbNote.Text = string.Empty;
             tbDescription.Text = string.Empty;
             nbGroupCapacity.Text = string.Empty;
-            List<int> placedMembers = new List<int>();
-            hfSubGroupId.Value = group.Id.ToString();
-            hfSubGroupMemberId.Value = "0";
-            foreach ( Group g in group.ParentGroup.Groups )
-            {
-                placedMembers.AddRange( g.Members.Select( m => m.Person.Id ).Where( m => !placedMembers.Contains( m ) ) );
-            }
+
             int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
             RegistrationInstanceService ris = new RegistrationInstanceService( new RockContext() );
-            //RegistrationInstance ri = ris.Get( RegistrationInstanceId );
-            //var placedRegistrants = ri.Where( ri => )
-            var qry = new RegistrationRegistrantService( rockContext )
-             .Queryable().AsNoTracking()
-             .Where( r =>
-                 r.Registration.RegistrationInstanceId == RegistrationInstanceId &&
-                 r.PersonAlias != null &&
-                 r.PersonAlias.Person != null &&
-                 !placedMembers.Contains( r.PersonAlias.Person.Id ) );
-            ddlRegistrantList.Help = string.Format( "Choose from a list of Registrants who have not yet been assigned to a {0} {1}", group.ParentGroup.Name, group.GroupType.GroupTerm );
-            foreach ( var registrant in qry.ToList() )
-            {
-                ddlRegistrantList.Items.Add( new ListItem( registrant.PersonAlias.Person.FullNameReversed, registrant.PersonAlias.Person.Guid.ToString() ) );
-            }
-            ddlGroupRole.DataSource = group.GroupType.Roles.OrderBy( a => a.Order ).ToList();
-            ddlGroupRole.DataBind();
-
+            hfSubGroupId.Value = group.Id.ToString();
             rblStatus.BindToEnum<GroupMemberStatus>();
-            rblStatus.SelectedIndex = 1;
             string groupMemberTerm = "Member";
             if ( !string.IsNullOrWhiteSpace( group.GroupType.GroupMemberTerm ) )
             {
                 groupMemberTerm = group.GroupType.GroupMemberTerm;
             }
-            mdlAddSubGroupMember.Title = string.Format( "Add New {0} to {1}", groupMemberTerm, group.Name );
+            ddlGroupRole.DataSource = group.GroupType.Roles.OrderBy( a => a.Order ).ToList();
+            ddlGroupRole.DataBind();
+            hfSubGroupMemberId.Value = groupMember != null ? groupMember.Id.ToString() : "0";
+            if ( groupMember == null )
+            {
+                ddlSubGroup.Visible = false;
+                ddlRegistrantList.Enabled = true;
+                List<int> placedMembers = new List<int>();
+                foreach ( Group g in group.ParentGroup.Groups )
+                {
+                    placedMembers.AddRange( g.Members.Select( m => m.Person.Id ).Where( m => !placedMembers.Contains( m ) ) );
+                }
+                var qry = new RegistrationRegistrantService( rockContext )
+                 .Queryable().AsNoTracking()
+                 .Where( r =>
+                     r.Registration.RegistrationInstanceId == RegistrationInstanceId &&
+                     r.PersonAlias != null &&
+                     r.PersonAlias.Person != null &&
+                     !placedMembers.Contains( r.PersonAlias.Person.Id ) );
+                ddlRegistrantList.Help = string.Format( "Choose from a list of Registrants who have not yet been assigned to a {0} {1}", group.ParentGroup.Name, group.GroupType.GroupTerm );
+                foreach ( var registrant in qry.ToList() )
+                {
+                    ddlRegistrantList.Items.Add( new ListItem( registrant.PersonAlias.Person.FullNameReversed, registrant.PersonAlias.Person.Guid.ToString() ) );
+                }
+                rblStatus.SelectedIndex = 1;
+                mdlAddSubGroupMember.Title = string.Format( "Add New {0} to {1}", groupMemberTerm, group.Name );
+            }
+            else
+            {
+                ddlRegistrantList.Help = null;
+                ddlRegistrantList.Items.Add( new ListItem( groupMember.Person.FullNameReversed, groupMember.Person.Guid.ToString() ) );
+                ddlRegistrantList.Enabled = false;
+                ddlGroupRole.SelectedValue = groupMember.GroupRoleId.ToString();
+                rblStatus.SelectedValue = ( (int)groupMember.GroupMemberStatus ).ToString();
+                tbNote.Text = groupMember.Note;
+                mdlAddSubGroupMember.Title = string.Format( "Edit {0} in {1}", groupMemberTerm, group.Name );
+                ddlSubGroup.Visible = true;
+                
+                ddlSubGroup.DataSource = group.ParentGroup.Groups;
+                ddlSubGroup.DataTextField = "Name";
+                ddlSubGroup.DataValueField = "Id";
+                ddlSubGroup.DataBind();
+                ddlSubGroup.Label = !string.IsNullOrWhiteSpace( group.GroupType.GroupTerm ) ? group.GroupType.GroupTerm : "Sub-Group";
+                //ddlSubGroup.SelectedValue = group.Id.ToString();
+            }
             mdlAddSubGroupMember.Show();
         }
 

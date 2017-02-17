@@ -1,4 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupPanel.ascx.cs" Inherits="RockWeb.Plugins.com_kingdomfirstsolutions.Event.KFSGroupPanel" %>
+
 <asp:UpdatePanel ID="upnlSubGroup" runat="server">
     <ContentTemplate>
         <Rock:HiddenFieldWithClass ID="hfGroupId" runat="server" CssClass="panel-widget-groupid" />

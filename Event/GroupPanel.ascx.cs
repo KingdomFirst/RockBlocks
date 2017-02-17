@@ -41,6 +41,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
 
         public event EventHandler AddButtonClick;
 
+        public event EventHandler EditMemberButtonClick;
+
         public void BuildControl()
         {
             if ( _group != null )
@@ -72,9 +74,13 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             gGroupMembers.Actions.AddClick += Actions_AddClick;
             gGroupMembers.Actions.ShowAdd = true;
             gGroupMembers.IsDeleteEnabled = true;
-            //gGroupMembers.RowSelected += GGroupMembers_Edit;
             gGroupMembers.RowDataBound += GGroupMembers_RowDataBound;
-            //gGroupMembers.RowCommand += GGroupMembers_RowCommand;
+
+            // Add edit column
+            var editField = new EditField();
+            gGroupMembers.Columns.Add( editField );
+            editField.Click += Actions_EditClick;
+
 
             // Add delete column
             var deleteField = new DeleteField();
@@ -127,10 +133,13 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             }
         }
 
-        private void GGroupMembers_RowCommand( object sender, GridViewCommandEventArgs e )
+        private void Actions_EditClick( object sender, EventArgs e )
         {
+            if ( EditMemberButtonClick != null )
+            {
+                EditMemberButtonClick( this, e );
+            }
         }
-
 
         private void DeleteGroupMember_Click( object sender, RowEventArgs e )
         {

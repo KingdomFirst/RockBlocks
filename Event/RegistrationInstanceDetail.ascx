@@ -413,6 +413,7 @@
                                 <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMemmber" />
                             </div>
                             <div class="col-md-6">
+                                <Rock:RockDropDownList ID="ddlSubGroup" runat="server" ValidationGroup="vgAddGroupMemmber" Visible="false" />
                                 <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMemmber" />
                                 <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMemmber"/>
                             </div>
