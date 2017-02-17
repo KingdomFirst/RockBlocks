@@ -1007,6 +1007,18 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     var changes = new List<string>();
                     changes.Add( "Deleted registration" );
 
+                    // remove registrants from any associated groups
+                    GroupMemberService memberService = new GroupMemberService( rockContext );
+                    List<GroupMember> deleteMembers = new List<GroupMember>();
+                    foreach ( GroupType groupType in _associatedGroupsUsed )
+                    {
+                        foreach ( RegistrationRegistrant registrant in registration.Registrants )
+                        {
+                            deleteMembers.AddRange( GetDeleteGroupMembers( rockContext, memberService, groupType, registrant ) );
+                        }
+                    }
+
+
                     rockContext.WrapTransaction( () =>
                     {
                         HistoryService.SaveChanges(
@@ -1017,6 +1029,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                             changes );
 
                         registrationService.Delete( registration );
+                        foreach( GroupMember member in deleteMembers )
+                        {
+                            memberService.Delete( member );
+                        }
                         rockContext.SaveChanges();
                     } );
 
@@ -1025,6 +1041,21 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             }
 
             BindRegistrationsGrid();
+        }
+
+        private List<GroupMember> GetDeleteGroupMembers( RockContext rockContext, GroupMemberService memberService, GroupType groupType, RegistrationRegistrant registrant )
+        {
+            GroupService groupService = new GroupService( rockContext );
+            List<GroupMember> deleteMembers = new List<GroupMember>();
+            int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
+            RegistrationInstance ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
+            ri.LoadAttributes();
+            Group parentGroup = groupService.Get( Guid.Parse( ri.AttributeValues[groupType.Name].Value ) );
+            List<int> groupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
+            deleteMembers.AddRange( memberService.Queryable()
+                                        .Where( m => groupIds.Contains( m.GroupId ) )
+                                        .Where( m => m.PersonId == registrant.PersonId ).ToList() );
+            return deleteMembers;
         }
 
         /// <summary>
@@ -1425,7 +1456,19 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                         return;
                     }
 
+                    // remove registrant from any associated groups
+                    GroupMemberService memberService = new GroupMemberService( rockContext );
+                    List<GroupMember> deleteMembers = new List<GroupMember>();
+                    foreach ( GroupType groupType in _associatedGroupsUsed )
+                    {
+                        deleteMembers.AddRange( GetDeleteGroupMembers( rockContext, memberService, groupType, registrant ) );
+                    }
+
                     registrantService.Delete( registrant );
+                    foreach ( GroupMember member in deleteMembers )
+                    {
+                        memberService.Delete( member );
+                    }
                     rockContext.SaveChanges();
                 }
             }
