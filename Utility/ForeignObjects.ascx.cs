@@ -25,7 +25,8 @@ namespace RockWeb.Plugins.com_kfs.Utility
     <span class=""label label-type"">{{ Context.Person.ForeignKey }}</span>
     <span class=""label label-type"">{{ Context.Person.ForeignGuid }}</span>
     <span class=""label label-type"">{{ Context.Person.ForeignId }}</span>
-</div>", order: 2 )]
+</div>
+<br />", order: 2 )]
     [BooleanField( "Enable Debug", "Shows the merge fields available for the Lava.", order: 3 )]
     [ContextAware]
 
