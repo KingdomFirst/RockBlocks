@@ -42,6 +42,7 @@ namespace Plugins.com_kfs.Reporting
             {
                 SetAdminFieldVisibility();
                 TestConnection();
+                LoadCredentials();
                 
             }
         }
