@@ -1534,6 +1534,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     }
                 }
             }
+            if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
+            {
+                BindRegistrantsFilter( new RegistrationInstanceService( new RockContext() ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
+            }
+            BindRegistrantsGrid();
         }
 
         /// <summary>
