@@ -41,6 +41,7 @@ namespace Plugins.com_kfs.Reporting
             if ( !Page.IsPostBack )
             {
                 SetAdminFieldVisibility();
+                btnConfigure.Visible = false;
                 TestConnection();
                 LoadCredentials();
                 
@@ -86,6 +87,7 @@ namespace Plugins.com_kfs.Reporting
         private void LoadCredentials()
         {
             ReportingServicesClient client = new ReportingServicesClient();
+            btnVerify.Visible = client.CredentialsStored;
             tbReportingServicesURL.Text = client.ServerUrl;
             tbReportRootFolder.Text = client.ReportPath;
 
@@ -94,7 +96,7 @@ namespace Plugins.com_kfs.Reporting
                 tbAdminUserName.Text = client.ContentManagerUser;
                 tbAdminUserName.Required = true;
                 tbAdminPassword.Text = String.Empty;
-                if ( string.IsNullOrWhiteSpace( client.ContentManagerPassword ) )
+                if ( !string.IsNullOrWhiteSpace( client.ContentManagerPassword ) )
                 {
                     tbAdminPassword.Placeholder = "Stored";
                     tbAdminPassword.Required = false;
@@ -116,7 +118,7 @@ namespace Plugins.com_kfs.Reporting
 
             tbUserName.Text = client.BrowserUser;
 
-            if ( string.IsNullOrWhiteSpace( client.BrowserPassword ) )
+            if ( !string.IsNullOrWhiteSpace( client.BrowserPassword ) )
             {
                 tbPassword.Placeholder = "Stored";
                 tbPassword.Required = false;
@@ -139,7 +141,20 @@ namespace Plugins.com_kfs.Reporting
         {
             ReportingServicesClient client = new ReportingServicesClient();
             client.ServerUrl = tbReportingServicesURL.Text.Trim();
+
+            if ( String.IsNullOrWhiteSpace( client.ServerUrl ) )
+            {
+                DisplayMessage( "<strong>Error</strong> - Server URL is not formatted properly.", NotificationBoxType.Danger );
+                return;
+            }
             client.ReportPath = tbReportRootFolder.Text.Trim();
+
+            client.BrowserUser = tbUserName.Text.Trim();
+
+            if ( !hfPasswordSet.Value.AsBoolean() || !String.IsNullOrWhiteSpace( tbPassword.Text ) )
+            {
+                client.BrowserPassword = tbPassword.Text;
+            }
 
             if ( useCMUser )
             {
@@ -150,13 +165,15 @@ namespace Plugins.com_kfs.Reporting
                 }
 
             }
-
-            client.BrowserUser = tbUserName.Text.Trim();
-
-            if ( !hfPasswordSet.Value.AsBoolean() || !String.IsNullOrWhiteSpace( tbPassword.Text ) )
+            else
             {
-                client.BrowserPassword = tbPassword.Text;
+                client.ContentManagerUser = tbUserName.Text.Trim();
+                if ( !hfPasswordSet.Value.AsBoolean() || !String.IsNullOrWhiteSpace( tbPassword.Text ) )
+                {
+                    client.ContentManagerPassword = tbPassword.Text;
+                }
             }
+
             string message = String.Empty;
             if ( client.SaveCredentials( out message ) )
             {
@@ -173,20 +190,35 @@ namespace Plugins.com_kfs.Reporting
         {
             ReportingServicesClient client = new ReportingServicesClient();
 
-            if ( client.Configured )
+            if ( !client.CredentialsStored )
             {
-                string message = String.Empty;
+                return;
+            }
+            string message = String.Empty;
+            bool connectionSuccess = client.TestConnection( out message, UserType.Browser  );
 
-                if ( client.TestConnection( out message ) )
-                {
-                    DisplayMessage( message, NotificationBoxType.Success );
-                }
-                else
-                {
-                    DisplayMessage( message, NotificationBoxType.Danger );
-                }
+            if ( !connectionSuccess )
+            {
+                DisplayMessage( message, NotificationBoxType.Danger );
+                return;
             }
 
+            if ( !client.TestPath() )
+            {
+                message = string.Format( "<strong>Warning</strong> - Report Path not found ({0})", client.ReportPath );
+                DisplayMessage( message, NotificationBoxType.Warning );
+                btnConfigure.Visible = true;
+                return;
+            }
+
+            if ( !client.TestDataSource( out message ) )
+            {
+                DisplayMessage( "<strong>Datasource Error</strong> - " + message, NotificationBoxType.Warning );
+                btnConfigure.Visible = true;
+                return;
+            }
+
+            DisplayMessage( "<strong>Success</strong> - Successfully Configured.", NotificationBoxType.Success );
             
         }
         #endregion
