@@ -589,9 +589,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                             if ( control.GetType() == typeof( RockRadioButtonList ) )
                             {
                                 RockRadioButtonList rbl = ( RockRadioButtonList )control;
+                                associatedGroupTypeId = rbl.ID.Substring( rbl.ID.LastIndexOf( '_' ) + 1 ).AsInteger();  // get GroupType id out of radio button list id
                                 if ( rbl.SelectedValue.AsInteger() > 0 )
                                 {
-                                    associatedGroupTypeId = rbl.ID.Substring( rbl.ID.LastIndexOf('_') + 1).AsInteger();  // get GroupType id out of radio button list id
                                     if ( instance.GetAttributeValue( rbl.Label ) == null )
                                     {
                                         GroupTypeService groupTypeService = new GroupTypeService( rockContext );
@@ -614,6 +614,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                                             instance.AttributeValues[rbl.Label].Value = string.Format( "{0}^{1}", grp.Guid.ToString(), showOnListInt );
                                             instance.SaveAttributeValues();
                                         }
+                                        _associatedGroupsUsed.Add( groupTypeService.Get( groupTypeGuid ) );
+                                        _associatedGroupsUsed = _associatedGroupsUsed.OrderBy( t => t.Name ).ToList();
                                     }
                                     else if ( !string.IsNullOrWhiteSpace( instance.GetAttributeValue( rbl.Label ) ) )
                                     {
@@ -629,7 +631,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                                 else if( !string.IsNullOrWhiteSpace( instance.GetAttributeValue( rbl.Label ) ) )
                                 {
                                     instance.AttributeValues[rbl.Label].Value = null;
-                                    _associatedGroupsAvailable.Remove( new GroupTypeService( rockContext ).Get( associatedGroupTypeId ) );
+                                    GroupType gt = new GroupTypeService( rockContext ).Get( associatedGroupTypeId );
+                                    if( gt != null )
+                                    {
+                                        _associatedGroupsUsed = _associatedGroupsUsed.Where( t => t.Guid != gt.Guid ).ToList();
+                                    }
                                 }
                             }
                         }
@@ -648,6 +654,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             }
             else
             {
+                BuildSubGroupTabs();
+                rpGroupPanels.DataSource = _associatedGroupsUsed;
+                rpGroupPanels.DataBind();
 
                 // Reload instance and show readonly view
                 using ( var rockContext = new RockContext() )
@@ -2314,6 +2323,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
 
         private void BuildSubGroupTabs()
         {
+            phGroupTabs.Controls.Clear();
             int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
             RegistrationInstance instance = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
             instance.LoadAttributes();
@@ -2326,7 +2336,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 lb.Text = groupType.Name;
                 lb.Click += lbTab_Click;
                 item.Controls.Add( lb );
-                ulTabs.Controls.Add( item );
+                phGroupTabs.Controls.Add( item );
             }
         }
 

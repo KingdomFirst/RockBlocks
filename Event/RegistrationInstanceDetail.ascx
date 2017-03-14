@@ -135,6 +135,7 @@
                     <li id="liGroupPlacement" runat="server">
                         <asp:LinkButton ID="lbGroupPlacement" runat="server" Text="Group Placement" OnClick="lbTab_Click" />
                     </li>
+                    <asp:PlaceHolder ID="phGroupTabs" runat="server"></asp:PlaceHolder>
                 </ul>
 
                 <asp:Panel ID="pnlRegistrations" runat="server" Visible="false" CssClass="panel panel-block">
