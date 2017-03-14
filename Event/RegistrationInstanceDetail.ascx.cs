@@ -594,7 +594,26 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                                     associatedGroupTypeId = rbl.ID.Substring( rbl.ID.LastIndexOf('_') + 1).AsInteger();  // get GroupType id out of radio button list id
                                     if ( instance.GetAttributeValue( rbl.Label ) == null )
                                     {
-                                        CreateGroup( instance, rockContext, new GroupTypeService( rockContext ).Get( associatedGroupTypeId ).Guid, parentGroupId, rbl.Label, rbl.Label, groupService, rbl.SelectedValue == "2" );
+                                        GroupTypeService groupTypeService = new GroupTypeService( rockContext );
+                                        Guid groupTypeGuid = groupTypeService.Get( associatedGroupTypeId ).Guid;
+
+                                        // Check for existing group
+                                        Group grp = groupService.Queryable()
+                                            .Where( g => g.ParentGroupId == parentGroupId )
+                                            .Where( g => g.GroupType.Guid == groupTypeGuid )
+                                            .Where( g => g.IsActive )
+                                            .FirstOrDefault();
+                                        bool showOnList = rbl.SelectedValue == "2";
+                                        if ( grp == null )
+                                        {
+                                            CreateGroup( instance, rockContext, groupTypeGuid, parentGroupId, rbl.Label, rbl.Label, groupService, showOnList );
+                                        }
+                                        else
+                                        {
+                                            int showOnListInt = showOnList ? 1 : 0;
+                                            instance.AttributeValues[rbl.Label].Value = string.Format( "{0}^{1}", grp.Guid.ToString(), showOnListInt );
+                                            instance.SaveAttributeValues();
+                                        }
                                     }
                                     else if ( !string.IsNullOrWhiteSpace( instance.GetAttributeValue( rbl.Label ) ) )
                                     {
