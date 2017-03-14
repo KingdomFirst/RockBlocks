@@ -206,6 +206,13 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
 
             // Add Associated Group types from Block Setting to dictionary
 
+            int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
+            RegistrationInstance ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
+            if ( ri == null )
+            {
+                ri = new RegistrationInstance();
+            }
+
             RockContext rockContext = new RockContext();
             GroupTypeService groupTypeService = new GroupTypeService( rockContext );
             if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeParentSetting" ) ) )
@@ -220,12 +227,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                             _associatedGroupsAvailable.Add( groupTypeService.Get( guid ) );
                         }
                     }
-                }
-                int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-                RegistrationInstance ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
-                if( ri == null )
-                {
-                    ri = new RegistrationInstance();
                 }
                 VerifyEntityAttribute( rockContext, _attributeKeyParent, _attributeNameParent, ri );
                 ri.LoadAttributes();
@@ -244,6 +245,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 }
             }
             pnlSubGroups.Visible = _associatedGroupsAvailable.Count > 0;
+            SetupGroupPanel( ri, false );
 
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
@@ -570,7 +572,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                         }
                         if ( templateGroup != null )
                         {
-                            parentGroupId = CreateGroup( instance, rockContext, parentGroupTypeGuid, templateGroup.Id, _attributeKeyParent, instance.Name, groupService );
+                            parentGroupId = CreateGroup( instance, rockContext, parentGroupTypeGuid, templateGroup.Id, _attributeKeyParent, instance.Name, groupService, false);
                         }
                     }
                     else
@@ -578,19 +580,42 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                         parentGroupId = groupService.Get( Guid.Parse( instance.GetAttributeValue( _attributeKeyParent ) ) ).Id;
                     }
                     if ( parentGroupId > 0 )
-                    {                        int associatedGroupTypeId = 0;
+                    {
+                        int associatedGroupTypeId = 0;
                         instance.LoadAttributes();
-                        foreach ( ListItem li in cblSubGroups.Items )
+                        //SetupGroupPanel( instance, false );
+                        foreach ( Control control in pnlAssociatedGroupTypes.Controls )
                         {
-                            if ( li.Selected )
+                            if ( control.GetType() == typeof( RockRadioButtonList ) )
                             {
-                                associatedGroupTypeId = li.Value.AsInteger();
-                                if ( instance.GetAttributeValue( li.Text ) == null )
+                                RockRadioButtonList rbl = ( RockRadioButtonList )control;
+                                if ( rbl.SelectedValue.AsInteger() > 0 )
                                 {
-                                    CreateGroup( instance, rockContext, new GroupTypeService( rockContext ).Get( associatedGroupTypeId ).Guid, parentGroupId, li.Text, li.Text, groupService );
+                                    associatedGroupTypeId = rbl.ID.Substring( rbl.ID.LastIndexOf('_') + 1).AsInteger();  // get GroupType id out of radio button list id
+                                    if ( instance.GetAttributeValue( rbl.Label ) == null )
+                                    {
+                                        CreateGroup( instance, rockContext, new GroupTypeService( rockContext ).Get( associatedGroupTypeId ).Guid, parentGroupId, rbl.Label, rbl.Label, groupService, rbl.SelectedValue == "2" );
+                                    }
+                                    else if ( !string.IsNullOrWhiteSpace( instance.GetAttributeValue( rbl.Label ) ) )
+                                    {
+                                        int showOnListInt = 0;
+                                        if ( rbl.SelectedValue == "2" )
+                                        {
+                                            showOnListInt = 1;
+                                        }
+                                        List<String> val = instance.GetAttributeValue( rbl.Label ).Split('^').ToList();
+                                        instance.AttributeValues[rbl.Label].Value = string.Format( "{0}^{1}", val[0], showOnListInt );                            
+                                    }
+                                }
+                                else if( !string.IsNullOrWhiteSpace( instance.GetAttributeValue( rbl.Label ) ) )
+                                {
+                                    instance.AttributeValues[rbl.Label].Value = null;
+                                    _associatedGroupsAvailable.Remove( new GroupTypeService( rockContext ).Get( associatedGroupTypeId ) );
                                 }
                             }
                         }
+                        rockContext.SaveChanges();
+                        instance.SaveAttributeValues();
                     }
                 }
             }
@@ -699,7 +724,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             }
         }
 
-        private int CreateGroup( RegistrationInstance instance, RockContext rockContext, Guid groupTypeGuid, int parentGroupId, string attributeKey, string groupName, GroupService groupService )
+        private int CreateGroup( RegistrationInstance instance, RockContext rockContext, Guid groupTypeGuid, int parentGroupId, string attributeKey, string groupName, GroupService groupService, bool showOnList )
         {
             int result = 0;
             Group subGroup = new Group();
@@ -714,7 +739,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 rockContext.SaveChanges();
 
                 subGroup = new GroupService( new RockContext() ).Get( subGroup.Guid );
-                instance.AttributeValues[attributeKey].Value = subGroup.Guid.ToString();
+                int showOnListInt = showOnList ? 1 : 0;
+                instance.AttributeValues[attributeKey].Value = string.Format( "{0}^{1}", subGroup.Guid.ToString(), showOnListInt );
                 instance.SaveAttributeValues();
                 result = subGroup.Id;
             }
@@ -726,6 +752,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             int? entityTypeId = null;
             AttributeService attributeService = new AttributeService( rockContext );
             Rock.Model.Attribute attribute = null;
+            Rock.Model.Attribute attShowOnList = null;
             entityTypeId = EntityTypeCache.Read( entity.GetType() ).Id;
             IQueryable<Rock.Model.Attribute> attributeQuery = null;
             if ( entityTypeId != null )
@@ -736,13 +763,14 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             if ( attributeQuery.Count() == 0 )
             {
                 Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
-                edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id;
+                edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.KEY_VALUE_LIST ).Id;
                 edtAttribute.Name = attributeName;
                 edtAttribute.Key = attributeKey;
                 attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, entityTypeId, string.Empty, string.Empty );
 
                 AttributeCache.FlushEntityAttributes();
             }
+            attribute.LoadAttributes();
         }
 
         /// <summary>
@@ -2213,19 +2241,56 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             pnlEditDetails.Visible = editable;
             fieldsetViewDetails.Visible = !editable;
             pnlTabs.Visible = !editable;
-            cblSubGroups.Items.Clear();
+            SetGroupPanelRblValues( instance, true );
+        }
+
+        private void SetupGroupPanel( RegistrationInstance instance, bool setValues )
+        {
             if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeParentSetting" ) ) )
             {
                 RockContext rockContext = new RockContext();
                 instance.LoadAttributes();
-                foreach( GroupType groupType in _associatedGroupsAvailable )
+                foreach ( GroupType groupType in _associatedGroupsAvailable )
                 {
-                    ListItem li = new ListItem( groupType.Name, groupType.Id.ToString() );
-                    cblSubGroups.Items.Add( li );
-                    li.Selected = !string.IsNullOrWhiteSpace( instance.AttributeValues[groupType.Name].Value );
+                    RockRadioButtonList groupTypeRbl = new RockRadioButtonList();
+                    groupTypeRbl.Label = groupType.Name;
+                    groupTypeRbl.RepeatDirection = RepeatDirection.Horizontal;
+                    groupTypeRbl.ID = string.Format( "rblGroupType_{0}", groupType.Id.ToString() );
+                    groupTypeRbl.Items.Add( new ListItem( "Show on Grid", "2" ) );
+                    groupTypeRbl.Items.Add( new ListItem( "Hide on Grid", "1" ) );
+                    groupTypeRbl.Items.Add( new ListItem( "Not Used", "0" ) );
+                    pnlAssociatedGroupTypes.Controls.Add( groupTypeRbl );
                 }
             }
-            pnlSubGroups.Visible = cblSubGroups.Items.Count > 0;
+            pnlSubGroups.Visible = pnlAssociatedGroupTypes.Controls.Count > 0;
+        }
+
+        private void SetGroupPanelRblValues( RegistrationInstance instance, bool setValues)
+        {
+            foreach ( Control control in pnlAssociatedGroupTypes.Controls )
+            {
+                if ( control.GetType() == typeof( RockRadioButtonList ) )
+                {
+                    instance.LoadAttributes();
+                    RockRadioButtonList rbl = ( RockRadioButtonList )control;
+                    if ( setValues && !string.IsNullOrWhiteSpace( instance.AttributeValues[rbl.Label].Value ) )
+                    {
+                        List<String> val = instance.GetAttributeValue( rbl.Label ).Split( '^' ).ToList();
+                        if ( val[1] == "1" )
+                        {
+                            rbl.SelectedValue = "2";
+                        }
+                        else
+                        {
+                            rbl.SelectedValue = "1";
+                        }
+                    }
+                    else
+                    {
+                        rbl.SelectedValue = "0";
+                    }
+                }
+            }
         }
 
         private void BuildSubGroupTabs()
@@ -2283,7 +2348,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 if ( ActiveTab == "lb" + groupType.Name )
                 {
                     liAssociatedGroup.AddCssClass( "active" );
-                    parentGroup = groupService.Get( Guid.Parse( instance.AttributeValues[groupType.Name].Value ) );
+                    parentGroup = groupService.Get( Guid.Parse( instance.AttributeValues[groupType.Name].Value.Split('^')[0] ) );
                     hfActiveTabParentGroup.Value = parentGroup.Guid.ToString();
                 }
             }
@@ -3484,7 +3549,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             ri.LoadAttributes();
             foreach ( GroupType groupType in _associatedGroupsUsed )
             {
-                Group parentGroup = groupService.Get( Guid.Parse( ri.AttributeValues[groupType.Name].Value ) );
+                List<String> attributeValSplit = ri.AttributeValues[groupType.Name].Value.Split( '^' ).ToList();
+                Group parentGroup = groupService.Get( Guid.Parse( attributeValSplit[0] ) );
                 LinkButtonField subGroupColumn = new LinkButtonField();
                 subGroupColumn.HeaderStyle.CssClass = "";
                 subGroupColumn.HeaderText = parentGroup.Name;
@@ -3942,7 +4008,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 groupTypeGroupTerm = groupType.GroupTerm;
             }
             lbAddSubGroup.Text += string.Format( "Add {0}", groupTypeGroupTerm );
-            Group parentGroup = new GroupService( new RockContext() ).Get( Guid.Parse( ri.AttributeValues[groupType.Name].Value ) );
+            List<String> attributeValSplit = ri.AttributeValues[groupType.Name].Value.Split( '^' ).ToList();
+            Group parentGroup = new GroupService( new RockContext() ).Get( Guid.Parse( attributeValSplit[0] ) );
             List<Group> subGroups = new List<Group>( parentGroup.Groups );
             hfParentGroupId.Value = parentGroup.Guid.ToString();
             lbAddSubGroup.CommandName = "AddGroup";
@@ -4074,7 +4141,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     ddlRegistrantList.Enabled = false;
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0}", groupMemberTerm );
                     ddlSubGroup.Visible = true;
-
                     ddlSubGroup.DataSource = parentGroup.Groups;
                     ddlSubGroup.DataTextField = "Name";
                     ddlSubGroup.DataValueField = "Id";
@@ -4119,8 +4185,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 ddlSubGroup.DataTextField = "Name";
                 ddlSubGroup.DataValueField = "Id";
                 ddlSubGroup.DataBind();
+                ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
                 ddlSubGroup.Label = !string.IsNullOrWhiteSpace( group.GroupType.GroupTerm ) ? group.GroupType.GroupTerm : "Sub-Group";
-                //ddlSubGroup.SelectedValue = group.Id.ToString();
+                ddlSubGroup.SelectedValue = group.Id.ToString();
             }
             mdlAddSubGroupMember.Show();
         }

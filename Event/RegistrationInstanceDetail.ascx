@@ -73,10 +73,9 @@
                     <asp:ValidationSummary ID="vsDetails" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
 
                     <div id="pnlEditDetails" runat="server">
-                        <div id="pnlSubGroups" runat="server" class="row">
-                            <div class="col-md-6">
-                                <Rock:RockCheckBoxList ID="cblSubGroups" runat="server" Label="Additional Groupings" />
-                            </div>
+                        <div id="pnlSubGroups" runat="server" class="form-group">
+                                <label class="control-label" for="pnlAssociatedGroupTypes">ADDITIONAL GROUPINGS</label>
+                                <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well"></asp:Panel>
                         </div>
                         <Rock:RegistrationInstanceEditor ID="rieDetails" runat="server" />
 
