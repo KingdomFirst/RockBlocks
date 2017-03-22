@@ -27,7 +27,6 @@
             </div>
             <div class="actions margin-b-lg">
                 <asp:LinkButton ID="btnSave" runat="server" Visible="true" CssClass="btn btn-primary" OnClick="btnSave_Click" CausesValidation="true" ValidationGroup="RSConfig"><i class="fa fa-save"></i>Save</asp:LinkButton>
-                <asp:LinkButton ID="btnConfigure" runat="server" Visible="true" CssClass="btn btn-default" OnClick="btnConfigure_Click" CausesValidation="true" ValidationGroup="RSConfig"><i class="fa fa fa-cogs"></i>Configure</asp:LinkButton>
                 <asp:LinkButton ID="btnVerify" runat="server" Visible="false" CssClass="btn btn-default" OnClick="btnVerify_Click" CausesValidation="false"><i class="fa fa-check-square-o"></i>Verify</asp:LinkButton>
             </div>
         </asp:Panel>
