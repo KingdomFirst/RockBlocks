@@ -24,3 +24,8 @@
 # Jobs Debug Files #
 ####################
 **/[Dd]ebug/*
+
+
+# Rock Sample Project #
+#######################
+SampleProject/*
