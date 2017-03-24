@@ -1,4 +1,4 @@
-<%@ Control Language="C#" AutoEventWireup="true" CodeFile="BatchGLExport.ascx.cs" Inherits="RockWeb.Plugins.com_kingdomfirstsolutions.Finance.BatchGLExport" %>
+<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ShelbyGLExport.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Finance.ShelbyGLExport" %>
 
 <asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
@@ -17,10 +17,10 @@
                             <Rock:RockDropDownList ID="ddlStatus" runat="server" Label="Status" />
                             <Rock:DateRangePicker ID="drpBatchDate" runat="server" Label="Date Range" />
                             <Rock:CampusPicker ID="campCampus" runat="server" />
-                            <Rock:RockDropDownList ID="ddlTransactionType" runat="server"  Label="Contains Transaction Type" />
+                            <Rock:RockDropDownList ID="ddlTransactionType" runat="server" Label="Contains Transaction Type" />
                             <Rock:RockTextBox ID="tbTitle" runat="server" Label="Title"></Rock:RockTextBox>
                             <Rock:RockTextBox ID="tbAccountingCode" runat="server" Label="Accounting Code"></Rock:RockTextBox>
-                            <Rock:RockDropDownList ID="ddlBatchExported" runat="server"  Label="Batch Exported">
+                            <Rock:RockDropDownList ID="ddlBatchExported" runat="server" Label="Batch Exported">
                                 <asp:ListItem Text="" Value="" />
                                 <asp:ListItem Text="No" Value="No" Selected="True" />
                                 <asp:ListItem Text="Yes" Value="Yes" />
@@ -64,22 +64,22 @@
                             <h1 class="panel-title">GL File Export</h1>
                         </div>
                         <div class="panel-body">
-                                <Rock:RockDropDownList ID="ddlJournalType" runat="server" Label="Journal Type" Required="true" ValidationGroup="KFSGLExport">
-                                    <asp:ListItem Text="" Value="" Selected="True"></asp:ListItem>
-                                    <asp:ListItem Text="Cash Receipts" Value="CR"></asp:ListItem>
-                                    <asp:ListItem Text="Accounts Payable" Value="AP"></asp:ListItem>
-                                    <asp:ListItem Text="Accounts Receivable" Value="AR"></asp:ListItem>
-                                    <asp:ListItem Text="Cash Disbursements" Value="CD"></asp:ListItem>
-                                    <asp:ListItem Text="Check Express" Value="CK"></asp:ListItem>
-                                    <asp:ListItem Text="Contributions" Value="CN"></asp:ListItem>
-                                    <asp:ListItem Text="Registrations" Value="RG"></asp:ListItem>
-                                    <asp:ListItem Text="Journal Entry" Value="JE"></asp:ListItem>
-                                    <asp:ListItem Text="Payroll" Value="PR"></asp:ListItem>
-                                    <asp:ListItem Text="Gifts" Value="GF"></asp:ListItem>
-                                    <asp:ListItem Text="Expense Amortization" Value="AM"></asp:ListItem>
-                                </Rock:RockDropDownList>
-                                <Rock:RockTextBox ID="tbAccountingPeriod" runat="server" label="Accounting Period" Required="true" Width="50" ValidationGroup="KFSGLExport"></Rock:RockTextBox>
-                                <Rock:DatePicker ID="dpExportDate" runat="server" Label="Date" Required="true" ValidationGroup="KFSGLExport"></Rock:DatePicker>
+                            <Rock:RockDropDownList ID="ddlJournalType" runat="server" Label="Journal Type" Required="true" ValidationGroup="KFSGLExport">
+                                <asp:ListItem Text="" Value="" Selected="True"></asp:ListItem>
+                                <asp:ListItem Text="Cash Receipts" Value="CR"></asp:ListItem>
+                                <asp:ListItem Text="Accounts Payable" Value="AP"></asp:ListItem>
+                                <asp:ListItem Text="Accounts Receivable" Value="AR"></asp:ListItem>
+                                <asp:ListItem Text="Cash Disbursements" Value="CD"></asp:ListItem>
+                                <asp:ListItem Text="Check Express" Value="CK"></asp:ListItem>
+                                <asp:ListItem Text="Contributions" Value="CN"></asp:ListItem>
+                                <asp:ListItem Text="Registrations" Value="RG"></asp:ListItem>
+                                <asp:ListItem Text="Journal Entry" Value="JE"></asp:ListItem>
+                                <asp:ListItem Text="Payroll" Value="PR"></asp:ListItem>
+                                <asp:ListItem Text="Gifts" Value="GF"></asp:ListItem>
+                                <asp:ListItem Text="Expense Amortization" Value="AM"></asp:ListItem>
+                            </Rock:RockDropDownList>
+                            <Rock:RockTextBox ID="tbAccountingPeriod" runat="server" Label="Accounting Period" Required="true" Width="50" ValidationGroup="KFSGLExport"></Rock:RockTextBox>
+                            <Rock:DatePicker ID="dpExportDate" runat="server" Label="Date" Required="true" ValidationGroup="KFSGLExport"></Rock:DatePicker>
                             <div class="actions">
                                 <asp:LinkButton ID="btnExport" runat="server" CssClass="btn btn-primary" Text="Export" OnClick="btnExport_Click" ValidationGroup="KFSGLExport" />
                                 <asp:LinkButton ID="btnPreview" runat="server" CssClass="btn btn-default" Text="Preview" OnClick="btnPreview_Click" ValidationGroup="KFSGLExport" />
@@ -91,24 +91,24 @@
                 <div class="col-md-1"></div>
                 <div class="col-md-7 margin-t-md">
                     <div class="panel panel-block">
-                <div class="panel-heading">
-                    <h1 class="panel-title" id="batchPreviewHdr" runat="server">Preview</h1>
-                </div>
-                <div class="panel-body">
-                    <div class="grid grid-panel">
-                        <Rock:Grid ID="BatchExportList" runat="server" RowItemText="Transaction" AllowSorting="false" CssClass="js-grid-batch-list">
-                            <Columns> 
-                                <Rock:RockBoundField DataField="CompanyNumber" HeaderText="Company" SortExpression="CompanyNumber" />
-                                <Rock:RockBoundField DataField="FundNumber" HeaderText="Fund" SortExpression="FundNumber" />
-                                <Rock:RockBoundField DataField="AccountNumber" HeaderText="Account" SortExpression="AccountNumber" ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
-                                <Rock:RockBoundField DataField="DepartmentNumber" HeaderText="Dept" SortExpression="DepartmentNumber" />
-                                <Rock:RockBoundField DataField="ProjectCode" HeaderText="Proj" />
-                                <Rock:CurrencyField DataField="Amount" HeaderText="Amount" SortExpression="Amount" ItemStyle-HorizontalAlign="Right" />
-                            </Columns>
-                        </Rock:Grid>
+                        <div class="panel-heading">
+                            <h1 class="panel-title" id="batchPreviewHdr" runat="server">Preview</h1>
+                        </div>
+                        <div class="panel-body">
+                            <div class="grid grid-panel">
+                                <Rock:Grid ID="BatchExportList" runat="server" RowItemText="Transaction" AllowSorting="false" CssClass="js-grid-batch-list">
+                                    <Columns>
+                                        <Rock:RockBoundField DataField="CompanyNumber" HeaderText="Company" SortExpression="CompanyNumber" />
+                                        <Rock:RockBoundField DataField="FundNumber" HeaderText="Fund" SortExpression="FundNumber" />
+                                        <Rock:RockBoundField DataField="AccountNumber" HeaderText="Account" SortExpression="AccountNumber" ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
+                                        <Rock:RockBoundField DataField="DepartmentNumber" HeaderText="Dept" SortExpression="DepartmentNumber" />
+                                        <Rock:RockBoundField DataField="ProjectCode" HeaderText="Proj" />
+                                        <Rock:CurrencyField DataField="Amount" HeaderText="Amount" SortExpression="Amount" ItemStyle-HorizontalAlign="Right" />
+                                    </Columns>
+                                </Rock:Grid>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
                 </div>
             </div>
             <Rock:NotificationBox ID="nbResult" runat="server" Visible="false" Dismissable="true"></Rock:NotificationBox>
