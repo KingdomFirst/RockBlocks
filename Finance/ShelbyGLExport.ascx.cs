@@ -38,7 +38,6 @@ namespace RockWeb.Plugins.com_kfs.Finance
         #region Fields
 
         private RockDropDownList ddlAction;
-        private int? _entityTypeId = null;
         private string _entityQualifierColumn = string.Empty;
         private string _entityQualifierValue = string.Empty;
         private List<string> _errorMessage = new List<string>();
@@ -408,7 +407,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
 
                     Session["GLExportLineItems"] = output;
 
-                    var url = "/Plugins/com_kingdomfirstsolutions/Finance/GLExport.aspx";
+                    var url = "/Plugins/com_kfs/Finance/GLExport.aspx";
                     ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "batchexport", string.Format( "window.downloadIframe.location = '{0}';", url ), true );
 
                 }
@@ -435,7 +434,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
         protected IQueryable<AttributeValue> generateAttributeFilters()
         {
             var attributeValueService = new AttributeValueService( rockContext );
-            var attributes = attributeService.GetByEntityTypeId( _entityTypeId );
+            var attributes = attributeService.GetByEntityTypeId( EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id );
             var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == attributeKeyDateExported );
 
             var attribute = AttributeCache.Read( exported.Id );
