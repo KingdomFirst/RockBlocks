@@ -13,7 +13,7 @@ using Rock.Attribute;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
-namespace Plugins.com_kfs.Reporting
+namespace RockWeb.Plugins.com_kfs.Reporting
 {
 
     [DisplayName("Reporting Services Configuration")]

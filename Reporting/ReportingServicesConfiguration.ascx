@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ReportingServicesConfiguration.ascx.cs" Inherits="Plugins.com_kfs.Reporting.ReportingServicesConfiguration" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ReportingServicesConfiguration.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Reporting.ReportingServicesConfiguration" %>
 <asp:UpdatePanel ID="upRSConfig" runat="server" UpdateMode="Conditional">
     <ContentTemplate>
         <asp:Panel ID="pnlRSConfig" runat="server" Visible="true">
