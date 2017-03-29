@@ -14,9 +14,10 @@ namespace RockWeb.Plugins.com_kfs.Finance
     [Category( "KFS > Finance" )]
     [Description( "Shows date exported and allows for quick access to Export Page" )]
 
+    [LinkedPage( "Export Page", "Page where export block is located. If not set, export shortcut will not be displayed.", false, "", "", 0 )]
     [BooleanField( "Show Remove Date Exported Button", "Option to display the 'Remove Date Exported' button.", false, "", 1 )]
     [BooleanField( "Confirm Remove Date Exported", "Option to display confirmation when 'Remove Date Exported' button is clicked.", true, "", 2 )]
-    [LinkedPage( "Export Page", "Page where export block is located. If not set, export shortcut will not be displayed.", false )]
+
 
     public partial class BatchExportDetails : Rock.Web.UI.RockBlock, ISecondaryBlock
     {
