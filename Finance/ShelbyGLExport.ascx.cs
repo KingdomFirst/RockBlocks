@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -154,6 +153,12 @@ namespace RockWeb.Plugins.com_kfs.Finance
             {
                 dpExportDate.SelectedDate = RockDateTime.Today;
             }
+
+            var batchId = PageParameter( "batchId" );
+            if ( !string.IsNullOrWhiteSpace( batchId ) )
+            {
+                gfBatchFilter.SaveUserPreference( "Batch Id", batchId );
+            }
         }
 
         private string getAttributeKey( Guid? v )
@@ -300,6 +305,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
             gfBatchFilter.SaveUserPreference( "Campus", campCampus.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Batch Exported", ddlBatchExported.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Contains Transaction Type", ddlTransactionType.SelectedValue );
+            gfBatchFilter.SaveUserPreference( "Batch Id", tbBatchId.Text );
 
             BindGrid();
         }
@@ -697,6 +703,9 @@ namespace RockWeb.Plugins.com_kfs.Finance
             string titleFilter = gfBatchFilter.GetUserPreference( "Title" );
             tbTitle.Text = !string.IsNullOrWhiteSpace( titleFilter ) ? titleFilter : string.Empty;
 
+            string batchIdFilter = gfBatchFilter.GetUserPreference( "Batch Id" );
+            tbBatchId.Text = !string.IsNullOrWhiteSpace( batchIdFilter ) ? batchIdFilter : string.Empty;
+
             if ( tbAccountingCode.Visible )
             {
                 string accountingCode = gfBatchFilter.GetUserPreference( "Accounting Code" );
@@ -730,7 +739,6 @@ namespace RockWeb.Plugins.com_kfs.Finance
                 batchExportedFilter = "No";
             }
             ddlBatchExported.SetValue( batchExportedFilter );
-
 
         }
 
@@ -878,6 +886,13 @@ namespace RockWeb.Plugins.com_kfs.Finance
             if ( !string.IsNullOrEmpty( title ) )
             {
                 qry = qry.Where( batch => batch.Name.StartsWith( title ) );
+            }
+
+            // filter by id
+            string id = gfBatchFilter.GetUserPreference( "Batch Id" );
+            if ( !string.IsNullOrEmpty( id ) )
+            {
+                qry = qry.Where( batch => batch.Id.ToString().Equals( id ) );
             }
 
             // filter by accounting code

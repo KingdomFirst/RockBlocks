@@ -25,6 +25,7 @@
                                 <asp:ListItem Text="No" Value="No" Selected="True" />
                                 <asp:ListItem Text="Yes" Value="Yes" />
                             </Rock:RockDropDownList>
+                            <Rock:RockTextBox ID="tbBatchId" runat="server" Label="Batch Id"></Rock:RockTextBox>
                         </Rock:GridFilter>
 
                         <Rock:ModalAlert ID="mdGridWarning" runat="server" />
