@@ -85,6 +85,22 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         public List<RegistrantFormField> RegistrantFields { get; set; }
 
         /// <summary>
+        /// Gets or sets the Associated GroupTypes.
+        /// </summary>
+        /// <value>
+        /// The associated GroupTypes.
+        /// </value>
+        public List<GroupType> AssociatedGroupTypes { get; set; }
+
+        /// <summary>
+        /// Gets or sets the Grid Associated GroupTypes.
+        /// </summary>
+        /// <value>
+        /// The grid associated GroupTypes.
+        /// </value>
+        public List<GroupType> AssociatedGroupTypesGrid { get; set; }
+
+        /// <summary>
         /// Gets or sets the person campus ids.
         /// </summary>
         /// <value>
@@ -130,8 +146,25 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
 
             ActiveTab = ( ViewState["ActiveTab"] as string ) ?? "";
             RegistrantFields = ViewState["RegistrantFields"] as List<RegistrantFormField>;
+            GroupTypeService gs = new GroupTypeService( new RockContext() );
+            AssociatedGroupTypes = new List<GroupType>();
+            AssociatedGroupTypesGrid = new List<GroupType>();
+            foreach ( int id in ViewState["AssociatedGroupTypes"] as List<int> )
+            {
+                AssociatedGroupTypes.Add( gs.Get( id ) );
+            }
+            foreach ( int id in ViewState["AssociatedGroupTypesGrid"] as List<int> )
+            {
+                AssociatedGroupTypesGrid.Add( gs.Get( id ) );
+            }
 
             AddDynamicControls();
+            BindRegistrantsGrid();
+        }
+        protected virtual void OnPreRenderComplete( EventArgs e )
+        {
+            //AddDynamicControls();
+            //BindRegistrantsGrid();
         }
 
         /// <summary>
@@ -181,7 +214,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             gRegistrants.RowDataBound += gRegistrants_RowDataBound;
             gRegistrants.GridRebind += gRegistrants_GridRebind;
             gRegistrants.RowCommand += gRegistrants_RowCommand;
-            _registrantGridColumnCount = gRegistrants.Columns.Count;
+            //_registrantGridColumnCount = gRegistrants.Columns.Count;
 
             fPayments.ApplyFilterClick += fPayments_ApplyFilterClick;
             gPayments.DataKeyNames = new string[] { "Id" };
@@ -204,48 +237,37 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             rpGroupPanels.ItemDataBound += rpGroupPanels_ItemDataBound;
             rpGroupPanels.ItemCommand += RpGroupPanels_ItemCommand;
 
-            // Add Associated Group types from Block Setting to dictionary
+            //RockContext rockContext = new RockContext();
+            //GroupTypeService groupTypeService = new GroupTypeService( rockContext );
+            //if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeParentSetting" ) ) )
+            //{
+            //    if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypesSetting" ) ) )
+            //    {
+            //        foreach( string groupGuid in this.GetAttributeValue( "GroupTypesSetting" ).Split( ',' ) )
+            //        {
+            //            Guid guid;
+            //            if( Guid.TryParse( groupGuid, out guid ) )
+            //            {
+            //                _associatedGroupsAvailable.Add( groupTypeService.Get( guid ) );
+            //            }
+            //        }
+            //    }
+            //    VerifyEntityAttribute( rockContext, _attributeKeyParent, _attributeNameParent, ri );
+            //    ri.LoadAttributes();
 
-            int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-            RegistrationInstance ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
-            if ( ri == null )
-            {
-                ri = new RegistrationInstance();
-            }
-
-            RockContext rockContext = new RockContext();
-            GroupTypeService groupTypeService = new GroupTypeService( rockContext );
-            if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeParentSetting" ) ) )
-            {
-                if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypesSetting" ) ) )
-                {
-                    foreach( string groupGuid in this.GetAttributeValue( "GroupTypesSetting" ).Split( ',' ) )
-                    {
-                        Guid guid;
-                        if( Guid.TryParse( groupGuid, out guid ) )
-                        {
-                            _associatedGroupsAvailable.Add( groupTypeService.Get( guid ) );
-                        }
-                    }
-                }
-                VerifyEntityAttribute( rockContext, _attributeKeyParent, _attributeNameParent, ri );
-                ri.LoadAttributes();
-
-                if ( _associatedGroupsAvailable.Count > 0 )
-                {
-                    foreach ( GroupType groupType in _associatedGroupsAvailable )
-                    {
-                        VerifyEntityAttribute( rockContext, groupType.Name, groupType.Name, ri );
-                        ri.LoadAttributes();
-                        if ( !string.IsNullOrWhiteSpace( ri.AttributeValues[groupType.Name].Value ) )
-                        {
-                            _associatedGroupsUsed.Add( groupType );
-                        }
-                    }
-                }
-            }
-            pnlSubGroups.Visible = _associatedGroupsAvailable.Count > 0;
-            SetupGroupPanel( ri, false );
+            //    if ( _associatedGroupsAvailable.Count > 0 )
+            //    {
+            //        foreach ( GroupType groupType in _associatedGroupsAvailable )
+            //        {
+            //            VerifyEntityAttribute( rockContext, groupType.Name, groupType.Name, ri );
+            //            ri.LoadAttributes();
+            //            if ( !string.IsNullOrWhiteSpace( ri.AttributeValues[groupType.Name].Value ) )
+            //            {
+            //                AssociatedGroupTypes.Add( groupType );sadfs
+            //            }
+            //        }
+            //    }
+            //}
 
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
@@ -344,8 +366,21 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
+
+            // Set up associated group types
+
+            int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
+            RegistrationInstance ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
+            if ( ri == null )
+            {
+                ri = new RegistrationInstance();
+            }
+            LoadAssociatedGroupTypes( ri );
+            pnlSubGroups.Visible = _associatedGroupsAvailable.Count > 0;
+            SetupGroupPanel( ri, false );
+
             BuildSubGroupTabs();
-            rpGroupPanels.DataSource = _associatedGroupsUsed;
+            rpGroupPanels.DataSource = AssociatedGroupTypes;
             rpGroupPanels.DataBind();
             if ( !Page.IsPostBack )
             {
@@ -393,6 +428,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         protected override object SaveViewState()
         {
             ViewState["RegistrantFields"] = RegistrantFields;
+            ViewState["AssociatedGroupTypes"] = AssociatedGroupTypes.Select( t => t.Id ).ToList();
+            ViewState["AssociatedGroupTypesGrid"] = AssociatedGroupTypesGrid.Select( t => t.Id ).ToList();
             ViewState["ActiveTab"] = ActiveTab;
 
             return base.SaveViewState();
@@ -614,8 +651,13 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                                             instance.AttributeValues[rbl.Label].Value = string.Format( "{0}^{1}", grp.Guid.ToString(), showOnListInt );
                                             instance.SaveAttributeValues();
                                         }
-                                        _associatedGroupsUsed.Add( groupTypeService.Get( groupTypeGuid ) );
-                                        _associatedGroupsUsed = _associatedGroupsUsed.OrderBy( t => t.Name ).ToList();
+                                        AssociatedGroupTypes.Add( groupTypeService.Get( groupTypeGuid ) );
+                                        AssociatedGroupTypes = AssociatedGroupTypes.OrderBy( t => t.Name ).ToList();
+                                        if ( showOnList )
+                                        {
+                                            AssociatedGroupTypesGrid.Add( groupTypeService.Get( groupTypeGuid ) );
+                                            AssociatedGroupTypesGrid = AssociatedGroupTypesGrid.OrderBy( t => t.Name ).ToList();
+                                        }
                                     }
                                     else if ( !string.IsNullOrWhiteSpace( instance.GetAttributeValue( rbl.Label ) ) )
                                     {
@@ -625,7 +667,16 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                                             showOnListInt = 1;
                                         }
                                         List<String> val = instance.GetAttributeValue( rbl.Label ).Split('^').ToList();
-                                        instance.AttributeValues[rbl.Label].Value = string.Format( "{0}^{1}", val[0], showOnListInt );                            
+                                        instance.AttributeValues[rbl.Label].Value = string.Format( "{0}^{1}", val[0], showOnListInt );   
+                                        if( showOnListInt == 1 && !AssociatedGroupTypesGrid.Select( t => t.Id ).Contains( associatedGroupTypeId ) )
+                                        {
+                                            AssociatedGroupTypesGrid.Add( new GroupTypeService( new RockContext() ).Get( associatedGroupTypeId ) );
+                                            AssociatedGroupTypesGrid = AssociatedGroupTypesGrid.OrderBy( t => t.Name ).ToList();
+                                        }    
+                                        if( showOnListInt == 0 && AssociatedGroupTypesGrid.Select( t => t.Id ).Contains( associatedGroupTypeId ) )
+                                        {
+                                            AssociatedGroupTypesGrid = AssociatedGroupTypesGrid.Where( t => t.Id != associatedGroupTypeId ).OrderBy( t => t.Name ).ToList();
+                                        }                 
                                     }
                                 }
                                 else if( !string.IsNullOrWhiteSpace( instance.GetAttributeValue( rbl.Label ) ) )
@@ -634,7 +685,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                                     GroupType gt = new GroupTypeService( rockContext ).Get( associatedGroupTypeId );
                                     if( gt != null )
                                     {
-                                        _associatedGroupsUsed = _associatedGroupsUsed.Where( t => t.Guid != gt.Guid ).ToList();
+                                        AssociatedGroupTypes = AssociatedGroupTypes.Where( t => t.Guid != gt.Guid ).ToList();
+                                        AssociatedGroupTypesGrid = AssociatedGroupTypesGrid.Where( t => t.Guid != gt.Guid ).ToList();
                                     }
                                 }
                             }
@@ -654,15 +706,12 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             }
             else
             {
-                BuildSubGroupTabs();
-                rpGroupPanels.DataSource = _associatedGroupsUsed;
-                rpGroupPanels.DataBind();
-
                 // Reload instance and show readonly view
                 using ( var rockContext = new RockContext() )
                 {
                     instance = new RegistrationInstanceService( rockContext ).Get( instance.Id );
                     ShowReadonlyDetails( instance );
+                    
                 }
 
                 // show send payment reminder link
@@ -675,6 +724,13 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     btnSendPaymentReminder.Visible = false;
                 }
             }
+            //ShowDetail();
+            //rpGroupPanels.DataSource = AssociatedGroupTypes;
+            //rpGroupPanels.DataBind();
+            //ShowDetail();
+            BuildSubGroupTabs();
+            AddDynamicControls();
+            BindRegistrantsGrid();
         }
 
         protected void mdlAddSubGroupMember_SaveClick( object sender, EventArgs e )
@@ -740,7 +796,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                         groupMember.SaveAttributeValues( rockContext );
                     } );
 
-                    rpGroupPanels.DataSource = _associatedGroupsUsed;
+                    rpGroupPanels.DataSource = AssociatedGroupTypes;
                     rpGroupPanels.DataBind();
                     if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
                     {
@@ -1074,7 +1130,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     // remove registrants from any associated groups
                     GroupMemberService memberService = new GroupMemberService( rockContext );
                     List<GroupMember> deleteMembers = new List<GroupMember>();
-                    foreach ( GroupType groupType in _associatedGroupsUsed )
+                    foreach ( GroupType groupType in AssociatedGroupTypes )
                     {
                         foreach ( RegistrationRegistrant registrant in registration.Registrants )
                         {
@@ -1451,48 +1507,53 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 RegistrationInstance ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
                 ri.LoadAttributes();
                 int columnIndex = _registrantGridColumnCount;
-                foreach ( GroupType groupType in _associatedGroupsUsed )
+                if ( AssociatedGroupTypesGrid != null )
                 {
-                    Group parentGroup = groupService.Get( Guid.Parse( ri.AttributeValues[groupType.Name].Value ) );
-                    LinkButton changeGroup = e.Row.Cells[columnIndex].Controls[0] as LinkButton;
-                    var parentGroupColumn = e.Row.FindControl( "lSubGroup_" + parentGroup.Id ) as Literal;
-                    if( changeGroup != null )
-                    //if( parentGroupColumn != null )
+                    foreach ( GroupType groupType in AssociatedGroupTypesGrid )
                     {
-                        List<int> subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
-                        GroupMember member = memberService.Queryable()
-                                                .AsNoTracking()
-                                                .Where( m => m.PersonId == registrant.PersonId )
-                                                .Where( m => subGroupIds.Contains( m.GroupId ) ).FirstOrDefault();
-                        if ( member != null )
-                        {
-                            changeGroup.Text = member.Group.Name;
-                            changeGroup.CommandName = "ChangeSubGroup";
-                            changeGroup.CommandArgument = member.Id.ToString();
+                        List<String> attributeValSplit = ri.AttributeValues[groupType.Name].Value.Split( '^' ).ToList();
+                        Group parentGroup = groupService.Get( Guid.Parse( attributeValSplit[0] ) );
 
-                        }
-                        else
+                        LinkButton changeGroup = e.Row.Cells[columnIndex].Controls[0] as LinkButton;
+                        var parentGroupColumn = e.Row.FindControl( "lSubGroup_" + parentGroup.Id ) as Literal;
+                        if ( changeGroup != null )
+                        //if ( parentGroupColumn != null )
                         {
-                            changeGroup.CssClass = "btn-add btn btn-default btn-sm";
-                            if ( parentGroup.Groups.Count() > 0 )
+                            List<int> subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
+                            GroupMember member = memberService.Queryable()
+                                                    .AsNoTracking()
+                                                    .Where( m => m.PersonId == registrant.PersonId )
+                                                    .Where( m => subGroupIds.Contains( m.GroupId ) ).FirstOrDefault();
+                            if ( member != null )
                             {
-                                changeGroup.Controls.Add( new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) );
-                                changeGroup.Controls.Add( new LiteralControl( "<span class='grid-btn-assign-text'> Assign</span>" ) );
-                                changeGroup.CommandName = "AssignSubGroup";
-                                changeGroup.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
+                                changeGroup.Text = member.Group.Name;
+                                changeGroup.CommandName = "ChangeSubGroup";
+                                changeGroup.CommandArgument = member.Id.ToString();
+
                             }
                             else
                             {
-                                changeGroup.Controls.Add( new LiteralControl( "<i class='fa fa-minus-circle'></i>" ) );
-                                changeGroup.Controls.Add( new LiteralControl( string.Format( "<span class='grid-btn-assign-text'> No {0}</span>", parentGroup.GroupType.GroupTerm.Pluralize() ) ) );
-                                changeGroup.Enabled = false;
+                                changeGroup.CssClass = "btn-add btn btn-default btn-sm";
+                                if ( parentGroup.Groups.Count() > 0 )
+                                {
+                                    changeGroup.Controls.Add( new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) );
+                                    changeGroup.Controls.Add( new LiteralControl( "<span class='grid-btn-assign-text'> Assign</span>" ) );
+                                    changeGroup.CommandName = "AssignSubGroup";
+                                    changeGroup.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
+                                }
+                                else
+                                {
+                                    changeGroup.Controls.Add( new LiteralControl( "<i class='fa fa-minus-circle'></i>" ) );
+                                    changeGroup.Controls.Add( new LiteralControl( string.Format( "<span class='grid-btn-assign-text'> No {0}</span>", parentGroup.GroupType.GroupTerm.Pluralize() ) ) );
+                                    changeGroup.Enabled = false;
+                                }
                             }
+                            columnIndex++;
                         }
                     }
-                    columnIndex++;
                 }
                 // add addresses if exporting
-                if (_homeAddresses.Count > 0 )
+                if ( _homeAddresses.Count > 0 )
                 {
                     var lStreet1 = e.Row.FindControl( "lStreet1" ) as Literal;
                     var lStreet2 = e.Row.FindControl( "lStreet2" ) as Literal;
@@ -1620,7 +1681,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     // remove registrant from any associated groups
                     GroupMemberService memberService = new GroupMemberService( rockContext );
                     List<GroupMember> deleteMembers = new List<GroupMember>();
-                    foreach ( GroupType groupType in _associatedGroupsUsed )
+                    foreach ( GroupType groupType in AssociatedGroupTypes )
                     {
                         deleteMembers.AddRange( GetDeleteGroupMembers( rockContext, memberService, groupType, registrant ) );
                     }
@@ -2152,7 +2213,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     btnSendPaymentReminder.Visible = false;
                 }
 
-                LoadRegistrantFormFields( registrationInstance );
+                //LoadRegistrantFormFields( registrationInstance );
                 BindRegistrationsFilter();
                 BindRegistrantsFilter( registrationInstance );
                 BindLinkagesFilter();
@@ -2327,16 +2388,19 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
             RegistrationInstance instance = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
             instance.LoadAttributes();
-            foreach( GroupType groupType in _associatedGroupsUsed )
+            if ( AssociatedGroupTypes != null )
             {
-                HtmlGenericControl item = new HtmlGenericControl( "li" );
-                item.ID = "li" + groupType.Name;
-                LinkButton lb = new LinkButton();
-                lb.ID = "lb" + groupType.Name;
-                lb.Text = groupType.Name;
-                lb.Click += lbTab_Click;
-                item.Controls.Add( lb );
-                phGroupTabs.Controls.Add( item );
+                foreach ( GroupType groupType in AssociatedGroupTypes )
+                {
+                    HtmlGenericControl item = new HtmlGenericControl( "li" );
+                    item.ID = "li" + groupType.Name;
+                    LinkButton lb = new LinkButton();
+                    lb.ID = "lb" + groupType.Name;
+                    lb.Text = groupType.Name;
+                    lb.Click += lbTab_Click;
+                    item.Controls.Add( lb );
+                    phGroupTabs.Controls.Add( item );
+                }
             }
         }
 
@@ -2366,22 +2430,25 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             pnlGroupPlacement.Visible = false;
 
             HtmlGenericControl liAssociatedGroup;
-            foreach ( GroupType groupType in _associatedGroupsUsed )
+            if ( AssociatedGroupTypes != null )
             {
-                liAssociatedGroup = new HtmlGenericControl();
-                liAssociatedGroup = ( HtmlGenericControl )ulTabs.FindControl( "li" + groupType.Name );
-                if( liAssociatedGroup != null )
+                foreach ( GroupType groupType in AssociatedGroupTypes )
                 {
-                    liAssociatedGroup.RemoveCssClass( "active" );
-                }
-                if ( ActiveTab == "lb" + groupType.Name )
-                {
-                    liAssociatedGroup.AddCssClass( "active" );
-                    parentGroup = groupService.Get( Guid.Parse( instance.AttributeValues[groupType.Name].Value.Split('^')[0] ) );
-                    hfActiveTabParentGroup.Value = parentGroup.Guid.ToString();
+                    liAssociatedGroup = new HtmlGenericControl();
+                    liAssociatedGroup = ( HtmlGenericControl )ulTabs.FindControl( "li" + groupType.Name );
+                    if ( liAssociatedGroup != null )
+                    {
+                        liAssociatedGroup.RemoveCssClass( "active" );
+                    }
+                    if ( ActiveTab == "lb" + groupType.Name )
+                    {
+                        liAssociatedGroup.AddCssClass( "active" );
+                        parentGroup = groupService.Get( Guid.Parse( instance.AttributeValues[groupType.Name].Value.Split( '^' )[0] ) );
+                        hfActiveTabParentGroup.Value = parentGroup.Guid.ToString();
+                    }
                 }
             }
-            rpGroupPanels.DataSource = _associatedGroupsUsed;
+            rpGroupPanels.DataSource = AssociatedGroupTypes;
             rpGroupPanels.DataBind();
 
             switch ( ActiveTab ?? string.Empty )
@@ -3257,16 +3324,77 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
         }
 
         /// <summary>
+        /// Gets all of the group types that are associated with the registration template, as well as those marked as 'Show on Grid'.
+        /// </summary>
+        /// <param name="registrationInstance">The registration instance.</param>
+        private void LoadAssociatedGroupTypes( RegistrationInstance registrationInstance )
+        {
+            AssociatedGroupTypes = new List<GroupType>();
+            AssociatedGroupTypesGrid = new List<GroupType>();
+
+            if ( registrationInstance != null )
+            {
+                RockContext rockContext = new RockContext();
+                GroupTypeService groupTypeService = new GroupTypeService( rockContext );
+                if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeParentSetting" ) ) )
+                {
+                    if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypesSetting" ) ) )
+                    {
+                        foreach ( string groupGuid in this.GetAttributeValue( "GroupTypesSetting" ).Split( ',' ) )
+                        {
+                            Guid guid;
+                            if ( Guid.TryParse( groupGuid, out guid ) )
+                            {
+                                _associatedGroupsAvailable.Add( groupTypeService.Get( guid ) );
+                            }
+                        }
+                    }
+                    VerifyEntityAttribute( rockContext, _attributeKeyParent, _attributeNameParent, registrationInstance );
+                    registrationInstance.LoadAttributes();
+
+                    if ( _associatedGroupsAvailable.Count > 0 )
+                    {
+                        foreach ( GroupType groupType in _associatedGroupsAvailable )
+                        {
+                            VerifyEntityAttribute( rockContext, groupType.Name, groupType.Name, registrationInstance );
+                            registrationInstance.LoadAttributes();
+                            if ( !string.IsNullOrWhiteSpace( registrationInstance.AttributeValues[groupType.Name].Value ) )
+                            {
+                                AssociatedGroupTypes.Add( groupType );
+                                List<String> attributeValSplit = registrationInstance.AttributeValues[groupType.Name].Value.Split( '^' ).ToList();
+                                if ( attributeValSplit != null && attributeValSplit[1] == "1" )
+                                {
+                                    AssociatedGroupTypesGrid.Add( groupType );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Adds the filter controls and grid columns for all of the registration template's form fields
         /// that were configured to 'Show on Grid'
         /// </summary>
         private void AddDynamicControls()
         {
             phRegistrantFormFieldFilters.Controls.Clear();
+            _registrantGridColumnCount = gRegistrants.Columns.Count;
+
+            // Remove the registrant field
+            foreach ( var column in gRegistrants.Columns
+                .OfType<TemplateField>()
+                .Where( c => c.HeaderText == "Registrant" )
+                .ToList() )
+            {
+                gRegistrants.Columns.Remove( column );
+                //_registrantGridColumnCount--;
+            }
 
             // Remove any of the dynamic person fields
             var dynamicColumns = new List<string> {
-                "PersonAlias.Person.BirthDate",
+                "PersonAlias.Person.BirthDate"
             };
             foreach ( var column in gRegistrants.Columns
                 .OfType<BoundField>()
@@ -3305,6 +3433,15 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 _registrantGridColumnCount--;
             }
 
+            // Remove Sub Group fields
+            foreach ( var column in gRegistrants.Columns
+                .OfType<LinkButtonField>()
+                .ToList() )
+            {
+                gRegistrants.Columns.Remove( column );
+                _registrantGridColumnCount--;
+            }
+
             // Remove any of the dynamic attribute fields on group placements grid
             foreach ( var column in gGroupPlacements.Columns
                 .OfType<AttributeField>()
@@ -3320,6 +3457,14 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             {
                 gGroupPlacements.Columns.Remove( column );
             }
+
+            // Add registrant column
+            var registrantField = new RockLiteralField();
+            registrantField.ID = "lRegistrant";
+            registrantField.HeaderText = "Registrant";
+            registrantField.SortExpression = "PersonAlias.Person.LastName, PersonAlias.Person.NickName";
+            registrantField.ExcelExportBehavior = ExcelExportBehavior.NeverInclude;
+            gRegistrants.Columns.Insert( 1, registrantField );
 
             if ( RegistrantFields != null )
             {
@@ -3571,19 +3716,22 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 }
             }
 
-            // Add dynamic columns for sub groups
-            GroupService groupService = new GroupService( new RockContext() );
-            int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-            RegistrationInstance ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
-            ri.LoadAttributes();
-            foreach ( GroupType groupType in _associatedGroupsUsed )
+            //// Add dynamic columns for sub groups
+            if ( AssociatedGroupTypesGrid != null )
             {
-                List<String> attributeValSplit = ri.AttributeValues[groupType.Name].Value.Split( '^' ).ToList();
-                Group parentGroup = groupService.Get( Guid.Parse( attributeValSplit[0] ) );
-                LinkButtonField subGroupColumn = new LinkButtonField();
-                subGroupColumn.HeaderStyle.CssClass = "";
-                subGroupColumn.HeaderText = parentGroup.Name;
-                gRegistrants.Columns.Add( subGroupColumn );
+                GroupService groupService = new GroupService( new RockContext() );
+                int RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
+                RegistrationInstance ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
+                ri.LoadAttributes();
+                foreach ( var groupType in AssociatedGroupTypesGrid )
+                {
+                    List<String> attributeValSplit = ri.AttributeValues[groupType.Name].Value.Split( '^' ).ToList();
+                    Group parentGroup = groupService.Get( Guid.Parse( attributeValSplit[0] ) );
+                    LinkButtonField subGroupColumn = new LinkButtonField();
+                    subGroupColumn.HeaderStyle.CssClass = "";
+                    subGroupColumn.HeaderText = parentGroup.Name;
+                    gRegistrants.Columns.Add( subGroupColumn );
+                }
             }
 
             // Add fee column
@@ -4098,7 +4246,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 {
                     modalIconString = string.Format( "<i class='{0}'></i> ", parentGroup.GroupType.IconCssClass );
                 }
-                rpGroupPanels.DataSource = _associatedGroupsUsed;
+                rpGroupPanels.DataSource = AssociatedGroupTypes;
                 rpGroupPanels.DataBind();
                 mdlAddSubGroup.Title = string.Format( "{0}Add New {1}", modalIconString, groupTypeGroupTerm );
                 mdlAddSubGroup.Show();
@@ -4293,7 +4441,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             }
             rockContext.SaveChanges();
             mdlAddSubGroup.Hide();
-            rpGroupPanels.DataSource = _associatedGroupsUsed;
+            rpGroupPanels.DataSource = AssociatedGroupTypes;
             rpGroupPanels.DataBind();
         }
     }
