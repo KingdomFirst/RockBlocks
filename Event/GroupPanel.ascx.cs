@@ -63,6 +63,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             BuildSubgroupHeading( group );
             pnlSubGroup.Expanded = _expanded;
             hfGroupId.Value = group.Id.ToString();
+            lbGroupEdit.CommandArgument = group.Id.ToString();
+            lbGroupDelete.CommandArgument = group.Id.ToString();
 
             // Set up Member Grid
             RockContext rockContext = new RockContext();

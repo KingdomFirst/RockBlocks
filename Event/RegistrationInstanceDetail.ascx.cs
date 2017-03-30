@@ -252,6 +252,14 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             }
         });
     });
+    $('a.js-delete-subGroup').click(function( e ){
+        e.preventDefault();
+        Rock.dialogs.confirm('Are you sure you want to delete this Group?', function (result) {
+            if (result) {
+                    window.location = e.target.href ? e.target.href : e.target.parentElement.href;
+            }
+        });
+    });
 
     $('table.js-grid-registration a.grid-delete-button').click(function( e ){
         e.preventDefault();
@@ -4145,7 +4153,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             Group parentGroup = new GroupService( new RockContext() ).Get( Guid.Parse( attributeValSplit[0] ) );
             List<Group> subGroups = new List<Group>( parentGroup.Groups );
             hfParentGroupId.Value = parentGroup.Guid.ToString();
-            lbAddSubGroup.CommandName = "AddGroup";
+            lbAddSubGroup.CommandName = "AddSubGroup";
             lbAddSubGroup.CommandArgument = parentGroup.Guid.ToString();
             BuildSubGroupPanels( phGroupControl, subGroups );
 
@@ -4186,8 +4194,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
 
         private void RpGroupPanels_ItemCommand( object source, RepeaterCommandEventArgs e )
         {
-            if ( e.CommandName == "AddGroup" )
+            if ( e.CommandName == "AddSubGroup" )
             {
+                hfEditGroup.Value = string.Empty;
                 tbName.Text = string.Empty;
                 tbDescription.Text = string.Empty;
                 nbGroupCapacity.Text = string.Empty;
@@ -4204,8 +4213,84 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 }
                 rpGroupPanels.DataSource = AssociatedGroupTypes;
                 rpGroupPanels.DataBind();
-                mdlAddSubGroup.Title = string.Format( "{0}Add New {1}", modalIconString, groupTypeGroupTerm );
+                mdlAddSubGroup.Title = string.Format( "{0} Add New {1}", modalIconString, groupTypeGroupTerm );
                 mdlAddSubGroup.Show();
+            }
+            if ( e.CommandName == "EditSubGroup" )
+            {
+                Group group = new GroupService( new RockContext() ).Get( int.Parse( e.CommandArgument.ToString() ) );
+                hfEditGroup.Value = group.Guid.ToString();
+                tbName.Text = group.Name;
+                tbDescription.Text = group.Description;
+                nbGroupCapacity.Text = group.GroupCapacity.ToString();
+                string modalIconString = string.Empty;
+                if ( !string.IsNullOrWhiteSpace( group.ParentGroup.GroupType.IconCssClass ) )
+                {
+                    modalIconString = string.Format( "<i class='{0}'></i> ", group.ParentGroup.GroupType.IconCssClass );
+                }
+                rpGroupPanels.DataSource = AssociatedGroupTypes;
+                rpGroupPanels.DataBind();
+                mdlAddSubGroup.Title = string.Format( "{0} Edit {1}", modalIconString, group.Name );
+                mdlAddSubGroup.Show();
+            }
+            if ( e.CommandName == "DeleteSubGroup" )
+            {
+                RockContext rockContext = new RockContext();
+                GroupService groupService = new GroupService( rockContext );
+                AuthService authService = new AuthService( rockContext );
+                Group group = groupService.Get( e.CommandArgument.ToString().AsInteger() );
+                hfEditGroup.Value = string.Empty;
+
+                int? parentGroupId = null;
+
+                if ( group != null )
+                {
+                    if ( !group.IsAuthorized( Authorization.EDIT, this.CurrentPerson ) )
+                    {
+                        mdDeleteWarning.Show( "You are not authorized to delete this group.", ModalAlertType.Information );
+                        return;
+                    }
+
+                    parentGroupId = group.ParentGroupId;
+                    string errorMessage;
+                    if ( !groupService.CanDelete( group, out errorMessage ) )
+                    {
+                        mdDeleteWarning.Show( errorMessage, ModalAlertType.Information );
+                        return;
+                    }
+
+                    bool isSecurityRoleGroup = group.IsActive && (group.IsSecurityRole || group.GroupType.Guid.Equals( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid() ));
+                    if ( isSecurityRoleGroup )
+                    {
+                        Rock.Security.Role.Flush( group.Id );
+                        foreach ( var auth in authService.Queryable().Where( a => a.GroupId == group.Id ).ToList() )
+                        {
+                            authService.Delete( auth );
+                        }
+                    }
+
+                    // If group has a non-named schedule, delete the schedule record.
+                    if ( group.ScheduleId.HasValue )
+                    {
+                        var scheduleService = new ScheduleService( rockContext );
+                        var schedule = scheduleService.Get( group.ScheduleId.Value );
+                        if ( schedule != null && schedule.ScheduleType != ScheduleType.Named )
+                        {
+                            scheduleService.Delete( schedule );
+                        }
+                    }
+
+                    groupService.Delete( group );
+
+                    rockContext.SaveChanges();
+
+                    if ( isSecurityRoleGroup )
+                    {
+                        Rock.Security.Authorization.Flush();
+                    }
+                }
+                rpGroupPanels.DataSource = AssociatedGroupTypes;
+                rpGroupPanels.DataBind();
             }
         }
 

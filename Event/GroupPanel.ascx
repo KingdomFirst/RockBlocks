@@ -16,8 +16,8 @@
                 </Columns>
             </Rock:Grid><br />
             <div class="actions">
-                <asp:LinkButton ID="lbGroupEdit" runat="server" AccessKey="m" Text="Edit" CssClass="btn btn-primary" />
-                <asp:LinkButton ID="lbGroupDelete" runat="server" Text="Delete" CssClass="btn btn-link js-delete-subGroup" CausesValidation="false" />
+                <asp:LinkButton ID="lbGroupEdit" runat="server" AccessKey="m" Text="Edit" CommandName="EditSubGroup" CssClass="btn btn-primary" />
+                <asp:LinkButton ID="lbGroupDelete" runat="server" Text="Delete" CommandName="DeleteSubGroup" CssClass="btn btn-link js-delete-subGroup" CausesValidation="false" />
             </div>
         </Rock:PanelWidget>
     </ContentTemplate>
