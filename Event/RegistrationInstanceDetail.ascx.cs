@@ -161,11 +161,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             AddDynamicControls();
             BindRegistrantsGrid();
         }
-        protected virtual void OnPreRenderComplete( EventArgs e )
-        {
-            //AddDynamicControls();
-            //BindRegistrantsGrid();
-        }
 
         /// <summary>
         /// Raises the <see cref="E:System.Web.UI.Control.Init" /> event.
@@ -214,7 +209,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             gRegistrants.RowDataBound += gRegistrants_RowDataBound;
             gRegistrants.GridRebind += gRegistrants_GridRebind;
             gRegistrants.RowCommand += gRegistrants_RowCommand;
-            //_registrantGridColumnCount = gRegistrants.Columns.Count;
 
             fPayments.ApplyFilterClick += fPayments_ApplyFilterClick;
             gPayments.DataKeyNames = new string[] { "Id" };
@@ -236,38 +230,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
 
             rpGroupPanels.ItemDataBound += rpGroupPanels_ItemDataBound;
             rpGroupPanels.ItemCommand += RpGroupPanels_ItemCommand;
-
-            //RockContext rockContext = new RockContext();
-            //GroupTypeService groupTypeService = new GroupTypeService( rockContext );
-            //if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypeParentSetting" ) ) )
-            //{
-            //    if ( !string.IsNullOrWhiteSpace( this.GetAttributeValue( "GroupTypesSetting" ) ) )
-            //    {
-            //        foreach( string groupGuid in this.GetAttributeValue( "GroupTypesSetting" ).Split( ',' ) )
-            //        {
-            //            Guid guid;
-            //            if( Guid.TryParse( groupGuid, out guid ) )
-            //            {
-            //                _associatedGroupsAvailable.Add( groupTypeService.Get( guid ) );
-            //            }
-            //        }
-            //    }
-            //    VerifyEntityAttribute( rockContext, _attributeKeyParent, _attributeNameParent, ri );
-            //    ri.LoadAttributes();
-
-            //    if ( _associatedGroupsAvailable.Count > 0 )
-            //    {
-            //        foreach ( GroupType groupType in _associatedGroupsAvailable )
-            //        {
-            //            VerifyEntityAttribute( rockContext, groupType.Name, groupType.Name, ri );
-            //            ri.LoadAttributes();
-            //            if ( !string.IsNullOrWhiteSpace( ri.AttributeValues[groupType.Name].Value ) )
-            //            {
-            //                AssociatedGroupTypes.Add( groupType );sadfs
-            //            }
-            //        }
-            //    }
-            //}
 
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
@@ -724,10 +686,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                     btnSendPaymentReminder.Visible = false;
                 }
             }
-            //ShowDetail();
-            //rpGroupPanels.DataSource = AssociatedGroupTypes;
-            //rpGroupPanels.DataBind();
-            //ShowDetail();
             BuildSubGroupTabs();
             AddDynamicControls();
             BindRegistrantsGrid();
@@ -1517,7 +1475,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                         LinkButton changeGroup = e.Row.Cells[columnIndex].Controls[0] as LinkButton;
                         var parentGroupColumn = e.Row.FindControl( "lSubGroup_" + parentGroup.Id ) as Literal;
                         if ( changeGroup != null )
-                        //if ( parentGroupColumn != null )
                         {
                             List<int> subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
                             GroupMember member = memberService.Queryable()
@@ -2212,8 +2169,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 {
                     btnSendPaymentReminder.Visible = false;
                 }
-
-                //LoadRegistrantFormFields( registrationInstance );
                 BindRegistrationsFilter();
                 BindRegistrantsFilter( registrationInstance );
                 BindLinkagesFilter();
@@ -3389,7 +3344,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
                 .ToList() )
             {
                 gRegistrants.Columns.Remove( column );
-                //_registrantGridColumnCount--;
+                _registrantGridColumnCount--;
             }
 
             // Remove any of the dynamic person fields
@@ -3465,6 +3420,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
             registrantField.SortExpression = "PersonAlias.Person.LastName, PersonAlias.Person.NickName";
             registrantField.ExcelExportBehavior = ExcelExportBehavior.NeverInclude;
             gRegistrants.Columns.Insert( 1, registrantField );
+            _registrantGridColumnCount++;
 
             if ( RegistrantFields != null )
             {
