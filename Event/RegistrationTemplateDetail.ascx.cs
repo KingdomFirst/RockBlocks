@@ -34,7 +34,7 @@ using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using Attribute = Rock.Model.Attribute;
 
-namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
+namespace RockWeb.Plugins.com_kfs.Event
 {
     [DisplayName( "KFS Registration Template Detail" )]
     [Category( "KFS > Event" )]

@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CategoryDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kingdomfirstsolutions.Core.KFSCategoryDetail" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CategoryDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Core.KFSCategoryDetail" %>
 
 <asp:UpdatePanel ID="upDetail" runat="server">
     <ContentTemplate>

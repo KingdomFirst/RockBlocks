@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationTemplateDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kingdomfirstsolutions.Event.KFSRegistrationTemplateDetail" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationTemplateDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.KFSRegistrationTemplateDetail" %>
 
 <script type="text/javascript">
 

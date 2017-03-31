@@ -31,7 +31,7 @@ using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using Rock.Security;
 
-namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
+namespace RockWeb.Plugins.com_kfs.Core
 {
     #region Block Attributes
 

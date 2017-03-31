@@ -19,7 +19,7 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Plugins.com_kingdomfirstsolutions.Event
+namespace RockWeb.Plugins.com_kfs.Event
 {
     public partial class KFSGroupPanel : System.Web.UI.UserControl
     {

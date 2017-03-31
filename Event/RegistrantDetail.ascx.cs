@@ -37,7 +37,7 @@ using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using Attribute = Rock.Model.Attribute;
 
-namespace RockWeb.Blocks.Event
+namespace RockWeb.Plugins.com_kfs.Event
 {
     /// <summary>
     /// Displays interface for editing the registration attribute values and fees for a given registrant.
