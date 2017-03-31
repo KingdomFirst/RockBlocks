@@ -80,7 +80,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
         {
             base.OnInit( e );
 
-            Guid entityTypeGuid = Guid.Empty;
+            var entityTypeGuid = Guid.Empty;
             if ( Guid.TryParse( GetAttributeValue( "EntityType" ), out entityTypeGuid ) )
             {
                 entityTypeId = EntityTypeCache.Read( entityTypeGuid ).Id;
@@ -117,7 +117,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
 
             if ( !Page.IsPostBack )
             {
-                string categoryIdParam = PageParameter( "CategoryId" );
+                var categoryIdParam = PageParameter( "CategoryId" );
                 if ( !string.IsNullOrEmpty( categoryIdParam ) )
                 {
                     ShowDetail( categoryIdParam.AsInteger(), PageParameter( "ParentCategoryId" ).AsIntegerOrNull() );
@@ -142,7 +142,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
         {
             if ( hfCategoryId.Value.Equals( "0" ) )
             {
-                int? parentCategoryId = PageParameter( "ParentCategoryId" ).AsIntegerOrNull();
+                var parentCategoryId = PageParameter( "ParentCategoryId" ).AsIntegerOrNull();
                 if ( parentCategoryId.HasValue )
                 {
                     // Cancelling on Add, and we know the parentCategoryId, so we are probably in treeview mode, so navigate to the current page
@@ -159,8 +159,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
             else
             {
                 // Cancelling on Edit.  Return to Details
-                CategoryService service = new CategoryService( new RockContext() );
-                Category category = service.Get( hfCategoryId.ValueAsInt() );
+                var service = new CategoryService( new RockContext() );
+                var category = service.Get( hfCategoryId.ValueAsInt() );
                 ShowReadonlyDetails( category );
             }
         }
@@ -172,8 +172,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void btnEdit_Click( object sender, EventArgs e )
         {
-            CategoryService service = new CategoryService( new RockContext() );
-            Category category = service.Get( hfCategoryId.ValueAsInt() );
+            var service = new CategoryService( new RockContext() );
+            var category = service.Get( hfCategoryId.ValueAsInt() );
             ShowEditDetails( category );
         }
 
@@ -239,18 +239,20 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
             Category category;
 
             var rockContext = new RockContext();
-            CategoryService categoryService = new CategoryService( rockContext );
+            var categoryService = new CategoryService( rockContext );
 
-            int categoryId = hfCategoryId.ValueAsInt();
+            var categoryId = hfCategoryId.ValueAsInt();
 
             if ( categoryId == 0 )
             {
-                category = new Category();
-                category.IsSystem = false;
-                category.EntityTypeId = entityTypeId;
-                category.EntityTypeQualifierColumn = entityTypeQualifierProperty;
-                category.EntityTypeQualifierValue = entityTypeQualifierValue;
-                category.Order = 0;
+                category = new Category
+                {
+                    IsSystem = false,
+                    EntityTypeId = entityTypeId,
+                    EntityTypeQualifierColumn = entityTypeQualifierProperty,
+                    EntityTypeQualifierValue = entityTypeQualifierValue,
+                    Order = 0
+                };
                 categoryService.Add( category );
             }
             else
@@ -263,7 +265,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
             category.IconCssClass = tbIconCssClass.Text;
             category.HighlightColor = tbHighlightColor.Text;
 
-            List<int> orphanedBinaryFileIdList = new List<int>();
+            var orphanedBinaryFileIdList = new List<int>();
 
             if ( !Page.IsValid )
             {
@@ -280,7 +282,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
                 return;
             }
 
-            BinaryFileService binaryFileService = new BinaryFileService( rockContext );
+            var binaryFileService = new BinaryFileService( rockContext );
             foreach ( int binaryFileId in orphanedBinaryFileIdList )
             {
                 var binaryFile = binaryFileService.Get( binaryFileId );
@@ -294,21 +296,21 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
             rockContext.SaveChanges();
             CategoryCache.Flush( category.Id );
 
-            category = new CategoryService( new RockContext() ).Get( category.Id );
+            category = categoryService.Get( category.Id );
 
             Guid groupTypeGuid;
             if ( Guid.TryParse( this.GetAttributeValue( "GroupTypeSetting" ), out groupTypeGuid ) )
             {
-                string attributeKey = "AssociatedGroup";
+                var attributeKey = "AssociatedGroup";
                 VerifyCategoryAttribute( rockContext, attributeKey );
                 category.LoadAttributes();
                 if( category.GetAttributeValue( attributeKey ) == null )
                 {
                     Group parentGroup = null;
-                    GroupService groupService = new GroupService( rockContext );
-                    GroupTypeService groupTypeService = new GroupTypeService( rockContext );
-                    Category parentCategory = category.ParentCategory;
-                    if( parentCategory != null )
+                    var groupService = new GroupService( rockContext );
+                    var groupTypeService = new GroupTypeService( rockContext );
+                    var parentCategory = category.ParentCategory;
+                    if ( parentCategory != null )
                     {
                         parentCategory.LoadAttributes();
                         if ( parentCategory.GetAttributeValue( attributeKey ) != null )
@@ -316,9 +318,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
                             parentGroup = groupService.Get( Guid.Parse( category.ParentCategory.GetAttributeValue( attributeKey ) ) );
                         }
                     }
-                    Group newGroup = new Group();
-                    newGroup.Name = category.Name;
-                    if( parentGroup != null )
+                    var newGroup = new Group
+                    {
+                        Name = category.Name
+                    };
+                    if ( parentGroup != null )
                     {
                         newGroup.ParentGroup = parentGroup;
                     }
@@ -326,7 +330,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
                     groupService.Add( newGroup );
                     rockContext.SaveChanges();
 
-                    newGroup = new GroupService( new RockContext() ).Get( newGroup.Guid );
+                    newGroup = groupService.Get( newGroup.Guid );
                     category.AttributeValues[attributeKey].Value = newGroup.Guid.ToString();
                     category.SaveAttributeValues();
                 }
@@ -340,22 +344,19 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
         private static void VerifyCategoryAttribute( RockContext rockContext, string attributeKey )
         {
             int? categoryEntityTypeId = null;
-            AttributeService attributeService = new AttributeService( rockContext );
+            var attributeService = new AttributeService( rockContext );
             Rock.Model.Attribute attribute = null;
-            categoryEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Category ) ).Id;
-            IQueryable<Rock.Model.Attribute> attributeQuery = null;
-            if ( categoryEntityTypeId != null )
+            categoryEntityTypeId = EntityTypeCache.Read( typeof( Category ) ).Id;
+            var attributeExists = attributeService.Get( categoryEntityTypeId, string.Empty, string.Empty ).Any( a => a.Key == attributeKey );
+            if ( attributeExists )
             {
-                attributeQuery = attributeService.Get( categoryEntityTypeId, string.Empty, string.Empty );
-                attributeQuery = attributeQuery.Where( a => a.Key == attributeKey );
-            }
-            if ( attributeQuery.Count() == 0 )
-            {
-                Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
-                edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id;
-                edtAttribute.Name = "Associated Group";
-                edtAttribute.Key = attributeKey;
-                attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, categoryEntityTypeId, string.Empty, string.Empty );
+                var edtAttribute = new Rock.Model.Attribute
+                {
+                    FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id,
+                    Name = "Associated Group",
+                    Key = attributeKey
+                };
+                attribute = Helper.SaveAttributeEdits( edtAttribute, categoryEntityTypeId, string.Empty, string.Empty );
 
                 AttributeCache.FlushEntityAttributes();
             }
@@ -394,13 +395,17 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
 
             if ( category == null )
             {
-                category = new Category { Id = 0, IsSystem = false, ParentCategoryId = parentCategoryId};
-
-                // fetch the ParentCategory (if there is one) so that security can check it
-                category.ParentCategory = categoryService.Get( parentCategoryId ?? 0 );
-                category.EntityTypeId = entityTypeId;
-                category.EntityTypeQualifierColumn = entityTypeQualifierProperty;
-                category.EntityTypeQualifierValue = entityTypeQualifierValue;
+                category = new Category
+                {
+                    Id = 0,
+                    IsSystem = false,
+                    ParentCategoryId = parentCategoryId,
+                    // fetch the ParentCategory (if there is one) so that security can check it
+                    ParentCategory = categoryService.Get( parentCategoryId ?? 0 ),
+                    EntityTypeId = entityTypeId,
+                    EntityTypeQualifierColumn = entityTypeQualifierProperty,
+                    EntityTypeQualifierValue = entityTypeQualifierValue
+                };
                 // hide the panel drawer that show created and last modified dates
                 pdAuditDetails.Visible = false;
             }
@@ -415,7 +420,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
             hfCategoryId.Value = category.Id.ToString();
 
             // render UI based on Authorized and IsSystem
-            bool readOnly = false;
+            var readOnly = false;
 
             nbEditModeMessage.Text = string.Empty;
             
@@ -446,7 +451,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
             else
             {
                 btnEdit.Visible = true;
-                string errorMessage = string.Empty;
+                var errorMessage = string.Empty;
                 btnDelete.Visible = true;
                 btnDelete.Enabled = categoryService.CanDelete(category, out errorMessage);
                 btnDelete.ToolTip = btnDelete.Enabled ? string.Empty : errorMessage;
@@ -507,7 +512,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
             }
 
             var excludeCategoriesGuids = this.GetAttributeValue( "ExcludeCategories" ).SplitDelimitedValues().AsGuidList();
-            List<int> excludedCategoriesIds = new List<int>();
+            var excludedCategoriesIds = new List<int>();
             if ( excludeCategoriesGuids != null && excludeCategoriesGuids.Any() )
             {
                 foreach ( var excludeCategoryGuid in excludeCategoriesGuids )
@@ -570,8 +575,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
         /// </summary>
         protected override void ShowSettings()
         {
+            var rockContext = new RockContext();
+            var categoryService = new CategoryService( rockContext );
             var entityType = EntityTypeCache.Read( this.GetAttributeValue( "EntityType" ).AsGuid() );
-            var rootCategory = new CategoryService( new RockContext() ).Get( this.GetAttributeValue( "RootCategory" ).AsGuid() );
+            var rootCategory = categoryService.Get( this.GetAttributeValue( "RootCategory" ).AsGuid() );
 
             cpRootCategoryDetail.EntityTypeId = entityType != null ? entityType.Id : 0;
 
@@ -588,7 +595,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Core
             cpRootCategoryDetail.Enabled = entityType != null;
             nbRootCategoryEntityTypeWarning.Visible = entityType == null;
 
-            var excludedCategories = new CategoryService( new RockContext() ).GetByGuids( this.GetAttributeValue( "ExcludeCategories" ).SplitDelimitedValues().AsGuidList() );
+            var excludedCategories = categoryService.GetByGuids( this.GetAttributeValue( "ExcludeCategories" ).SplitDelimitedValues().AsGuidList() );
             cpExcludeCategoriesDetail.EntityTypeId = entityType != null ? entityType.Id : 0;
 
             // make sure the excluded categories matches the EntityTypeId (just in case they changed the EntityType after setting excluded categories
