@@ -23,6 +23,16 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
     [Category( "KFS > Finance" )]
     [Description( "Lists all financial batches and provides GL Export capability" )]
     [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
+    [BooleanField( "Show Actions", "Should the grid display merge template and export to excel actions?", false )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Company", "Choose the financial account attribute for the General Ledger Export Company.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Fund", "Choose the financial account attribute for the General Ledger Export Fund.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Bank Account", "Choose the financial account attribute for the General Ledger Export Bank Account.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Account", "Choose the financial account attribute for the General Ledger Export Revenue Account.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Department", "Choose the financial account attribute for the General Ledger Export Revenue Department.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Default Project Attribute", "Choose the financial account attribute for the default project.", false, false, "", "Export Account Attributes" )]
+    [AttributeField( "2C1CB26B-AB22-42D0-8164-AEDEE0DAE667", "Transaction Project Attribute", "Choose the financial transaction attribute for the Project.", false, false, "", "Export Transaction Detail Attributes" )]
+    [AttributeField( "AC4AC28B-8E7E-4D7E-85DB-DFFB4F3ADCCE", "Transaction Detail Project Attribute", "Choose the financial transaction detail attribute for the Project.", false, false, "", "Export Transaction Attributes" )]
+    [TextField( "Project Code Attribute", "Project defined type attribute key name for Code", false, "Code", "Export Project Attributes" )]
     public partial class BatchGLExport : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -38,6 +48,16 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         private FinancialBatchService batchService = null;
         private AttributeService attributeService = null;
 
+        // Define default attribute names as strings before they get overridden by block settings
+        private string AttributeStr_TransactionProject = "Project";
+        private string AttributeStr_TransactionDetailProject = "Project";
+        private string AttributeStr_ProjectCode = "Code";
+        private string AttributeStr_Company = "GeneralLedgerExport_Company";
+        private string AttributeStr_Fund = "GeneralLedgerExport_Fund";
+        private string AttributeStr_BankAccount = "GeneralLedgerExport_BankAccount";
+        private string AttributeStr_RevenueAccount = "GeneralLedgerExport_RevenueAccount";
+        private string AttributeStr_RevenueDepartment = "GeneralLedgerExport_RevenueDepartment";
+        private string AttributeStr_DefaultProject = "Project";
 
         #endregion
 
@@ -57,15 +77,65 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlContent );
 
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "Company" ) ) )
+            {
+                AttributeStr_Company = getAttributeKey( GetAttributeValue( "Company" ).AsGuidOrNull() );
+            }
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "Fund" ) ) )
+            {
+                AttributeStr_Fund = getAttributeKey( GetAttributeValue( "Fund" ).AsGuidOrNull() );
+            }
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "BankAccount" ) ) )
+            {
+                AttributeStr_BankAccount = getAttributeKey( GetAttributeValue( "BankAccount" ).AsGuidOrNull() );
+            }
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "RevenueAccount" ) ) )
+            {
+                AttributeStr_RevenueAccount = getAttributeKey( GetAttributeValue( "RevenueAccount" ).AsGuidOrNull() );
+            }
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "RevenueDepartment" ) ) )
+            {
+                AttributeStr_RevenueDepartment = getAttributeKey( GetAttributeValue( "RevenueDepartment" ).AsGuidOrNull() );
+            }
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "DefaultProjectAttribute" ) ) )
+            {
+                AttributeStr_DefaultProject = getAttributeKey( GetAttributeValue( "DefaultProjectAttribute" ).AsGuidOrNull() );
+            }
+
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "TransactionProjectAttribute" ) ) )
+            {
+                AttributeStr_TransactionProject = getAttributeKey( GetAttributeValue( "TransactionProjectAttribute" ).AsGuidOrNull() );
+            }
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "TransactionDetailProjectAttribute" ) ) )
+            {
+                AttributeStr_TransactionDetailProject = getAttributeKey( GetAttributeValue( "TransactionDetailProjectAttribute" ).AsGuidOrNull() );
+            }
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "ProjectCodeAttribute" ) ) )
+            {
+                AttributeStr_ProjectCode = GetAttributeValue( "ProjectCodeAttribute" );
+            }
+
             gfBatchFilter.ApplyFilterClick += gfBatchFilter_ApplyFilterClick;
             gfBatchFilter.ClearFilterClick += gfBatchFilter_ClearFilterClick;
             gfBatchFilter.DisplayFilterValue += gfBatchFilter_DisplayFilterValue;
 
+            bool showActions = GetAttributeValue( "ShowActions" ).AsBoolean();
+
+            if (showActions)
+            {
+                rockContext.Configuration.ProxyCreationEnabled = false;
+            }
+
             gBatchList.DataKeyNames = new string[] { "Id" };
-            gBatchList.Actions.ShowExcelExport = false;
-            gBatchList.Actions.ShowMergeTemplate = false;
+            gBatchList.Actions.ShowExcelExport = showActions;
+            gBatchList.Actions.ShowMergeTemplate = showActions;
             gBatchList.GridRebind += gBatchList_GridRebind;
             gBatchList.RowDataBound += gBatchList_RowDataBound;
+
+            BatchExportList.ShowFooter = false;
+            BatchExportList.Actions.ShowExcelExport = false;
+            BatchExportList.Actions.ShowMergeTemplate = false;
+            BatchExportList.PagerSettings.Visible = false;
 
             object journalType = Session["JournalType"];
             if ( journalType != null )
@@ -117,6 +187,20 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             }
 
 
+        }
+
+        private string getAttributeKey( Guid? v )
+        {
+            string attributeKey = String.Empty;
+            if ( v.HasValue )
+            {
+                var attribute = AttributeCache.Read( v.Value, rockContext );
+                if ( attribute != null )
+                {
+                    attributeKey = attribute.Key;
+                }
+            }
+            return attributeKey;
         }
 
         /// <summary>
@@ -290,20 +374,19 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             var batchesSelected = new List<int>();
 
             gBatchList.SelectedKeys.ToList().ForEach( b => batchesSelected.Add( b.ToString().AsInteger() ) );
+            rockContext = new RockContext();
 
             var attributeValues = generateAttributeFilters();
+            batchService = new FinancialBatchService( rockContext );
 
             var batchesToUpdate = batchService.Queryable()
                 .Where( b => batchesSelected.Contains( b.Id ) )
                 .Where( b => !attributeValues.Select( v => v.EntityId ).Contains( b.Id ) )
                 .ToList();
 
-            string output = String.Empty;
             List<GLExportLineItem> items = getExportLineItems( batchesToUpdate );
-            BatchExportList.ShowFooter = false;
-            BatchExportList.Actions.ShowExcelExport = false;
-            BatchExportList.Actions.ShowMergeTemplate = false;
-            BatchExportList.PagerSettings.Visible = false;
+
+            batchPreviewHdr.InnerText = "Preview - " + dpExportDate.SelectedDate.Value.ToShortDateString();
             BatchExportList.DataSource = new BindingList<GLExportLineItem>( items );
             BatchExportList.DataBind();
         }
@@ -321,7 +404,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             if ( batchesSelected.Any() )
             {
+                rockContext = new RockContext();
                 var attributeValues = generateAttributeFilters();
+                batchService = new FinancialBatchService( rockContext );
 
                 var batchesToUpdate = batchService.Queryable()
                     .Where( b => batchesSelected.Contains( b.Id ) )
@@ -331,19 +416,24 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 string output = String.Empty;
                 List<GLExportLineItem> items = getExportLineItems( batchesToUpdate );
 
-                StringBuilder stringBuilder = new StringBuilder();
-                int num = 0;
-                foreach ( GLExportLineItem lineitem in items )
-                {
-                    if ( num > 0 )
-                    {
-                        stringBuilder.Append( Environment.NewLine );
-                    }
-                    stringBuilder.Append( convertGLItemToStr( lineitem ) );
-                    num++;
-                }
                 if ( items.Count > 0 && nbResult.NotificationBoxType != NotificationBoxType.Warning )
                 {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    int num = 0;
+                    foreach ( GLExportLineItem lineitem in items )
+                    {
+                        if ( num > 0 )
+                        {
+                            stringBuilder.Append( Environment.NewLine );
+                        }
+                        stringBuilder.Append( convertGLItemToStr( lineitem ) );
+                        num++;
+                    }
+
+                    batchPreviewHdr.InnerText = "Exported Preview - " + dpExportDate.SelectedDate.Value.ToShortDateString();
+                    BatchExportList.DataSource = new BindingList<GLExportLineItem>( items );
+                    BatchExportList.DataBind();
+
                     setExported( batchesToUpdate );
 
                     output = stringBuilder.ToString();
@@ -460,14 +550,28 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     foreach ( var transactionDetail in transaction.TransactionDetails )
                     {
                         transactionDetail.Account.LoadAttributes();
+                        transactionDetail.LoadAttributes();
 
                         GLTransaction transactionItem = new GLTransaction();
-                        transactionItem.glCompany = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_Company" );
-                        transactionItem.glFund = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_Fund" );
-                        transactionItem.glBankAccount = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_BankAccount" );
-                        transactionItem.glRevenueAccount = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_RevenueAccount" );
-                        transactionItem.glRevenueDepartment = transactionDetail.Account.GetAttributeValue( "GeneralLedgerExport_RevenueDepartment" );
-                        transactionItem.projectCode = transaction.GetAttributeValue( "Project" );
+                        transactionItem.glCompany = transactionDetail.Account.GetAttributeValue( AttributeStr_Company );
+                        transactionItem.glFund = transactionDetail.Account.GetAttributeValue( AttributeStr_Fund );
+                        transactionItem.glBankAccount = transactionDetail.Account.GetAttributeValue( AttributeStr_BankAccount );
+                        transactionItem.glRevenueAccount = transactionDetail.Account.GetAttributeValue( AttributeStr_RevenueAccount );
+                        transactionItem.glRevenueDepartment = transactionDetail.Account.GetAttributeValue( AttributeStr_RevenueDepartment );
+
+                        if ( !string.IsNullOrWhiteSpace( transactionDetail.GetAttributeValue( AttributeStr_TransactionDetailProject )) )
+                        {
+                            transactionItem.projectCode = transactionDetail.GetAttributeValue( AttributeStr_TransactionDetailProject );
+                        }
+                        else if ( !string.IsNullOrWhiteSpace( transaction.GetAttributeValue( AttributeStr_TransactionProject ) ) )
+                        {
+                            transactionItem.projectCode = transaction.GetAttributeValue( AttributeStr_TransactionProject );
+                        }
+                        else
+                        {
+                            transactionItem.projectCode = transactionDetail.Account.GetAttributeValue( AttributeStr_DefaultProject );
+                        }
+
                         transactionItem.total = transactionDetail.Amount;
 
                         transactionItem.batch = batch;
@@ -516,8 +620,12 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     {
                         foreach ( var project in projects.DefinedValues.OrderByDescending( a => a.Value.AsInteger() ).Where( p => p.Guid.ToString().ToLower() == transaction.projectCode.ToString().ToLower() ) )
                         {
-                            projectCode = project.GetAttributeValue( "Code" );
+                            projectCode = project.GetAttributeValue( AttributeStr_ProjectCode );
                         }
+                    }
+                    if ( String.IsNullOrWhiteSpace( projectCode ) )
+                    {
+                        _errorMessage.Add( string.Format( "Project code cannot be empty. Batch id: {0}, Account: {1}<br>", transaction.batch.Id, transaction.glBankAccount ) );
                     }
                 }
 
@@ -1050,31 +1158,40 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         {
             [StringLength( 2, ErrorMessage = "AccountingPeriod cannot have more than 2 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "AccountingPeriod must be numeric." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "AccountingPeriod cannot be null." )]
             public string AccountingPeriod { get; set; }
             [StringLength( 9, ErrorMessage = "AccountNumber cannot have more than 9 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "AccountNumber must be numeric." )]
             [Required()]
             public string AccountNumber { get; set; }
+            [Required( AllowEmptyStrings = true, ErrorMessage = "Amount cannot be null." )]
             public decimal Amount { get; set; }
             [StringLength( 4, ErrorMessage = "CompanyNumber cannot have more than 4 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "CompanyNumber must be numeric." )]
             [Required()]
             public string CompanyNumber { get; set; }
+            [Required( AllowEmptyStrings = true, ErrorMessage = "Date Code cannot be null." )]
             public DateTime? Date { get; set; }
             [StringLength( 3, ErrorMessage = "DepartmentNumber cannot have more than 3 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "DepartmentNumber must be numeric." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "DepartmentNumber cannot be null." )]
             public string DepartmentNumber { get; set; }
+            [Required( AllowEmptyStrings = true, ErrorMessage = "Description1 cannot be null." )]
             public string Description1 { get; set; }
+            [Required( AllowEmptyStrings = true, ErrorMessage = "Description2 cannot be null." )]
             public string Description2 { get; set; }
             [StringLength( 5, ErrorMessage = "FundNumber cannot have more than 5 characters in length." )]
             [RegularExpression( "([0-9]+)", ErrorMessage = "FundNumber must be numeric." )]
             [Required()]
             public string FundNumber { get; set; }
             [Range( 0, 99999, ErrorMessage = "JournalNumber cannot have more than 5 characters in length." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "JournalNumber cannot be null." )]
             public int JournalNumber { get; set; }
             [StringLength( 2, ErrorMessage = "JournalType cannot have more than 2 characters in length." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "JournalType cannot be null." )]
             public string JournalType { get; set; }
             [StringLength( 50, ErrorMessage = "ProjectCode cannot have more than 50 characters in length." )]
+            [Required( AllowEmptyStrings = true, ErrorMessage = "ProjectCode cannot be null." )]
             public string ProjectCode { get; set; }
         }
 

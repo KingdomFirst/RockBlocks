@@ -92,7 +92,7 @@
                 <div class="col-md-7 margin-t-md">
                     <div class="panel panel-block">
                 <div class="panel-heading">
-                    <h1 class="panel-title">Preview</h1>
+                    <h1 class="panel-title" id="batchPreviewHdr" runat="server">Preview</h1>
                 </div>
                 <div class="panel-body">
                     <div class="grid grid-panel">
