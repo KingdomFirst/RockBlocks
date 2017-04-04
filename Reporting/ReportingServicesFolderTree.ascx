@@ -1,39 +1,50 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ReportingServicesFolderTree.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Reporting.ReportingServicesFolderTree" %>
-<asp:UpdatePanel ID="upFolderTree" runat="server" UpdateMode="Conditional">
+<asp:UpdatePanel ID="upMain" runat="server" UpdateMode="Conditional">
     <ContentTemplate>
-        <asp:HiddenField ID="hfRootPath" runat="server" />
-        <asp:HiddenField ID="hfShowHidden" runat="server" />
-        <asp:HiddenField ID="hfRecursive" runat="server" />
-        <asp:Label ID="lPath" runat="server" />
-        <div class="treeview-scroll scroll-container scroll-container-horizontal">
-            <div class="viewport">
-                <div class="overview">
-                    <div class="panel-body treeview-frame">
-                        <asp:Panel ID="pnlTreeviewContent" runat="server" />
-                    </div>
-                </div>
+        <asp:HiddenField ID="hfExpandedFolders" runat="server" />
+        <asp:Panel ID="pnFolders" CssClass="panel panel-block" runat="server">
+            <div id="folders" style="display: none;">
+                <asp:Literal ID="lFolders" runat="server" ViewStateMode="Disabled" />
             </div>
-            <div class="scrollbar">
-                <div class="track">
-                    <div class="thumb">
-                        <div class="end"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </asp:Panel>
 
         <script type="text/javascript">
-            $(function () {
-                $('#<%=pnlTreeviewContent.ClientID%>')
-                    .rockTree({
-                        id: '',
-                        restUrl: '/api/com.kfs/ReportingServices/GetFolderList/',
-                        restParams: '?rootPath=' + $('#<%=hfRootPath.ClientID%>').val()
-                            + '&getChildren=' + $('#<%=hfRecursive.ClientID%>').val()
-                            + '&includeHidden=' + $('#<%=hfShowHidden.ClientID%>').val(),
-                    multiSelect: false
-                    });
+            Sys.Application.add_load(function () {
+                $("#folders")
+                    .on("rockTree:selected", function (e, id) {
+                        debugger;
+                        var $li = $(this).find('[data-id="' + id + '"]'),
+                            rockTree = $(this).data('rockTree'),
+                            modelType,
+                            action,
+                            i;
+                        var expandedDataIds = $(e.currentTarget).find('.rocktree-children').filter(":visible").closest('.rocktree-item').map(function () {
+                            return $(this).attr('data-id')
+                        }).get().join(',');
+
+                        $('<%= hfExpandedFolders.ClientID %>').val(expandedDataIds);
+
+                if ($li.length > 1) {
+                    for (i = 0; i < $li.length; i++) {
+                        if (!rockTree.selectedNodes[0].name === $li.find('span').text()) {
+                            $li = $li[i];
+                            break;
+                        }
+                    }
+                }
+
+            })
+            .rockTree({
+                mapping: {
+                    include: ["model"]
+                }
             });
+
+        $("#folders").show();
+    });
+
+
         </script>
     </ContentTemplate>
 </asp:UpdatePanel>
+
