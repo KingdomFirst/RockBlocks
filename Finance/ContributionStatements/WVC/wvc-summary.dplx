@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<document xsi:schemaLocation="http://www.cete.com http://www.cete.com/schemas/DPLX60.xsd" version="6.0" author="" keywords="" subject="" id="MainReport" title="Woodmen Valley (Summary)" xmlns="http://www.cete.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<report id="OuterReport" bottomMargin="18" leftMargin="36" rightMargin="36" topMargin="36">
+		<query id="OuterQuery">
+			<eventDriven connectionString=""></eventDriven>
+		</query>
+		<template id="Template1"/>
+		<header id="ReportHeader" height="126"><image x="0" y="0" height="50" width="150" path="logo.jpg" id="imgLogo"/>
+			<recordArea width="252" height="36" x="288" y="0" align="right" fontSize="11" id="raOrganizationAddress">
+				<text>290 E Woodmen Rd
+Colorado Springs, CO 80919</text>
+			</recordArea>
+			<recordArea height="36" width="540" x="0" align="center" vAlign="bottom" y="68.4" fontSize="11" id="raOrganizationHeader">
+				<text>719.388.5000  •  WOODMENVALLEY.ORG  •  FEIN: 84-0996424</text>
+			</recordArea>
+			<line x1="0" x2="540" y1="108" y2="108" color="gray" id="lnPageHeader" width="3"/></header>
+		<detail id="PersonDetail" autoSplit="true" height="252">
+			<subReport id="InnerReport" x="0" y="198" width="72">
+				<query id="InnerQuery">
+					<eventDriven connectionString=""></eventDriven>
+				</query>
+				<header id="TranListHeader" height="0">
+				</header>
+				<detail autoSplit="true" id="TranListDetail" height="1">
+					<subReport id="TransactionDetailReport" y="0" x="0" width="36">
+						<query id="qryTransactionDetails">
+							<eventDriven connectionString=""></eventDriven>
+						</query>
+						<header id="Header2"/>
+						<detail id="Detail1" height="1">
+						</detail>
+						<footer id="Footer2"/>
+					</subReport>
+				</detail>
+				<footer id="TranListFooter">
+				</footer>
+			</subReport>
+			<recordArea x="0" id="raToAddress" fontSize="11" height="72" width="234" y="0">
+				<text>#AddressPersonNames#
+#Street1##IIF(len(trim(Street2)),"
+")##Street2#
+#City##IIF(len(trim(City)),",")# #State# #PostalCode#</text>
+			</recordArea>
+			<subReport id="OrganizationInfoReport" width="540" x="0" y="0">
+				<query id="OrgInfoQuery">
+					<eventDriven connectionString=""></eventDriven>
+				</query>
+				<header id="Header1" height="1"/>
+				<detail id="OrgDetail" height="0">
+				</detail>
+				<footer id="Footer1"/>
+			</subReport>
+			<recordArea fontSize="11" height="30.1" width="540" x="0" align="center" id="raContributionSummaryDate" y="162">
+				<text>SUMMARY OF CONTRIBUTIONS FROM #ToUpper(Format(StartDate, "MMMM d, yyyy"))# THROUGH #ToUpper(Format(EndDate, "MMMM d, yyyy"))#</text>
+			</recordArea>
+			<recordArea id="raCustomArea1" height="108" fontSize="9" width="306" x="234" y="0">
+				<text>Thank you for your gifts and continuing contributions that support the ministries of Woodmen Valley Chapel. We rejoice and celebrate in God's bounty expressed by your partnership with our church community. Listed below are the contributions you have made. As we see God's amazing work accomplished through Woodmen, know that you are a vital part of the financial support that sustains this ministry. We are grateful for you!
+
+If you should have any questions, please feel free to call the Finance Department at 719.388.5000.</text>
+			</recordArea>
+			<subReport id="AccountSummaryReport" width="288" x="126" y="198">
+				<query id="AccountSummaryQuery">
+					<eventDriven connectionString=""></eventDriven>
+				</query>
+				<header id="AccountSummaryHeader" height="15">
+					<label font="HelveticaBold" fontSize="10" id="lblAccountSummary" y="0" x="6" height="12" text="Account" width="144"/>
+					<label font="HelveticaBold" fontSize="10" y="0" height="12" id="Label1" width="90" x="192.24" align="right" text="Amount"/>
+					<line x1="0" x2="288" y1="13.32" y2="13.32" color="gray" id="lnAccountHeader"/></header>
+				<detail id="AccountSummaryDetail" height="13.32">
+					<recordBox dataFormat="" id="raAccountSummaryAccountName" field="AccountName" fontSize="9" x="6" y="0" height="12" width="144"/>
+					<recordBox width="90" id="raAccountSummaryAmount" field="Amount" align="right" y="0" height="12" x="192" fontSize="9" dataFormat="$#,##0.00"/>
+				</detail>
+				<footer id="AccountSummaryFooter" height="18"><recordBox height="14" fontSize="10" font="HelveticaBold" align="right" dataFormat="$#,##0.00" field="Sum(Amount, AccountSummaryReport, AccountSummaryQuery)" width="90" x="192.24" y="1.8" id="raSummaryCalculatedTotal"/>
+					<recordArea width="90" height="13.968" fontSize="10" font="HelveticaBold" x="5.976" y="1.8" id="raSummaryTextTotal"><text>Total</text></recordArea><line x1="0" x2="288" y1="0" y2="0" color="gray" id="lnAccountFooter"/></footer>
+			</subReport>
+			<recordArea height="18" id="raCustomArea2" font="HelveticaBold" fontSize="9" width="306" x="234" y="108">
+				<text>No goods or services have been rendered for these contributions.</text>
+			</recordArea>
+			<pageBreak id="pbEndOfRecord" y="252"/></detail>
+		<footer id="ReportFooter"/>
+	</report>
+</document>
