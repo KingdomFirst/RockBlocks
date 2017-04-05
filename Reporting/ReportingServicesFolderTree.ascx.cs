@@ -39,6 +39,12 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         {
             base.OnLoad( e );
             LoadAttributes();
+
+            if ( !Page.IsPostBack )
+            {
+                string folderPath = PageParameter( "selectedpath" );
+                hfSelectedFolder.Value = folderPath;
+            }
             BuildTree();
         }
 
@@ -58,10 +64,11 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
         private void BuildTreeNode( ReportingServiceItem item, ref StringBuilder treeBuilder )
         {
+            string nodeId = item.Path.Replace( "/", "_" );
             treeBuilder.AppendFormat(
-                "<li data-expanded=\"{0}\" data-modal=\"RSFolder\" data-id=\"f{1}\"><span><span class=\"rollover-container\"><i class=\"fa fa-folder-o\">&nbsp;</i>{2}</span></span>{3}",
-                bool.FalseString.ToLower(),
-                item.Path.Replace( "/", "_" ),
+                "<li data-expanded=\"{0}\"  data-modal=\"RSFolder\" data-id=\"{1}\"><span><span class=\"rollover-container\"><i class=\"fa fa-folder-o\">&nbsp;</i>{2}</span></span>{3}",
+                ( hfSelectedFolder.Value.Contains( nodeId ) ).ToString().ToLower(),
+                nodeId,
                 item.Name,
                 Environment.NewLine );
 

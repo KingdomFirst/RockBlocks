@@ -1,7 +1,7 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ReportingServicesFolderTree.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Reporting.ReportingServicesFolderTree" %>
 <asp:UpdatePanel ID="upMain" runat="server" UpdateMode="Conditional">
     <ContentTemplate>
-        <asp:HiddenField ID="hfExpandedFolders" runat="server" />
+        <asp:HiddenField ID="hfSelectedFolder" runat="server" />
         <asp:Panel ID="pnFolders" CssClass="panel panel-block" runat="server">
             <div id="folders" style="display: none;">
                 <asp:Literal ID="lFolders" runat="server" ViewStateMode="Disabled" />
@@ -10,6 +10,8 @@
 
         <script type="text/javascript">
             Sys.Application.add_load(function () {
+                var selectedFolder = $('#<%= hfSelectedFolder.ClientID%>').val();
+                
                 $("#folders")
                     .on("rockTree:selected", function (e, id) {
                         debugger;
@@ -22,7 +24,9 @@
                             return $(this).attr('data-id')
                         }).get().join(',');
 
-                        $('<%= hfExpandedFolders.ClientID %>').val(expandedDataIds);
+                       
+
+                        $('#<%= hfSelectedFolder.ClientID%>').val(id);
 
                 if ($li.length > 1) {
                     for (i = 0; i < $li.length; i++) {
@@ -37,7 +41,9 @@
             .rockTree({
                 mapping: {
                     include: ["model"]
-                }
+                },
+                selectedIds: [$('#<%= hfSelectedFolder.ClientID%>').val()],
+                multSelect: false
             });
 
         $("#folders").show();
