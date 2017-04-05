@@ -19,16 +19,18 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 {
     [DisplayName( "Reporting Services Folder Tree" )]
     [Category( "KFS > Reporting" )]
-    [Description( "SQL Server Reporting Services Folder Tree View" )]
+    [Description( "SQL Server Reporting Services Tree View" )]
 
-    [BooleanField( "Show Hidden Folders", "Determines if hidden folders should be displayed. Default is false.", false, "Configuration", 1, "ShowHiddenFolders" )]
-    [BooleanField( "Show Child Folders", "Determines if child folders/reecursion should be displayed. Default is true", true, "Configuration", 0, "ShowChildFolders" )]
+    [BooleanField( "Show Hidden Items", "Determines if hidden items should be displayed. Default is false.", false, "Configuration", 1, "ShowHiddenItems" )]
+    [BooleanField( "Show Child Items", "Determines if child items should be displayed. Default is true", true, "Configuration", 0, "ShowChildItems" )]
     [TextField( "Root Folder", "Root/Base Folder", false, "/", "Configuration", 2, "RootFolder" )]
+    [CustomRadioListField("Selection Mode", "Reporting Services Tree selection mode.", "Folder,Report", true, "Folder", "Configuration", 1, "SelectionMode")]
     public partial class ReportingServicesFolderTree : RockBlock
     {
-        bool showHiddenFolders = false;
-        bool showChildFolders = false;
+        bool showHiddenItems = false;
+        bool showChildItems = false;
         string rootFolder = null;
+        string selectionMode = null;
 
         protected override void OnInit( EventArgs e )
         {
@@ -50,13 +52,21 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
         private void BuildTree()
         {
-            var folder = ReportingServiceItem.GetFoldersTree( rootFolder, showChildFolders, showHiddenFolders );
+            ReportingServiceItem rsItem = null;
+            if ( selectionMode.Equals( "Folder" ) )
+            {
+                rsItem = ReportingServiceItem.GetFoldersTree( rootFolder, showChildItems, showHiddenItems );
+            }
+            else if(selectionMode.Equals("Report"))
+            {
+                rsItem = ReportingServiceItem.GetReportTree( rootFolder, showChildItems, showHiddenItems );
+            }
 
             var treeBuilder = new StringBuilder();
 
             treeBuilder.AppendLine( "<ul id=\"treeview\">" );
 
-            BuildTreeNode( folder, ref treeBuilder );
+            BuildTreeNode( rsItem, ref treeBuilder );
 
             treeBuilder.AppendLine( "</ul>" );
             lFolders.Text = treeBuilder.ToString();
@@ -64,15 +74,30 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
         private void BuildTreeNode( ReportingServiceItem item, ref StringBuilder treeBuilder )
         {
+            string iconClass;
+            switch ( item.Type )
+            {
+                case ItemType.Folder:
+                    iconClass = "fa-folder-o";
+                    break;
+                case ItemType.Report:
+                    iconClass = "fa-file-text-o";
+                    break;
+                default:
+                    return;
+                  
+            }
             string nodeId = item.Path.Replace( "/", "_" );
+            
             treeBuilder.AppendFormat(
-                "<li data-expanded=\"{0}\"  data-modal=\"RSFolder\" data-id=\"{1}\"><span><span class=\"rollover-container\"><i class=\"fa fa-folder-o\">&nbsp;</i>{2}</span></span>{3}",
+                "<li data-expanded=\"{0}\"  data-modal=\"RSFolder\" data-id=\"{1}\"><span><span class=\"rollover-container\"><i class=\"fa {4}\">&nbsp;</i>{2}</span></span>{3}",
                 ( hfSelectedFolder.Value.Contains( nodeId ) ).ToString().ToLower(),
                 nodeId,
                 item.Name,
-                Environment.NewLine );
+                Environment.NewLine,
+                iconClass);
 
-            if ( item.Children.Count() > 0 )
+            if ( item.Children != null && item.Children.Where(c => c.Type != ItemType.DataSource).Count()> 0 )
             {
                 treeBuilder.AppendLine( "<ul>" );
                 foreach ( ReportingServiceItem child in item.Children )
@@ -86,9 +111,10 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
         private void LoadAttributes()
         {
-            showHiddenFolders = GetAttributeValue( "ShowHiddenFolders" ).AsBoolean();
-            showChildFolders = GetAttributeValue( "ShowChildFolders" ).AsBoolean();
+            showHiddenItems = GetAttributeValue( "ShowHiddenItems" ).AsBoolean();
+            showChildItems = GetAttributeValue( "ShowChildItems" ).AsBoolean();
             rootFolder = GetAttributeValue( "RootFolder" );
+            selectionMode = GetAttributeValue( "SelectionMode" );
 
 
         }
