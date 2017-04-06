@@ -296,7 +296,7 @@ namespace RockWeb.Plugins.com_kfs.Core
             rockContext.SaveChanges();
             CategoryCache.Flush( category.Id );
 
-            category = categoryService.Get( category.Id );
+            category = new CategoryService( new RockContext() ).Get( category.Id );
 
             Guid groupTypeGuid;
             if ( Guid.TryParse( this.GetAttributeValue( "GroupTypeSetting" ), out groupTypeGuid ) )
@@ -348,7 +348,7 @@ namespace RockWeb.Plugins.com_kfs.Core
             Rock.Model.Attribute attribute = null;
             categoryEntityTypeId = EntityTypeCache.Read( typeof( Category ) ).Id;
             var attributeExists = attributeService.Get( categoryEntityTypeId, string.Empty, string.Empty ).Any( a => a.Key == attributeKey );
-            if ( attributeExists )
+            if ( !attributeExists )
             {
                 var edtAttribute = new Rock.Model.Attribute
                 {
