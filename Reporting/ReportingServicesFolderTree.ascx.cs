@@ -30,7 +30,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         bool showHiddenItems = false;
         bool showChildItems = false;
         string rootFolder = null;
-        string selectionMode = null;
 
         protected override void OnInit( EventArgs e )
         {
@@ -45,19 +44,20 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             if ( !Page.IsPostBack )
             {
                 string folderPath = PageParameter( "selectedpath" );
-                hfSelectedFolder.Value = folderPath;
+                hfSelectedItem.Value = folderPath;
             }
             BuildTree();
         }
 
         private void BuildTree()
         {
+           
             ReportingServiceItem rsItem = null;
-            if ( selectionMode.Equals( "Folder" ) )
+            if ( hfSelectionType.Value.Equals( "Folder" ) )
             {
                 rsItem = ReportingServiceItem.GetFoldersTree( rootFolder, showChildItems, showHiddenItems );
             }
-            else if(selectionMode.Equals("Report"))
+            else if(hfSelectionType.Value.Equals("Report"))
             {
                 rsItem = ReportingServiceItem.GetReportTree( rootFolder, showChildItems, showHiddenItems );
             }
@@ -75,27 +75,31 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         private void BuildTreeNode( ReportingServiceItem item, ref StringBuilder treeBuilder )
         {
             string iconClass;
+            string nodeIdPrefix;
             switch ( item.Type )
             {
                 case ItemType.Folder:
                     iconClass = "fa-folder-o";
+                    nodeIdPrefix = "f-";
                     break;
                 case ItemType.Report:
                     iconClass = "fa-file-text-o";
+                    nodeIdPrefix = "r-";
                     break;
                 default:
                     return;
                   
             }
-            string nodeId = item.Path.Replace( "/", "_" );
+            string nodeId = string.Concat( nodeIdPrefix, item.Path.Replace( "/", "_" ) );
             
             treeBuilder.AppendFormat(
-                "<li data-expanded=\"{0}\"  data-modal=\"RSFolder\" data-id=\"{1}\"><span><span class=\"rollover-container\"><i class=\"fa {4}\">&nbsp;</i>{2}</span></span>{3}",
-                ( hfSelectedFolder.Value.Contains( nodeId ) ).ToString().ToLower(),
+                "<li data-expanded=\"{0}\"  data-modal=\"RSItem\" data-id=\"{1}\" data-type=\"{5}\"><span><span class=\"rollover-container\"><i class=\"fa {4}\">&nbsp;</i>{2}</span></span>{3}",
+                ( hfSelectedItem.Value.Contains( nodeId ) ).ToString().ToLower(),
                 nodeId,
                 item.Name,
                 Environment.NewLine,
-                iconClass);
+                iconClass,
+                item.Type.ToString());
 
             if ( item.Children != null && item.Children.Where(c => c.Type != ItemType.DataSource).Count()> 0 )
             {
@@ -114,7 +118,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             showHiddenItems = GetAttributeValue( "ShowHiddenItems" ).AsBoolean();
             showChildItems = GetAttributeValue( "ShowChildItems" ).AsBoolean();
             rootFolder = GetAttributeValue( "RootFolder" );
-            selectionMode = GetAttributeValue( "SelectionMode" );
+            hfSelectionType.Value = GetAttributeValue( "SelectionMode" );
 
 
         }
