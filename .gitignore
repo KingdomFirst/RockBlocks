@@ -24,7 +24,8 @@
 # Jobs Debug Files #
 ####################
 **/[Dd]ebug/*
-SampleProject/ReferralAgencyDetail.ascx
-SampleProject/ReferralAgencyDetail.ascx.cs
-SampleProject/ReferralAgencyList.ascx
-SampleProject/ReferralAgencyList.ascx.cs
+
+
+# Rock Sample Project #
+#######################
+SampleProject/*
