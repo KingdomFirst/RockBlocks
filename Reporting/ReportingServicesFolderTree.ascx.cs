@@ -90,7 +90,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                     return;
                   
             }
-            string nodeId = string.Concat( nodeIdPrefix, item.Path.Replace( "/", "_" ) );
+            string nodeId = string.Concat( nodeIdPrefix, item.Path.Replace( "/", "$" ) );
             
             treeBuilder.AppendFormat(
                 "<li data-expanded=\"{0}\"  data-modal=\"RSItem\" data-id=\"{1}\" data-type=\"{5}\"><span><span class=\"rollover-container\"><i class=\"fa {4}\">&nbsp;</i>{2}</span></span>{3}",
