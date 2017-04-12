@@ -23,7 +23,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
     {
         string reportPathAttribute = null;
         Dictionary<string, string> reportParamAttributes = null;
-
+        string pageTitleFormat = "{0} Report Viewer";
         protected override void OnLoad( EventArgs e )
         {
 
@@ -45,6 +45,8 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
         private void LoadReport()
         {
+
+            
             string reportPath = null;
             bool singleMode = false;
 
@@ -62,8 +64,20 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             else
             {
                 pnlReportViewer.Visible = false;
+                ShowError( "Report Path Required" );
                 return;
             }
+            var rsItem = ReportingServiceItem.GetItemByPath( reportPath );
+            if ( rsItem == null )
+            {
+                ShowError( "Report Not Found" );
+                pnlReportViewer.Visible = false;
+                lReportTitle.Text = string.Format( pageTitleFormat, String.Empty );
+                return;
+               
+            }
+
+            lReportTitle.Text = string.Format( pageTitleFormat, rsItem.Name );
 
             ReportingServicesProvider provider = new ReportingServicesProvider();
             rsViewer.ProcessingMode = ProcessingMode.Remote;
@@ -106,6 +120,14 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
 
 
+        }
+
+        private void ShowError( string errorText )
+        {
+            nbError.Title = "Error";
+            nbError.Text = errorText;
+
+            nbError.Visible = !String.IsNullOrWhiteSpace( errorText );
         }
        
 
