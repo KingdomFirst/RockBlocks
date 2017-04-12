@@ -158,7 +158,14 @@ namespace RockWeb.Plugins.com_kfs.Event
                 AssociatedGroupTypesGrid.Add( gs.Get( id ) );
             }
 
-            AddDynamicControls();
+            var RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
+            var ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
+            if ( ri == null )
+            {
+                ri = new RegistrationInstance();
+            }
+
+            AddDynamicControls( ri );
             BindRegistrantsGrid();
         }
 
@@ -349,7 +356,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             pnlSubGroups.Visible = _associatedGroupsAvailable.Count > 0;
             SetupGroupPanel( ri, false );
 
-            BuildSubGroupTabs();
+            BuildSubGroupTabs( ri );
             rpGroupPanels.DataSource = AssociatedGroupTypes;
             rpGroupPanels.DataBind();
             if ( !Page.IsPostBack )
@@ -695,8 +702,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     btnSendPaymentReminder.Visible = false;
                 }
             }
-            BuildSubGroupTabs();
-            AddDynamicControls();
+            BuildSubGroupTabs( instance );
+            AddDynamicControls( instance );
             BindRegistrantsGrid();
         }
 
@@ -2201,7 +2208,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 BindRegistrationsFilter();
                 BindRegistrantsFilter( registrationInstance );
                 BindLinkagesFilter();
-                AddDynamicControls();
+                AddDynamicControls( registrationInstance );
             }
         }
 
@@ -2370,11 +2377,9 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
-        private void BuildSubGroupTabs()
+        private void BuildSubGroupTabs( RegistrationInstance instance )
         {
             phGroupTabs.Controls.Clear();
-            var RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-            var instance = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
             instance.LoadAttributes();
             if ( AssociatedGroupTypes != null )
             {
@@ -3373,7 +3378,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// Adds the filter controls and grid columns for all of the registration template's form fields
         /// that were configured to 'Show on Grid'
         /// </summary>
-        private void AddDynamicControls()
+        private void AddDynamicControls( RegistrationInstance instance )
         {
             phRegistrantFormFieldFilters.Controls.Clear();
             _registrantGridColumnCount = gRegistrants.Columns.Count;
@@ -3763,12 +3768,10 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( AssociatedGroupTypesGrid != null )
             {
                 var groupService = new GroupService( new RockContext() );
-                var RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-                var ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
-                ri.LoadAttributes();
+                instance.LoadAttributes();
                 foreach ( var groupType in AssociatedGroupTypesGrid )
                 {
-                    var attributeValSplit = ri.AttributeValues[groupType.Name].Value.Split( '^' ).ToList();
+                    var attributeValSplit = instance.AttributeValues[groupType.Name].Value.Split( '^' ).ToList();
                     var parentGroup = groupService.Get( Guid.Parse( attributeValSplit[0] ) );
                     var subGroupColumn = new LinkButtonField();
                     subGroupColumn.HeaderStyle.CssClass = "";
