@@ -1,5 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationInstanceDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.KFSRegistrationInstanceDetail" %>
-<<%@ Reference Control="~/Plugins/com_kfs/Event/GroupPanel.ascx"  %>
+<%@ Reference Control="~/Plugins/com_kfs/Event/GroupPanel.ascx"  %>
 
 <script type="text/javascript">
     Sys.Application.add_load(function () {
