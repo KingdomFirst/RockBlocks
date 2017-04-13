@@ -575,13 +575,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var parentGroupId = 0;
                     instance.LoadAttributes();
                     var groupService = new GroupService( rockContext );
-                    if ( instance.GetAttributeValue( _attributeKeyParent ) == null )
+                    if ( string.IsNullOrWhiteSpace( instance.GetAttributeValue( _attributeKeyParent ) ) )
                     {
                         var template = instance.RegistrationTemplate;
                         if ( template != null )
                         {
                             template.LoadAttributes();
-                            if ( template.GetAttributeValue( _templateAttributeKey ) != null )
+                            if ( !string.IsNullOrWhiteSpace( template.GetAttributeValue( _templateAttributeKey ) ) )
                             {
                                 templateGroup = groupService.Get( Guid.Parse( template.GetAttributeValue( _templateAttributeKey ) ) );
                             }
@@ -608,7 +608,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 associatedGroupTypeId = rbl.ID.Substring( rbl.ID.LastIndexOf( '_' ) + 1 ).AsInteger();  // get GroupType id out of radio button list id
                                 if ( rbl.SelectedValue.AsInteger() > 0 )
                                 {
-                                    if ( instance.GetAttributeValue( rbl.Label ) == null )
+                                    if ( string.IsNullOrWhiteSpace( instance.GetAttributeValue( rbl.Label ) ) )
                                     {
                                         var groupTypeService = new GroupTypeService( rockContext );
                                         var groupTypeGuid = groupTypeService.Get( associatedGroupTypeId ).Guid;
@@ -637,7 +637,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                             AssociatedGroupTypesGrid = AssociatedGroupTypesGrid.OrderBy( t => t.Name ).ToList();
                                         }
                                     }
-                                    else if ( !string.IsNullOrWhiteSpace( instance.GetAttributeValue( rbl.Label ) ) )
+                                    else
                                     {
                                         var showOnListInt = 0;
                                         if ( rbl.SelectedValue == "2" )
@@ -826,7 +826,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.KEY_VALUE_LIST ).Id,
                     Name = attributeName,
-                    Key = attributeKey
+                    Key = attributeKey,
+                    DefaultValue = string.Empty
                 };
                 attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, entityTypeId, string.Empty, string.Empty );
 
@@ -1029,7 +1030,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var lDiscount = e.Row.FindControl( "lDiscount" ) as Label;
                 if ( lDiscount != null )
                 {
-                    lDiscount.Visible = _instanceHasCost && !string.IsNullOrEmpty( discountCode );
+                    lDiscount.Visible = _instanceHasCost && !string.IsNullOrWhiteSpace( discountCode );
                     lDiscount.Text = discountCode;
                 }
 
