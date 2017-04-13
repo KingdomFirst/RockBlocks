@@ -116,10 +116,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             }
             pnlReportViewer.Visible = true;
 
-
-
-
-
         }
 
         private void ShowError( string errorText )
