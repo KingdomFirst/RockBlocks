@@ -18,7 +18,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
     [DisplayName ("Reporting Services Viewer")]
     [Category( "KFS > Reporting" )]
     [TextField("Report Path", "Relative Path to Reporting Services Report. Used in single report mode, and will overide \"ReportPath\" page parameter.", false, "", "Report Configuration", 0, "ReportPath")]
-    [KeyValueListField("Report Parameters", "Report Parameters report in single report mode. Only evaluted when \"Report Path\" is populated.", false, "", "Name", "Value", Category = "Report Configuration", Order = 1, Key ="ReportParameters")]
+    [KeyValueListField("Report Parameters", "Report Parameters.", false, "", "Name", "Value", Category = "Report Configuration", Order = 1, Key ="ReportParameters")]
     public partial class ReportingServicesViewer : RockBlock
     {
         string reportPathAttribute = null;
@@ -48,12 +48,10 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
             
             string reportPath = null;
-            bool singleMode = false;
 
             if ( !String.IsNullOrWhiteSpace( reportPathAttribute ) )
             {
                 reportPath = reportPathAttribute;
-                singleMode = true;
             }
             else if ( !String.IsNullOrWhiteSpace( PageParameter( "reportPath" ) ) )
             {
@@ -95,7 +93,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             foreach ( ReportParameterInfo parameter in report.GetParameters() )
             {
                 string paramValue = null;
-                if ( singleMode && reportParamAttributes.ContainsKey( parameter.Name ) )
+                if ( reportParamAttributes.ContainsKey( parameter.Name ) )
                 {
                     paramValue = reportParamAttributes[parameter.Name];
                 }

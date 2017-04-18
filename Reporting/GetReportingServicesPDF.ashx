@@ -1,4 +1,4 @@
-﻿<%@ WebHandler Language="C#" Class="com.kfs.Reporting.SQLReportingServices.ReportingServicesPDFGenerator" %>
+﻿<%@ WebHandler Language="C#" Class="com.kfs.Reporting.SQLReportingServices.GetReportingServicesPDF" %>
 
 using System;
 using System.Collections.Generic;
@@ -9,22 +9,42 @@ using Microsoft.Reporting.WebForms;
 
 namespace com.kfs.Reporting.SQLReportingServices
 {
-    public class ReportingServicesPDFGenerator : IHttpHandler
+    public class GetReportingServicesPDF : IHttpHandler
     {
 
         HttpContext Context;
         public void ProcessRequest( HttpContext context )
         {
-            Context = context;
-            string reportPath = GetRequestParameter( "reportPath" );
-
-            byte[] reportBody = new byte[] { };
-            if ( !String.IsNullOrWhiteSpace( reportPath ) )
+            try
             {
-                reportBody = LoadReport( HttpUtility.UrlDecode( reportPath ) );
+                Context = context;
+                string reportPath = GetRequestParameter( "reportPath" );
+
+                if ( String.IsNullOrWhiteSpace( reportPath ) )
+                {
+                    throw new Exception( "Report Path is required." );
+                }
+
+                byte[] reportBody = new byte[] { };
+                if ( !String.IsNullOrWhiteSpace( reportPath ) )
+                {
+                    reportBody = LoadReport( HttpUtility.UrlDecode( reportPath ) );
+                }
+                context.Response.ContentType = "application/pdf";
+                context.Response.OutputStream.Write( reportBody, 0, reportBody.Length );
             }
-            context.Response.ContentType = "application/pdf";
-            context.Response.OutputStream.Write( reportBody, 0, reportBody.Length );
+            catch ( Exception ex )
+            {
+
+                if ( context.Response.IsClientConnected )
+                {
+                    Rock.Model.ExceptionLogService.LogException( ex, context );
+                    context.Response.StatusCode = 500;
+                    context.Response.StatusDescription = ex.Message;
+                    context.ApplicationInstance.CompleteRequest();
+
+                }
+            }
 
         }
 

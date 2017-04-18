@@ -2,14 +2,13 @@
 <style>
     .fill {
         display: inline-block;
-        border: 1px solid #000;
+        border: 1px solid #000000;
         padding: 2px;
     }
 
-    iframe.fill {
+    .fill iframe {
         height: 800px;
         max-height: 800px;
-        width: 100%;
     }
 </style>
 <asp:UpdatePanel ID="upPDFViewer" runat="server" UpdateMode="Conditional">
@@ -21,8 +20,8 @@
                     <asp:Literal ID="lReportTitle" runat="server" /></h1>
             </div>
             <div class="panel-body">
-                <Rock:NotificationBox ID="nbError" runat="server" Visible="false" />
-                <asp:Panel ID="pnlPdfViewer" runat="server" Visible="false">
+                <Rock:NotificationBox ID="nbError" runat="server" Visible="false" NotificationBoxType="Danger"  />
+                <asp:Panel ID="pnlPdfViewer" runat="server" CssClass="col-sm-12 fill kfs-ReportViewer" Visible="false">
                     <asp:PlaceHolder ID="phViewer" runat="server"></asp:PlaceHolder>
                 </asp:Panel>
             </div>

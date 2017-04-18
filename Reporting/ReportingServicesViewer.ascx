@@ -4,7 +4,6 @@
     .fill {
         height: 800px;
         min-height: 800px;
-        width: 100%;
         background-color: #ffffff;
         display: inline-block;
         border: 1px solid #000;
@@ -21,7 +20,7 @@
             <div class="panel-body ">
                 <Rock:NotificationBox ID="nbError" runat="server" Visible="false" NotificationBoxType="Danger" />
                 <asp:Panel ID="pnlReportViewer" runat="server" Visible="false">
-                    <rsweb:ReportViewer ID="rsViewer" runat="server" ProcessingMode="Remote" CssClass="fill kfs-ReportViewer"></rsweb:ReportViewer>
+                    <rsweb:ReportViewer ID="rsViewer" runat="server" ProcessingMode="Remote" CssClass="col-sm-12 fill kfs-ReportViewer"></rsweb:ReportViewer>
                 </asp:Panel>
             </div>
         </div>
