@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Web;
 using System.Web.UI;
-using System.Web.UI.WebControls;
 
 using Rock;
 using Rock.Attribute;
@@ -39,23 +38,23 @@ namespace com.kfs.Reporting.SQLReportingServices
 
         #region Private Method
 
-        private string GetReportPath(ReportingServicesProvider provider)
+        private string GetReportPath( ReportingServicesProvider provider )
         {
             //get path from attributes
             string reportPath = GetAttributeValue( "ReportPath" );
-            
+
             //if path not provided attempt to get it from query string
-            if ( String.IsNullOrWhiteSpace( reportPath )  )
+            if ( String.IsNullOrWhiteSpace( reportPath ) )
             {
                 reportPath = HttpUtility.UrlDecode( PageParameter( "reportPath" ) );
             }
-    
+
             //if report path found, format it
-            if(!string.IsNullOrWhiteSpace(reportPath))
+            if ( !string.IsNullOrWhiteSpace( reportPath ) )
             {
                 reportPath = provider.GetFolderPath( reportPath );
             }
-            
+
             return reportPath;
         }
 
@@ -65,7 +64,7 @@ namespace com.kfs.Reporting.SQLReportingServices
         {
             phViewer.Controls.Clear();
             ReportingServicesProvider provider = new ReportingServicesProvider();
-            string reportPath = GetReportPath(provider);
+            string reportPath = GetReportPath( provider );
             lReportTitle.Text = "Report Viewer";
 
             if ( String.IsNullOrWhiteSpace( reportPath ) )
@@ -84,13 +83,21 @@ namespace com.kfs.Reporting.SQLReportingServices
                 return;
             }
 
-            var paramNames = provider.GetParameterList( reportPath );
+            var paramNames = ReportingServiceItem.GetReportParameterList( provider, reportPath );
             lReportTitle.Text = string.Format( "{0} Viewer", rsItem.Name );
             Dictionary<string, string> paramValues = new Dictionary<string, string>();
             var paramAttribute = GetAttributeValue( "ReportParameters" ).AsDictionaryOrNull();
             foreach ( var pn in paramNames )
             {
-                var paramValue = paramAttribute.Where( a => a.Key.Equals( pn, StringComparison.InvariantCultureIgnoreCase ) ).Select( a => a.Value ).FirstOrDefault();
+                string paramValue = null;
+                if ( paramAttribute != null )
+                {
+                    paramValue = paramAttribute
+                                    .Where( a => a.Key.Equals( pn, StringComparison.InvariantCultureIgnoreCase ) )
+                                    .Select( a => a.Value )
+                                    .FirstOrDefault();
+                }
+
                 if ( !String.IsNullOrWhiteSpace( paramValue ) )
                 {
                     paramValue = HttpUtility.UrlEncode( paramValue );
@@ -109,7 +116,7 @@ namespace com.kfs.Reporting.SQLReportingServices
             StringBuilder urlBuilder = new StringBuilder();
             urlBuilder.AppendFormat( "{0}?reportPath={1}",
                 ResolveRockUrl( "~/Plugins/KFS/Reporting/GetReportingServicesPDF.ashx" ),
-                reportPath);
+                reportPath );
             foreach ( var param in paramValues )
             {
                 urlBuilder.AppendFormat( "&{0}={1}", param.Key, param.Value );
