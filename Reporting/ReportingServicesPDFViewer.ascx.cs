@@ -131,7 +131,7 @@ namespace com.kfs.Reporting.SQLReportingServices
         private void SetError( string title, string error )
         {
             nbError.Title = title;
-            nbError.Details = error;
+            nbError.Text = error;
             nbError.Visible = !String.IsNullOrWhiteSpace( error );
         }
         #endregion
