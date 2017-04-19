@@ -115,7 +115,7 @@ namespace com.kfs.Reporting.SQLReportingServices
 
             StringBuilder urlBuilder = new StringBuilder();
             urlBuilder.AppendFormat( "{0}?reportPath={1}",
-                ResolveRockUrl( "~/Plugins/KFS/Reporting/GetReportingServicesPDF.ashx" ),
+                ResolveRockUrl( "~/Plugins/com_kfs/Reporting/GetReportingServicesPDF.ashx" ),
                 reportPath );
             foreach ( var param in paramValues )
             {
