@@ -3,7 +3,8 @@
     <ContentTemplate>
         <asp:HiddenField ID="hfSelectedItem" runat="server" />
         <asp:HiddenField ID="hfSelectionType" runat="server" />
-        <asp:Panel ID="pnFolders" CssClass="panel panel-block" runat="server">
+        <asp:HiddenField ID="hfInitialLoad" runat="server" />
+        <asp:Panel ID="pnlFolders" runat="server">
             <div id="folders" style="display: none;">
                 <asp:Literal ID="lFolders" runat="server" ViewStateMode="Disabled" />
             </div>
@@ -12,11 +13,11 @@
         <script type="text/javascript">
             Sys.Application.add_load(function () {
                 var selectedFolder = $('#<%= hfSelectedItem.ClientID%>').val();
-                
+               
                 $("#folders")
                     .on("rockTree:selected", function (e, id) {
-                     
-                        var rockTree = $(this).data('rockTree'),
+                        var $li = $(this).find('[data-id="' + id + '"]'),
+                            rockTree = $(this).data('rockTree'),
                             modelType,
                             action,
                             i;
@@ -40,6 +41,13 @@
 
                         if (validSelection === true) {
                             $('#<%= hfSelectedItem.ClientID%>').val(id);
+                           
+                                var action = $li.find('a').first().attr('href');
+
+                                if (action != null) {
+                                    window.location = action;
+                                }
+                           
                         }
                         else {
                             var index = -1;
@@ -53,6 +61,8 @@
                                 rockTree.clear();
                             }
                         }
+
+
                         
 
             })
@@ -60,10 +70,11 @@
                 mapping: {
                     include: ["model"]
                 },
-                selectedIds: [$('#<%= hfSelectedItem.ClientID%>').val()],
+               
+<%--                selectedIds: [$('#<%= hfSelectedItem.ClientID%>').val()],--%>
                 multSelect: false
             });
-
+                
         $("#folders").show();
     });
 

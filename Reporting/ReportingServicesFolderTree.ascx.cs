@@ -17,18 +17,22 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Reporting
 {
-    [DisplayName( "Reporting Services Folder Tree" )]
+    [DisplayName( "Reporting Services Tree" )]
     [Category( "KFS > Reporting" )]
     [Description( "SQL Server Reporting Services Tree View" )]
 
-    [BooleanField( "Show Hidden Items", "Determines if hidden items should be displayed. Default is false.", false, "Configuration", 1, "ShowHiddenItems" )]
+    [BooleanField( "Show Hidden Items", "Determines if hidden items should be displayed. Default is false.", false, "Configuration", 3, "ShowHiddenItems" )]
     [BooleanField( "Show Child Items", "Determines if child items should be displayed. Default is true", true, "Configuration", 0, "ShowChildItems" )]
     [TextField( "Root Folder", "Root/Base Folder", false, "/", "Configuration", 2, "RootFolder" )]
-    [CustomRadioListField("Selection Mode", "Reporting Services Tree selection mode.", "Folder,Report", true, "Folder", "Configuration", 1, "SelectionMode")]
+    [CustomRadioListField("Selection Mode", "Reporting Services Tree selection mode.", "Folder,Report", true, "Folder", "Configuration", 2, "SelectionMode")]
+    [LinkedPage("Report Viewer Page", "The page that contains the Reporting Services Report Viewer. If populated all report nodes will be clickable.", false, "","Configuration", 4, "ReportViewerPage")]
+    [BooleanField("Standalone Mode", "A flag indicating if this block is on a shared page with a report viewer or if it is on it's own page.", false, "Configuration", 4, "StandaloneMode")]
+
     public partial class ReportingServicesFolderTree : RockBlock
     {
         bool showHiddenItems = false;
         bool showChildItems = false;
+        bool standaloneMode = false;
         string rootFolder = null;
 
         protected override void OnInit( EventArgs e )
@@ -40,18 +44,41 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         {
             base.OnLoad( e );
             LoadAttributes();
-
             if ( !Page.IsPostBack )
             {
-                string folderPath = PageParameter( "selectedpath" );
-                hfSelectedItem.Value = folderPath;
+                
+                if ( standaloneMode )
+                {
+                    pnlFolders.CssClass += " panel panel-block";
+                }
+                else
+                {
+                    pnlFolders.CssClass = pnlFolders.CssClass.Replace( "panel panel-block", "" ).Trim();
+                }
+                
             }
             BuildTree();
         }
 
         private void BuildTree()
         {
-           
+            string selectedItemPath = PageParameter( "reportPath" );
+
+            if ( !string.IsNullOrWhiteSpace( selectedItemPath ) )
+            {
+                selectedItemPath = HttpUtility.UrlDecode( selectedItemPath );
+                var selectedItem = ReportingServiceItem.GetItemByPath( selectedItemPath );
+
+                if ( selectedItem != null && selectedItem.Type == ItemType.Report )
+                {
+                    hfSelectedItem.Value = string.Concat( "r-", selectedItemPath );
+                }
+                else if ( selectedItem != null && selectedItem.Type == ItemType.Folder )
+                {
+                    hfSelectedItem.Value = string.Concat( "f-", selectedItemPath );
+                }
+
+            }
             ReportingServiceItem rsItem = null;
             if ( hfSelectionType.Value.Equals( "Folder" ) )
             {
@@ -76,6 +103,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         {
             string iconClass;
             string nodeIdPrefix;
+            string viewerUrl = null;
             switch ( item.Type )
             {
                 case ItemType.Folder:
@@ -85,18 +113,24 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 case ItemType.Report:
                     iconClass = "fa-file-text-o";
                     nodeIdPrefix = "r-";
+                    if ( !String.IsNullOrWhiteSpace( GetAttributeValue( "ReportViewerPage" ) ) )
+                    {
+                        var qsParams = new Dictionary<string, string>();
+                        qsParams.Add( "reportPath", HttpUtility.UrlEncode( item.Path ) );
+                        viewerUrl = LinkedPageUrl( "ReportViewerPage", qsParams );
+                    }
                     break;
                 default:
                     return;
                   
             }
-            string nodeId = string.Concat( nodeIdPrefix, item.Path.Replace( "/", "$" ) );
+            string nodeId = string.Concat( nodeIdPrefix, item.Path );
             
             treeBuilder.AppendFormat(
                 "<li data-expanded=\"{0}\"  data-modal=\"RSItem\" data-id=\"{1}\" data-type=\"{5}\"><span><span class=\"rollover-container\"><i class=\"fa {4}\">&nbsp;</i>{2}</span></span>{3}",
-                ( hfSelectedItem.Value.Contains( nodeId ) ).ToString().ToLower(),
+                ( hfSelectedItem.Value.Contains( item.Path ) ).ToString().ToLower(),
                 nodeId,
-                item.Name,
+                String.IsNullOrWhiteSpace(viewerUrl) ? item.Name : string.Format("<a href=\"{0}\">{1}</a>", viewerUrl, item.Name),
                 Environment.NewLine,
                 iconClass,
                 item.Type.ToString());
@@ -119,7 +153,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             showChildItems = GetAttributeValue( "ShowChildItems" ).AsBoolean();
             rootFolder = GetAttributeValue( "RootFolder" );
             hfSelectionType.Value = GetAttributeValue( "SelectionMode" );
-
+            standaloneMode = GetAttributeValue( "StandaloneMode" ).AsBoolean();
 
         }
     }

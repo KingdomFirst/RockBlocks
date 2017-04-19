@@ -62,7 +62,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             else
             {
                 pnlReportViewer.Visible = false;
-                ShowError( "Report Path Required" );
+                lReportTitle.Text = string.Format( pageTitleFormat, string.Empty ).Trim();
                 return;
             }
             var rsItem = ReportingServiceItem.GetItemByPath( reportPath );
@@ -70,7 +70,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             {
                 ShowError( "Report Not Found" );
                 pnlReportViewer.Visible = false;
-                lReportTitle.Text = string.Format( pageTitleFormat, String.Empty );
+                lReportTitle.Text = string.Format( pageTitleFormat, String.Empty ).Trim();
                 return;
                
             }
@@ -93,7 +93,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             foreach ( ReportParameterInfo parameter in report.GetParameters() )
             {
                 string paramValue = null;
-                if ( reportParamAttributes.ContainsKey( parameter.Name ) )
+                if ( reportParamAttributes != null && reportParamAttributes.ContainsKey( parameter.Name ) )
                 {
                     paramValue = reportParamAttributes[parameter.Name];
                 }
