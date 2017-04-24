@@ -769,7 +769,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             groupMemberService.Add( groupMember );
                         }
-
+                        else if ( groupMember.GroupId == 0 )
+                        {
+                            groupMemberService.Delete( groupMember );
+                        }
                         rockContext.SaveChanges();
                         groupMember.SaveAttributeValues( rockContext );
                     } );
