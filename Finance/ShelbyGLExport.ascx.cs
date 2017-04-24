@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,41 +16,40 @@ using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
+namespace RockWeb.Plugins.com_kfs.Finance
 {
-    [DisplayName( "Batch GL Export" )]
+    [DisplayName( "Shelby GL Export" )]
     [Category( "KFS > Finance" )]
-    [Description( "Lists all financial batches and provides GL Export capability" )]
+    [Description( "Lists all financial batches and provides Shelby GL Export capability" )]
     [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
-    [BooleanField( "Show Actions", "Should the grid display merge template and export to excel actions?", false )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Company", "Choose the financial account attribute for the General Ledger Export Company.", false, false, "", "Export Account Attributes" )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Fund", "Choose the financial account attribute for the General Ledger Export Fund.", false, false, "", "Export Account Attributes" )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Bank Account", "Choose the financial account attribute for the General Ledger Export Bank Account.", false, false, "", "Export Account Attributes" )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Account", "Choose the financial account attribute for the General Ledger Export Revenue Account.", false, false, "", "Export Account Attributes" )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Department", "Choose the financial account attribute for the General Ledger Export Revenue Department.", false, false, "", "Export Account Attributes" )]
-    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Default Project Attribute", "Choose the financial account attribute for the default project.", false, false, "", "Export Account Attributes" )]
-    [AttributeField( "2C1CB26B-AB22-42D0-8164-AEDEE0DAE667", "Transaction Project Attribute", "Choose the financial transaction attribute for the Project.", false, false, "", "Export Transaction Detail Attributes" )]
-    [AttributeField( "AC4AC28B-8E7E-4D7E-85DB-DFFB4F3ADCCE", "Transaction Detail Project Attribute", "Choose the financial transaction detail attribute for the Project.", false, false, "", "Export Transaction Attributes" )]
-    [TextField( "Project Code Attribute", "Project defined type attribute key name for Code", false, "Code", "Export Project Attributes" )]
-    public partial class BatchGLExport : Rock.Web.UI.RockBlock
+    [BooleanField( "Show Actions", "Should the grid display merge template and export to excel actions?", false, "", 2 )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Company", "Choose the financial account attribute for the General Ledger Export Company.", false, false, "", "Export Account Attributes", 3 )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Fund", "Choose the financial account attribute for the General Ledger Export Fund.", false, false, "", "Export Account Attributes", 4 )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Bank Account", "Choose the financial account attribute for the General Ledger Export Bank Account.", false, false, "", "Export Account Attributes", 5 )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Account", "Choose the financial account attribute for the General Ledger Export Revenue Account.", false, false, "", "Export Account Attributes", 6 )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Revenue Department", "Choose the financial account attribute for the General Ledger Export Revenue Department.", false, false, "", "Export Account Attributes", 7 )]
+    [AttributeField( "798BCE48-6AA7-4983-9214-F9BCEFB4521D", "Default Project Attribute", "Choose the financial account attribute for the default project.", false, false, "", "Export Account Attributes", 8 )]
+    [AttributeField( "2C1CB26B-AB22-42D0-8164-AEDEE0DAE667", "Transaction Project Attribute", "Choose the financial transaction attribute for the Project.", false, false, "", "Export Transaction Attributes", 9 )]
+    [AttributeField( "AC4AC28B-8E7E-4D7E-85DB-DFFB4F3ADCCE", "Transaction Detail Project Attribute", "Choose the financial transaction detail attribute for the Project.", false, false, "", "Export Transaction Detail Attributes", 10 )]
+    [TextField( "Project Code Attribute", "Defined type's attribute key name for Project Code", false, "Code", "Export Project Attributes", 11 )]
+    public partial class ShelbyGLExport : Rock.Web.UI.RockBlock
     {
         #region Fields
 
         private RockDropDownList ddlAction;
-        private int? _entityTypeId = null;
         private string _entityQualifierColumn = string.Empty;
         private string _entityQualifierValue = string.Empty;
         private List<string> _errorMessage = new List<string>();
-        private string attributeKey = "GLExport_BatchExported";
+        private string attributeKeyDateExported = "GLExport_BatchExported";
 
         protected RockContext rockContext = new RockContext();
         private FinancialBatchService batchService = null;
         private AttributeService attributeService = null;
 
         // Define default attribute names as strings before they get overridden by block settings
+        private string AttributeStr_ProjectCode = "Code";
         private string AttributeStr_TransactionProject = "Project";
         private string AttributeStr_TransactionDetailProject = "Project";
-        private string AttributeStr_ProjectCode = "Code";
         private string AttributeStr_Company = "GeneralLedgerExport_Company";
         private string AttributeStr_Fund = "GeneralLedgerExport_Fund";
         private string AttributeStr_BankAccount = "GeneralLedgerExport_BankAccount";
@@ -101,7 +99,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             {
                 AttributeStr_DefaultProject = getAttributeKey( GetAttributeValue( "DefaultProjectAttribute" ).AsGuidOrNull() );
             }
-
             if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "TransactionProjectAttribute" ) ) )
             {
                 AttributeStr_TransactionProject = getAttributeKey( GetAttributeValue( "TransactionProjectAttribute" ).AsGuidOrNull() );
@@ -121,7 +118,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
             bool showActions = GetAttributeValue( "ShowActions" ).AsBoolean();
 
-            if (showActions)
+            if ( showActions )
             {
                 rockContext.Configuration.ProxyCreationEnabled = false;
             }
@@ -157,36 +154,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 dpExportDate.SelectedDate = RockDateTime.Today;
             }
 
-            Rock.Model.Attribute attribute = null;
-
-            _entityTypeId = EntityTypeCache.Read( typeof( Rock.Model.FinancialBatch ) ).Id;
-
-            IQueryable<Rock.Model.Attribute> attributeQuery = null;
-
-            if ( _entityTypeId != null )
+            var batchId = PageParameter( "batchId" );
+            if ( !string.IsNullOrWhiteSpace( batchId ) )
             {
-                attributeQuery = attributeService.Get( _entityTypeId, _entityQualifierColumn, _entityQualifierValue );
-                attributeQuery = attributeQuery.Where( a => a.Key == attributeKey );
+                gfBatchFilter.SaveUserPreference( "Batch Id", batchId );
             }
-            if ( attributeQuery.Count() == 0 )
-            {
-                Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
-                edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.DATE_TIME ).Id;
-                edtAttribute.Name = "Batch Exported";
-                edtAttribute.Key = attributeKey;
-
-                attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, _entityTypeId, _entityQualifierColumn, _entityQualifierValue );
-                // Attribute will be null if it was not valid
-                if ( attribute == null )
-                {
-                    nbWarningMessage.Text += "Batch exported attribute not created!";
-                    nbWarningMessage.Visible = true;
-                }
-
-                AttributeCache.FlushEntityAttributes();
-            }
-
-
         }
 
         private string getAttributeKey( Guid? v )
@@ -333,6 +305,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             gfBatchFilter.SaveUserPreference( "Campus", campCampus.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Batch Exported", ddlBatchExported.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Contains Transaction Type", ddlTransactionType.SelectedValue );
+            gfBatchFilter.SaveUserPreference( "Batch Id", tbBatchId.Text );
 
             BindGrid();
         }
@@ -440,7 +413,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
 
                     Session["GLExportLineItems"] = output;
 
-                    var url = "/Plugins/com_kingdomfirstsolutions/Finance/GLExport.aspx";
+                    var url = "/Plugins/com_kfs/Finance/GLExport.aspx";
                     ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "batchexport", string.Format( "window.downloadIframe.location = '{0}';", url ), true );
 
                 }
@@ -467,8 +440,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
         protected IQueryable<AttributeValue> generateAttributeFilters()
         {
             var attributeValueService = new AttributeValueService( rockContext );
-            var attributes = attributeService.GetByEntityTypeId( _entityTypeId );
-            var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == attributeKey );
+            var attributes = attributeService.GetByEntityTypeId( EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id );
+            var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == attributeKeyDateExported );
 
             var attribute = AttributeCache.Read( exported.Id );
 
@@ -492,8 +465,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 var changes = new List<string>();
                 History.EvaluateChange( changes, "Status", batch.Status, newStatus );
                 batch.Status = newStatus;
-                History.EvaluateChange( changes, "Batch Exported", batch.GetAttributeValue( attributeKey ), newDateExported.ToString() );
-                batch.SetAttributeValue( attributeKey, newDateExported );
+                History.EvaluateChange( changes, "Batch Exported", batch.GetAttributeValue( attributeKeyDateExported ), newDateExported.ToString() );
+                batch.SetAttributeValue( attributeKeyDateExported, newDateExported );
 
                 if ( !batch.IsValid )
                 {
@@ -502,7 +475,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     return;
                 }
 
-                int? modifiedByPersonAliasId = batch.ModifiedAuditValuesAlreadyUpdated ? batch.ModifiedByPersonAliasId : ( int? ) null;
+                int? modifiedByPersonAliasId = batch.ModifiedAuditValuesAlreadyUpdated ? batch.ModifiedByPersonAliasId : (int?)null;
 
                 HistoryService.SaveChanges(
                     rockContext,
@@ -559,7 +532,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         transactionItem.glRevenueAccount = transactionDetail.Account.GetAttributeValue( AttributeStr_RevenueAccount );
                         transactionItem.glRevenueDepartment = transactionDetail.Account.GetAttributeValue( AttributeStr_RevenueDepartment );
 
-                        if ( !string.IsNullOrWhiteSpace( transactionDetail.GetAttributeValue( AttributeStr_TransactionDetailProject )) )
+                        if ( !string.IsNullOrWhiteSpace( transactionDetail.GetAttributeValue( AttributeStr_TransactionDetailProject ) ) )
                         {
                             transactionItem.projectCode = transactionDetail.GetAttributeValue( AttributeStr_TransactionDetailProject );
                         }
@@ -578,7 +551,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         transactionItem.transactionDetail = transactionDetail;
 
                         batchTransactions.Add( transactionItem );
-
                     }
                 }
             }
@@ -592,7 +564,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     glRevenueAccount = t.Key.glRevenueAccount,
                     glRevenueDepartment = t.Key.glRevenueDepartment,
                     projectCode = t.Key.projectCode,
-                    total = t.Sum( f => ( decimal? ) f.total ) ?? 0.0M,
+                    total = t.Sum( f => (decimal?)f.total ) ?? 0.0M,
 
                     batch = t.FirstOrDefault().batch,
                     transactionDetail = t.FirstOrDefault().transactionDetail
@@ -633,7 +605,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 {
                     AccountingPeriod = accountingPeriod,
                     AccountNumber = transaction.glBankAccount,
-                    Amount = ( decimal ) transaction.total,
+                    Amount = (decimal)transaction.total,
                     CompanyNumber = transaction.glCompany,
                     Date = selectedDate,
                     DepartmentNumber = "",
@@ -650,7 +622,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 {
                     AccountingPeriod = accountingPeriod,
                     AccountNumber = transaction.glRevenueAccount,
-                    Amount = new decimal( 10, 0, 0, true, 1 ) * ( decimal ) transaction.total,
+                    Amount = new decimal( 10, 0, 0, true, 1 ) * (decimal)transaction.total,
                     CompanyNumber = transaction.glCompany,
                     Date = selectedDate,
                     DepartmentNumber = transaction.glRevenueDepartment,
@@ -693,7 +665,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             StringBuilder stringBuilder = new StringBuilder();
             int num = 0;
             string[] strArrays1 = str;
-            for ( int i = 0; i < ( int ) strArrays1.Length; i++ )
+            for ( int i = 0; i < (int)strArrays1.Length; i++ )
             {
                 string str1 = strArrays1[i];
                 if ( num > 0 )
@@ -731,6 +703,9 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
             string titleFilter = gfBatchFilter.GetUserPreference( "Title" );
             tbTitle.Text = !string.IsNullOrWhiteSpace( titleFilter ) ? titleFilter : string.Empty;
 
+            string batchIdFilter = gfBatchFilter.GetUserPreference( "Batch Id" );
+            tbBatchId.Text = !string.IsNullOrWhiteSpace( batchIdFilter ) ? batchIdFilter : string.Empty;
+
             if ( tbAccountingCode.Visible )
             {
                 string accountingCode = gfBatchFilter.GetUserPreference( "Accounting Code" );
@@ -764,7 +739,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 batchExportedFilter = "No";
             }
             ddlBatchExported.SetValue( batchExportedFilter );
-
 
         }
 
@@ -814,7 +788,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                     Name = b.Name,
                     AccountingSystemCode = b.AccountingSystemCode,
                     TransactionCount = b.Transactions.Count(),
-                    TransactionAmount = b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M,
+                    TransactionAmount = b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M,
                     ControlAmount = b.ControlAmount,
                     CampusName = b.Campus != null ? b.Campus.Name : "",
                     Status = b.Status,
@@ -829,7 +803,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                             AccountId = s.Key,
                             AccountOrder = s.Max( d => d.Account.Order ),
                             AccountName = s.Max( d => d.Account.Name ),
-                            Amount = s.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M
+                            Amount = s.Sum( d => (decimal?)d.Amount ) ?? 0.0M
                         } )
                         .OrderBy( s => s.AccountOrder )
                         .ToList()
@@ -840,7 +814,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 foreach ( var batchRow in attributeBatchRowList )
                 {
                     batchRow.batch.LoadAttributes();
-                    batchRow.batchExportedDT = batchRow.batch.GetAttributeValue( attributeKey );
+                    batchRow.batchExportedDT = batchRow.batch.GetAttributeValue( attributeKeyDateExported );
                 }
 
                 gBatchList.SetLinqDataSource( batchRowQry );
@@ -853,7 +827,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 {
                     a.Key.Name,
                     a.Key.Order,
-                    TotalAmount = ( decimal? ) a.Sum( d => d.Amount )
+                    TotalAmount = (decimal?)a.Sum( d => d.Amount )
                 } ).OrderBy( a => a.Order );
 
             }
@@ -914,6 +888,13 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                 qry = qry.Where( batch => batch.Name.StartsWith( title ) );
             }
 
+            // filter by id
+            string id = gfBatchFilter.GetUserPreference( "Batch Id" );
+            if ( !string.IsNullOrEmpty( id ) )
+            {
+                qry = qry.Where( batch => batch.Id.ToString().Equals( id ) );
+            }
+
             // filter by accounting code
             if ( tbAccountingCode.Visible )
             {
@@ -971,11 +952,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Finance
                         {
                             if ( sortProperty.Direction == SortDirection.Ascending )
                             {
-                                sortedQry = qry.OrderBy( b => b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M );
+                                sortedQry = qry.OrderBy( b => b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M );
                             }
                             else
                             {
-                                sortedQry = qry.OrderByDescending( b => b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M );
+                                sortedQry = qry.OrderByDescending( b => b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M );
                             }
 
                             break;
