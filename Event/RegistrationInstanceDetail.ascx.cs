@@ -4267,7 +4267,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             foreach ( Group g in subGroups )
             {
-                var gp = ( KFSGroupPanel )LoadControl( "~/Plugins/KFS/Event/GroupPanel.ascx" );
+                var gp = ( KFSGroupPanel )LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
                 gp.ID = string.Format( "groupPanel_{0}", g.Id );
                 foreach ( string control in _expandedGroupPanels )
                 {
