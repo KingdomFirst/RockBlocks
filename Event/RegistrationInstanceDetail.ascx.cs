@@ -593,7 +593,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                     else
                     {
-                        parentGroupId = groupService.Get( Guid.Parse( instance.GetAttributeValue( _attributeKeyParent ) ) ).Id;
+                        var val = instance.GetAttributeValue( _attributeKeyParent ).Split( '^' ).ToList();
+                        parentGroupId = groupService.Get( Guid.Parse( val[0] ) ).Id;
                     }
                     if ( parentGroupId > 0 )
                     {
