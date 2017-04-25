@@ -242,6 +242,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlContent );
 
+            //AddGroupPopup();
+
             var deleteScript = @"
     $('a.js-delete-instance').click(function( e ){
         e.preventDefault();
@@ -4231,7 +4233,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             var pnlGroupBody = ( Panel )e.Item.FindControl( "pnlGroupBody" );
             var pnlGroupHeading = ( Panel )e.Item.FindControl( "pnlGroupHeading" );
             var phGroupHeading = ( PlaceHolder )e.Item.FindControl( "phGroupHeading" );
-            var lbAddSubGroup = ( LinkButton )e.Item.FindControl( "lbAddSubGroup" );
+            var lbAddSubGroup = ( HtmlAnchor )e.Item.FindControl( "lbAddSubGroup" );
             var hfParentGroupId = ( HiddenField )e.Item.FindControl( "hfParentGroupId" );
             var phGroupControl = ( PlaceHolder )e.Item.FindControl( "phGroupControl" );
 
@@ -4243,19 +4245,24 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 groupTypeGroupTerm = groupType.GroupTerm;
             }
-            lbAddSubGroup.Text += string.Format( "Add {0}", groupTypeGroupTerm );
+            lbAddSubGroup.InnerHtml += string.Format( "Add {0}", groupTypeGroupTerm );
             var attributeValSplit = ri.AttributeValues[groupType.Name].Value.Split( '^' ).ToList();
             var parentGroup = new GroupService( new RockContext() ).Get( Guid.Parse( attributeValSplit[0] ) );
             var subGroups = new List<Group>( parentGroup.Groups );
             hfParentGroupId.Value = parentGroup.Guid.ToString();
-            lbAddSubGroup.CommandName = "AddSubGroup";
-            lbAddSubGroup.CommandArgument = parentGroup.Guid.ToString();
+            //lbAddSubGroup.CommandName = "AddSubGroup";
+            //lbAddSubGroup.CommandArgument = parentGroup.Guid.ToString();
+            lbAddSubGroup.Attributes.Add( "href", "javascript: Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Add {0}&GroupId=0&ParentGroupId={1}", groupTypeGroupTerm, parentGroup.Id ) ) + "')" );
             BuildSubGroupPanels( phGroupControl, subGroups );
 
             pnlAssociatedGroup.Visible = ActiveTab == ("lb" + groupType.Name);
             var header = new HtmlGenericControl( "h1" );
             header.Attributes.Add( "class", "panel-title" );
             var modalIconString = string.Empty;
+            if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.IconCssClass ) )
+            {
+                modalIconString = string.Format( "<i class='{0}'></i> ", parentGroup.GroupType.IconCssClass );
+            }
             if ( !string.IsNullOrWhiteSpace( groupType.IconCssClass ) )
             {
                 var faIcon = new HtmlGenericControl( "i" );
@@ -4505,6 +4512,13 @@ namespace RockWeb.Plugins.com_kfs.Event
             mdlAddSubGroupMember.Show();
         }
 
+        //private void AddGroupPopup( )
+        //{
+        //    var groupModalPopup = new ModalIFrameDialog();
+        //    groupModalPopup.ID = "group-modal-popup";
+        //    groupModalPopup.ClientIDMode = ClientIDMode.Static;
+        //    Page.Controls.Add( groupModalPopup );
+        //}
         #endregion
 
         #endregion

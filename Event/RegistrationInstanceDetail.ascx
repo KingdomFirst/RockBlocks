@@ -1,6 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationInstanceDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.KFSRegistrationInstanceDetail" %>
 <%@ Reference Control="~/Plugins/com_kfs/Event/GroupPanel.ascx"  %>
-
 <script type="text/javascript">
     Sys.Application.add_load(function () {
         $('.js-follow-status').tooltip();
@@ -369,9 +368,9 @@
                                 </div>
                             </asp:Panel>
                             <asp:Panel ID="pnlGroupBody" runat="server" CssClass="panel-body">
-                                <asp:LinkButton ID="lbAddSubGroup" runat="server" CssClass="btn btn-action btn-xs">
+                                <a ID="lbAddSubGroup" runat="server" Class="btn btn-action btn-xs">
                                     <i class="fa fa-plus-circle"></i>
-                                </asp:LinkButton><br /><br />
+                                </a><br /><br />
                                 <asp:HiddenField ID="hfParentGroupId" runat="server" />
                                 <asp:PlaceHolder ID="phGroupControl" runat="server"></asp:PlaceHolder>
                             </asp:Panel>
