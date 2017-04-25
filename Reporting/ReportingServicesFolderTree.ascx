@@ -4,16 +4,23 @@
         <asp:HiddenField ID="hfSelectedItem" runat="server" />
         <asp:HiddenField ID="hfSelectionType" runat="server" />
         <asp:HiddenField ID="hfInitialLoad" runat="server" />
+        <Rock:NotificationBox ID="nbRockError" runat="server" NotificationBoxType="Danger" Visible="false" />
         <asp:Panel ID="pnlFolders" runat="server">
-            <div id="folders" style="display: none;">
-                <asp:Literal ID="lFolders" runat="server" ViewStateMode="Disabled" />
-            </div>
+            <asp:Panel ID="pnlHeader" runat="server" CssClass="panel-heading">
+                <h1 class="panel-title"><i class="fa fa-folder-open-o"></i>
+                    <asp:Literal ID="lTitle" runat="server" /></h1>
+            </asp:Panel>
+            <asp:Panel ID="pnlTree" runat="server">
+                <div id="folders" style="display: none;">
+                    <asp:Literal ID="lFolders" runat="server" ViewStateMode="Disabled" />
+                </div>
+            </asp:Panel>
         </asp:Panel>
 
         <script type="text/javascript">
             Sys.Application.add_load(function () {
                 var selectedFolder = $('#<%= hfSelectedItem.ClientID%>').val();
-               
+
                 $("#folders")
                     .on("rockTree:selected", function (e, id) {
                         var $li = $(this).find('[data-id="' + id + '"]'),
@@ -41,13 +48,13 @@
 
                         if (validSelection === true) {
                             $('#<%= hfSelectedItem.ClientID%>').val(id);
-                           
-                                var action = $li.find('a').first().attr('href');
 
-                                if (action != null) {
-                                    window.location = action;
-                                }
-                           
+                            var action = $li.find('a').first().attr('href');
+
+                            if (action != null) {
+                                window.location = action;
+                            }
+
                         }
                         else {
                             var index = -1;
@@ -63,20 +70,20 @@
                         }
 
 
-                        
 
-            })
+
+                    })
             .rockTree({
                 mapping: {
                     include: ["model"]
                 },
-               
+
 <%--                selectedIds: [$('#<%= hfSelectedItem.ClientID%>').val()],--%>
                 multSelect: false
             });
-                
-        $("#folders").show();
-    });
+
+                $("#folders").show();
+            });
 
 
         </script>

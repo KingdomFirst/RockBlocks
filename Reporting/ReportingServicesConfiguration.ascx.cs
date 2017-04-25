@@ -20,7 +20,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
     [Category("KFS > Reporting")]
     [BooleanField("Use Separate Content Manager User", "Use separate Content Manager user and Browser user.", false, "", 0, "UseCMUser")]
     
-    [Description("SQL Server Reprting Services Setup and Configuration.")]
+    [Description("SQL Server Reporting Services Setup and Configuration.")]
     public partial class ReportingServicesConfiguration : RockBlock
     {
 
