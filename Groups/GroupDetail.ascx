@@ -217,10 +217,10 @@
                             </div>
                         </Rock:PanelWidget>
 
-                        <div class="actions">
+                        <asp:Panel runat="server" ID="pnlActions" CssClass="actions">
                             <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
                             <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
-                        </div>
+                        </asp:Panel>
 
                     </div>
 

@@ -39,8 +39,8 @@ using Attribute = Rock.Model.Attribute;
 
 namespace RockWeb.Blocks.Groups
 {
-    [DisplayName( "Group Detail" )]
-    [Category( "Groups" )]
+    [DisplayName( "KFS Group Detail" )]
+    [Category( "KFS > Groups" )]
     [Description( "Displays the details of the given group." )]
     [GroupTypesField( "Group Types Include", "Select group types to show in this block.  Leave all unchecked to show all but the excluded group types.", false, key: "GroupTypes", order: 0 )]
     [GroupTypesField( "Group Types Exclude", "Select group types to exclude from this block.", false, key: "GroupTypesExclude", order: 1 )]
@@ -53,6 +53,7 @@ namespace RockWeb.Blocks.Groups
     [LinkedPage( "Registration Instance Page", "The page to display registration details.", false, "", "", 7 )]
     [LinkedPage( "Event Item Occurrence Page", "The page to display event item occurrence details.", false, "", "", 8 )]
     [LinkedPage( "Content Item Page", "The page to display registration details.", false, "", "", 9 )]
+    [BooleanField( "Use in Dialog Modal", "Set to true when being used in a Layout of type Modal. This will cause only edit fields to be displayed, and the Save/Cancel buttons of the Modal layout will replace the same from the block itself.", false, "", 9, key: "useDialog" )]
     public partial class GroupDetail : RockBlock, IDetailBlock
     {
         #region Constants
@@ -65,6 +66,7 @@ namespace RockWeb.Blocks.Groups
         #region Fields
 
         private readonly List<string> _tabs = new List<string> { MEMBER_LOCATION_TAB_TITLE, OTHER_LOCATION_TAB_TITLE };
+        private bool _useDialog = false;
 
         #endregion
 
@@ -226,6 +228,19 @@ namespace RockWeb.Blocks.Groups
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlGroupDetail );
+
+            //evalute if page is dialoge
+            _useDialog = GetAttributeValue( "useDialog" ).AsBoolean();
+            if ( _useDialog )
+            {
+                var dialogPage = this.Page as DialogPage;
+                if ( dialogPage != null )
+                {
+                    dialogPage.OnSave += btnSave_Click;
+                    pnlActions.Visible = false;
+                    //dialogPage.SubTitle = string.Format( "Id: {0}", pageCache.Id );
+                }
+            }
         }
 
         /// <summary>
@@ -771,11 +786,19 @@ namespace RockWeb.Blocks.Groups
                 GroupMemberWorkflowTriggerService.FlushCachedTriggers();
             }
 
-            var qryParams = new Dictionary<string, string>();
-            qryParams["GroupId"] = group.Id.ToString();
-            qryParams["ExpandedIds"] = PageParameter( "ExpandedIds" );
+            if ( !_useDialog )
+            {
+                var qryParams = new Dictionary<string, string>();
+                qryParams["GroupId"] = group.Id.ToString();
+                qryParams["ExpandedIds"] = PageParameter( "ExpandedIds" );
 
-            NavigateToPage( RockPage.Guid, qryParams );
+                NavigateToPage( RockPage.Guid, qryParams );
+            }
+            else
+            {
+                string script = "if (typeof window.parent.Rock.controls.modal.close === 'function') window.parent.Rock.controls.modal.close('Done');";
+                ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "close-modal", script, true );
+            }
         }
 
         /// <summary>
