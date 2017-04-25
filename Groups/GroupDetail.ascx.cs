@@ -1110,7 +1110,7 @@ namespace RockWeb.Blocks.Groups
             {
                 btnEdit.Visible = true;
                 btnDelete.Visible = !group.IsSystem;
-                if ( group.Id > 0 )
+                if ( group.Id > 0 && string.IsNullOrWhiteSpace( PageParameter( "Edit" ) ) && !_useDialog )
                 {
                     ShowReadonlyDetails( group );
                 }
