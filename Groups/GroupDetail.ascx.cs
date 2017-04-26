@@ -238,7 +238,6 @@ namespace RockWeb.Blocks.Groups
                 {
                     dialogPage.OnSave += btnSave_Click;
                     pnlActions.Visible = false;
-                    //dialogPage.SubTitle = string.Format( "Id: {0}", pageCache.Id );
                 }
             }
         }
