@@ -66,7 +66,15 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 }
 
             }
-            BuildTree();
+            var provider = new ReportingServicesProvider();
+            if ( provider.CredentialsStored )
+            {
+                BuildTree();
+            }
+            else
+            {
+                ShowError( "Configuration Error", "Reporting Services has not been configured." );
+            }
         }
 
         private void BuildTree()
