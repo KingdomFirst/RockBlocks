@@ -123,9 +123,14 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 }
 
             }
+
             catch ( System.ServiceModel.Security.MessageSecurityException msgEx )
             {
                 ShowError( "Authorization Error", "Browser User could not authenticate to Reporting Server." );
+            }
+            catch ( System.ServiceModel.EndpointNotFoundException ex404 )
+            {
+                ShowError( "Connection Error", "An error occurred when connecting to the reporting server." );
             }
         }
 

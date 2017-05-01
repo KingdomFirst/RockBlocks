@@ -31,7 +31,33 @@ namespace com.kfs.Reporting.SQLReportingServices
             SetError( null, null );
             if ( !Page.IsPostBack )
             {
-                LoadReport();
+                try
+                {
+                    LoadReport();
+                }
+                catch ( System.Net.WebException webEx )
+                {
+                    if ( ( ( System.Net.HttpWebResponse )webEx.Response ).StatusCode == System.Net.HttpStatusCode.Unauthorized )
+                    {
+                        SetError( "Authorization Error", "Browser User Could not authenticate to Reporting Server." );
+                    }
+
+                    else
+                    {
+                        throw webEx;
+                    }
+
+                }
+
+                catch ( System.ServiceModel.Security.MessageSecurityException )
+                {
+                    SetError( "Authorization Error", "Browser User could not authenticate to Reporting Server." );
+                }
+                catch ( System.ServiceModel.EndpointNotFoundException )
+                {
+                    SetError( "Connection Error", "An error occurred when connecting to the reporting server." );
+                }
+                
             }
         }
         #endregion

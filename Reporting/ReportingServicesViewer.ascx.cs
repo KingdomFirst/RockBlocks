@@ -31,7 +31,33 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             LoadAttributes();
             if ( !Page.IsPostBack )
             {
-                LoadReport();
+                try
+                {
+                    LoadReport();
+                }
+                catch ( System.Net.WebException webEx )
+                {
+                    if ( ( ( System.Net.HttpWebResponse )webEx.Response ).StatusCode == System.Net.HttpStatusCode.Unauthorized )
+                    {
+                        ShowError( "Authorization Error", "Browser User Could not authenticate to Reporting Server." );
+                    }
+
+                    else
+                    {
+                        throw webEx;
+                    }
+
+                }
+
+                catch ( System.ServiceModel.Security.MessageSecurityException )
+                {
+                    ShowError( "Authorization Error", "Browser User could not authenticate to Reporting Server." );
+                }
+                catch ( System.ServiceModel.EndpointNotFoundException  )
+                {
+                    ShowError( "Connection Error", "An error occurred when connecting to the reporting server." );
+                }
+
             }
 
         }
@@ -68,7 +94,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             var rsItem = ReportingServiceItem.GetItemByPath( reportPath );
             if ( rsItem == null )
             {
-                ShowError( "Report Not Found" );
+                ShowError( "Error", "Report Not Found" );
                 pnlReportViewer.Visible = false;
                 lReportTitle.Text = string.Format( pageTitleFormat, String.Empty ).Trim();
                 return;
@@ -116,9 +142,9 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
         }
 
-        private void ShowError( string errorText )
+        private void ShowError( string errorTitle, string errorText )
         {
-            nbError.Title = "Error";
+            nbError.Title = errorTitle;
             nbError.Text = errorText;
 
             nbError.Visible = !String.IsNullOrWhiteSpace( errorText );
