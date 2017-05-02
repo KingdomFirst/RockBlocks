@@ -795,6 +795,7 @@ namespace RockWeb.Blocks.Groups
             }
             else
             {
+                lReadOnlyTitle.Text = group.Name.FormatAsHtmlTitle();
                 string script = "if (typeof window.parent.Rock.controls.modal.close === 'function') window.parent.Rock.controls.modal.close('Done');";
                 ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "close-modal", script, true );
             }

@@ -74,7 +74,20 @@
                     <div id="pnlEditDetails" runat="server">
                         <div id="pnlSubGroups" runat="server" class="form-group">
                                 <label class="control-label" for="pnlAssociatedGroupTypes">ADDITIONAL GROUPINGS</label>
-                                <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well"></asp:Panel>
+                                <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well">
+                                    <div class="grid">
+                                        <Rock:Grid ID="gAssociatedParentGroups" runat="server" AllowPaging="false" DisplayType="Light" RowItemText="Member Attribute" ShowConfirmDeleteDialog="false">
+                                            <Columns>
+                                                <Rock:ReorderField />
+                                                <Rock:RockBoundField DataField="Name" HeaderText="Name" />
+                                                <Rock:RockBoundField DataField="Description" HeaderText="Description" />
+                                                <%--<Rock:BoolField DataField="ShowOnGrid" HeaderText="Show On Grid" />--%>
+                                                <%--<Rock:EditField OnClick="gGroupMemberAttributes_Edit" />
+                                                <Rock:DeleteField OnClick="gGroupMemberAttributes_Delete" />--%>
+                                            </Columns>
+                                        </Rock:Grid>
+                            </div>
+                                </asp:Panel>
                         </div>
                         <Rock:RegistrationInstanceEditor ID="rieDetails" runat="server" />
 
@@ -370,32 +383,14 @@
                             <asp:Panel ID="pnlGroupBody" runat="server" CssClass="panel-body">
                                 <a ID="lbAddSubGroup" runat="server" Class="btn btn-action btn-xs">
                                     <i class="fa fa-plus-circle"></i>
-                                </a><br /><br />
+                                </a>
+                                <br /><br />
                                 <asp:HiddenField ID="hfParentGroupId" runat="server" />
                                 <asp:PlaceHolder ID="phGroupControl" runat="server"></asp:PlaceHolder>
                             </asp:Panel>
                         </asp:Panel>
                     </ItemTemplate>
                 </asp:Repeater>
-                <Rock:ModalDialog ID="mdlAddSubGroup" runat="server" OnSaveClick="mdlAddSubGroup_SaveClick" ValidationGroup="vgAddGroup" >
-                    <Content>
-                        <asp:ValidationSummary ID="vsSubGroup" runat="server" ValidationGroup="vgAddGroup" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
-                        <fieldset>
-                            <div class="col-md-6">
-                                <Rock:DataTextBox ID="tbName" runat="server" SourceTypeName="Rock.Model.Group, Rock" PropertyName="Name" ValidationGroup="vgAddGroup" />
-                            </div>
-                            <div class="col-md-6">
-                                <Rock:RockCheckBox ID="cbIsActive" runat="server" CssClass="js-isactivegroup" Text="Active" ValidationGroup="vgAddGroup" />
-                            </div>
-                            <div class="col-md-12">
-                                <Rock:DataTextBox ID="tbDescription" runat="server" SourceTypeName="Rock.Model.Group, Rock" PropertyName="Description" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroup" />
-                            </div>
-                            <div class="col-md-6">
-                                <Rock:NumberBox ID="nbGroupCapacity" runat="server" Label="Capacity" NumberType="Integer" ValidationGroup="vgAddGroup" />
-                            </div>
-                        </fieldset>
-                    </Content>
-                </Rock:ModalDialog>
                 <Rock:ModalDialog ID="mdlAddSubGroupMember" runat="server" OnSaveClick="mdlAddSubGroupMember_SaveClick" ValidationGroup="vgAddGroupMemmber" >
                     <Content>
                         <asp:HiddenField ID="hfSubGroupId" runat="server" />

@@ -51,7 +51,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
-        public void BuildControl ( Group group )
+        public void BuildControl( Group group )
         {
             if ( _group == null )
             {
@@ -65,6 +65,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             hfGroupId.Value = group.Id.ToString();
             lbGroupEdit.CommandArgument = group.Id.ToString();
             lbGroupDelete.CommandArgument = group.Id.ToString();
+            pnlSubGroup.DataBind();
 
             // Set up Member Grid
             RockContext rockContext = new RockContext();
