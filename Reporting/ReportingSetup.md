@@ -19,7 +19,7 @@ Deploy the contents of the `/Plugins/com_kfs/Reporting` folder
 
 ## Web.config
 
-Add the nodes that are between the `##Begin Update##` and `##End Update##` below
+Add the nodes that are between the `##Begin Update##` and `##End Update##` below **Make sure to backup your existing Web.config before proceeding**
 
 ```xml
 <configuration>
