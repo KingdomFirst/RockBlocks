@@ -19,35 +19,18 @@ Deploy the contents of the `/Plugins/com_kfs/Reporting` folder
 
 ## Web.config
 
-Add the nodes that are between the `##Begin Update##` and `##End Update##` below **Make sure to backup your existing Web.config before proceeding**
+1.  Add to `<System.Web>`\ `<compilation>`\ `<assembiles>`
 
-```xml
-<configuration>
-<system.web>
-	<complication debug="false" targetFramework="4.5.2">
-		<assemblies>
-		<!-- ##Begin Add## -->
-			<add assembly="Microsoft.ReportViewer.Common, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845DCD8080CC91" />
-			<add assembly="Microsoft.ReportViewer.WebForms, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845DCD8080CC91" />
-		<!-- ##End Add## -->
-		</assemblies>
-	</complication>
-	<!-- ##Begin Add## -->
-	<httpHandlers>
-	
-	  <add path="Reserved.ReportViewerWebControl.axd" verb="*" type="Microsoft.Reporting.WebForms.HttpHandler, Microsoft.ReportViewer.WebForms, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845DCD8080CC91" validate="false" />
-	</httpHandlers>
-	<!-- ##End Add## -->
-</system.web>
-<system.webServer>
-	<handlers>
-	<!-- ##Begin Add## -->
-		<add name="ReportViewerWebControlHandler" verb="*" path="Reserved.ReportViewerWebControl.axd" preCondition="integratedMode" type="Microsoft.Reporting.WebForms.HttpHandler, Microsoft.ReportViewer.WebForms, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845DCD8080CC91" />	
-		<!-- ##End Add## -->
-	</handlers>
-</system.webServer>
-</configuration>
-```
+   ```
+   <add assembly="Microsoft.ReportViewer.WebForms, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845DCD8080CC91" />
+   ```
+
+2.  Add to `<system.webServer>`\\`<handlers>`
+
+   ```
+   <add name="ReportViewerWebControlHandler" preCondition="integratedMode" verb="*" path="Reserved.ReportViewerWebControl.axd" type="Microsoft.Reporting.WebForms.HttpHandler, Microsoft.ReportViewer.WebForms, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91" />
+   ```
+
 # Setup
 
 1. Make sure that all blocks are registered
