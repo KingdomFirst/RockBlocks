@@ -1,19 +1,5 @@
-﻿// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
+﻿// KFS Registration Template Detail
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -39,7 +25,6 @@ namespace RockWeb.Plugins.com_kfs.Event
     [DisplayName( "KFS Registration Template Detail" )]
     [Category( "KFS > Event" )]
     [Description( "Displays the details of the given registration template." )]
-
     [CodeEditorField( "Default Confirmation Email", "The default Confirmation Email Template value to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"
 {{ 'Global' | Attribute:'EmailHeader' }}
 {% capture currencySymbol %}{{ 'Global' | Attribute:'CurrencySymbol' }}{% endcapture %}
@@ -55,13 +40,13 @@ namespace RockWeb.Plugins.com_kfs.Event
 <ul>
 {% for registrant in Registration.Registrants %}
     <li>
-    
+
         <strong>{{ registrant.PersonAlias.Person.FullName }}</strong>
-        
+
         {% if registrant.Cost > 0 %}
             - {{ currencySymbol }}{{ registrant.Cost | Format:'#,##0.00' }}
         {% endif %}
-        
+
         {% assign feeCount = registrant.Fees | Size %}
         {% if feeCount > 0 %}
             <br/>{{ RegistrationInstance.RegistrationTemplate.FeeTerm | PluralizeForQuantity:registrantCount }}:
@@ -86,16 +71,16 @@ namespace RockWeb.Plugins.com_kfs.Event
         Discounted Cost: {{ currencySymbol }}{{ Registration.DiscountedCost | Format:'#,##0.00' }}<br/>
     {% endif %}
     {% for payment in Registration.Payments %}
-        Paid {{ currencySymbol }}{{ payment.Amount | Format:'#,##0.00' }} on {{ payment.Transaction.TransactionDateTime| Date:'M/d/yyyy' }} 
+        Paid {{ currencySymbol }}{{ payment.Amount | Format:'#,##0.00' }} on {{ payment.Transaction.TransactionDateTime| Date:'M/d/yyyy' }}
         <small>(Acct #: {{ payment.Transaction.FinancialPaymentDetail.AccountNumberMasked }}, Ref #: {{ payment.Transaction.TransactionCode }})</small><br/>
     {% endfor %}
-    
+
     {% assign paymentCount = Registration.Payments | Size %}
-    
+
     {% if paymentCount > 1 %}
         Total Paid: {{ currencySymbol }}{{ Registration.TotalPaid | Format:'#,##0.00' }}<br/>
     {% endif %}
-    
+
     Balance Due: {{ currencySymbol }}{{ Registration.BalanceDue | Format:'#,##0.00' }}
 </p>
 {% endif %}
@@ -109,7 +94,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 </p>
 
 {{ 'Global' | Attribute:'EmailFooter' }}", "", 0 )]
-
     [CodeEditorField( "Default Reminder Email", "The default Reminder Email Template value to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"{{ 'Global' | Attribute:'EmailHeader' }}
 {% capture currencySymbol %}{{ 'Global' | Attribute:'CurrencySymbol' }}{% endcapture %}
 {% capture externalSite %}{{ 'Global' | Attribute:'PublicApplicationRoot' }}{% endcapture %}
@@ -132,10 +116,9 @@ namespace RockWeb.Plugins.com_kfs.Event
 {% endfor %}
 </ul>
 
-
 {% if Registration.BalanceDue > 0 %}
 <p>
-    This {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase  }} has a remaining balance 
+    This {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase  }} has a remaining balance
     of {{ currencySymbol }}{{ Registration.BalanceDue | Format:'#,##0.00' }}.
     You can complete the payment for this {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase }}
     using our <a href='{{ externalSite }}/Registration?RegistrationId={{ Registration.Id }}&rckipid={{ Registration.PersonAlias.Person.UrlEncodedKey }}'>
@@ -149,12 +132,11 @@ namespace RockWeb.Plugins.com_kfs.Event
 
 {{ 'Global' | Attribute:'EmailFooter' }}
 ", "", 1 )]
-
     [CodeEditorField( "Default Success Text", "The success text default to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"
 {% capture currencySymbol %}{{ 'Global' | Attribute:'CurrencySymbol' }}{% endcapture %}
 {% assign registrantCount = Registration.Registrants | Size %}
 <p>
-    You have successfully registered the following 
+    You have successfully registered the following
     {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | PluralizeForQuantity:registrantCount | Downcase }}
     for {{ RegistrationInstance.Name }}:
 </p>
@@ -162,13 +144,13 @@ namespace RockWeb.Plugins.com_kfs.Event
 <ul>
 {% for registrant in Registration.Registrants %}
     <li>
-    
+
         <strong>{{ registrant.PersonAlias.Person.FullName }}</strong>
-        
+
         {% if registrant.Cost > 0 %}
             - {{ currencySymbol }}{{ registrant.Cost | Format:'#,##0.00' }}
         {% endif %}
-        
+
         {% assign feeCount = registrant.Fees | Size %}
         {% if feeCount > 0 %}
             <br/>{{ RegistrationInstance.RegistrationTemplate.FeeTerm | PluralizeForQuantity:registrantCount }}:
@@ -181,7 +163,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {% endfor %}
             </ul>
         {% endif %}
-        
+
     </li>
 {% endfor %}
 </ul>
@@ -193,7 +175,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         Discounted Cost: {{ currencySymbol }}{{ Registration.DiscountedCost | Format:'#,##0.00' }}<br/>
     {% endif %}
     {% for payment in Registration.Payments %}
-        Paid {{ currencySymbol }}{{ payment.Amount | Format:'#,##0.00' }} on {{ payment.Transaction.TransactionDateTime| Date:'M/d/yyyy' }} 
+        Paid {{ currencySymbol }}{{ payment.Amount | Format:'#,##0.00' }} on {{ payment.Transaction.TransactionDateTime| Date:'M/d/yyyy' }}
         <small>(Acct #: {{ payment.Transaction.FinancialPaymentDetail.AccountNumberMasked }}, Ref #: {{ payment.Transaction.TransactionCode }})</small><br/>
     {% endfor %}
     {% assign paymentCount = Registration.Payments | Size %}
@@ -205,11 +187,10 @@ namespace RockWeb.Plugins.com_kfs.Event
 {% endif %}
 
 <p>
-    A confirmation email has been sent to {{ Registration.ConfirmationEmail }}. If you have any questions 
+    A confirmation email has been sent to {{ Registration.ConfirmationEmail }}. If you have any questions
     please contact {{ RegistrationInstance.ContactPersonAlias.Person.FullName }} at {{ RegistrationInstance.ContactEmail }}.
 </p>
 ", "", 2 )]
-
     [CodeEditorField( "Default Payment Reminder Email", "The default Payment Reminder Email Template value to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"{{ 'Global' | Attribute:'EmailHeader' }}
 {% capture currencySymbol %}{{ 'Global' | Attribute:'CurrencySymbol' }}{% endcapture %}
 {% capture externalSite %}{{ 'Global' | Attribute:'PublicApplicationRoot' }}{% endcapture %}
@@ -218,9 +199,9 @@ namespace RockWeb.Plugins.com_kfs.Event
 <h1>{{ RegistrationInstance.RegistrationTemplate.RegistrationTerm }} Payment Reminder</h1>
 
 <p>
-    This {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase  }} for {{ RegistrationInstance.Name }} has a remaining balance 
-    of {{ currencySymbol }}{{ Registration.BalanceDue | Format:'#,##0.00' }}. The 
-    {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | Downcase | Pluralize  }} for this 
+    This {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase  }} for {{ RegistrationInstance.Name }} has a remaining balance
+    of {{ currencySymbol }}{{ Registration.BalanceDue | Format:'#,##0.00' }}. The
+    {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | Downcase | Pluralize  }} for this
     {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm }} are below.
 </p>
 
@@ -242,11 +223,9 @@ namespace RockWeb.Plugins.com_kfs.Event
 
 {{ 'Global' | Attribute:'EmailFooter' }}
 ", "", 3 )]
-
     [GroupTypeField( "Associated Group Type", "Select a Group Type to trigger the creation of a new group of selected type upon creating a new Registration Template. The new Template's 'AssociatedGroup' attribute will be set to the new Group.", false, "", "", 0, "GroupTypeSetting", "" )]
     public partial class KFSRegistrationTemplateDetail : RockBlock
     {
-
         #region Properties
 
         private List<RegistrationTemplateForm> FormState { get; set; }
@@ -345,7 +324,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             gFees.Actions.AddClick += gFees_AddClick;
             gFees.GridRebind += gFees_GridRebind;
             gFees.GridReorder += gFees_GridReorder;
-            
+
             btnSecurity.EntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.RegistrationTemplate ) ).Id;
 
             string deleteScript = @"
@@ -403,7 +382,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             {
                                 case "re-order-form":
                                     {
-                                        SortForms( guid, newIndex+1 );
+                                        SortForms( guid, newIndex + 1 );
                                         break;
                                     }
                             }
@@ -436,7 +415,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             breadCrumbs.Add( new BreadCrumb( this.PageCache.PageTitle, pageReference ) );
             return breadCrumbs;
         }
-        
+
         /// <summary>
         /// Saves any user control view-state changes that have occurred since the last page postback.
         /// </summary>
@@ -445,8 +424,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </returns>
         protected override object SaveViewState()
         {
-            var jsonSetting = new JsonSerializerSettings 
-            { 
+            var jsonSetting = new JsonSerializerSettings
+            {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 ContractResolver = new Rock.Utility.IgnoreUrlEncodedKeyContractResolver()
             };
@@ -664,7 +643,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             RegistrationNotify notify = RegistrationNotify.None;
-            foreach( ListItem li in cblNotify.Items )
+            foreach ( ListItem li in cblNotify.Items )
             {
                 if ( li.Selected )
                 {
@@ -734,7 +713,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( FormFieldsState.ContainsKey( form.Guid ) )
                 {
-                    foreach( var formField in FormFieldsState[ form.Guid ])
+                    foreach ( var formField in FormFieldsState[form.Guid] )
                     {
                         if ( !formField.IsValid )
                         {
@@ -753,10 +732,10 @@ namespace RockWeb.Plugins.com_kfs.Event
             var validGroupMemberAttributeIds = groupMember.Attributes.Select( a => a.Value.Id ).ToList();
 
             // Remove any group member attributes that are not valid based on selected group type
-            foreach( var fieldList in FormFieldsState.Select( s => s.Value ) )
+            foreach ( var fieldList in FormFieldsState.Select( s => s.Value ) )
             {
-                foreach( var formField in fieldList
-                    .Where( a => 
+                foreach ( var formField in fieldList
+                    .Where( a =>
                         a.FieldSource == RegistrationFieldSource.GroupMemberAttribute &&
                         a.AttributeId.HasValue &&
                         !validGroupMemberAttributeIds.Contains( a.AttributeId.Value ) )
@@ -804,7 +783,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         f.RegistrationTemplateId == RegistrationTemplate.Id &&
                         !formUiGuids.Contains( f.Guid ) ) )
                 {
-                    foreach( var formField in form.Fields.ToList() )
+                    foreach ( var formField in form.Fields.ToList() )
                     {
                         form.Fields.Remove( formField );
                         registrationTemplateFormFieldService.Delete( formField );
@@ -813,7 +792,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 // delete fields that aren't assigned in the UI anymore
-                var fieldUiGuids = FormFieldsState.SelectMany( a => a.Value).Select( f => f.Guid ).ToList();
+                var fieldUiGuids = FormFieldsState.SelectMany( a => a.Value ).Select( f => f.Guid ).ToList();
                 foreach ( var formField in registrationTemplateFormFieldService
                     .Queryable()
                     .Where( a =>
@@ -976,7 +955,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 AttributeCache.FlushEntityAttributes();
 
-                // If this is a new template, give the current user and the Registration Administrators role administrative 
+                // If this is a new template, give the current user and the Registration Administrators role administrative
                 // rights to this template, and staff, and staff like roles edit rights
                 if ( newTemplate )
                 {
@@ -1104,7 +1083,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             ParseControls();
 
             nbMaxRegistrants.Visible = cbMultipleRegistrants.Checked;
-            
+
             BuildControls();
         }
 
@@ -1250,7 +1229,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        void tfeForm_DeleteFormClick( object sender, EventArgs e )
+        private void tfeForm_DeleteFormClick( object sender, EventArgs e )
         {
             ParseControls();
 
@@ -1282,7 +1261,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_AddFieldClick( object sender, TemplateFormFieldEventArg e )
+        private void tfeForm_AddFieldClick( object sender, TemplateFormFieldEventArg e )
         {
             ParseControls();
 
@@ -1296,7 +1275,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_EditFieldClick( object sender, TemplateFormFieldEventArg e )
+        private void tfeForm_EditFieldClick( object sender, TemplateFormFieldEventArg e )
         {
             ParseControls();
 
@@ -1310,7 +1289,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_ReorderFieldClick( object sender, TemplateFormFieldEventArg e )
+        private void tfeForm_ReorderFieldClick( object sender, TemplateFormFieldEventArg e )
         {
             ParseControls();
 
@@ -1328,7 +1307,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_DeleteFieldClick( object sender, TemplateFormFieldEventArg e )
+        private void tfeForm_DeleteFieldClick( object sender, TemplateFormFieldEventArg e )
         {
             ParseControls();
 
@@ -1345,7 +1324,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_RebindFieldClick( object sender, TemplateFormFieldEventArg e )
+        private void tfeForm_RebindFieldClick( object sender, TemplateFormFieldEventArg e )
         {
             ParseControls();
 
@@ -1905,7 +1884,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
                 else
                 {
-                    LoadStateDetails(registrationTemplate, rockContext);
+                    LoadStateDetails( registrationTemplate, rockContext );
                     ShowEditDetails( registrationTemplate, rockContext );
                 }
             }
@@ -1934,9 +1913,9 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 // Add first name field if it doesn't exist
                 if ( !defaultForm.Fields
-                    .Any( f => 
+                    .Any( f =>
                         f.FieldSource == RegistrationFieldSource.PersonField &&
-                        f.PersonFieldType == RegistrationPersonFieldType.FirstName ))
+                        f.PersonFieldType == RegistrationPersonFieldType.FirstName ) )
                 {
                     var formField = new RegistrationTemplateFormField();
                     formField.FieldSource = RegistrationFieldSource.PersonField;
@@ -1978,7 +1957,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
                 DiscountState = RegistrationTemplate.Discounts.OrderBy( a => a.Order ).ToList();
                 FeeState = RegistrationTemplate.Fees.OrderBy( a => a.Order ).ToList();
-
             }
             else
             {
@@ -2038,7 +2016,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             cbDisplayInLine.Checked = RegistrationTemplate.SignatureDocumentAction == SignatureDocumentAction.Embed;
             wtpRegistrationWorkflow.SetValue( RegistrationTemplate.RegistrationWorkflowTypeId );
 
-            foreach( ListItem li in cblNotify.Items )
+            foreach ( ListItem li in cblNotify.Items )
             {
                 RegistrationNotify notify = (RegistrationNotify)li.Value.AsInteger();
                 li.Selected = ( RegistrationTemplate.Notify & notify ) == notify;
@@ -2213,7 +2191,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             ddlSignatureDocumentTemplate.Items.Clear();
             ddlSignatureDocumentTemplate.Items.Add( new ListItem() );
-            foreach( var documentType in new SignatureDocumentTemplateService( rockContext )
+            foreach ( var documentType in new SignatureDocumentTemplateService( rockContext )
                 .Queryable().AsNoTracking()
                 .OrderBy( t => t.Name ) )
             {
@@ -2232,7 +2210,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         private void ParseControls( bool expandInvalid = false )
         {
             ExpandedForms = new List<Guid>();
-            FormState = FormState.Take(1).ToList();
+            FormState = FormState.Take( 1 ).ToList();
 
             int order = 1;
             foreach ( var formEditor in phForms.Controls.OfType<RegistrationTemplateFormEditor>() )
@@ -2299,7 +2277,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( setValues )
             {
                 control.Expanded = ExpandedForms.Contains( form.Guid );
-                if ( !control.Expanded && showInvalid && !form.IsValid)
+                if ( !control.Expanded && showInvalid && !form.IsValid )
                 {
                     control.Expanded = true;
                 }
@@ -2323,7 +2301,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( FormFieldsState != null && FormFieldsState.Any() )
             {
                 gFields.DataSource = FormFieldsState.First().Value
-                    .OrderBy( a => a.Order)
+                    .OrderBy( a => a.Order )
                     .Select( a => new
                     {
                         a.Id,
@@ -2331,7 +2309,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         Name = ( a.FieldSource != RegistrationFieldSource.PersonField && a.Attribute != null ) ?
                             a.Attribute.Name : a.PersonFieldType.ConvertToString(),
                         FieldSource = a.FieldSource.ConvertToString(),
-                        FieldType = ( a.FieldSource != RegistrationFieldSource.PersonField && a.Attribute != null ) ? 
+                        FieldType = ( a.FieldSource != RegistrationFieldSource.PersonField && a.Attribute != null ) ?
                             a.Attribute.FieldTypeId : 0,
                         a.IsInternal,
                         a.IsSharedValue,
@@ -2429,7 +2407,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 hfFormGuid.Value = formGuid.ToString();
                 hfAttributeGuid.Value = formFieldGuid.ToString();
-                
+
                 lPersonField.Visible = formField.FieldSource == RegistrationFieldSource.PersonField && (
                     formField.PersonFieldType == RegistrationPersonFieldType.FirstName ||
                     formField.PersonFieldType == RegistrationPersonFieldType.LastName );
@@ -2466,7 +2444,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             cbInternalField.Visible = true;
             cbCommonValue.Visible = true;
-            cbUsePersonCurrentValue.Visible = 
+            cbUsePersonCurrentValue.Visible =
                 fieldSource == RegistrationFieldSource.PersonAttribute ||
                 fieldSource == RegistrationFieldSource.PersonField;
 
@@ -2554,7 +2532,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             int order = 0;
             fieldList.ForEach( a => a.Order = order++ );
         }
-        
+
         #endregion
 
         #region Discount Methods
@@ -2586,7 +2564,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="discountGuid">The discount unique identifier.</param>
         private void ShowDiscountEdit( Guid discountGuid )
         {
-            var discount = DiscountState.FirstOrDefault( d => d.Guid.Equals( discountGuid ));
+            var discount = DiscountState.FirstOrDefault( d => d.Guid.Equals( discountGuid ) );
             if ( discount == null )
             {
                 discount = new RegistrationTemplateDiscount();
@@ -2646,7 +2624,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="feeGuid">The fee unique identifier.</param>
         private void ShowFeeEdit( Guid feeGuid )
         {
-            var fee = FeeState.FirstOrDefault( d => d.Guid.Equals( feeGuid ));
+            var fee = FeeState.FirstOrDefault( d => d.Guid.Equals( feeGuid ) );
             if ( fee == null )
             {
                 fee = new RegistrationTemplateFee();
@@ -2721,9 +2699,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "ATTRIBUTES":
                     dlgField.Show();
                     break;
+
                 case "DISCOUNTS":
                     dlgDiscount.Show();
                     break;
+
                 case "FEES":
                     dlgFee.Show();
                     break;
@@ -2740,9 +2720,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "ATTRIBUTES":
                     dlgField.Hide();
                     break;
+
                 case "DISCOUNTS":
                     dlgDiscount.Hide();
                     break;
+
                 case "FEES":
                     dlgFee.Hide();
                     break;
@@ -2754,6 +2736,5 @@ namespace RockWeb.Plugins.com_kfs.Event
         #endregion
 
         #endregion
-
-}
+    }
 }
