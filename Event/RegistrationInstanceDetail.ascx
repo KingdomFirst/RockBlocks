@@ -109,8 +109,6 @@
                 </div>
                 <div class="panel-body">
 
-                    <asp:ValidationSummary ID="vsDetails" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
-
                     <div id="pnlEditDetails" runat="server">
 
                         <Rock:RegistrationInstanceEditor ID="rieDetails" runat="server" />
@@ -127,7 +125,7 @@
                                             <asp:PlaceHolder ID="phRows" runat="server" />
                                         </ul>
                                         <div class="pull-right checkin-item-actions">
-                                            <asp:LinkButton ID="lbAddResource" runat="server" CssClass="btn btn-xs btn-default" OnClick="lbAddResource_Click">
+                                            <asp:LinkButton ID="lbAddResourceArea" runat="server" CssClass="btn btn-xs btn-default" OnClick="lbAddResourceArea_Click">
                                                 <i class="fa fa-plus"></i> <i class="fa fa-folder-open"></i>
                                             </asp:LinkButton>
                                         </div>
@@ -135,16 +133,17 @@
                                     <div class="col-md-6 js-area-group-details">
 
                                         <asp:HiddenField ID="hfIsDirty" runat="server" Value="false" />
-                                        <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
-                                        <Rock:NotificationBox ID="nbInvalid" runat="server" NotificationBoxType="Danger" Visible="false" />
-                                        <Rock:NotificationBox ID="nbSaveSuccess" runat="server" NotificationBoxType="Success" Text="Changes have been saved." Visible="false" />
-
                                         <Rock:CheckinArea ID="resourceAreaPanel" runat="server" Visible="false"  />
                                         <Rock:CheckinGroup ID="resourceGroupPanel" runat="server" Visible="false" />
 
                                         <div class="actions margin-t-md">
-                                            <asp:LinkButton ID="btnGroupSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnGroupSave_Click" Visible="false" />
+                                            <asp:LinkButton ID="btnResourceSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnGroupSave_Click" Visible="false" />
                                         </div>
+
+                                        <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+                                        <Rock:NotificationBox ID="nbInvalid" runat="server" NotificationBoxType="Danger" Visible="false" />
+                                        <Rock:NotificationBox ID="nbSaveSuccess" runat="server" NotificationBoxType="Success" Text="Changes have been saved." Visible="false" />
+
                                     </div>
                                 </div>
                             </asp:Panel>
