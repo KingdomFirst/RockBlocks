@@ -39,7 +39,9 @@
         border-top-color: #5593a4;
     }
 
-    .rollover-item .checkin-area-add-area {
+    .rollover-item .checkin-area-add-area,
+    .js-area-group-details h3
+    {
         display: none;
     }
 </style>
@@ -128,7 +130,7 @@
                                         <Rock:NotificationBox ID="nbInvalid" runat="server" NotificationBoxType="Danger" Visible="false" />
                                         <Rock:NotificationBox ID="nbSaveSuccess" runat="server" NotificationBoxType="Success" Text="Changes have been saved." Visible="false" />
 
-                                        <Rock:CheckinGroup ID="checkinGroup" runat="server" Visible="true" />
+                                        <Rock:CheckinGroup ID="checkinGroup" runat="server" Visible="false" />
 
                                         <div class="actions margin-t-md">
                                             <asp:LinkButton ID="btnGroupSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnGroupSave_Click" Visible="false" />
@@ -469,3 +471,30 @@
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>
+
+
+<script>
+    
+    Sys.Application.add_load(function () {
+
+        var fixHelper = function (e, ui) {
+            ui.children().each(function () {
+                $(this).width($(this).width());
+            });
+            return ui;
+        };
+
+        $('section.checkin-item').click(function () {
+            
+            var $li = $(this).closest('li');
+            if ($(this).hasClass('checkin-area')) {
+                __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
+            } else {
+                __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
+            }
+            
+        });
+    });
+
+
+</script>
