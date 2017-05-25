@@ -112,16 +112,25 @@
                     <asp:ValidationSummary ID="vsDetails" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
 
                     <div id="pnlEditDetails" runat="server">
+
+                        <Rock:RegistrationInstanceEditor ID="rieDetails" runat="server" />
+
                         <div id="pnlSubGroups" runat="server" class="form-group">
-                            <label class="control-label" for="pnlAssociatedGroupTypes">Additional Resources</label>
+                            <label class="control-label" for="pnlAssociatedGroupTypes">Registration Resources</label>
                             <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well">
                                 <div class="row">
+                                    <asp:HiddenField runat="server" ID="hfAreaGroupClicked" />
                                     <Rock:NotificationBox ID="nbDeleteWarning" runat="server" NotificationBoxType="Warning" />
 
                                     <div class="col-md-6">
                                         <ul class="checkin-list checkin-list-first js-checkin-area-list">
                                             <asp:PlaceHolder ID="phRows" runat="server" />
                                         </ul>
+                                        <div class="pull-right checkin-item-actions">
+                                            <asp:LinkButton ID="lbAddResource" runat="server" CssClass="btn btn-xs btn-default" OnClick="lbAddResource_Click">
+                                                <i class="fa fa-plus"></i> <i class="fa fa-folder-open"></i>
+                                            </asp:LinkButton>
+                                        </div>
                                     </div>
                                     <div class="col-md-6 js-area-group-details">
 
@@ -130,7 +139,8 @@
                                         <Rock:NotificationBox ID="nbInvalid" runat="server" NotificationBoxType="Danger" Visible="false" />
                                         <Rock:NotificationBox ID="nbSaveSuccess" runat="server" NotificationBoxType="Success" Text="Changes have been saved." Visible="false" />
 
-                                        <Rock:CheckinGroup ID="checkinGroup" runat="server" Visible="false" />
+                                        <Rock:CheckinArea ID="resourceAreaPanel" runat="server" Visible="false"  />
+                                        <Rock:CheckinGroup ID="resourceGroupPanel" runat="server" Visible="false" />
 
                                         <div class="actions margin-t-md">
                                             <asp:LinkButton ID="btnGroupSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnGroupSave_Click" Visible="false" />
@@ -139,8 +149,6 @@
                                 </div>
                             </asp:Panel>
                         </div>
-
-                        <Rock:RegistrationInstanceEditor ID="rieDetails" runat="server" />
 
                         <div class="actions">
                             <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
@@ -474,6 +482,25 @@
 
 
 <script>
+
+    var AfterPostBack = function () {
+        // Detect if the two panels are side by side or in one column by finding the delta between the two.
+        // If the offset is more than 58-80 then scroll to the js-area-group-details instead.
+        if ( $('.js-area-group-details').length && $('.js-panel-details').length) {
+            var panelDelta = $('.js-area-group-details').offset().top - $('.js-panel-details').offset().top;
+            var scrollToPanel = ".js-panel-details";
+            if (panelDelta > 80) {
+                scrollToPanel = ".js-area-group-details";
+            }
+
+            $('html, body').animate({
+                scrollTop: $(scrollToPanel).offset().top + 'px'
+                }, 400
+            );
+        }
+    }
+
+    Sys.WebForms.PageRequestManager.getInstance().add_endRequest(AfterPostBack);
     
     Sys.Application.add_load(function () {
 
