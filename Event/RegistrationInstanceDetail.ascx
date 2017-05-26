@@ -39,7 +39,8 @@
         border-top-color: #5593a4;
     }
 
-    .rollover-item .checkin-area-add-area,
+    .checkin-area .checkin-area-add-area, 
+    .checkin-area .btn-danger,
     .js-area-group-details h3
     {
         display: none;
@@ -98,6 +99,8 @@
 
             <div class="panel panel-block">
 
+                <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+
                 <div class="panel-heading panel-follow clearfix">
                     <h1 class="panel-title"><i class="fa fa-file-o"></i>
                         <asp:Literal ID="lReadOnlyTitle" runat="server" /></h1>
@@ -124,11 +127,6 @@
                                         <ul class="checkin-list checkin-list-first js-checkin-area-list">
                                             <asp:PlaceHolder ID="phRows" runat="server" />
                                         </ul>
-                                        <div class="pull-right checkin-item-actions">
-                                            <asp:LinkButton ID="lbAddResourceArea" runat="server" CssClass="btn btn-xs btn-default" OnClick="lbAddResourceArea_Click">
-                                                <i class="fa fa-plus"></i> <i class="fa fa-folder-open"></i>
-                                            </asp:LinkButton>
-                                        </div>
                                     </div>
                                     <div class="col-md-6 js-area-group-details">
 
@@ -136,14 +134,14 @@
                                         <Rock:CheckinArea ID="resourceAreaPanel" runat="server" Visible="false"  />
                                         <Rock:CheckinGroup ID="resourceGroupPanel" runat="server" Visible="false" />
 
-                                        <div class="actions margin-t-md">
+                                        <div class="actions">
                                             <asp:LinkButton ID="btnResourceSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnGroupSave_Click" Visible="false" />
                                         </div>
 
-                                        <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
-                                        <Rock:NotificationBox ID="nbInvalid" runat="server" NotificationBoxType="Danger" Visible="false" />
-                                        <Rock:NotificationBox ID="nbSaveSuccess" runat="server" NotificationBoxType="Success" Text="Changes have been saved." Visible="false" />
-
+                                        <div class="margin-t-md">
+                                            <Rock:NotificationBox ID="nbInvalid" runat="server" NotificationBoxType="Danger" Visible="false" />
+                                            <Rock:NotificationBox ID="nbSaveSuccess" runat="server" NotificationBoxType="Success" Text="Changes have been saved." Visible="false" />    
+                                        </div>
                                     </div>
                                 </div>
                             </asp:Panel>
@@ -482,10 +480,14 @@
 
 <script>
 
+    /* This function is called after post back to animate scroll to the proper element 
+        * if the user just clicked an area/group.
+    */
     var AfterPostBack = function () {
         // Detect if the two panels are side by side or in one column by finding the delta between the two.
         // If the offset is more than 58-80 then scroll to the js-area-group-details instead.
-        if ( $('.js-area-group-details').length && $('.js-panel-details').length) {
+        if ($('#<%=hfAreaGroupClicked.ClientID %>').val() == "true" && $('.js-area-group-details').length && $('.js-panel-details').length) {
+            $('#<%=hfAreaGroupClicked.ClientID %>').val("false");
             var panelDelta = $('.js-area-group-details').offset().top - $('.js-panel-details').offset().top;
             var scrollToPanel = ".js-panel-details";
             if (panelDelta > 80) {
