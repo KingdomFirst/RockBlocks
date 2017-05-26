@@ -23,26 +23,27 @@
         list-style-type: none;
         padding-left: 40px;
     }
+
     .checkin-list-first {
         padding-left: 0;
     }
+
     .checkin-item .fa-bars {
         opacity: .5;
         margin-right: 6px;
     }
-    
+
     .checkin-group {
         border-top-color: #afd074;
     }
-    
+
     .checkin-area {
         border-top-color: #5593a4;
     }
 
-    .checkin-area .checkin-area-add-area, 
+    .checkin-area .checkin-area-add-area,
     .checkin-area .btn-danger,
-    .js-area-group-details h3
-    {
+    .js-area-group-details h3 {
         display: none;
     }
 </style>
@@ -131,7 +132,7 @@
                                     <div class="col-md-6 js-area-group-details">
 
                                         <asp:HiddenField ID="hfIsDirty" runat="server" Value="false" />
-                                        <Rock:CheckinArea ID="resourceAreaPanel" runat="server" Visible="false"  />
+                                        <Rock:CheckinArea ID="resourceAreaPanel" runat="server" Visible="false" />
                                         <Rock:CheckinGroup ID="resourceGroupPanel" runat="server" Visible="false" />
 
                                         <div class="actions">
@@ -140,7 +141,7 @@
 
                                         <div class="margin-t-md">
                                             <Rock:NotificationBox ID="nbInvalid" runat="server" NotificationBoxType="Danger" Visible="false" />
-                                            <Rock:NotificationBox ID="nbSaveSuccess" runat="server" NotificationBoxType="Success" Text="Changes have been saved." Visible="false" />    
+                                            <Rock:NotificationBox ID="nbSaveSuccess" runat="server" NotificationBoxType="Success" Text="Changes have been saved." Visible="false" />
                                         </div>
                                     </div>
                                 </div>
@@ -477,10 +478,9 @@
     </ContentTemplate>
 </asp:UpdatePanel>
 
-
 <script>
 
-    /* This function is called after post back to animate scroll to the proper element 
+    /* This function is called after post back to animate scroll to the proper element
         * if the user just clicked an area/group.
     */
     var AfterPostBack = function () {
@@ -502,7 +502,7 @@
     }
 
     Sys.WebForms.PageRequestManager.getInstance().add_endRequest(AfterPostBack);
-    
+
     Sys.Application.add_load(function () {
 
         var fixHelper = function (e, ui) {
@@ -513,16 +513,14 @@
         };
 
         $('section.checkin-item').click(function () {
-            
+
             var $li = $(this).closest('li');
             if ($(this).hasClass('checkin-area')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
             } else {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
             }
-            
+
         });
     });
-
-
 </script>

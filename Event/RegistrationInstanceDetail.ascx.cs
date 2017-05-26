@@ -94,11 +94,13 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         // registration resource types and instances
         protected List<GroupType> ResourceGroupTypes { get; set; }
+
         protected int? RegistrationInstanceGroupId = null;
         protected int? TemplateGroupTypeId = null;
 
         // TODO: clean up some of these fields
         private List<string> _expandedGroupPanels = new List<string>();
+
         private List<Guid> _resourceGroupTypes = new List<Guid>();
         private List<Guid> _resourceGroups = new List<Guid>();
         private List<Guid> _expandedRows = new List<Guid>();
@@ -202,7 +204,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     SetRegistrationResources( registrationInstance );
                 }
-                
+
                 if ( ResourceGroupTypes.Any() )
                 {
                     BuildSubGroupTabs( registrationInstance );
@@ -254,7 +256,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         string eventParam = nameValue[0];
                         hfAreaGroupClicked.Value = "false";
                         switch ( eventParam )
-                        {   
+                        {
                             case "select-area":
                                 {
                                     hfAreaGroupClicked.Value = "true";
@@ -304,7 +306,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         protected override void LoadViewState( object savedState )
         {
             base.LoadViewState( savedState );
-            
+
             RegistrantFields = ViewState["RegistrantFields"] as List<RegistrantFormField>;
             ActiveTab = ( ViewState["ActiveTab"] as string ) ?? "";
             TemplateGroupTypeId = ViewState["TemplateGroupTypeId"] as int?;
@@ -482,7 +484,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     return;
                 }
-                
+
                 if ( resourceAreaPanel.Visible )
                 {
                     var attributeService = new AttributeService( rockContext );
@@ -501,7 +503,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             if ( !groupType.DefaultGroupRoleId.HasValue && groupType.Roles.Any() )
                             {
                                 groupType.DefaultGroupRoleId = groupType.Roles.First().Id;
-                            }                 
+                            }
 
                             GroupTypeCache.Flush( groupType.Id );
                             nbSaveSuccess.Visible = true;
@@ -523,7 +525,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         group.LoadAttributes( rockContext );
                         resourceGroupPanel.GetGroupValues( group );
-                        
+
                         if ( group.IsValid )
                         {
                             rockContext.SaveChanges();
@@ -536,11 +538,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
                     }
                 }
-                
+
                 rockContext.SaveChanges();
                 BuildRegistrationGroupHierarchy( rockContext, instance );
             }
-            
+
             if ( newInstance )
             {
                 var qryParams = new Dictionary<string, string>();
@@ -1943,7 +1945,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             return registrationInstance;
         }
-        
 
         /// <summary>
         /// Shows the detail.
@@ -2241,7 +2242,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             liGroupPlacement.RemoveCssClass( "active" );
             pnlGroupPlacement.Visible = false;
 
-            // set custom placement groups 
+            // set custom placement groups
             HtmlGenericControl liAssociatedGroup;
             var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
             var instance = GetRegistrationInstance( registrationInstanceId );
@@ -2272,7 +2273,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
             }
-
 
             // TODO: only bind quick placement when that tab is open
             BindQuickPlacementGrid();
@@ -3586,7 +3586,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             };
             gGroupPlacements.Columns.Add( groupPickerField );
         }
-        
+
         /// <summary>
         /// Handles the AddGroupClick event of the ResourceArea control.
         /// </summary>
@@ -3623,7 +3623,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             BuildRegistrationResources();
         }
-        
+
         /// <summary>
         /// Handles the AddGroupClick event of the CheckinGroupRow control.
         /// </summary>
@@ -3687,7 +3687,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     groupService.Delete( group );
                     rockContext.SaveChanges();
-                    
+
                     SelectGroup( null );
                 }
             }
@@ -3833,7 +3833,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     templateGroupType = instance.RegistrationTemplate.GroupType;
                 }
-                else 
+                else
                 {
                     var registrationTemplateId = PageParameter( "RegistrationTemplateId" ).AsInteger();
                     if ( registrationTemplateId > 0 )
@@ -3866,7 +3866,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="rockContext">The rock context.</param>
         /// <param name="instance">The instance.</param>
         private void BuildRegistrationGroupHierarchy( RockContext rockContext, RegistrationInstance instance )
-        {   
+        {
             if ( TemplateGroupTypeId.HasValue )
             {
                 if ( instance.RegistrationTemplate == null )
@@ -3966,7 +3966,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     foreach ( var groupType in ResourceGroupTypes )
                     {
-                       // this is a new registration, create resource group placeholders
+                        // this is a new registration, create resource group placeholders
                         var resourceGroup = new Group();
                         resourceGroup.Guid = Guid.NewGuid();
                         resourceGroup.Name = groupType.Name;
@@ -3976,12 +3976,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         resourceGroup.Order = 0;
                         resourceGroup.GroupTypeId = groupType.Id;
                         groupService.Add( resourceGroup );
-                     
                     }
                 }
-
-
-                
 
                 rockContext.SaveChanges();
                 instance.SaveAttributeValues();
@@ -4885,8 +4881,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         private Group CreateGroup( RockContext rockContext, GroupType groupType, int? parentGroupId, string groupName, RegistrationInstance instance, string instanceAttributeKey )
         {
             Group newGroup = null;
-            
-            if ( !string.IsNullOrWhiteSpace( groupName ))
+
+            if ( !string.IsNullOrWhiteSpace( groupName ) )
             {
                 var groupService = new GroupService( rockContext );
 
@@ -4900,7 +4896,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 // TODO: this should already have a guid // reuse connection
                 newGroup = new GroupService( new RockContext() ).Get( newGroup.Guid );
 
-                if ( !string.IsNullOrWhiteSpace( instanceAttributeKey ))
+                if ( !string.IsNullOrWhiteSpace( instanceAttributeKey ) )
                 {
                     if ( !instance.Attributes.Any() )
                     {
@@ -4934,7 +4930,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// Registers the page script.
         /// </summary>
         private void RegisterScript()
-        {       
+        {
             var script = @"
     $('a.js-delete-instance').click(function( e ){
         e.preventDefault();
@@ -5003,7 +4999,7 @@ namespace RockWeb.Plugins.com_kfs.Event
     $('.js-area-group-details').find('input').blur( function() {{
         $('#{0}').val('true')
     }});
-    
+
     function isDirty() {{
         return false;
     }}
