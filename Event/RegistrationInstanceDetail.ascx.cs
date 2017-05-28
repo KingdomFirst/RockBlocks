@@ -3761,24 +3761,26 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 var groupTypeService = new GroupTypeService( rockContext );
                 var parentArea = groupTypeService.Get( parentRow.GroupTypeGuid );
-                if ( parentArea != null )
+                if ( parentArea != null  )
                 {
-                    Guid newGuid = Guid.NewGuid();
+                    var checkinGroup = parentArea.Groups.FirstOrDefault( g => g.ParentGroupId == RegistrationInstanceGroupId );
+                    if ( checkinGroup == null )
+                    {
+                        checkinGroup = new Group();
+                        checkinGroup.Guid = Guid.NewGuid();
+                        checkinGroup.Name = parentArea.Name;
+                        checkinGroup.IsActive = true;
+                        checkinGroup.IsPublic = true;
+                        checkinGroup.IsSystem = false;
+                        checkinGroup.Order = 0;
+                        checkinGroup.ParentGroupId = RegistrationInstanceGroupId;
+                        parentArea.Groups.Add( checkinGroup );
+                        rockContext.SaveChanges();
 
-                    var checkinGroup = new Group();
-                    checkinGroup.Guid = newGuid;
-                    checkinGroup.Name = parentArea.Name;
-                    checkinGroup.IsActive = true;
-                    checkinGroup.IsPublic = true;
-                    checkinGroup.IsSystem = false;
-                    checkinGroup.Order = parentArea.Groups.Any() ? parentArea.Groups.Max( t => t.Order ) + 1 : 0;
-                    checkinGroup.ParentGroupId = RegistrationInstanceGroupId;
-                    parentArea.Groups.Add( checkinGroup );
-                    rockContext.SaveChanges();
+                        GroupTypeCache.Flush( parentArea.Id );
+                    }
 
-                    GroupTypeCache.Flush( parentArea.Id );
-
-                    SelectGroup( newGuid );
+                    SelectGroup( checkinGroup.Guid );
                 }
             }
 
