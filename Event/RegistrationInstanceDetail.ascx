@@ -43,7 +43,12 @@
 
     .checkin-area .checkin-area-add-area,
     .checkin-area .btn-danger,
-    .js-area-group-details h3 {
+    .js-area-group-details h3,
+    label[for$='ddlPrintTo'],
+    select[id$='ddlPrintTo'],
+    label[for$='ddlAttendanceRule'],
+    select[id$='ddlAttendanceRule']
+    {
         display: none;
     }
 </style>
@@ -450,21 +455,24 @@
                         </asp:Panel>
                     </ItemTemplate>
                 </asp:Repeater>
+                <asp:LinkButton ID="btnAllowMultipleRegistrations" runat="server" OnClick="btnAllowMultipleRegistrations_Click" Visible="false" />
 
-                <Rock:ModalDialog ID="mdlAddSubGroupMember" runat="server" OnSaveClick="mdlAddSubGroupMember_SaveClick" ValidationGroup="vgAddGroupMemmber">
+                <Rock:ModalDialog ID="mdlAddSubGroupMember" runat="server" OnSaveClick="mdlAddSubGroupMember_SaveClick" ValidationGroup="vgAddGroupMember">
                     <Content>
                         <asp:HiddenField ID="hfSubGroupId" runat="server" />
                         <asp:HiddenField ID="hfSubGroupMemberId" runat="server" />
-                        <asp:ValidationSummary ID="vsSubGroupMember" runat="server" ValidationGroup="vgAddGroupMemmber" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+                        <Rock:NotificationBox ID="nbErrorMessage" runat="server" NotificationBoxType="Danger" />
+                        <asp:ValidationSummary ID="vsSubGroupMember" runat="server" ValidationGroup="vgAddGroupMember" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
                         <fieldset>
                             <div class="col-md-6">
-                                <Rock:RockDropDownList ID="ddlRegistrantList" runat="server" Label="Registrant" Required="true" ValidationGroup="vgAddGroupMemmber" />
-                                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMemmber" />
+                                <Rock:RockDropDownList ID="ddlRegistrantList" runat="server" Label="Registrant" Required="true" ValidationGroup="vgAddGroupMember" />
+                                <%--<Rock:PersonPicker ID="ppSubGroupMember" runat="server" Label="Registrant" Visible="false" ValidationGroup="vgAddGroupMember" />--%>
+                                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMember" />
                             </div>
                             <div class="col-md-6">
-                                <Rock:RockDropDownList ID="ddlSubGroup" runat="server" ValidationGroup="vgAddGroupMemmber" Visible="false" />
-                                <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMemmber" />
-                                <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMemmber" />
+                                <Rock:RockDropDownList ID="ddlSubGroup" runat="server" ValidationGroup="vgAddGroupMember" Visible="false" />
+                                <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMember" />
+                                <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMember" />
                             </div>
                             <div class="col-md-12">
                                 <asp:PlaceHolder ID="phAttributes" runat="server" EnableViewState="false"></asp:PlaceHolder>
