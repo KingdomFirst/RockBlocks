@@ -93,7 +93,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         protected string ActiveTab { get; set; }
 
         // registration resource types and instances
-        protected List<GroupType> ResourceGroupTypes { get; set; }
+        protected List<GroupTypeCache> ResourceGroupTypes { get; set; }
 
         protected int? RegistrationInstanceGroupId = null;
         protected int? TemplateGroupTypeId = null;
@@ -308,22 +308,13 @@ namespace RockWeb.Plugins.com_kfs.Event
             _currentGroupTypeGuid = ViewState["CurrentGroupTypeGuid"] as Guid?;
             _currentGroupGuid = ViewState["CurrentGroupGuid"] as Guid?;
 
-            ResourceGroupTypes = new List<GroupType>();
+            ResourceGroupTypes = new List<GroupTypeCache>();
             using ( var rockContext = new RockContext() )
             {
-                var groupTypeService = new GroupTypeService( rockContext );
                 foreach ( int id in ViewState["ResourceGroupTypes"] as List<int> )
                 {
-                    var groupType = groupTypeService.Get( id );
-                    groupType.LoadAttributes( rockContext );
-                    ResourceGroupTypes.Add( groupType );
+                    ResourceGroupTypes.Add( GroupTypeCache.Read( id, rockContext ) );
                 }
-
-                // TODO: use grouptypecache here for optimal performance
-                //foreach ( int id in ViewState["ResourceGroupTypes"] as List<int> )
-                //{
-                //    ResourceGroupTypes.Add( GroupTypeCache.Read( id ) );
-                //}
             }
 
             AddDynamicControls();
@@ -681,13 +672,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupMember.SaveAttributeValues( rockContext );
                 } );
 
-                BindQuickPlacementGrid();
-
                 if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
                 {
                     BindRegistrantsFilter( new RegistrationInstanceService( rockContext ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
                 }
 
+                BindQuickPlacementGrid();
                 BindRegistrantsGrid();
                 mdlAddSubGroupMember.Hide();                
             }
@@ -983,7 +973,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var deleteMembers = new List<GroupMember>();
                     foreach ( var groupType in ResourceGroupTypes )
                     {
-                        foreach ( RegistrationRegistrant registrant in registration.Registrants )
+                        foreach ( var registrant in registration.Registrants )
                         {
                             deleteMembers.AddRange( GetDeleteGroupMembers( rockContext, memberService, groupType, registrant, registrationInstanceId ) );
                         }
@@ -1024,7 +1014,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="registrant">The registrant.</param>
         /// <param name="registrationInstanceId">The registration instance identifier.</param>
         /// <returns></returns>
-        private List<GroupMember> GetDeleteGroupMembers( RockContext rockContext, GroupMemberService memberService, GroupType groupType, RegistrationRegistrant registrant, int? registrationInstanceId )
+        private List<GroupMember> GetDeleteGroupMembers( RockContext rockContext, GroupMemberService memberService, GroupTypeCache groupType, RegistrationRegistrant registrant, int? registrationInstanceId )
         {
             var deleteMembers = new List<GroupMember>();
             registrationInstanceId = registrationInstanceId ?? PageParameter( "RegistrationInstanceId" ).AsIntegerOrNull();
@@ -1374,10 +1364,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
 
                     var columnIndex = _registrantGridColumnCount;
-                    foreach ( var groupType in ResourceGroupTypes )
+                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
                     {            
-                        if ( groupType.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) )
-                        {
+                        
                             if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
                             {
                                 var resourceGroupGuid = instance.AttributeValues[groupType.Name];
@@ -1477,7 +1466,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     }
                                 }
 
-                            }
+                           
                         }
 
                         columnIndex++;
@@ -3700,10 +3689,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     instance = instance ?? GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
 
-                    foreach ( var groupType in ResourceGroupTypes )
+                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
                     {
-                        if ( groupType.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) )
-                        {
+                        
                             string columnHeaderName = null;
                             if ( instance != null )
                             {
@@ -3732,7 +3720,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             subGroupColumn.HeaderStyle.CssClass = "";
                             subGroupColumn.HeaderText = columnHeaderName;
                             gRegistrants.Columns.Add( subGroupColumn );
-                        }
+                        
                     }
                 }
             }
@@ -3905,7 +3893,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                             rockContext.SaveChanges();
 
                             GroupTypeCache.Flush( groupType.Id );
-                            //SelectArea( groupType.Guid );
                             nbSaveSuccess.Visible = true;
                         }
                         else
@@ -3929,7 +3916,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             rockContext.SaveChanges();
                             group.SaveAttributeValues( rockContext );
-                            //SelectGroup( group.Guid );
                             nbSaveSuccess.Visible = true;
                         }
                         else
@@ -4057,25 +4043,19 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
 
-                ResourceGroupTypes = ResourceGroupTypes ?? new List<GroupType>();
+                ResourceGroupTypes = new List<GroupTypeCache>();
 
                 if ( templateGroupType != null )
                 {
                     TemplateGroupTypeId = templateGroupType.Id;
-                    var groupTypes = new GroupTypeService( rockContext ).Queryable().AsNoTracking()
+                    var groupTypeIds = new GroupTypeService( rockContext ).Queryable().AsNoTracking()
                         .Where( t => t.InheritedGroupTypeId == templateGroupType.Id && t.Id != templateGroupType.Id )
-                        .OrderBy( t => t.Order ).ThenBy( t => t.Name ).ToList();
+                        .OrderBy( t => t.Order ).ThenBy( t => t.Name ).Select( t => t.Id ).ToList();
 
-                    foreach ( var groupType in groupTypes )
+                    foreach ( var groupTypeId in groupTypeIds )
                     {
-                        groupType.LoadAttributes();
-                        ResourceGroupTypes.Add( groupType );
+                        ResourceGroupTypes.Add( GroupTypeCache.Read( groupTypeId ) );
                     }
-                    
-                    //foreach ( var groupType in groupTypes )
-                    //{
-                    //    ResourceGroupTypes.Add( GroupTypeCache.Read( groupType.Id ) );
-                    //}
                 }
             }
         }
@@ -4185,7 +4165,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 }
 
                                 // store selections
-                                if ( instance.AttributeValues.ContainsKey( groupType.Name ))
+                                if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
                                 {
                                     instance.AttributeValues[resourceGroup.GroupType.Name].Value = resourceGroup.Guid.ToString();
                                 }
@@ -4778,7 +4758,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
         protected void rpQuickPlacementPanel_ItemDataBound( object sender, RepeaterItemEventArgs e )
         {
-            var groupType = (GroupType)e.Item.DataItem;
+            var groupType = (GroupTypeCache)e.Item.DataItem;
             var pnlAssociatedGroup = (Panel)e.Item.FindControl( "pnlAssociatedGroup" );
             var pnlGroupBody = (Panel)e.Item.FindControl( "pnlGroupBody" );
             var pnlGroupHeading = (Panel)e.Item.FindControl( "pnlGroupHeading" );
