@@ -274,6 +274,14 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
 
+                var groupMember = new GroupMember { Id = hfSubGroupMemberId.ValueAsInt(), GroupId = hfSubGroupId.ValueAsInt() };
+                if ( groupMember != null && groupMember.GroupId > 0 )
+                {
+                    groupMember.LoadAttributes();
+                    phAttributes.Controls.Clear();
+                    Rock.Attribute.Helper.AddEditControls( groupMember, phAttributes, false, mdlAddSubGroupMember.ValidationGroup );
+                }
+
                 SetFollowingOnPostback();
             }
         }
@@ -288,6 +296,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </returns>
         protected override object SaveViewState()
         {
+            ResourceGroupTypes = ResourceGroupTypes ?? new List<GroupTypeCache>();
             ViewState["RegistrantFields"] = RegistrantFields;
             ViewState["TemplateGroupTypeId"] = TemplateGroupTypeId;
             ViewState["ResourceGroupTypes"] = ResourceGroupTypes.Select( t => t.Id ).ToList();
@@ -654,22 +663,29 @@ namespace RockWeb.Plugins.com_kfs.Event
                         return;
                     }
 
-                    if ( groupMember.Id != 0 && groupMember.GroupId != 0 )
+                    // using WrapTransaction because there are three Saves
+                    rockContext.WrapTransaction( () =>
                     {
-                        // using WrapTransaction because there are three Saves
-                        rockContext.WrapTransaction( () =>
+                        if ( groupMember.Id.Equals( 0 ) )
                         {
-                            if ( groupMember.Id.Equals( 0 ) )
-                            {
-                                groupMemberService.Add( groupMember );
-                            }
-                            else if ( groupMember.GroupId == 0 )
-                            {
-                                groupMemberService.Delete( groupMember );
-                            }
-                            rockContext.SaveChanges();
-                            groupMember.SaveAttributeValues( rockContext );
-                        } );
+                            groupMemberService.Add( groupMember );
+                        }
+                        else if ( groupMember.GroupId == 0 )
+                        {
+                            groupMemberService.Delete( groupMember );
+                        }
+                        rockContext.SaveChanges();
+                        groupMember.SaveAttributeValues( rockContext );
+                    } );
+
+                    if ( groupMember != null && groupMember.Id > 0 )
+                    {
+                        hfSubGroupMemberId.Value = groupMember.Id.ToString();
+
+                        if ( groupMember.GroupId > 0 )
+                        {
+                            hfSubGroupId.Value = groupMember.Id.ToString();
+                        }
                     }
 
                     if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
@@ -2295,39 +2311,42 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             phGroupTabs.Controls.Clear();
             instance = instance ?? GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
-            foreach ( var groupType in ResourceGroupTypes )
+            if ( instance != null )
             {
-                if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
+                foreach ( var groupType in ResourceGroupTypes )
                 {
-                    var tabName = groupType.Name;
-                    bool createTab = true;
-                    if ( instance != null && instance.AttributeValues.ContainsKey( groupType.Name ) )
+                    if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
                     {
-                        var resourceGroupGuid = instance.AttributeValues[groupType.Name].Value.ToStringSafe();
-                        var group = new GroupService( new RockContext() ).Get( resourceGroupGuid.AsGuid() );
-                        if ( group != null )
+                        var tabName = groupType.Name;
+                        bool createTab = true;
+                        if ( instance != null && instance.AttributeValues.ContainsKey( groupType.Name ) )
                         {
-                            tabName = group.Name;
+                            var resourceGroupGuid = instance.AttributeValues[groupType.Name].Value.ToStringSafe();
+                            var group = new GroupService( new RockContext() ).Get( resourceGroupGuid.AsGuid() );
+                            if ( group != null )
+                            {
+                                tabName = group.Name;
+                            }
+
+                            createTab = resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid ) && !Guid.Empty.Equals( resourceGroupGuid.AsGuid() );
                         }
 
-                        createTab = resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid ) && !Guid.Empty.Equals( resourceGroupGuid.AsGuid() );
-                    }
-
-                    if ( createTab )
-                    {
-                        var item = new HtmlGenericControl( "li" )
+                        if ( createTab )
                         {
-                            ID = "li" + tabName
-                        };
-                        var lb = new LinkButton
-                        {
-                            ID = "lb" + tabName,
-                            Text = tabName
-                        };
+                            var item = new HtmlGenericControl( "li" )
+                            {
+                                ID = "li" + tabName
+                            };
+                            var lb = new LinkButton
+                            {
+                                ID = "lb" + tabName,
+                                Text = tabName
+                            };
 
-                        lb.Click += lbTab_Click;
-                        item.Controls.Add( lb );
-                        phGroupTabs.Controls.Add( item );
+                            lb.Click += lbTab_Click;
+                            item.Controls.Add( lb );
+                            phGroupTabs.Controls.Add( item );
+                        }
                     }
                 }
             }
@@ -3660,14 +3679,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                 using ( var rockContext = new RockContext() )
                 {
                     instance = instance ?? GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
-
-                    if ( instance.Attributes == null || !instance.Attributes.Any() )
-                    {
-                        instance.LoadAttributes();
-                    }
-
                     if ( instance != null )
                     {
+                        if ( instance.Attributes == null || !instance.Attributes.Any() )
+                        {
+                            instance.LoadAttributes();
+                        }
+
                         foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
                         {
                             var columnHeaderName = groupType.Name;
@@ -4121,7 +4139,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     // this might still be null if the instance doesn't have a name yet
                     instanceGroup = CreateGroup( rockContext, templateGroupType, parentGroupId, instance.Name );
-                    CreateRegistrationInstanceAttribute( rockContext, instance, attributeKey, instanceGroup.Guid.ToString() );
+                    if ( instanceGroup != null )
+                    {
+                        CreateRegistrationInstanceAttribute( rockContext, instance, attributeKey, instanceGroup.Guid.ToString() );
+                    }
                 }
                 else
                 {
@@ -5109,7 +5130,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             groupMember.LoadAttributes();
             phAttributes.Controls.Clear();
-            Rock.Attribute.Helper.AddEditControls( groupMember, phAttributes, false, mdlAddSubGroupMember.ValidationGroup );
+            Rock.Attribute.Helper.AddEditControls( groupMember, phAttributes, true, string.Empty, true );
 
             mdlAddSubGroupMember.Show();
             BindRegistrantsGrid();
