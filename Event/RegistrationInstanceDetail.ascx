@@ -141,7 +141,7 @@
                                         <Rock:CheckinGroup ID="resourceGroupPanel" runat="server" Visible="false" />
 
                                         <div class="actions">
-                                            <asp:LinkButton ID="btnResourceSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnGroupSave_Click" Visible="false" />
+                                            <asp:LinkButton ID="btnResourceSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnResourceSave_Click" Visible="false" />
                                         </div>
 
                                         <div class="margin-t-md">
@@ -424,7 +424,7 @@
                             </Columns>
                         </Rock:Grid>
                         <div class="actions">
-                            <asp:LinkButton ID="lbPlaceInGroup" runat="server" OnClick="lbPlaceInGroup_Click" Text="Place" CssClass="btn btn-primary" />
+                            <asp:LinkButton ID="lbGroupPlace" runat="server" OnClick="lbGroupPlace_Click" Text="Place" CssClass="btn btn-primary" />
                         </div>
                     </div>
                 </asp:Panel>
@@ -432,7 +432,7 @@
                 <asp:HiddenField ID="hfEditGroup" runat="server" />
                 <Rock:HiddenFieldWithClass ID="hfExpandedGroups" runat="server" CssClass="hf-expanded-groups" />
 
-                <asp:Repeater ID="rpQuickPlacementPanel" runat="server">
+                <asp:Repeater ID="rpResourcePanels" runat="server">
                     <ItemTemplate>
                         <asp:Panel ID="pnlAssociatedGroup" runat="server" Visible="false" CssClass="panel panel-block">
                             <asp:Panel ID="pnlGroupHeading" runat="server" CssClass="panel-heading">
@@ -455,7 +455,10 @@
                         </asp:Panel>
                     </ItemTemplate>
                 </asp:Repeater>
-                <asp:LinkButton ID="btnAllowMultipleRegistrations" runat="server" OnClick="btnAllowMultipleRegistrations_Click" Visible="false" />
+                
+                <div hidden>
+                    <asp:LinkButton ID="btnMultipleRegistrations" runat="server" Text="Postback" />
+                </div>
 
                 <Rock:ModalDialog ID="mdlAddSubGroupMember" runat="server" OnSaveClick="mdlAddSubGroupMember_SaveClick" ValidationGroup="vgAddGroupMember">
                     <Content>
@@ -521,14 +524,12 @@
         };
 
         $('section.checkin-item').click(function () {
-
             var $li = $(this).closest('li');
             if ($(this).hasClass('checkin-area')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
             } else {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
             }
-
         });
     });
 </script>
