@@ -600,7 +600,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     GroupMember groupMember;
                     var groupMemberService = new GroupMemberService( rockContext );
                     int groupMemberId = int.Parse( hfSubGroupMemberId.Value );
-                    
+
                     // Check to see if a person was selected
                     var person = new PersonService( rockContext ).Get( ddlRegistrantList.SelectedValue.AsGuid() );
                     if ( person == null )
@@ -618,8 +618,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         nbErrorMessage.Visible = true;
                         return;
                     }
-                        
-                    // if adding a new group member 
+
+                    // if adding a new group member
                     if ( groupMemberId.Equals( 0 ) )
                     {
                         var groupId = hfSubGroupId.ValueAsInt() > 0 ? hfSubGroupId.ValueAsInt() : ddlSubGroup.SelectedValue.AsInteger();
@@ -643,7 +643,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupMember.LoadAttributes();
                     Rock.Attribute.Helper.GetEditValues( phAttributes, groupMember );
 
-                    if ( groupMember.GroupId != 0 && (!groupMember.IsValid || !Page.IsValid ) )
+                    if ( groupMember.GroupId != 0 && ( !groupMember.IsValid || !Page.IsValid ) )
                     {
                         if ( groupMember.ValidationResults.Any() )
                         {
@@ -671,7 +671,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                             groupMember.SaveAttributeValues( rockContext );
                         } );
                     }
-                    
 
                     if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
                     {
@@ -752,7 +751,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             NavigateToParentPage( qryParams );
         }
-        
+
         /// <summary>
         /// Handles the Click event of the MultipleSubGroup control.
         /// </summary>
@@ -1374,7 +1373,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     var columnIndex = _registrantGridColumnCount;
                     foreach ( var groupType in ResourceGroupTypes )
-                    {   
+                    {
                         if ( groupType.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) && instance.AttributeValues.ContainsKey( groupType.Name ) )
                         {
                             var resourceGroupGuid = instance.AttributeValues[groupType.Name];
@@ -1398,7 +1397,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         if ( !groupMemberships.Any() )
                                         {
                                             btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
-                                            
+
                                             using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
                                             {
                                                 btnGroupAssignment.Controls.Add( literalControl );
@@ -1411,13 +1410,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                                             btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
                                         }
                                         else if ( parentGroup.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
-                                        {   
+                                        {
                                             var subGroupControls = e.Row.Cells[columnIndex].Controls;
 
                                             // add any group memberships
                                             foreach ( var member in groupMemberships )
-                                            {   
-                                                using ( var subGroupButton  = new LinkButton() )
+                                            {
+                                                using ( var subGroupButton = new LinkButton() )
                                                 {
                                                     // TODO: Y U NO WORK?
                                                     //subGroupButton.Command += new CommandEventHandler( MultipleSubGroup_Click );
@@ -1429,7 +1428,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                                     subGroupControls.AddAt( 0, subGroupButton );
                                                 }
                                             }
-                                            
+
                                             using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
                                             {
                                                 btnGroupAssignment.Controls.Add( literalControl );
@@ -1462,8 +1461,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         }
                                         btnGroupAssignment.Enabled = false;
                                     }
-
-
                                 }
                             }
 
@@ -1558,7 +1555,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
             }
-            
+
             if ( e.CommandName == "ChangeSubGroup" )
             {
                 var subGroupMemberId = 0;
@@ -2139,7 +2136,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 else
                 {
                     btnSendPaymentReminder.Visible = false;
-                }                                         
+                }
 
                 BuildRegistrationGroupHierarchy( rockContext, instance );
                 AddDynamicControls( instance );
@@ -2386,7 +2383,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             liAssociatedGroup.AddCssClass( "active" );
                         }
                     }
-                }   
+                }
             }
 
             BindResourcePanels();
@@ -3735,7 +3732,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 var groupTypeService = new GroupTypeService( rockContext );
                 var parentArea = groupTypeService.Get( parentRow.GroupTypeGuid );
-                if ( parentArea != null  )
+                if ( parentArea != null )
                 {
                     var checkinGroup = parentArea.Groups.FirstOrDefault( g => g.ParentGroupId == RegistrationInstanceGroupId );
                     if ( checkinGroup == null )
@@ -4069,7 +4066,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var templateGroupType = new GroupTypeService( rockContext ).Get( (int)TemplateGroupTypeId );
 
                 // make sure child groups can be created
-                if ( !templateGroupType.ChildGroupTypes.Contains( templateGroupType ))
+                if ( !templateGroupType.ChildGroupTypes.Contains( templateGroupType ) )
                 {
                     templateGroupType.ChildGroupTypes.Add( templateGroupType );
                 }
@@ -4755,7 +4752,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             var tabName = groupType.Name;
             if ( instance != null )
-            {   
+            {
                 // get the group placeholder for this grouptype
                 if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
                 {
@@ -4990,7 +4987,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
                     }
                 }
-            } 
+            }
         }
 
         /// <summary>
@@ -5162,7 +5159,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             return newGroup;
         }
-                                
+
         /// <summary>
         /// Creates the registration instance attribute.
         /// </summary>
