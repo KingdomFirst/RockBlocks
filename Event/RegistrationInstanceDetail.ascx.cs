@@ -684,7 +684,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                         if ( groupMember.GroupId > 0 )
                         {
-                            hfSubGroupId.Value = groupMember.Id.ToString();
+                            hfSubGroupId.Value = groupMember.GroupId.ToString();
                         }
                     }
 
