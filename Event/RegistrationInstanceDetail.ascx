@@ -527,9 +527,7 @@
             var $li = $(this).closest('li');
             if ($(this).hasClass('checkin-area')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
-            } else {
-                __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
-            }
+            } 
         });
     });
 </script>
