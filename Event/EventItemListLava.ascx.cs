@@ -1,26 +1,15 @@
-// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
+// KFS Event Item List
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Runtime.Caching;
+using System.Web;
 using System.Web.UI;
-
+using System.Web.UI.WebControls;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -29,10 +18,6 @@ using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
-using System.Linq.Expressions;
-using System.Web;
-using System.Web.UI.WebControls;
-using System.Runtime.Caching;
 
 namespace RockWeb.Blocks.Event
 {
@@ -42,19 +27,15 @@ namespace RockWeb.Blocks.Event
     [DisplayName( "KFS Calendar Item List Lava" )]
     [Category( "KFS > Event" )]
     [Description( "Renders calendar items using Lava and pulls audience." )]
-
     [EventCalendarField( "Event Calendar", "The event calendar to be displayed", true, "1", order: 0 )]
-    [CampusesField( "Campuses", "List of which campuses to show occurrences for. This setting will be ignored in the 'Use Campus Context' is enabled.", required: false, order: 1, includeInactive:true )]
+    [CampusesField( "Campuses", "List of which campuses to show occurrences for. This setting will be ignored in the 'Use Campus Context' is enabled.", required: false, order: 1, includeInactive: true )]
     [BooleanField( "Use Campus Context", "Determine if the campus should be read from the campus context of the page.", order: 2 )]
     [LinkedPage( "Details Page", "Detail page for events", order: 3 )]
     [SlidingDateRangeField( "Date Range", "Optional date range to filter the items on. (defaults to next 1000 days)", false, order: 4 )]
     [IntegerField( "Max Occurrences", "The maximum number of occurrences to show.", false, 100, order: 5 )]
-
     [CodeEditorField( "Lava Template", "The lava template to use for the results", CodeEditorMode.Lava, CodeEditorTheme.Rock, defaultValue: "{% include '~~/Assets/Lava/EventItemList.lava' %}", order: 6 )]
     [BooleanField( "Enable Debug", "Show the lava merge fields.", order: 7 )]
-
-    [ContentChannelField("Channel for Lava", "If set lava will generate objects for each item in the selected Content Channel", false, "", "", 1)]
-
+    [ContentChannelField( "Channel for Lava", "If set lava will generate objects for each item in the selected Content Channel", false, "", "", 1 )]
     public partial class EventItemListLava : RockBlock
     {
         #region Fields
@@ -139,7 +120,7 @@ namespace RockWeb.Blocks.Event
             {
                 lMessages.Text = string.Empty;
             }
-            
+
             var eventItemOccurrenceService = new EventItemOccurrenceService( rockContext );
 
             // Grab events
@@ -166,7 +147,7 @@ namespace RockWeb.Blocks.Event
                 var campusGuidList = GetAttributeValue( "Campuses" ).Split( ',' ).AsGuidList();
                 if ( campusGuidList.Any() )
                 {
-                    qry = qry.Where( e => !e.CampusId.HasValue ||  campusGuidList.Contains( e.Campus.Guid ) );
+                    qry = qry.Where( e => !e.CampusId.HasValue || campusGuidList.Contains( e.Campus.Guid ) );
                 }
             }
 
@@ -179,7 +160,7 @@ namespace RockWeb.Blocks.Event
                 dateRange.End = dateRange.Start.Value.AddDays( 1000 );
             }
 
-            // Get the occurrences 
+            // Get the occurrences
             var occurrences = qry.ToList();
             var occurrencesWithDates = occurrences
                 .Select( o => new EventOccurrenceDate
@@ -236,174 +217,169 @@ namespace RockWeb.Blocks.Event
             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
             mergeFields.Add( "DetailsPage", LinkedPageUrl( "DetailsPage", null ) );
             mergeFields.Add( "EventOccurrenceSummaries", eventOccurrenceSummaries );
-            
+
             //KFS Custom code to link Channels together
-            var items = GetCacheItem(CONTENT_CACHE_KEY) as List<ContentChannelItem>;
+            var items = GetCacheItem( CONTENT_CACHE_KEY ) as List<ContentChannelItem>;
             var errorMessages = new List<string>();
 
-            Guid? channelGuid = GetAttributeValue("ChannelforLava").AsGuidOrNull();
-            if (channelGuid.HasValue)
+            Guid? channelGuid = GetAttributeValue( "ChannelforLava" ).AsGuidOrNull();
+            if ( channelGuid.HasValue )
             {
                 //var rockContext = new RockContext();
-                var service = new ContentChannelItemService(rockContext);
-                var itemType = typeof(Rock.Model.ContentChannelItem);
+                var service = new ContentChannelItemService( rockContext );
+                var itemType = typeof( Rock.Model.ContentChannelItem );
 
                 ParameterExpression paramExpression = service.ParameterExpression;
 
-                var contentChannel = new ContentChannelService(rockContext).Get(channelGuid.Value);
+                var contentChannel = new ContentChannelService( rockContext ).Get( channelGuid.Value );
 
-                if (contentChannel != null)
+                if ( contentChannel != null )
                 {
-                    var entityFields = HackEntityFields(contentChannel, rockContext);
+                    var entityFields = HackEntityFields( contentChannel, rockContext );
 
-                    if (items == null)
+                    if ( items == null )
                     {
                         items = new List<ContentChannelItem>();
 
-                        var qryChannel = service.Queryable("ContentChannel,ContentChannelType");
+                        var qryChannel = service.Queryable( "ContentChannel,ContentChannelType" );
 
-                        int? itemId = PageParameter("Item").AsIntegerOrNull();
+                        int? itemId = PageParameter( "Item" ).AsIntegerOrNull();
                         {
-                            qryChannel = qryChannel.Where(i => i.ContentChannelId == contentChannel.Id);
+                            qryChannel = qryChannel.Where( i => i.ContentChannelId == contentChannel.Id );
 
-                            if (contentChannel.RequiresApproval)
+                            if ( contentChannel.RequiresApproval )
                             {
                                 // Check for the configured status and limit query to those
                                 var statuses = new List<ContentChannelItemStatus>();
 
-                                foreach (string statusVal in (GetAttributeValue("Status") ?? "2").Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                                foreach ( string statusVal in ( GetAttributeValue( "Status" ) ?? "2" ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ) )
                                 {
                                     var status = statusVal.ConvertToEnumOrNull<ContentChannelItemStatus>();
-                                    if (status != null)
+                                    if ( status != null )
                                     {
-                                        statuses.Add(status.Value);
+                                        statuses.Add( status.Value );
                                     }
                                 }
-                                if (statuses.Any())
+                                if ( statuses.Any() )
                                 {
-                                    qryChannel = qryChannel.Where(i => statuses.Contains(i.Status));
+                                    qryChannel = qryChannel.Where( i => statuses.Contains( i.Status ) );
                                 }
                             }
 
-                            int? dataFilterId = GetAttributeValue("FilterId").AsIntegerOrNull();
-                            if (dataFilterId.HasValue)
+                            int? dataFilterId = GetAttributeValue( "FilterId" ).AsIntegerOrNull();
+                            if ( dataFilterId.HasValue )
                             {
-                                var dataFilterService = new DataViewFilterService(rockContext);
-                                var dataFilter = dataFilterService.Queryable("ChildFilters").FirstOrDefault(a => a.Id == dataFilterId.Value);
-                                Expression whereExpression = dataFilter != null ? dataFilter.GetExpression(itemType, service, paramExpression, errorMessages) : null;
+                                var dataFilterService = new DataViewFilterService( rockContext );
+                                var dataFilter = dataFilterService.Queryable( "ChildFilters" ).FirstOrDefault( a => a.Id == dataFilterId.Value );
+                                Expression whereExpression = dataFilter != null ? dataFilter.GetExpression( itemType, service, paramExpression, errorMessages ) : null;
 
-                                qryChannel = qryChannel.Where(paramExpression, whereExpression, null);
+                                qryChannel = qryChannel.Where( paramExpression, whereExpression, null );
                             }
                         }
 
                         // All filtering has been added, now run query and load attributes
-                        foreach (var item in qryChannel.ToList())
+                        foreach ( var item in qryChannel.ToList() )
                         {
-                            item.LoadAttributes(rockContext);
-                            items.Add(item);
+                            item.LoadAttributes( rockContext );
+                            items.Add( item );
                         }
 
                         // Order the items
                         SortProperty sortProperty = null;
 
-                        string orderBy = GetAttributeValue("Order");
-                        if (!string.IsNullOrWhiteSpace(orderBy))
+                        string orderBy = GetAttributeValue( "Order" );
+                        if ( !string.IsNullOrWhiteSpace( orderBy ) )
                         {
                             var fieldDirection = new List<string>();
-                            foreach (var itemPair in orderBy.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Select(a => a.Split('^')))
+                            foreach ( var itemPair in orderBy.Split( new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries ).Select( a => a.Split( '^' ) ) )
                             {
-                                if (itemPair.Length == 2 && !string.IsNullOrWhiteSpace(itemPair[0]))
+                                if ( itemPair.Length == 2 && !string.IsNullOrWhiteSpace( itemPair[0] ) )
                                 {
                                     var sortDirection = SortDirection.Ascending;
-                                    if (!string.IsNullOrWhiteSpace(itemPair[1]))
+                                    if ( !string.IsNullOrWhiteSpace( itemPair[1] ) )
                                     {
-                                        sortDirection = itemPair[1].ConvertToEnum<SortDirection>(SortDirection.Ascending);
+                                        sortDirection = itemPair[1].ConvertToEnum<SortDirection>( SortDirection.Ascending );
                                     }
-                                    fieldDirection.Add(itemPair[0] + (sortDirection == SortDirection.Descending ? " desc" : ""));
+                                    fieldDirection.Add( itemPair[0] + ( sortDirection == SortDirection.Descending ? " desc" : "" ) );
                                 }
                             }
 
                             sortProperty = new SortProperty();
                             sortProperty.Direction = SortDirection.Ascending;
-                            sortProperty.Property = fieldDirection.AsDelimited(",");
+                            sortProperty.Property = fieldDirection.AsDelimited( "," );
 
-                            string[] columns = sortProperty.Property.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                            string[] columns = sortProperty.Property.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
 
                             var itemQry = items.AsQueryable();
                             IOrderedQueryable<ContentChannelItem> orderedQry = null;
 
-                            for (int columnIndex = 0; columnIndex < columns.Length; columnIndex++)
+                            for ( int columnIndex = 0; columnIndex < columns.Length; columnIndex++ )
                             {
                                 string column = columns[columnIndex].Trim();
 
                                 var direction = sortProperty.Direction;
-                                if (column.ToLower().EndsWith(" desc"))
+                                if ( column.ToLower().EndsWith( " desc" ) )
                                 {
-                                    column = column.Left(column.Length - 5);
+                                    column = column.Left( column.Length - 5 );
                                     direction = sortProperty.Direction == SortDirection.Ascending ? SortDirection.Descending : SortDirection.Ascending;
                                 }
 
                                 try
                                 {
-                                    if (column.StartsWith("Attribute:"))
+                                    if ( column.StartsWith( "Attribute:" ) )
                                     {
-                                        string attributeKey = column.Substring(10);
+                                        string attributeKey = column.Substring( 10 );
 
-                                        if (direction == SortDirection.Ascending)
+                                        if ( direction == SortDirection.Ascending )
                                         {
-                                            orderedQry = (columnIndex == 0) ?
-                                                itemQry.OrderBy(i => i.AttributeValues.Where(v => v.Key == attributeKey).FirstOrDefault().Value.SortValue) :
-                                                orderedQry.ThenBy(i => i.AttributeValues.Where(v => v.Key == attributeKey).FirstOrDefault().Value.SortValue);
+                                            orderedQry = ( columnIndex == 0 ) ?
+                                                itemQry.OrderBy( i => i.AttributeValues.Where( v => v.Key == attributeKey ).FirstOrDefault().Value.SortValue ) :
+                                                orderedQry.ThenBy( i => i.AttributeValues.Where( v => v.Key == attributeKey ).FirstOrDefault().Value.SortValue );
                                         }
                                         else
                                         {
-                                            orderedQry = (columnIndex == 0) ?
-                                                itemQry.OrderByDescending(i => i.AttributeValues.Where(v => v.Key == attributeKey).FirstOrDefault().Value.SortValue) :
-                                                orderedQry.ThenByDescending(i => i.AttributeValues.Where(v => v.Key == attributeKey).FirstOrDefault().Value.SortValue);
+                                            orderedQry = ( columnIndex == 0 ) ?
+                                                itemQry.OrderByDescending( i => i.AttributeValues.Where( v => v.Key == attributeKey ).FirstOrDefault().Value.SortValue ) :
+                                                orderedQry.ThenByDescending( i => i.AttributeValues.Where( v => v.Key == attributeKey ).FirstOrDefault().Value.SortValue );
                                         }
                                     }
                                     else
                                     {
-                                        if (direction == SortDirection.Ascending)
+                                        if ( direction == SortDirection.Ascending )
                                         {
-                                            orderedQry = (columnIndex == 0) ? itemQry.OrderBy(column) : orderedQry.ThenBy(column);
+                                            orderedQry = ( columnIndex == 0 ) ? itemQry.OrderBy( column ) : orderedQry.ThenBy( column );
                                         }
                                         else
                                         {
-                                            orderedQry = (columnIndex == 0) ? itemQry.OrderByDescending(column) : orderedQry.ThenByDescending(column);
+                                            orderedQry = ( columnIndex == 0 ) ? itemQry.OrderByDescending( column ) : orderedQry.ThenByDescending( column );
                                         }
                                     }
                                 }
                                 catch { }
-
                             }
 
                             try
                             {
-                                if (orderedQry != null)
+                                if ( orderedQry != null )
                                 {
                                     items = orderedQry.ToList();
                                 }
                             }
                             catch { }
-
                         }
 
-                        int? cacheDuration = GetAttributeValue("CacheDuration").AsInteger();
-                        if (cacheDuration > 0)
+                        int? cacheDuration = GetAttributeValue( "CacheDuration" ).AsInteger();
+                        if ( cacheDuration > 0 )
                         {
-                            var cacheItemPolicy = new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.Now.AddSeconds(cacheDuration.Value) };
-                            AddCacheItem(CONTENT_CACHE_KEY, items, cacheItemPolicy);
+                            var cacheItemPolicy = new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.Now.AddSeconds( cacheDuration.Value ) };
+                            AddCacheItem( CONTENT_CACHE_KEY, items, cacheItemPolicy );
                         }
                     }
-
-
                 }
 
-
-                if (items != null)
+                if ( items != null )
                 {
-                    mergeFields.Add("ContentChannelItems", items);
+                    mergeFields.Add( "ContentChannelItems", items );
                 }
             }
 
@@ -423,46 +399,46 @@ namespace RockWeb.Blocks.Event
         }
 
         /// <summary>
-        /// The PropertyFilter checks for it's property/attribute list in a cached items object before recreating 
+        /// The PropertyFilter checks for it's property/attribute list in a cached items object before recreating
         /// them using reflection and loading of generic attributes. Because of this, we're going to load them here
         /// and exclude some properties and add additional attributes specific to the channel type, and then save
         /// list to same cached object so that property filter lists our collection of properties/attributes
         /// instead.
         /// </summary>
-        private List<Rock.Reporting.EntityField> HackEntityFields(ContentChannel channel, RockContext rockContext)
+        private List<Rock.Reporting.EntityField> HackEntityFields( ContentChannel channel, RockContext rockContext )
         {
-            if (channel != null)
+            if ( channel != null )
             {
-                var entityTypeCache = EntityTypeCache.Read(ITEM_TYPE_NAME);
-                if (entityTypeCache != null)
+                var entityTypeCache = EntityTypeCache.Read( ITEM_TYPE_NAME );
+                if ( entityTypeCache != null )
                 {
                     var entityType = entityTypeCache.GetEntityType();
 
-                    HttpContext.Current.Items.Remove(string.Format("EntityHelper:GetEntityFields:{0}", entityType.FullName));
-                    var entityFields = Rock.Reporting.EntityHelper.GetEntityFields(entityType);
-                    foreach (var entityField in entityFields
-                        .Where(f =>
-                           f.FieldKind == Rock.Reporting.FieldKind.Attribute &&
-                           f.AttributeGuid.HasValue)
-                        .ToList())
+                    HttpContext.Current.Items.Remove( string.Format( "EntityHelper:GetEntityFields:{0}", entityType.FullName ) );
+                    var entityFields = Rock.Reporting.EntityHelper.GetEntityFields( entityType );
+                    foreach ( var entityField in entityFields
+                        .Where( f =>
+                            f.FieldKind == Rock.Reporting.FieldKind.Attribute &&
+                            f.AttributeGuid.HasValue )
+                        .ToList() )
                     {
-                        var attribute = AttributeCache.Read(entityField.AttributeGuid.Value);
-                        if (attribute != null &&
+                        var attribute = AttributeCache.Read( entityField.AttributeGuid.Value );
+                        if ( attribute != null &&
                             attribute.EntityTypeQualifierColumn == "ContentChannelTypeId" &&
-                            attribute.EntityTypeQualifierValue.AsInteger() != channel.ContentChannelTypeId)
+                            attribute.EntityTypeQualifierValue.AsInteger() != channel.ContentChannelTypeId )
                         {
-                            entityFields.Remove(entityField);
+                            entityFields.Remove( entityField );
                         }
                     }
 
-                    if (entityFields != null)
+                    if ( entityFields != null )
                     {
                         // Remove the status field
                         var ignoreFields = new List<string>();
-                        ignoreFields.Add("ContentChannelId");
-                        ignoreFields.Add("Status");
+                        ignoreFields.Add( "ContentChannelId" );
+                        ignoreFields.Add( "Status" );
 
-                        entityFields = entityFields.Where(f => !ignoreFields.Contains(f.Name)).ToList();
+                        entityFields = entityFields.Where( f => !ignoreFields.Contains( f.Name ) ).ToList();
 
                         // Add any additional attributes that are specific to channel/type
                         var item = new ContentChannelItem();
@@ -470,31 +446,31 @@ namespace RockWeb.Blocks.Event
                         item.ContentChannelId = channel.Id;
                         item.ContentChannelType = channel.ContentChannelType;
                         item.ContentChannelTypeId = channel.ContentChannelTypeId;
-                        item.LoadAttributes(rockContext);
-                        foreach (var attribute in item.Attributes
-                            .Where(a =>
-                               a.Value.EntityTypeQualifierColumn != "" &&
-                               a.Value.EntityTypeQualifierValue != "")
-                            .Select(a => a.Value))
+                        item.LoadAttributes( rockContext );
+                        foreach ( var attribute in item.Attributes
+                            .Where( a =>
+                                a.Value.EntityTypeQualifierColumn != "" &&
+                                a.Value.EntityTypeQualifierValue != "" )
+                            .Select( a => a.Value ) )
                         {
-                            if (!entityFields.Any(f => f.AttributeGuid.Equals(attribute.Guid)))
+                            if ( !entityFields.Any( f => f.AttributeGuid.Equals( attribute.Guid ) ) )
                             {
-                                Rock.Reporting.EntityHelper.AddEntityFieldForAttribute(entityFields, attribute);
+                                Rock.Reporting.EntityHelper.AddEntityFieldForAttribute( entityFields, attribute );
                             }
                         }
 
                         // Re-sort fields
                         int index = 0;
                         var sortedFields = new List<Rock.Reporting.EntityField>();
-                        foreach (var entityProperty in entityFields.OrderBy(p => p.Title).ThenBy(p => p.Name))
+                        foreach ( var entityProperty in entityFields.OrderBy( p => p.Title ).ThenBy( p => p.Name ) )
                         {
                             entityProperty.Index = index;
                             index++;
-                            sortedFields.Add(entityProperty);
+                            sortedFields.Add( entityProperty );
                         }
 
                         // Save new fields to cache ( which report field will use instead of reading them again )
-                        HttpContext.Current.Items[string.Format("EntityHelper:GetEntityFields:{0}", entityType.FullName)] = sortedFields;
+                        HttpContext.Current.Items[string.Format( "EntityHelper:GetEntityFields:{0}", entityType.FullName )] = sortedFields;
                     }
 
                     return entityFields;

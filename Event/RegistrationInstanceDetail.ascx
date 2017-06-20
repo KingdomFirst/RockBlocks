@@ -1,10 +1,57 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationInstanceDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.KFSRegistrationInstanceDetail" %>
-<%@ Reference Control="~/Plugins/com_kfs/Event/GroupPanel.ascx"  %>
+<%@ Reference Control="~/Plugins/com_kfs/Event/GroupPanel.ascx" %>
 <script type="text/javascript">
     Sys.Application.add_load(function () {
         $('.js-follow-status').tooltip();
     });
 </script>
+
+<style>
+    .checkin-item {
+        padding: 12px;
+        border: 1px solid #d8d1c8;
+        cursor: pointer;
+        margin-bottom: 6px;
+        border-top-width: 3px;
+    }
+
+    .checkin-item-selected {
+        background-color: #d8d1c8;
+    }
+
+    .checkin-list {
+        list-style-type: none;
+        padding-left: 40px;
+    }
+
+    .checkin-list-first {
+        padding-left: 0;
+    }
+
+    .checkin-item .fa-bars {
+        opacity: .5;
+        margin-right: 6px;
+    }
+
+    .checkin-group {
+        border-top-color: #afd074;
+    }
+
+    .checkin-area {
+        border-top-color: #5593a4;
+    }
+
+    .checkin-area .checkin-area-add-area,
+    .checkin-area .btn-danger,
+    .js-area-group-details h3,
+    label[for$='ddlPrintTo'],
+    select[id$='ddlPrintTo'],
+    label[for$='ddlAttendanceRule'],
+    select[id$='ddlAttendanceRule']
+    {
+        display: none;
+    }
+</style>
 
 <asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
@@ -58,6 +105,8 @@
 
             <div class="panel panel-block">
 
+                <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+
                 <div class="panel-heading panel-follow clearfix">
                     <h1 class="panel-title"><i class="fa fa-file-o"></i>
                         <asp:Literal ID="lReadOnlyTitle" runat="server" /></h1>
@@ -69,27 +118,40 @@
                 </div>
                 <div class="panel-body">
 
-                    <asp:ValidationSummary ID="vsDetails" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
-
                     <div id="pnlEditDetails" runat="server">
-                        <div id="pnlSubGroups" runat="server" class="form-group">
-                                <label class="control-label" for="pnlAssociatedGroupTypes">ADDITIONAL GROUPINGS</label>
-                                <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well">
-                                    <div class="grid">
-                                        <Rock:Grid ID="gAssociatedParentGroups" runat="server" AllowPaging="false" DisplayType="Light" RowItemText="Member Attribute" ShowConfirmDeleteDialog="false">
-                                            <Columns>
-                                                <Rock:ReorderField />
-                                                <Rock:RockBoundField DataField="Name" HeaderText="Name" />
-                                                <Rock:RockBoundField DataField="Description" HeaderText="Description" />
-                                                <%--<Rock:BoolField DataField="ShowOnGrid" HeaderText="Show On Grid" />--%>
-                                                <%--<Rock:EditField OnClick="gGroupMemberAttributes_Edit" />
-                                                <Rock:DeleteField OnClick="gGroupMemberAttributes_Delete" />--%>
-                                            </Columns>
-                                        </Rock:Grid>
-                            </div>
-                                </asp:Panel>
-                        </div>
+
                         <Rock:RegistrationInstanceEditor ID="rieDetails" runat="server" />
+
+                        <div id="pnlSubGroups" runat="server" class="form-group">
+                            <label class="control-label" for="pnlAssociatedGroupTypes">Registration Resources</label>
+                            <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well">
+                                <div class="row">
+                                    <asp:HiddenField runat="server" ID="hfAreaGroupClicked" />
+                                    <Rock:NotificationBox ID="nbDeleteWarning" runat="server" NotificationBoxType="Warning" />
+
+                                    <div class="col-md-6">
+                                        <ul class="checkin-list checkin-list-first js-checkin-area-list">
+                                            <asp:PlaceHolder ID="phRows" runat="server" />
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6 js-area-group-details">
+
+                                        <asp:HiddenField ID="hfIsDirty" runat="server" Value="false" />
+                                        <Rock:CheckinArea ID="resourceAreaPanel" runat="server" Visible="false" />
+                                        <Rock:CheckinGroup ID="resourceGroupPanel" runat="server" Visible="false" />
+
+                                        <div class="actions">
+                                            <asp:LinkButton ID="btnResourceSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnResourceSave_Click" Visible="false" />
+                                        </div>
+
+                                        <div class="margin-t-md">
+                                            <Rock:NotificationBox ID="nbInvalid" runat="server" NotificationBoxType="Danger" Visible="false" />
+                                            <Rock:NotificationBox ID="nbSaveSuccess" runat="server" NotificationBoxType="Success" Text="Changes have been saved." Visible="false" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </asp:Panel>
+                        </div>
 
                         <div class="actions">
                             <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
@@ -218,7 +280,7 @@
                                 <Rock:DateRangePicker ID="drpRegistrantDateRange" runat="server" Label="Date Range" />
                                 <Rock:RockTextBox ID="tbRegistrantFirstName" runat="server" Label="First Name" />
                                 <Rock:RockTextBox ID="tbRegistrantLastName" runat="server" Label="Last Name" />
-                                <Rock:RockDropDownList ID="ddlInGroup" runat="server" Label="In Group"  />    
+                                <Rock:RockDropDownList ID="ddlInGroup" runat="server" Label="In Group" />
                                 <Rock:RockDropDownList ID="ddlSignedDocument" runat="server" Label="Signed Document" />
                                 <asp:PlaceHolder ID="phRegistrantFormFieldFilters" runat="server" />
                             </Rock:GridFilter>
@@ -362,14 +424,15 @@
                             </Columns>
                         </Rock:Grid>
                         <div class="actions">
-                            <asp:LinkButton ID="lbPlaceInGroup" runat="server" OnClick="lbPlaceInGroup_Click" Text="Place" CssClass="btn btn-primary" />
+                            <asp:LinkButton ID="lbGroupPlace" runat="server" OnClick="lbGroupPlace_Click" Text="Place" CssClass="btn btn-primary" />
                         </div>
                     </div>
                 </asp:Panel>
                 <asp:HiddenField ID="hfActiveTabParentGroup" runat="server" />
                 <asp:HiddenField ID="hfEditGroup" runat="server" />
                 <Rock:HiddenFieldWithClass ID="hfExpandedGroups" runat="server" CssClass="hf-expanded-groups" />
-                <asp:Repeater ID="rpGroupPanels" runat="server">
+
+                <asp:Repeater ID="rpResourcePanels" runat="server">
                     <ItemTemplate>
                         <asp:Panel ID="pnlAssociatedGroup" runat="server" Visible="false" CssClass="panel panel-block">
                             <asp:Panel ID="pnlGroupHeading" runat="server" CssClass="panel-heading">
@@ -381,30 +444,38 @@
                                 </div>
                             </asp:Panel>
                             <asp:Panel ID="pnlGroupBody" runat="server" CssClass="panel-body">
-                                <a ID="lbAddSubGroup" runat="server" Class="btn btn-action btn-xs">
+                                <a id="lbAddSubGroup" runat="server" class="btn btn-action btn-xs">
                                     <i class="fa fa-plus-circle"></i>
                                 </a>
-                                <br /><br />
+                                <br />
+                                <br />
                                 <asp:HiddenField ID="hfParentGroupId" runat="server" />
                                 <asp:PlaceHolder ID="phGroupControl" runat="server"></asp:PlaceHolder>
                             </asp:Panel>
                         </asp:Panel>
                     </ItemTemplate>
                 </asp:Repeater>
-                <Rock:ModalDialog ID="mdlAddSubGroupMember" runat="server" OnSaveClick="mdlAddSubGroupMember_SaveClick" ValidationGroup="vgAddGroupMemmber" >
+                
+                <div hidden>
+                    <asp:LinkButton ID="btnMultipleRegistrations" runat="server" Text="Postback" />
+                </div>
+
+                <Rock:ModalDialog ID="mdlAddSubGroupMember" runat="server" OnSaveClick="mdlAddSubGroupMember_SaveClick" ValidationGroup="vgAddGroupMember">
                     <Content>
                         <asp:HiddenField ID="hfSubGroupId" runat="server" />
                         <asp:HiddenField ID="hfSubGroupMemberId" runat="server" />
-                        <asp:ValidationSummary ID="vsSubGroupMember" runat="server" ValidationGroup="vgAddGroupMemmber" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+                        <Rock:NotificationBox ID="nbErrorMessage" runat="server" NotificationBoxType="Danger" />
+                        <asp:ValidationSummary ID="vsSubGroupMember" runat="server" ValidationGroup="vgAddGroupMember" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
                         <fieldset>
                             <div class="col-md-6">
-                                <Rock:RockDropDownList ID="ddlRegistrantList" runat="server" Label="Registrant" Required="true" ValidationGroup="vgAddGroupMemmber" />
-                                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMemmber" />
+                                <Rock:RockDropDownList ID="ddlRegistrantList" runat="server" Label="Registrant" Required="true" ValidationGroup="vgAddGroupMember" />
+                                <%--<Rock:PersonPicker ID="ppSubGroupMember" runat="server" Label="Registrant" Visible="false" ValidationGroup="vgAddGroupMember" />--%>
+                                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMember" />
                             </div>
                             <div class="col-md-6">
-                                <Rock:RockDropDownList ID="ddlSubGroup" runat="server" ValidationGroup="vgAddGroupMemmber" Visible="false" />
-                                <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMemmber" />
-                                <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMemmber"/>
+                                <Rock:RockDropDownList ID="ddlSubGroup" runat="server" ValidationGroup="vgAddGroupMember" Visible="false" />
+                                <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMember" />
+                                <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMember" />
                             </div>
                             <div class="col-md-12">
                                 <asp:PlaceHolder ID="phAttributes" runat="server" EnableViewState="false"></asp:PlaceHolder>
@@ -417,3 +488,46 @@
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>
+
+<script>
+
+    /* This function is called after post back to animate scroll to the proper element
+        * if the user just clicked an area/group.
+    */
+    var AfterPostBack = function () {
+        // Detect if the two panels are side by side or in one column by finding the delta between the two.
+        // If the offset is more than 58-80 then scroll to the js-area-group-details instead.
+        if ($('#<%=hfAreaGroupClicked.ClientID %>').val() == "true" && $('.js-area-group-details').length && $('.js-panel-details').length) {
+            $('#<%=hfAreaGroupClicked.ClientID %>').val("false");
+            var panelDelta = $('.js-area-group-details').offset().top - $('.js-panel-details').offset().top;
+            var scrollToPanel = ".js-panel-details";
+            if (panelDelta > 80) {
+                scrollToPanel = ".js-area-group-details";
+            }
+
+            $('html, body').animate({
+                scrollTop: $(scrollToPanel).offset().top + 'px'
+                }, 400
+            );
+        }
+    }
+
+    Sys.WebForms.PageRequestManager.getInstance().add_endRequest(AfterPostBack);
+
+    Sys.Application.add_load(function () {
+
+        var fixHelper = function (e, ui) {
+            ui.children().each(function () {
+                $(this).width($(this).width());
+            });
+            return ui;
+        };
+
+        $('section.checkin-item').click(function () {
+            var $li = $(this).closest('li');
+            if ($(this).hasClass('checkin-area')) {
+                __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
+            } 
+        });
+    });
+</script>

@@ -1,22 +1,13 @@
-﻿using System;
+﻿// KFS Group Panel
+
+using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
-using System.Web;
-using System.Web.UI;
-using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
-
-using Newtonsoft.Json;
 using Rock;
-using Rock.Attribute;
-using Rock.Constants;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
-using Rock.Web;
-using Rock.Web.Cache;
-using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Event
@@ -84,7 +75,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMembers.Columns.Add( editField );
             editField.Click += Actions_EditClick;
 
-
             // Add delete column
             var deleteField = new DeleteField();
             gGroupMembers.Columns.Add( deleteField );
@@ -94,7 +84,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMembers.DataBind();
         }
 
-        public void RefreshMemberGrid( )
+        public void RefreshMemberGrid()
         {
             RockContext rockContext = new RockContext();
             GroupMemberService groupMemberService = new GroupMemberService( rockContext );

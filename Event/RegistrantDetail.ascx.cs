@@ -1,41 +1,20 @@
-﻿// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
+﻿// KFS Registrant Detail
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
-using System.Text;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 using Newtonsoft.Json;
 using Rock;
-using Rock.Attribute;
-using Rock.Constants;
 using Rock.Data;
-using Rock.Financial;
 using Rock.Model;
-using Rock.Security;
-using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
-using Attribute = Rock.Model.Attribute;
 
 namespace RockWeb.Plugins.com_kfs.Event
 {
@@ -45,10 +24,8 @@ namespace RockWeb.Plugins.com_kfs.Event
     [DisplayName( "Registrant Detail" )]
     [Category( "Event" )]
     [Description( "Displays interface for editing the registration attribute values and fees for a given registrant." )]
-
     public partial class RegistrantDetail : RockBlock
     {
-
         #region Properties
 
         private RegistrationTemplate TemplateState { get; set; }
@@ -201,7 +178,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     return;
                 }
 
-                // Remove/delete any registrant fees that are no longer in UI with quantity 
+                // Remove/delete any registrant fees that are no longer in UI with quantity
                 foreach ( var dbFee in registrant.Fees.ToList() )
                 {
                     if ( !RegistrantState.FeeValues.Keys.Contains( dbFee.RegistrationTemplateFeeId ) ||
@@ -323,7 +300,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( !registrant.IsValid )
                 {
-                    // Controls will render the error messages                    
+                    // Controls will render the error messages
                     return;
                 }
 
@@ -433,7 +410,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     "Registrant: " + registrantName,
                     null, null );
             }
-            
+
             NavigateToRegistration();
         }
 
@@ -451,8 +428,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             var qryParams = new Dictionary<string, string>();
             var pageCache = PageCache.Read( RockPage.PageId );
-            if ( pageCache != null && 
-                pageCache.ParentPage != null && 
+            if ( pageCache != null &&
+                pageCache.ParentPage != null &&
                 pageCache.ParentPage.ParentPage != null &&
                 pageCache.ParentPage.ParentPage.ParentPage != null )
             {
@@ -523,8 +500,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         registrant.Registration.RegistrationInstance.RegistrationTemplate != null )
                     {
                         RegistrantState = new RegistrantInfo( registrant, rockContext );
-                        TemplateState = registrant.Registration.RegistrationInstance.RegistrationTemplate; 
-                        
+                        TemplateState = registrant.Registration.RegistrationInstance.RegistrationTemplate;
+
                         RegistrationInstanceId = registrant.Registration.RegistrationInstanceId;
 
                         lWizardTemplateName.Text = registrant.Registration.RegistrationInstance.RegistrationTemplate.Name;
@@ -546,7 +523,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         registration.RegistrationInstance.RegistrationTemplate != null )
                     {
                         TemplateState = registration.RegistrationInstance.RegistrationTemplate;
-                        
+
                         RegistrationInstanceId = registration.RegistrationInstanceId;
 
                         lWizardTemplateName.Text = registration.RegistrationInstance.RegistrationTemplate.Name;
@@ -624,7 +601,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         private void NavigateToRegistration()
         {
-            if ( RegistrantState != null  )
+            if ( RegistrantState != null )
             {
                 var qryParams = new Dictionary<string, string>();
                 qryParams.Add( "RegistrationId", RegistrantState.RegistrationId.ToString() );
@@ -818,7 +795,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         #region Parse Controls
 
-        private void ParseControls ()
+        private void ParseControls()
         {
             if ( RegistrantState != null && TemplateState != null )
             {
@@ -971,6 +948,5 @@ namespace RockWeb.Plugins.com_kfs.Event
         #endregion
 
         #endregion
-
     }
 }
