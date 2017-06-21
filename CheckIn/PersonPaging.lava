@@ -40,3 +40,29 @@ Template:
     "title": "{% assign title = item.Title %}{% if title == '' %}{% assign groupMembers = person | Groups: "10" %}{% for groupMember in groupMembers %}{% if forloop.first %}{{ groupMember.Group.Id }}{% endif %}{% endfor %}{% else %}{{ title }}{% endif %}"
   }{% unless forloop.last %},{% endunless %}
 {% endfor %} ]}
+
+
+
+
+
+
+
+
+Value:
+Paging Board - Family Id with Elevate
+
+Description:
+Feed to drive display board results with Family Id and Elevate to use Name
+
+MIME Type:
+application/json
+
+Template:
+
+{"paging": [ {% for item in Items %}{% assign person = item | Attribute:'Person','Object' %}{% assign elevated = item | Attribute:'Elevated' %}
+  {
+    "class": {% if elevated == 'Yes' %}"item elevated"{% else %}"item"{% endif %},
+    "title": "{% assign title = item.Title %}{% if title == '' %}{% assign groupMembers = person | Groups: "10" %}{% for groupMember in groupMembers %}{% if forloop.first %}{{ groupMember.Group.Id }}{% endif %}{% endfor %}{% else %}{{ title }}{% endif %}",
+    "name": "{% if elevated == 'Yes' %}<br />{{ person.NickName }}{% endif %}"
+  }{% unless forloop.last %},{% endunless %}
+{% endfor %} ]}

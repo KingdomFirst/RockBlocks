@@ -54,11 +54,11 @@
 
     function getAlertsJson() {
         var channelId = 6;
-        var templateId = 684;
+        var templateId = 686;
         var itemList = "";
         $.getJSON("/GetChannelFeed.ashx?ChannelId=" + channelId + "&TemplateId=" + templateId, function (data) {
             jQuery(data.paging).each(function (i, item) {
-                itemList = itemList + "<div class=\"" + item.class + "\">" + item.title + "</div>";
+                itemList = itemList + "<div class=\"" + item.class + "\">" + item.title + "<span class=\"name\">" + item.name + "</span></div>";
             })
             $('#rotate').addClass("hidden");
             $("#rotate").html(itemList);
@@ -72,11 +72,24 @@
 </div>
 
 <style>
+    body {
+        background-color: black !important;
+        color: #d0d0d0;
+        font-family: 'Arial Rounded MT Bold', 'Arial Rounded MT';
+        font-weight: bold;
+    }
     #rotate {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 120px;
+        text-align: center;
+        line-height: .5;
+    }
+    .item {
+        font-size: 50vmin;
+    }
+    .name {
+        font-size: 15vmin;
     }
 </style>
