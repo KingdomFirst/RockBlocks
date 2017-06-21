@@ -1,69 +1,42 @@
-<div id="rotate" class="hidden">
-	{% for item in Items %}
-	{% assign person = item | Attribute:'Person','Object' %}
-	{% assign elevated = item | Attribute:'Elevated' %}
-	{% if elevated == 'Yes' %}
-	<div class="item elevated">
-	{% else %}
-	<div class="item">
-	{% endif %}
-		{% assign title = item.Title %}
-		{% if title == '' %}
-		<h1>{{ person.NickName }} {{ person.LastName }}</h1>
-		{% else %}
-		<h1>{{ title }}</h1>
-		{% endif %}
-	</div>
-	{% endfor %}
-</div>
+Value:
+Paging Board - Person Name
 
-<script>
-    (function ($) {
-        $.fn.extend({
-            rotaterator: function (options) {
+Description:
+Feed to drive display board results with Person Name
 
-                var defaults = {
-                    fadeSpeed: 500,
-                    pauseSpeed: 5000,
-                    child: null
-                };
+MIME Type:
+application/json
 
-                var options = $.extend(defaults, options);
+Template:
 
-                return this.each(function () {
-                    var o = options;
-                    var obj = $(this);
-                    var items = $(obj.children(), obj);
-                    var count = $(obj.children(), obj).length;
-                    if (count > 1) {
-                        items.each(function () { $(this).hide(); })
-                        if (!o.child) {
-                            var next = $(obj).children(':first');
-                        } else {
-                            var next = o.child;
-                        }
-                        $(next).fadeIn(o.fadeSpeed, function () {
-                            $(next).delay(o.pauseSpeed).fadeOut(o.fadeSpeed, function () {
-                                var next = $(this).next();
-                                if (next.length == 0) {
-                                    location.reload();
-                                }
-                                $(obj).rotaterator({ child: next, fadeSpeed: o.fadeSpeed, pauseSpeed: o.pauseSpeed });
-                            })
-                        });
-                    } else {
+{"paging": [ {% for item in Items %}{% assign person = item | Attribute:'Person','Object' %}
+  {
+    "class": {% assign elevated = item | Attribute:'Elevated' %}{% if elevated == 'Yes' %}"item elevated"{% else %}"item"{% endif %},
+    "title": "{% assign title = item.Title %}{% if title == '' %}{{ person.NickName }} {{ person.LastName }}{% else %}{{ title }}{% endif %}"
+  }{% unless forloop.last %},{% endunless %}
+{% endfor %} ]}
 
-                        setTimeout(function () {
-                            location.reload();
-                        }, o.pauseSpeed);
-                    }
-                });
-            }
-        });
-    })(jQuery);
 
-    $(document).ready(function () {
-        $('#rotate').rotaterator({ fadeSpeed: 500, pauseSpeed: 5000 });
-        $('#rotate').removeClass("hidden");
-    });
-</script>
+
+
+
+
+
+
+Value:
+Paging Board - Family Id
+
+Description:
+Feed to drive display board results with Family Id
+
+MIME Type:
+application/json
+
+Template:
+
+{"paging": [ {% for item in Items %}{% assign person = item | Attribute:'Person','Object' %}
+  {
+    "class": {% assign elevated = item | Attribute:'Elevated' %}{% if elevated == 'Yes' %}"item elevated"{% else %}"item"{% endif %},
+    "title": "{% assign title = item.Title %}{% if title == '' %}{% assign groupMembers = person | Groups: "10" %}{% for groupMember in groupMembers %}{% if forloop.first %}{{ groupMember.Group.Id }}{% endif %}{% endfor %}{% else %}{{ title }}{% endif %}"
+  }{% unless forloop.last %},{% endunless %}
+{% endfor %} ]}
