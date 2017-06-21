@@ -125,22 +125,19 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
 
             if ( !contentChannelItem.Attributes.ContainsKey( attributeKey ) )
             {
-                nbWarning.Text = "The selected Content Channel is not configured properly.";
+                nbWarning.Text = "The selected Content Channel is not configured with provided Attribute Key.";
                 nbWarning.Visible = true;
             }
             else
             {
                 var contentChannelItems = new ContentChannelItemService( rockContext ).Queryable().AsNoTracking().Where( i => i.ContentChannelId.Equals( contentChannel.Id ) ).ToList();
                 var exists = false;
-                if ( contentChannelItems.Any() )
+                foreach ( var item in contentChannelItems )
                 {
-                    foreach ( var item in contentChannelItems )
+                    item.LoadAttributes();
+                    if ( item.AttributeValues[attributeKey].Value.Equals( person.PrimaryAlias.Guid.ToString() ) )
                     {
-                        item.LoadAttributes();
-                        if ( item.AttributeValues[attributeKey].Value.Equals( person.PrimaryAlias.Guid.ToString() ) )
-                        {
-                            exists = true;
-                        }
+                        exists = true;
                     }
                 }
 
