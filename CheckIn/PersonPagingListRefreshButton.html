@@ -1,0 +1,17 @@
+<script>
+    function reloadPage() {
+        location.reload();
+    }
+
+    $(document).ready(function () {
+        setTimeout(function () {
+            reloadPage()
+        }, 10000);
+    });
+</script>
+<div class="container-fluid">
+    <div class="row">
+        <div class="btn btn-default pull-right" onclick="reloadPage();">Refresh List</div>
+    </div>
+    <div class="row">&nbsp;</div>
+</div>
