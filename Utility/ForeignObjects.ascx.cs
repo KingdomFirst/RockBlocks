@@ -19,7 +19,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
     /// </summary>
     [DisplayName( "Foreign Objects" )]
     [Category( "Utility" )]
-    [Description( "This block displays Foreign Objects (Key, Guid, & Id) and allows for a Lava formatted output. Currently Supports; Person, FinancialAccount, FinancialBatch, FinancialPledge, FinancialTransaction, FinancialScheduledTransaction, Group, GroupMember, Metric, Location" )]
+    [Description( "This block displays Foreign Objects (Key, Guid, & Id) and allows for a Lava formatted output. Currently Supports; Person, FinancialAccount, FinancialBatch, FinancialPledge, FinancialTransaction, FinancialScheduledTransaction, Group, GroupMember, Metric, Location, PrayerRequest" )]
     [BooleanField( "Show Edit Link", "Option to hide the Edit link.", order: 1 )]
     [CodeEditorField( "Lava Template", "The Lava template to use to display the foreign objects.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 500, true, @"<div>
     <span class=""label label-type"">{{ Context.Person.ForeignKey }}</span>
@@ -311,6 +311,17 @@ namespace RockWeb.Plugins.com_kfs.Utility
                     _location.ForeignKey = tbForeignKey.Text;
                     _location.ForeignGuid = tbForeignGuid.Text.AsType<Guid?>();
                     _location.ForeignId = tbForeignId.Text.AsType<int?>();
+
+                    rockContext.SaveChanges();
+                }
+                else if ( contextEntity is PrayerRequest )
+                {
+                    var prayerRequestService = new PrayerRequestService( rockContext );
+                    var _request = prayerRequestService.Get( contextEntity.Id );
+
+                    _request.ForeignKey = tbForeignKey.Text;
+                    _request.ForeignGuid = tbForeignGuid.Text.AsType<Guid?>();
+                    _request.ForeignId = tbForeignId.Text.AsType<int?>();
 
                     rockContext.SaveChanges();
                 }
