@@ -19,7 +19,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
     /// </summary>
     [DisplayName( "Foreign Objects" )]
     [Category( "Utility" )]
-    [Description( "This block displays Foreign Objects (Key, Guid, & Id) and allows for a Lava formatted output. Currently Supports; Person, FinancialAccount, FinancialBatch, FinancialPledge, FinancialTransaction, Group, GroupMember, Metric, Location" )]
+    [Description( "This block displays Foreign Objects (Key, Guid, & Id) and allows for a Lava formatted output. Currently Supports; Person, FinancialAccount, FinancialBatch, FinancialPledge, FinancialTransaction, FinancialScheduledTransaction, Group, GroupMember, Metric, Location" )]
     [BooleanField( "Show Edit Link", "Option to hide the Edit link.", order: 1 )]
     [CodeEditorField( "Lava Template", "The Lava template to use to display the foreign objects.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 500, true, @"<div>
     <span class=""label label-type"">{{ Context.Person.ForeignKey }}</span>
@@ -241,6 +241,17 @@ namespace RockWeb.Plugins.com_kfs.Utility
                                 changes );
                         }
                     }
+                }
+                else if ( contextEntity is FinancialScheduledTransaction )
+                {
+                    var transactionScheduledService = new FinancialScheduledTransactionService( rockContext );
+                    var _scheduledTransaction = transactionScheduledService.Get( contextEntity.Id );
+
+                    _scheduledTransaction.ForeignKey = tbForeignKey.Text;
+                    _scheduledTransaction.ForeignGuid = tbForeignGuid.Text.AsType<Guid?>();
+                    _scheduledTransaction.ForeignId = tbForeignId.Text.AsType<int?>();
+
+                    rockContext.SaveChanges();
                 }
                 else if ( contextEntity is Group )
                 {
