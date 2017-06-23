@@ -19,7 +19,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
     /// </summary>
     [DisplayName( "Foreign Objects" )]
     [Category( "Utility" )]
-    [Description( "This block displays Foreign Objects (Key, Guid, & Id) and allows for a Lava formatted output. Currently Supports; Person, FinancialAccount, FinancialBatch, FinancialPledge, FinancialTransaction, FinancialScheduledTransaction, Group, GroupMember, Metric, Location, PrayerRequest" )]
+    [Description( "This block displays Foreign Objects (Key, Guid, & Id) and allows for a Lava formatted output. Currently Supports; Person, FinancialAccount, FinancialBatch, FinancialPledge, FinancialTransaction, FinancialScheduledTransaction, Group, GroupMember, Metric, Location, PrayerRequest, ContentChannel, ContentChannelItem" )]
     [BooleanField( "Show Edit Link", "Option to hide the Edit link.", order: 1 )]
     [CodeEditorField( "Lava Template", "The Lava template to use to display the foreign objects.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 500, true, @"<div>
     <span class=""label label-type"">{{ Context.Person.ForeignKey }}</span>
@@ -322,6 +322,28 @@ namespace RockWeb.Plugins.com_kfs.Utility
                     _request.ForeignKey = tbForeignKey.Text;
                     _request.ForeignGuid = tbForeignGuid.Text.AsType<Guid?>();
                     _request.ForeignId = tbForeignId.Text.AsType<int?>();
+
+                    rockContext.SaveChanges();
+                }
+                else if ( contextEntity is ContentChannel )
+                {
+                    var contentChannelService = new ContentChannelService( rockContext );
+                    var _channel = contentChannelService.Get( contextEntity.Id );
+
+                    _channel.ForeignKey = tbForeignKey.Text;
+                    _channel.ForeignGuid = tbForeignGuid.Text.AsType<Guid?>();
+                    _channel.ForeignId = tbForeignId.Text.AsType<int?>();
+
+                    rockContext.SaveChanges();
+                }
+                else if ( contextEntity is ContentChannelItem )
+                {
+                    var contentChannelItemService = new ContentChannelItemService( rockContext );
+                    var _item = contentChannelItemService.Get( contextEntity.Id );
+
+                    _item.ForeignKey = tbForeignKey.Text;
+                    _item.ForeignGuid = tbForeignGuid.Text.AsType<Guid?>();
+                    _item.ForeignId = tbForeignId.Text.AsType<int?>();
 
                     rockContext.SaveChanges();
                 }
