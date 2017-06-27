@@ -1314,6 +1314,31 @@ TransactionAcountDetails: [
             var selectedGuids = GetAttributeValues( "Accounts" ).Select( Guid.Parse ).ToList();
             bool showAll = !selectedGuids.Any();
 
+            // Find featured Accounts
+            foreach ( var account in new FinancialAccountService( rockContext ).Queryable()
+                .Where( f =>
+                f.IsActive &&
+                f.IsPublic.HasValue &&
+                f.IsPublic.Value &&
+                ( f.StartDate == null || f.StartDate <= RockDateTime.Today ) &&
+                ( f.EndDate == null || f.EndDate >= RockDateTime.Today ) )
+            .OrderBy( f => f.Order ) )
+            {
+                account.LoadAttributes();
+
+                var featureStartDateKey = "FeatureStartDate";
+                var featureStopDateKey = "FeatureStopDate";
+
+                if ( account.Attributes.ContainsKey( featureStartDateKey ) && account.Attributes.ContainsKey( featureStopDateKey ) )
+                {
+
+                    if ( !selectedGuids.Contains( account.Guid )
+                        && ( account.AttributeValues[featureStartDateKey].Value != null && account.AttributeValues[featureStartDateKey].Value.AsDateTime() <= RockDateTime.Today )
+                        && ( account.AttributeValues[featureStopDateKey].Value != null && account.AttributeValues[featureStopDateKey].Value.AsDateTime() >= RockDateTime.Today ) )
+                        selectedGuids.Add( account.Guid );
+                }
+            }
+
             bool additionalAccounts = GetAttributeValue( "AdditionalAccounts" ).AsBoolean( true );
             bool appendParentAccountName = GetAttributeValue( "AppendParentAccountName" ).AsBoolean( false );
 
