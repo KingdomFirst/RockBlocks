@@ -1,16 +1,16 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ReportingServicesConfiguration.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Reporting.ReportingServicesConfiguration" %>
-<asp:UpdatePanel ID="upRSConfig" runat="server" UpdateMode="Conditional">
+<asp:UpdatePanel ID="upRSConfig" runat="server">
     <ContentTemplate>
         <asp:Panel ID="pnlRSConfig" runat="server" Visible="true">
             <div class="panel panel-block">
                 <div class="panel-heading">
-                    <h1 class="panel-title"><i class="fa fa-area-chart"></i>Reporting Services Configuraiton</h1>
+                    <h1 class="panel-title"><i class="fa fa-area-chart"></i>Reporting Services Configuration</h1>
                 </div>
                 <Rock:NotificationBox ID="nbReportingServices" runat="server" Visible="false" />
                 <div class="panel-body">
                     <fieldset>
                         <h4>Server Configuration</h4>
-                        <Rock:RockTextBox ID="tbReportingServicesURL" runat="server" Label="Report Server URL" Required="true" RequiredErrorMessage="Reporting Server URL required" ToolTip="URL to the Reporting Services Report Server endpoint." ValidationGroup="RSConfig" />
+                        <Rock:RockTextBox ID="tbReportingServicesURL" runat="server" Label="Web Service URL" Required="true" RequiredErrorMessage="Reporting Server URL required" ToolTip="URL to the Reporting Services Report Server endpoint." ValidationGroup="RSConfig" />
                         <Rock:RockTextBox ID="tbReportRootFolder" runat="server" Label="Root Folder Path" Required="true" RequiredErrorMessage="Root Folder is required" ToolTip="Root Folder for Reporting Services Reports." ValidationGroup="RSConfig" />
                         <h4>Credentials</h4>
                         <asp:Panel ID="pnlAdminUser" runat="server" Visible="false">
@@ -23,13 +23,11 @@
                         <asp:HiddenField ID="hfPasswordSet" runat="server" />
                     </fieldset>
                 </div>
-
             </div>
-            <div class="actions margin-b-lg">
-                <asp:LinkButton ID="btnSave" runat="server" Visible="true" CssClass="btn btn-primary" OnClick="btnSave_Click" CausesValidation="true" ValidationGroup="RSConfig"><i class="fa fa-save"></i>Save</asp:LinkButton>
-                <asp:LinkButton ID="btnVerify" runat="server" Visible="false" CssClass="btn btn-default" OnClick="btnVerify_Click" CausesValidation="false"><i class="fa fa-check-square-o"></i>Verify</asp:LinkButton>
+            <div class="actions">
+                <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" CausesValidation="true" ValidationGroup="RSConfig" />
+                <asp:LinkButton ID="btnVerify" runat="server" AccessKey="v" Text="Verify" Visible="false" CssClass="btn btn-default" OnClick="btnVerify_Click" CausesValidation="false" />
             </div>
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>
-
