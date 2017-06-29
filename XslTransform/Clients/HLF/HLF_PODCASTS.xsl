@@ -18,6 +18,7 @@
           <th>Date</th>
           <th>Tags</th>
           <th>VimeoId</th>
+          <th>VimeoDownload</th>
           <th>Audio</th>
           <th>Notes</th>
           <th>ImgSm</th>
@@ -67,6 +68,9 @@
             </td>
             <td>
               <xsl:value-of select="video_link" disable-output-escaping="yes"/>
+            </td>
+            <td>
+              <xsl:value-of select="downloadvid_link" disable-output-escaping="yes"/>
             </td>
             <td>
               <xsl:value-of select="audio_link" disable-output-escaping="yes"/>
