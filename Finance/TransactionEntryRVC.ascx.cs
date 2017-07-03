@@ -163,6 +163,8 @@ TransactionAcountDetails: [
     [BooleanField( "Append Parent Account Name", "Flag indicating if the Parent Account Name be appended to the end of the Account Name in the Additional Accounts selector.", false, "Advanced", order: 11 )]
     [BooleanField( "Search Accounts", "Flag indicating if the Additional Accounts should be presented as a search box.", false, "Advanced", order: 12 )]
     [TextField( "Search Accounts Search Text", "Text override for the 'Search' label.", false, "Search", "Advanced", order: 13 )]
+    [AttributeField( Rock.SystemGuid.EntityType.FINANCIAL_ACCOUNT, "Featured Start Date", "The Financial Account Attribute containing the promotion start date of an account. This will move the Account from the Additional Fund list to the Featured Funds. The Feature End Date setting must also be set.", false, category:"Advanced", order:14 )]
+    [AttributeField( Rock.SystemGuid.EntityType.FINANCIAL_ACCOUNT, "Featured End Date", "The Financial Account Attribute containing the promotion end date of an account. This will move the Account from the Additional Fund list to the Featured Funds. The Feature Start Date setting must also be set.", false, category: "Advanced", order: 15 )]
 
     #endregion
 
@@ -185,6 +187,9 @@ TransactionAcountDetails: [
         private bool _onlyPublicAccountsInUrl = true;
         private int _accountCampusContextFilter = -1;
         private int _currentCampusContextId = -1;
+        private string _featuredStartDateKey = string.Empty;
+        private string _featuredEndDateKey = string.Empty;
+        private bool _useFeaturedDates = false;
 
         /// <summary>
         /// The scheduled transaction to be transferred.  This will get set if the
@@ -320,6 +325,17 @@ TransactionAcountDetails: [
                 {
                     _currentCampusContextId = campusEntity.Id;
                 }
+            }
+
+            // Evaluate Account Featured Dates
+            var featuredStartDateGuid = GetAttributeValue( "FeaturedStartDate" ).AsGuidOrNull();
+            var featuredEndDateGuid = GetAttributeValue( "FeaturedEndDate" ).AsGuidOrNull();
+            if ( featuredStartDateGuid != null && featuredEndDateGuid != null )
+            {
+                _useFeaturedDates = true;
+                var attributeService = new AttributeService( new RockContext() );
+                _featuredStartDateKey = attributeService.GetByGuids( new List<Guid> { (Guid)featuredStartDateGuid } ).FirstOrDefault().Key;
+                _featuredEndDateKey = attributeService.GetByGuids( new List<Guid> { (Guid)featuredEndDateGuid } ).FirstOrDefault().Key;
             }
 
             // Determine account campus context mode
@@ -1314,31 +1330,6 @@ TransactionAcountDetails: [
             var selectedGuids = GetAttributeValues( "Accounts" ).Select( Guid.Parse ).ToList();
             bool showAll = !selectedGuids.Any();
 
-            // Find featured Accounts
-            foreach ( var account in new FinancialAccountService( rockContext ).Queryable()
-                .Where( f =>
-                f.IsActive &&
-                f.IsPublic.HasValue &&
-                f.IsPublic.Value &&
-                ( f.StartDate == null || f.StartDate <= RockDateTime.Today ) &&
-                ( f.EndDate == null || f.EndDate >= RockDateTime.Today ) )
-            .OrderBy( f => f.Order ) )
-            {
-                account.LoadAttributes();
-
-                var featureStartDateKey = "FeatureStartDate";
-                var featureStopDateKey = "FeatureStopDate";
-
-                if ( account.Attributes.ContainsKey( featureStartDateKey ) && account.Attributes.ContainsKey( featureStopDateKey ) )
-                {
-
-                    if ( !selectedGuids.Contains( account.Guid )
-                        && ( account.AttributeValues[featureStartDateKey].Value != null && account.AttributeValues[featureStartDateKey].Value.AsDateTime() <= RockDateTime.Today )
-                        && ( account.AttributeValues[featureStopDateKey].Value != null && account.AttributeValues[featureStopDateKey].Value.AsDateTime() >= RockDateTime.Today ) )
-                        selectedGuids.Add( account.Guid );
-                }
-            }
-
             bool additionalAccounts = GetAttributeValue( "AdditionalAccounts" ).AsBoolean( true );
             bool appendParentAccountName = GetAttributeValue( "AppendParentAccountName" ).AsBoolean( false );
 
@@ -1388,7 +1379,20 @@ TransactionAcountDetails: [
                                     name = String.Format( "{0} ({1})", name, account.ParentAccount.Name );
                                     accountItem = new AccountItem( account.Id, account.Order, account.Name, account.CampusId, name );
                                 }
-                                AvailableAccounts.Add( accountItem );
+
+                                if ( _useFeaturedDates )
+                                {
+                                    account.LoadAttributes();
+                                }
+
+                                if ( ( !string.IsNullOrWhiteSpace( _featuredStartDateKey ) && account.AttributeValues[_featuredStartDateKey] != null && account.AttributeValues[_featuredStartDateKey].Value.AsDateTime() <= RockDateTime.Today ) && ( !string.IsNullOrWhiteSpace( _featuredEndDateKey ) && account.AttributeValues[_featuredEndDateKey].Value != null && account.AttributeValues[_featuredEndDateKey].Value.AsDateTime() >= RockDateTime.Today ) )
+                                {
+                                    SelectedAccounts.Add( accountItem );
+                                }
+                                else
+                                {
+                                    AvailableAccounts.Add( accountItem );
+                                }
                             }
                         }
                     }
