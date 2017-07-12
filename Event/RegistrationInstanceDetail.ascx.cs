@@ -3935,8 +3935,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="groupTypeGuid">The group type unique identifier.</param>
         private void SelectArea( Guid? groupTypeGuid )
         {
-            hfIsDirty.Value = "false";
-
             resourceAreaPanel.Visible = false;
             resourceGroupPanel.Visible = false;
             btnResourceSave.Visible = false;
@@ -3977,8 +3975,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="groupGuid">The group unique identifier.</param>
         private void SelectGroup( Guid? groupGuid )
         {
-            hfIsDirty.Value = "false";
-
             resourceAreaPanel.Visible = false;
             resourceGroupPanel.Visible = false;
             btnResourceSave.Visible = false;
@@ -5299,10 +5295,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         });
     });
-
-    $('.js-area-group-details').find('input').blur( function() {{
-        $('#{0}').val('true')
-    }});
 
     function isDirty() {{
         return false;
