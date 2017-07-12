@@ -17,7 +17,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
     /// <seealso cref="Rock.Web.UI.RockBlock" />
     [DisplayName( "Reporting Services Viewer" )]
     [Category( "KFS > Reporting" )]
-    [TextField( "Report Path", "Relative Path to Reporting Services Report. Used in single report mode, and will overide \"ReportPath\" page parameter.", false, "", "Report Configuration", 0, "ReportPath" )]
+    [TextField( "Report Path", "Relative Path to Reporting Services Report. Used in single report mode, and will overide ReportPath page parameter.", false, "", "Report Configuration", 0, "ReportPath" )]
     [KeyValueListField( "Report Parameters", "Report Parameters.", false, "", "Name", "Value", Category = "Report Configuration", Order = 1, Key = "ReportParameters" )]
     public partial class ReportingServicesViewer : RockBlock
     {
@@ -50,10 +50,8 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                     ShowError( "Connection Error", "An error occurred when connecting to the reporting server." );
                 }
             }
-
-            
         }
-        
+
         /// <summary>
         /// Loads the report.
         /// </summary>
@@ -63,7 +61,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
             const string pageTitleFormat = "{0} Report Viewer";
             var reportPathAttribute = GetAttributeValue( "ReportPath" );
-            var reportParamAttributes = GetAttributeValue( "ReportParameters" ).AsDictionaryOrNull();            
+            var reportParamAttributes = GetAttributeValue( "ReportParameters" ).AsDictionaryOrNull();
 
             if ( !string.IsNullOrWhiteSpace( reportPathAttribute ) )
             {
