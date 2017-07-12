@@ -5070,6 +5070,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
                     ddlSubGroup.SelectedIndex = parentGroup.Groups.Any() ? 1 : 0;
                     ddlSubGroup.Label = !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupTerm ) ? parentGroup.GroupType.GroupTerm : "Sub-Group";
+                    group = parentGroup.Groups.Any() ? parentGroup.Groups.FirstOrDefault() : null;
                 }
                 else if ( group != null )
                 {
@@ -5106,6 +5107,18 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0} to {1}", groupMemberTerm, group.Name );
                 }
+
+                if ( group != null )
+                {
+                    // this is a new group member, initialize the model
+                    groupMember = new GroupMember { Id = 0 };
+                    groupMember.GroupId = group.Id;
+                    groupMember.Group = group;
+                    groupMember.GroupRoleId = groupMember.Group.GroupType.DefaultGroupRoleId ?? 0;
+                    groupMember.GroupMemberStatus = GroupMemberStatus.Active;
+                    groupMember.DateTimeAdded = RockDateTime.Now;
+                }
+
                 rblStatus.SelectedIndex = 1;
             }
             else
