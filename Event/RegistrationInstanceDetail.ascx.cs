@@ -4968,7 +4968,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <summary>
         /// Renders the edit group member modal.
         /// </summary>
-        /// <param name="groupMemberId">The group member identifier.</param>
+        /// <param name="groupKey">The group key.</param>
         private void RenderEditGroupMemberModal( string groupKey )
         {
             if ( !groupKey.Contains( '|' ) )
@@ -5074,31 +5074,61 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         group.GroupType.LoadAttributes();
                     }
-
-                    var placedMembers = new List<int>();
-                    if ( !group.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
+                    
+                    // this is a registrants group, begin creating a registrant list
+                    // TODO: add a static reference Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_SERVING_AREA
+                    var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable().Where( g => g.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" );
+                    if ( group.GroupType.GroupTypePurposeValue == null || group.GroupType.GroupTypePurposeValue.Value != "Serving Area" )
                     {
-                        ddlRegistrantList.Help = string.Format( "Choose from a list of Registrants who have not yet been assigned to a {0} {1}", group.ParentGroup.Name, group.GroupType.GroupTerm );
-                        foreach ( Group g in group.ParentGroup.Groups )
+                        // check if registrants can be assigned to multiple groups
+                        var placedMembers = new List<int>();
+                        if ( !group.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
                         {
-                            placedMembers.AddRange(
-                                g.Members.Select( m => m.Person.Id )
-                                .Where( m => !placedMembers.Contains( m ) )
-                            );
+                            ddlRegistrantList.Help = string.Format( "Choose from a list of Registrants who have not yet been assigned to a {0} {1}", group.ParentGroup.Name, group.GroupType.GroupTerm );
+                            foreach ( Group g in group.ParentGroup.Groups )
+                            {
+                                placedMembers.AddRange(
+                                    g.Members.Select( m => m.Person.Id )
+                                    .Where( m => !placedMembers.Contains( m ) )
+                                );
+                            }
                         }
-                    }
-                    else
-                    {
-                        ddlRegistrantList.Help = null;
-                    }
+                        else
+                        {
+                            ddlRegistrantList.Label = groupMemberTerm;
+                            ddlRegistrantList.Help = null;
+                        }
 
-                    var allowedRegistrations = new RegistrationRegistrantService( rockContext ).Queryable().AsNoTracking()
-                        .Where( r => r.Registration.RegistrationInstanceId == registrationInstanceId
-                            && r.PersonAlias != null && r.PersonAlias.Person != null && !placedMembers.Contains( r.PersonAlias.Person.Id ) );
+                        // add the registrants who haven't already been placed
+                        var allowedRegistrations = new RegistrationRegistrantService( rockContext ).Queryable().AsNoTracking()
+                            .Where( r => r.Registration.RegistrationInstanceId == registrationInstanceId && r.PersonAlias != null && r.PersonAlias.Person != null 
+                                && !placedMembers.Contains( r.PersonAlias.Person.Id ) );
+                        foreach ( var allowedRegistrant in allowedRegistrations )
+                        {
+                            var registrantItem = new ListItem( allowedRegistrant.PersonAlias.Person.FullNameReversed, allowedRegistrant.PersonAlias.Person.Guid.ToString() );
+                            registrantItem.Attributes["optiongroup"] = "Registrants";
+                            ddlRegistrantList.Items.Add( registrantItem );
+                        }
+                        
+                        // restrict any volunteer lists to this registration's resources
+                        var registrationInstance = new RegistrationInstanceService( rockContext ).Get( registrationInstanceId );
+                        registrationInstance.LoadAttributes( rockContext );
+                        if ( registrationInstance.AttributeValues.Any() )
+                        {
+                            var registrationGroups = registrationInstance.AttributeValues.Values.Select( v => v.Value.AsGuid() ).ToList();
+                            qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroups.Contains( g.Group.Guid ) || registrationGroups.Contains( g.Group.ParentGroup.Guid ) );
+                        }
+                    }                    
 
-                    foreach ( var allowedRegistrant in allowedRegistrations )
-                    {
-                        ddlRegistrantList.Items.Add( new ListItem( allowedRegistrant.PersonAlias.Person.FullNameReversed, allowedRegistrant.PersonAlias.Person.Guid.ToString() ) );
+                    if ( group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
+                    {   
+                        // display active volunteers not already in this group
+                        foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
+                        {
+                            var volunteerItem = new ListItem( volunteer.Person.FullNameReversed, volunteer.Person.Guid.ToString() );
+                            volunteerItem.Attributes["optiongroup"] = "Volunteers";
+                            ddlRegistrantList.Items.Add( volunteerItem );
+                        }
                     }
 
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0} to {1}", groupMemberTerm, group.Name );
