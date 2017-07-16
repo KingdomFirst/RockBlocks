@@ -2287,22 +2287,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             pnlTabs.Visible = !editable;
         }
 
-        //private void gAssociatedParentGroups_AddClick( object sender, EventArgs e )
-        //{
-        //    var rockContext = new RockContext();
-        //    var groupService = new GroupService( rockContext );
-        //    var RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-        //    if ( RegistrationInstanceId > 0 )
-        //    {
-        //        var ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
-        //        ri.LoadAttributes();
-        //        var val = ri.GetAttributeValue( _attributeKeyParent ).Split( ',' ).ToList();
-
-        //        //string script = "Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Edit {0}&GroupId={1}", group.Name, group.Id ) ) + "');";
-        //        //ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + e.CommandArgument.ToString(), script, true );
-        //    }
-        //}
-
         /// <summary>
         /// Builds the sub group tabs.
         /// </summary>
@@ -2383,7 +2367,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var resourceGroupGuid = instance.AttributeValues[groupType.Name];
                     if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
                     {
-                        var tabName = groupType.Name;
+                        var tabName = groupType.Name.RemoveSpecialCharacters();
                         var parentGroup = new GroupService( new RockContext() ).Get( resourceGroupGuid.Value.AsGuid() );
                         if ( parentGroup != null )
                         {
@@ -2398,8 +2382,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                             liAssociatedGroup.RemoveCssClass( "active" );
                         }
                         if ( ActiveTab == "lb" + tabName )
-                        {
+                        {     
                             liAssociatedGroup.AddCssClass( "active" );
+                            //BuildSubGroupPanels( phGroupControl, parentGroup.Groups.ToList() );
                         }
                     }
                 }
@@ -4789,7 +4774,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         hfParentGroupId.Value = parentGroup.Guid.ToString();
                         phGroupControl.Controls.Clear();
+
+                        // TODO: move this to ShowTab method so it fires once per postback
+
                         BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList() );
+
+                        // TODO: remove hardcoded page number
+
                         lbAddSubGroup.HRef = "javascript: Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Add {0}&GroupId=0&ParentGroupId={1}", groupTypeGroupTerm, parentGroup.Id ) ) + "')";
 
                         if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.IconCssClass ) )
@@ -4856,6 +4847,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 hfEditGroup.Value = group.Guid.ToString();
 
                 BindResourcePanels();
+
+                // TODO: remove hardcoded page number
 
                 string script = "Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Edit {0}&GroupId={1}", group.Name, group.Id ) ) + "');";
                 ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + e.CommandArgument.ToString(), script, true );
