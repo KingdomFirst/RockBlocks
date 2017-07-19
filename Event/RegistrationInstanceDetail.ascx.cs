@@ -5109,7 +5109,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         if ( registrationInstance.AttributeValues.Any() )
                         {
                             var registrationGroups = registrationInstance.AttributeValues.Values.Select( v => v.Value.AsGuid() ).ToList();
-                            qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroups.Contains( g.Group.Guid ) || registrationGroups.Contains( g.Group.ParentGroup.Guid ) );
+                            qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroups.Contains( g.Group.Guid ) || registrationGroups.Contains( g.Group.ParentGroup.Guid ) )
+                                .DistinctBy( v => v.PersonId ).AsQueryable();
                         }
                     }                    
 

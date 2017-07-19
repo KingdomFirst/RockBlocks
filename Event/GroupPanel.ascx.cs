@@ -161,11 +161,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         public void BindGroupMembersGrid()
         {
-            //var rockContext = new RockContext();
-            //var groupMemberService = new GroupMemberService( rockContext );
-            //var qry = groupMemberService.Queryable( "Person,GroupRole", true ).AsNoTracking()
-            //    .Where( m => m.GroupId == _group.Id );
-            //var groupMembersList = qry.ToList();
             gGroupMembers.DataSource = _group.Members;
             gGroupMembers.DataBind();
         }
