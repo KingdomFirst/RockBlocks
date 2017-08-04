@@ -1,0 +1,68 @@
+﻿input.sjt_disabled + label {
+    color: Gray;
+}
+
+span.sjt_full > label {
+    color: Gray;
+}
+
+.parentMultiple {
+    float: left;
+    margin-left: 30px;
+    margin-bottom: 30px;
+}
+
+.parentSingle {
+}
+
+.profileDescriptionLabel {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.profileDetailsContainer {
+    margin-left: 20px;
+    margin-bottom: 10px;
+}
+
+.formLabel {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.formItem {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+span.formItem label, span.formItem input {
+    margin-left: 5px;
+}
+
+span.formItem input {
+    margin-top: 0px;
+}
+
+.field-block {
+    background-color: lightgray;
+}
+.sjt_profile label {
+    margin-left: 10px;
+
+}.kfs-address {
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+.kfs-address-1 {
+    margin-bottom: 15px;
+}
+
+.kfs-address-state {
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.kfs-address-zip {
+    padding-left: 3px;
+}
