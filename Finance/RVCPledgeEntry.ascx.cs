@@ -135,7 +135,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
 
                     if ( CurrentCampusContextId != null && CurrentCampusContextId > -1 )
                     {
-                        var CampusAccount = financialAccount.ChildAccounts.FirstOrDefault( c => c.CampusId == CurrentCampusContextId );
+                        var CampusAccount = financialAccount.ChildAccounts.OrderBy( c => c.Order ).FirstOrDefault( c => c.CampusId == CurrentCampusContextId );
                         if ( CampusAccount != null )
                         {
                             financialAccount = CampusAccount;
