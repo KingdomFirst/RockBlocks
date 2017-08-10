@@ -32,8 +32,8 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Finance
 {
-    [DisplayName( "Pledge Entry" )]
-    [Category( "Finance" )]
+    [DisplayName( "Pledge Entry RVC" )]
+    [Category( "KFS > Finance" )]
     [Description( "Allows a website visitor to create pledge for the configured accounts, start and end date. This block also creates a new person record if a matching person could not be found." )]
 
     [BooleanField( "Enable Smart Names", "Check the first name for 'and' and '&' and split it to just use the first name provided.", true, Order = 1 )]
