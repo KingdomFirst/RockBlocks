@@ -61,6 +61,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
     [SystemEmailField( "Confirmation Email Template", "Email template to use after submitting a new pledge. Leave blank to not send an email.", false, "", Order = 10 )]
     [BooleanField( "Enable Debug", "Outputs the object graph to help create your liquid syntax.", false, Order = 11 )]
     [GroupTypeField( "Select Group Type", "Optional Group Type that if selected will display a selection of groups that current user belongs to that can then be associated with the pledge", false, "", "", 12 )]
+    [BooleanField( "Use Campus Context", "If true, then child funds will be evaluated and the first fund encountered with current campus context will be targeted.  Useful for annual campaigns where pledging needs to be campus specific.", DefaultValue = "false", Order = 13 )]
     public partial class PledgeEntry : RockBlock
     {
         /// <summary>
@@ -122,6 +123,26 @@ namespace RockWeb.Plugins.com_kfs.Finance
             var financialAccount = financialAccountService.Get( GetAttributeValue( "Account" ).AsGuid() );
             if ( financialAccount != null )
             {
+                if ( GetAttributeValue( "UseCampusContext" ).AsBoolean() )
+                {
+                    var campusEntity = RockPage.GetCurrentContext( EntityTypeCache.Read( typeof( Campus ) ) );
+                    int? CurrentCampusContextId = null;
+
+                    if ( campusEntity != null )
+                    {
+                        CurrentCampusContextId = campusEntity.Id;
+                    }
+
+                    if ( CurrentCampusContextId != null && CurrentCampusContextId > -1 )
+                    {
+                        var CampusAccount = financialAccount.ChildAccounts.FirstOrDefault( c => c.CampusId == CurrentCampusContextId );
+                        if ( CampusAccount != null )
+                        {
+                            financialAccount = CampusAccount;
+                        }
+                    }
+                }
+
                 financialPledge.AccountId = financialAccount.Id;
             }
 
