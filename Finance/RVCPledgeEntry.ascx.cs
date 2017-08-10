@@ -30,7 +30,7 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Blocks.Finance
+namespace RockWeb.Plugins.com_kfs.Finance
 {
     [DisplayName( "Pledge Entry" )]
     [Category( "Finance" )]
