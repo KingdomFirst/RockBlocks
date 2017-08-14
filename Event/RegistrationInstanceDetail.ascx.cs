@@ -3743,7 +3743,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         private void ResourceAreaRow_AddGroupClick( object sender, EventArgs e )
         {
-            var parentRow = sender as CheckinAreaRow;
+            var parentRow = sender as ResourceAreaRow;
             parentRow.Expanded = true;
 
             using ( var rockContext = new RockContext() )
@@ -3777,13 +3777,13 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Handles the AddGroupClick event of the CheckinGroupRow control.
+        /// Handles the AddGroupClick event of the ResourceGroupRow control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         private void ResourceGroupRow_AddGroupClick( object sender, EventArgs e )
         {
-            var parentRow = sender as CheckinGroupRow;
+            var parentRow = sender as ResourceGroupRow;
             parentRow.Expanded = true;
 
             using ( var rockContext = new RockContext() )
@@ -3815,13 +3815,13 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Handles the DeleteGroupClick event of the CheckinGroupRow control.
+        /// Handles the DeleteGroupClick event of the ResourceGroupRow control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         private void ResourceGroupRow_DeleteGroupClick( object sender, EventArgs e )
         {
-            var row = sender as CheckinGroupRow;
+            var row = sender as ResourceGroupRow;
 
             using ( var rockContext = new RockContext() )
             {
@@ -4155,7 +4155,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     // check if UI groups have been updated
                     var resourceGroups = new List<Group>();
-                    foreach ( var groupRow in phRows.ControlsOfTypeRecursive<CheckinGroupRow>() )
+                    foreach ( var groupRow in phRows.ControlsOfTypeRecursive<ResourceGroupRow>() )
                     {
                         resourceGroups.Add( groupService.Get( groupRow.GroupGuid ) );
                     }
@@ -4209,7 +4209,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             _resourceGroups = new List<Guid>();
             _expandedRows = new List<Guid>();
 
-            foreach ( var groupTypeRow in phRows.ControlsOfTypeRecursive<CheckinAreaRow>() )
+            foreach ( var groupTypeRow in phRows.ControlsOfTypeRecursive<ResourceAreaRow>() )
             {
                 if ( groupTypeRow.Expanded )
                 {
@@ -4217,7 +4217,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            foreach ( var groupRow in phRows.ControlsOfTypeRecursive<CheckinGroupRow>() )
+            foreach ( var groupRow in phRows.ControlsOfTypeRecursive<ResourceGroupRow>() )
             {
                 if ( groupRow.Expanded )
                 {
@@ -4252,7 +4252,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 _resourceGroupTypes.Add( groupType.Guid );
 
-                var resourceAreaRow = new CheckinAreaRow()
+                var resourceAreaRow = new ResourceAreaRow()
                 {
                     ID = "ResourceAreaRow_" + groupType.Guid.ToString( "N" )
                 };
@@ -4300,7 +4300,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             if ( group != null && !_resourceGroups.Contains( group.Guid ) )
             {
-                var checkinGroupRow = new CheckinGroupRow
+                var checkinGroupRow = new ResourceGroupRow
                 {
                     ID = "ResourceGroupRow_" + group.Guid.ToString( "N" )
                 };
