@@ -113,7 +113,7 @@
 
                         <div id="pnlSubGroups" runat="server" class="form-group">
                             <label class="control-label" for="pnlAssociatedGroupTypes">Registration Resources</label>
-                            <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well">
+                            <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well js-panel-details">
                                 <div class="row">
                                     <asp:HiddenField runat="server" ID="hfAreaGroupClicked" />
                                     <Rock:NotificationBox ID="nbDeleteWarning" runat="server" NotificationBoxType="Warning" />
@@ -515,6 +515,8 @@
             var $li = $(this).closest('li');
             if ($(this).hasClass('resource-area')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
+            } else if ($(this).hasClass('resource-item')) {
+                __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
             }
         });
     });
