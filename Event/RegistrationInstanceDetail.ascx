@@ -7,7 +7,7 @@
 </script>
 
 <style>
-    .checkin-item {
+    .resource-item {
         padding: 12px;
         border: 1px solid #d8d1c8;
         cursor: pointer;
@@ -15,41 +15,30 @@
         border-top-width: 3px;
     }
 
-    .checkin-item-selected {
+    .resource-item-selected {
         background-color: #d8d1c8;
     }
 
-    .checkin-list {
+    .resource-list {
         list-style-type: none;
         padding-left: 40px;
     }
 
-    .checkin-list-first {
+    .resource-list-first {
         padding-left: 0;
     }
 
-    .checkin-item .fa-bars {
+    .resource-item .fa-bars {
         opacity: .5;
         margin-right: 6px;
     }
 
-    .checkin-group {
+    .resource-group {
         border-top-color: #afd074;
     }
 
-    .checkin-area {
+    .resource-area {
         border-top-color: #5593a4;
-    }
-
-    .checkin-area .checkin-area-add-area,
-    .checkin-area .btn-danger,
-    .js-area-group-details h3,
-    label[for$='ddlPrintTo'],
-    select[id$='ddlPrintTo'],
-    label[for$='ddlAttendanceRule'],
-    select[id$='ddlAttendanceRule']
-    {
-        display: none;
     }
 </style>
 
@@ -130,15 +119,14 @@
                                     <Rock:NotificationBox ID="nbDeleteWarning" runat="server" NotificationBoxType="Warning" />
 
                                     <div class="col-md-6">
-                                        <ul class="checkin-list checkin-list-first js-checkin-area-list">
+                                        <ul class="resource-list resource-list-first js-resource-area-list">
                                             <asp:PlaceHolder ID="phRows" runat="server" />
                                         </ul>
                                     </div>
                                     <div class="col-md-6 js-area-group-details">
 
-                                        <asp:HiddenField ID="hfIsDirty" runat="server" Value="false" />
-                                        <Rock:CheckinArea ID="resourceAreaPanel" runat="server" Visible="false" />
-                                        <Rock:CheckinGroup ID="resourceGroupPanel" runat="server" Visible="false" />
+                                        <Rock:ResourceArea ID="resourceAreaPanel" runat="server" Visible="false" />
+                                        <Rock:ResourceGroup ID="resourceGroupPanel" runat="server" Visible="false" />
 
                                         <div class="actions">
                                             <asp:LinkButton ID="btnResourceSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnResourceSave_Click" Visible="false" />
@@ -455,7 +443,7 @@
                         </asp:Panel>
                     </ItemTemplate>
                 </asp:Repeater>
-                
+
                 <div hidden>
                     <asp:LinkButton ID="btnMultipleRegistrations" runat="server" Text="Postback" />
                 </div>
@@ -469,7 +457,7 @@
                         <fieldset>
                             <div class="col-md-6">
                                 <Rock:RockDropDownList ID="ddlRegistrantList" runat="server" Label="Registrant" Required="true" ValidationGroup="vgAddGroupMember" />
-                                <%--<Rock:PersonPicker ID="ppSubGroupMember" runat="server" Label="Registrant" Visible="false" ValidationGroup="vgAddGroupMember" />--%>
+                                <Rock:PersonPicker ID="ppSubGroupMember" runat="server" Label="Registrant" Visible="false" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMember" />
                             </div>
                             <div class="col-md-6">
@@ -507,7 +495,7 @@
 
             $('html, body').animate({
                 scrollTop: $(scrollToPanel).offset().top + 'px'
-                }, 400
+            }, 400
             );
         }
     }
@@ -523,11 +511,11 @@
             return ui;
         };
 
-        $('section.checkin-item').click(function () {
+        $('section.resource-item').click(function () {
             var $li = $(this).closest('li');
-            if ($(this).hasClass('checkin-area')) {
+            if ($(this).hasClass('resource-area')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
-            } 
+            }
         });
     });
 </script>

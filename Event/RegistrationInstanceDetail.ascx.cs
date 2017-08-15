@@ -35,7 +35,7 @@ namespace RockWeb.Plugins.com_kfs.Event
     [LinkedPage( "Linkage Page", "The page for editing registration linkages", true, "", "", 2 )]
     [LinkedPage( "Calendar Item Page", "The page to view calendar item details", true, "", "", 3 )]
     [LinkedPage( "Group Detail Page", "The page for viewing details about a group", true, "", "", 4 )]
-    [LinkedPage( "Group Member Page", "The page for viewing details about a group member", true, "", "", 5 )]
+    [LinkedPage( "Group Modal Page", "The modal page to view and edit details for a group", true, "", "", 5 )]
     [LinkedPage( "Content Item Page", "The page for viewing details about a content channel item", true, "", "", 6 )]
     [LinkedPage( "Transaction Detail Page", "The page for viewing details about a payment", true, "", "", 7 )]
     [LinkedPage( "Payment Reminder Page", "The page for manually sending payment reminders.", false, "", "", 8 )]
@@ -612,7 +612,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     int groupMemberId = int.Parse( hfSubGroupMemberId.Value );
 
                     // Check to see if a person was selected
-                    var person = new PersonService( rockContext ).Get( ddlRegistrantList.SelectedValue.AsGuid() );
+                    var person = ppSubGroupMember.SelectedValue.HasValue ? new PersonService( rockContext ).Get( (int)ppSubGroupMember.SelectedValue ) : null;
                     if ( person == null )
                     {
                         nbErrorMessage.Title = "Please select a Person";
@@ -2287,7 +2287,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             fieldsetViewDetails.Visible = !editable;
             pnlTabs.Visible = !editable;
         }
-        
+
         /// <summary>
         /// Builds the sub group tabs.
         /// </summary>
@@ -4242,6 +4242,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     ID = "ResourceAreaRow_" + groupType.Guid.ToString( "N" )
                 };
 
+                //resourceAreaRow.EnableAddArea = false;
+                //resourceAreaRow.EnableGroupArea = true;
                 resourceAreaRow.SetGroupType( groupType );
                 resourceAreaRow.AddGroupClick += ResourceAreaRow_AddGroupClick;
                 parentControl.Controls.Add( resourceAreaRow );
@@ -4306,7 +4308,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     .OrderBy( a => a.Order )
                     .ThenBy( a => a.Name ) )
                 {
-                    BuildGroupRow( childGroup, checkinGroupRow, setValues );
+                    BuildGroupRow( childGroup, resourceGroupRow, setValues );
                 }
             }
         }
@@ -4786,7 +4788,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         qryParams.Add( "ParentGroupId", parentGroup.Id.ToString() );
 
                         //lbAddSubGroup.HRef = "javascript: Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Add {0}&GroupId=0&ParentGroupId={1}", groupTypeGroupTerm, parentGroup.Id ) ) + "')";
-                        lbAddSubGroup.HRef = "javascript: Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupMemberPage", qryParams ) + "')";
+                        lbAddSubGroup.HRef = "javascript: Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupModalPage", qryParams ) + "')";
 
                         if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.IconCssClass ) )
                         {
@@ -4858,7 +4860,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 qryParams.Add( "GroupId", group.Id.ToString() );
 
                 //string script = "Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Edit {0}&GroupId={1}", group.Name, group.Id ) ) + "');";
-                string script = "Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupMemberPage", qryParams ) + "');";
+                string script = "Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupModalPage", qryParams ) + "');";
                 ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + e.CommandArgument.ToString(), script, true );
             }
             if ( e.CommandName == "DeleteSubGroup" )
