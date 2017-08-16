@@ -124,7 +124,7 @@
 
                         <div id="pnlSubGroups" runat="server" class="form-group">
                             <label class="control-label" for="pnlAssociatedGroupTypes">Registration Resources</label>
-                            <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well">
+                            <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well js-panel-details">
                                 <div class="row">
                                     <asp:HiddenField runat="server" ID="hfAreaGroupClicked" />
                                     <Rock:NotificationBox ID="nbDeleteWarning" runat="server" NotificationBoxType="Warning" />
@@ -136,7 +136,6 @@
                                     </div>
                                     <div class="col-md-6 js-area-group-details">
 
-                                        <asp:HiddenField ID="hfIsDirty" runat="server" Value="false" />
                                         <Rock:CheckinArea ID="resourceAreaPanel" runat="server" Visible="false" />
                                         <Rock:CheckinGroup ID="resourceGroupPanel" runat="server" Visible="false" />
 
@@ -527,7 +526,9 @@
             var $li = $(this).closest('li');
             if ($(this).hasClass('checkin-area')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
-            } 
+            } else if ($(this).hasClass('checkin-item')) {
+                __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
+            }
         });
     });
 </script>

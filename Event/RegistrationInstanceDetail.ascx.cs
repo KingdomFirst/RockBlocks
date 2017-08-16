@@ -2287,22 +2287,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             pnlTabs.Visible = !editable;
         }
 
-        //private void gAssociatedParentGroups_AddClick( object sender, EventArgs e )
-        //{
-        //    var rockContext = new RockContext();
-        //    var groupService = new GroupService( rockContext );
-        //    var RegistrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-        //    if ( RegistrationInstanceId > 0 )
-        //    {
-        //        var ri = new RegistrationInstanceService( new RockContext() ).Get( RegistrationInstanceId );
-        //        ri.LoadAttributes();
-        //        var val = ri.GetAttributeValue( _attributeKeyParent ).Split( ',' ).ToList();
-
-        //        //string script = "Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Edit {0}&GroupId={1}", group.Name, group.Id ) ) + "');";
-        //        //ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + e.CommandArgument.ToString(), script, true );
-        //    }
-        //}
-
         /// <summary>
         /// Builds the sub group tabs.
         /// </summary>
@@ -2383,7 +2367,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var resourceGroupGuid = instance.AttributeValues[groupType.Name];
                     if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
                     {
-                        var tabName = groupType.Name;
+                        var tabName = groupType.Name.RemoveSpecialCharacters();
                         var parentGroup = new GroupService( new RockContext() ).Get( resourceGroupGuid.Value.AsGuid() );
                         if ( parentGroup != null )
                         {
@@ -2398,8 +2382,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                             liAssociatedGroup.RemoveCssClass( "active" );
                         }
                         if ( ActiveTab == "lb" + tabName )
-                        {
+                        {     
                             liAssociatedGroup.AddCssClass( "active" );
+                            //BuildSubGroupPanels( phGroupControl, parentGroup.Groups.ToList() );
                         }
                     }
                 }
@@ -3935,8 +3920,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="groupTypeGuid">The group type unique identifier.</param>
         private void SelectArea( Guid? groupTypeGuid )
         {
-            hfIsDirty.Value = "false";
-
             resourceAreaPanel.Visible = false;
             resourceGroupPanel.Visible = false;
             btnResourceSave.Visible = false;
@@ -3977,8 +3960,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="groupGuid">The group unique identifier.</param>
         private void SelectGroup( Guid? groupGuid )
         {
-            hfIsDirty.Value = "false";
-
             resourceAreaPanel.Visible = false;
             resourceGroupPanel.Visible = false;
             btnResourceSave.Visible = false;
@@ -4793,7 +4774,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         hfParentGroupId.Value = parentGroup.Guid.ToString();
                         phGroupControl.Controls.Clear();
+
+                        // TODO: move this to ShowTab method so it fires once per postback
+
                         BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList() );
+
+                        // TODO: remove hardcoded page number
+
                         lbAddSubGroup.HRef = "javascript: Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Add {0}&GroupId=0&ParentGroupId={1}", groupTypeGroupTerm, parentGroup.Id ) ) + "')";
 
                         if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.IconCssClass ) )
@@ -4860,6 +4847,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 hfEditGroup.Value = group.Guid.ToString();
 
                 BindResourcePanels();
+
+                // TODO: remove hardcoded page number
 
                 string script = "Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Edit {0}&GroupId={1}", group.Name, group.Id ) ) + "');";
                 ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + e.CommandArgument.ToString(), script, true );
@@ -4972,7 +4961,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <summary>
         /// Renders the edit group member modal.
         /// </summary>
-        /// <param name="groupMemberId">The group member identifier.</param>
+        /// <param name="groupKey">The group key.</param>
         private void RenderEditGroupMemberModal( string groupKey )
         {
             if ( !groupKey.Contains( '|' ) )
@@ -5070,6 +5059,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
                     ddlSubGroup.SelectedIndex = parentGroup.Groups.Any() ? 1 : 0;
                     ddlSubGroup.Label = !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupTerm ) ? parentGroup.GroupType.GroupTerm : "Sub-Group";
+                    group = parentGroup.Groups.Any() ? parentGroup.Groups.FirstOrDefault() : null;
                 }
                 else if ( group != null )
                 {
@@ -5077,35 +5067,78 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         group.GroupType.LoadAttributes();
                     }
-
-                    var placedMembers = new List<int>();
-                    if ( !group.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
+                    
+                    // this is a registrants group, begin creating a registrant list
+                    // TODO: add a static reference Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_SERVING_AREA
+                    var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable().Where( g => g.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" );
+                    if ( group.GroupType.GroupTypePurposeValue == null || group.GroupType.GroupTypePurposeValue.Value != "Serving Area" )
                     {
-                        ddlRegistrantList.Help = string.Format( "Choose from a list of Registrants who have not yet been assigned to a {0} {1}", group.ParentGroup.Name, group.GroupType.GroupTerm );
-                        foreach ( Group g in group.ParentGroup.Groups )
+                        // check if registrants can be assigned to multiple groups
+                        var placedMembers = new List<int>();
+                        if ( !group.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
                         {
-                            placedMembers.AddRange(
-                                g.Members.Select( m => m.Person.Id )
-                                .Where( m => !placedMembers.Contains( m ) )
-                            );
+                            ddlRegistrantList.Help = string.Format( "Choose from a list of Registrants who have not yet been assigned to a {0} {1}", group.ParentGroup.Name, group.GroupType.GroupTerm );
+                            foreach ( Group g in group.ParentGroup.Groups )
+                            {
+                                placedMembers.AddRange(
+                                    g.Members.Select( m => m.Person.Id )
+                                    .Where( m => !placedMembers.Contains( m ) )
+                                );
+                            }
                         }
-                    }
-                    else
-                    {
-                        ddlRegistrantList.Help = null;
-                    }
+                        else
+                        {
+                            ddlRegistrantList.Label = groupMemberTerm;
+                            ddlRegistrantList.Help = null;
+                        }
 
-                    var allowedRegistrations = new RegistrationRegistrantService( rockContext ).Queryable().AsNoTracking()
-                        .Where( r => r.Registration.RegistrationInstanceId == registrationInstanceId
-                            && r.PersonAlias != null && r.PersonAlias.Person != null && !placedMembers.Contains( r.PersonAlias.Person.Id ) );
+                        // add the registrants who haven't already been placed
+                        var allowedRegistrations = new RegistrationRegistrantService( rockContext ).Queryable().AsNoTracking()
+                            .Where( r => r.Registration.RegistrationInstanceId == registrationInstanceId && r.PersonAlias != null && r.PersonAlias.Person != null 
+                                && !placedMembers.Contains( r.PersonAlias.Person.Id ) );
+                        foreach ( var allowedRegistrant in allowedRegistrations )
+                        {
+                            var registrantItem = new ListItem( allowedRegistrant.PersonAlias.Person.FullNameReversed, allowedRegistrant.PersonAlias.Person.Guid.ToString() );
+                            registrantItem.Attributes["optiongroup"] = "Registrants";
+                            ddlRegistrantList.Items.Add( registrantItem );
+                        }
+                        
+                        // restrict any volunteer lists to this registration's resources
+                        var registrationInstance = new RegistrationInstanceService( rockContext ).Get( registrationInstanceId );
+                        registrationInstance.LoadAttributes( rockContext );
+                        if ( registrationInstance.AttributeValues.Any() )
+                        {
+                            var registrationGroups = registrationInstance.AttributeValues.Values.Select( v => v.Value.AsGuid() ).ToList();
+                            qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroups.Contains( g.Group.Guid ) || registrationGroups.Contains( g.Group.ParentGroup.Guid ) )
+                                .DistinctBy( v => v.PersonId ).AsQueryable();
+                        }
+                    }                    
 
-                    foreach ( var allowedRegistrant in allowedRegistrations )
-                    {
-                        ddlRegistrantList.Items.Add( new ListItem( allowedRegistrant.PersonAlias.Person.FullNameReversed, allowedRegistrant.PersonAlias.Person.Guid.ToString() ) );
+                    if ( group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
+                    {   
+                        // display active volunteers not already in this group
+                        foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
+                        {
+                            var volunteerItem = new ListItem( volunteer.Person.FullNameReversed, volunteer.Person.Guid.ToString() );
+                            volunteerItem.Attributes["optiongroup"] = "Volunteers";
+                            ddlRegistrantList.Items.Add( volunteerItem );
+                        }
                     }
 
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0} to {1}", groupMemberTerm, group.Name );
                 }
+
+                if ( group != null )
+                {
+                    // this is a new group member, initialize the model
+                    groupMember = new GroupMember { Id = 0 };
+                    groupMember.GroupId = group.Id;
+                    groupMember.Group = group;
+                    groupMember.GroupRoleId = groupMember.Group.GroupType.DefaultGroupRoleId ?? 0;
+                    groupMember.GroupMemberStatus = GroupMemberStatus.Active;
+                    groupMember.DateTimeAdded = RockDateTime.Now;
+                }
+
                 rblStatus.SelectedIndex = 1;
             }
             else
@@ -5286,10 +5319,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         });
     });
-
-    $('.js-area-group-details').find('input').blur( function() {{
-        $('#{0}').val('true')
-    }});
 
     function isDirty() {{
         return false;
