@@ -3916,6 +3916,106 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
+        /// Handles the Click event of the btnResourceDelete control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void btnResourceDelete_Click( object sender, EventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                if ( resourceAreaPanel.Visible )
+                {
+                    var groupTypeService = new GroupTypeService( rockContext );
+                    var groupType = groupTypeService.Get( resourceAreaPanel.GroupTypeGuid );
+                    if ( groupType != null )
+                    {
+                        if ( IsInheritedGroupTypeRecursive( groupType, groupTypeService ) )
+                        {
+                            nbDeleteWarning.Text = "WARNING - Cannot delete. This group type or one of its child group types is assigned as an inherited group type.";
+                            nbDeleteWarning.Visible = true;
+                            return;
+                        }
+
+                        string errorMessage;
+                        if ( !groupTypeService.CanDelete( groupType, out errorMessage ) )
+                        {
+                            nbDeleteWarning.Text = "WARNING - Cannot Delete: " + errorMessage;
+                            nbDeleteWarning.Visible = true;
+                            return;
+                        }
+
+                        int oldGroupTypeId = groupType.Id;
+
+                        groupType.ParentGroupTypes.Clear();
+                        groupType.ChildGroupTypes.Clear();
+                        groupTypeService.Delete( groupType );
+                        rockContext.SaveChanges();
+                        GroupTypeCache.Flush( oldGroupTypeId );
+                        Rock.CheckIn.KioskDevice.FlushAll();
+                    }
+                    SelectArea( null );
+                }
+
+                if ( resourceGroupPanel.Visible )
+                {
+                    var groupService = new GroupService( rockContext );
+                    var group = groupService.Get( resourceGroupPanel.GroupGuid );
+                    if ( group != null )
+                    {
+                        string errorMessage;
+                        if ( !groupService.CanDelete( group, out errorMessage ) )
+                        {
+                            nbDeleteWarning.Text = "WARNING - Cannot Delete: " + errorMessage;
+                            nbDeleteWarning.Visible = true;
+                            return;
+                        }
+
+                        groupService.Delete( group ); //Delete if group isn't active
+                        rockContext.SaveChanges();
+                        SelectGroup( null );
+                    }
+                }
+            }
+
+            BuildRegistrationResources();
+        }
+
+        /// <summary>
+        /// Determines whether [is inherited group type recursive] [the specified group type].
+        /// </summary>
+        /// <param name="groupType">Type of the group.</param>
+        /// <param name="groupTypeService">The group type service.</param>
+        /// <param name="typesChecked">The types checked.</param>
+        /// <returns>
+        ///   <c>true</c> if [is inherited group type recursive] [the specified group type]; otherwise, <c>false</c>.
+        /// </returns>
+        private bool IsInheritedGroupTypeRecursive( GroupType groupType, GroupTypeService groupTypeService, List<int> typesChecked = null )
+        {
+            // Track the groups that have been checked since group types can have themselves as a child
+            typesChecked = typesChecked ?? new List<int>();
+            if ( !typesChecked.Contains( groupType.Id ) )
+            {
+                typesChecked.Add( groupType.Id );
+
+                if ( groupTypeService.Queryable().Any( a => a.InheritedGroupType.Guid == groupType.Guid ) )
+                {
+                    return true;
+                }
+
+                foreach ( var childGroupType in groupType.ChildGroupTypes.Where( t => !typesChecked.Contains( t.Id ) ) )
+                {
+                    if ( IsInheritedGroupTypeRecursive( childGroupType, groupTypeService, typesChecked ) )
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Selects the area.
         /// </summary>
         /// <param name="groupTypeGuid">The group type unique identifier.</param>
@@ -3937,9 +4037,34 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         _currentGroupTypeGuid = groupType.Guid;
                         resourceAreaPanel.SetGroupType( groupType, rockContext );
+
+                        if ( resourceAreaPanel.EnableCheckinOptions )
+                        {
+                            resourceAreaPanel.CheckinLabels = new List<ResourceArea.CheckinLabelAttributeInfo>();
+                            groupType.LoadAttributes( rockContext );
+                            var labelAttributeKeys = ResourceArea.GetCheckinLabelAttributes( groupType.Attributes )
+                                .OrderBy( a => a.Value.Order )
+                                .Select( a => a.Key ).ToList();
+                            var binaryFileService = new BinaryFileService( rockContext );
+
+                            foreach ( string key in labelAttributeKeys )
+                            {
+                                var attributeValue = groupType.GetAttributeValue( key );
+                                var binaryFileGuid = attributeValue.AsGuid();
+                                var fileName = binaryFileService.Queryable().Where( a => a.Guid == binaryFileGuid ).Select( a => a.FileName ).FirstOrDefault();
+                                if ( fileName != null )
+                                {
+                                    resourceAreaPanel.CheckinLabels.Add( new ResourceArea.CheckinLabelAttributeInfo { AttributeKey = key, BinaryFileGuid = binaryFileGuid, FileName = fileName } );
+                                }
+                            }
+                        }
+
                         resourceAreaPanel.Visible = true;
                         btnResourceSave.Text = "Save Area";
                         btnResourceSave.Visible = true;
+                        // don't allow delete, this depends on areas generated from grouptype inheritance
+                        btnResourceDelete.Visible = false;
+                        //btnDelete.Attributes["onclick"] = string.Format( "javascript: return Rock.dialogs.confirmDelete(event, '{0}', '{1}');", "check-in area", "This action cannot be undone." );
                     }
                     else
                     {
@@ -3978,8 +4103,39 @@ namespace RockWeb.Plugins.com_kfs.Event
                         _currentGroupGuid = group.Guid;
                         resourceGroupPanel.SetGroup( group, rockContext );
                         resourceGroupPanel.Visible = true;
+
+                        if ( resourceGroupPanel.EnableAddLocations )
+                        {
+                            var locationService = new LocationService( rockContext );
+                            var locationQry = locationService.Queryable().Select( a => new { a.Id, a.ParentLocationId, a.Name } );
+
+                            resourceGroupPanel.Locations = new List<ResourceGroup.LocationGridItem>();
+                            foreach ( var groupLocation in group.GroupLocations.OrderBy( gl => gl.Order ).ThenBy( gl => gl.Location.Name ) )
+                            {
+                                var location = groupLocation.Location;
+                                var gridItem = new ResourceGroup.LocationGridItem();
+                                gridItem.LocationId = location.Id;
+                                gridItem.Name = location.Name;
+                                gridItem.FullNamePath = location.Name;
+                                gridItem.ParentLocationId = location.ParentLocationId;
+                                gridItem.Order = groupLocation.Order;
+
+                                var parentLocationId = location.ParentLocationId;
+                                while ( parentLocationId != null )
+                                {
+                                    var parentLocation = locationQry.FirstOrDefault( a => a.Id == parentLocationId );
+                                    gridItem.FullNamePath = parentLocation.Name + " > " + gridItem.FullNamePath;
+                                    parentLocationId = parentLocation.ParentLocationId;
+                                }
+
+                                resourceGroupPanel.Locations.Add( gridItem );
+                            }
+                        }
+
                         btnResourceSave.Text = "Save Group";
                         btnResourceSave.Visible = true;
+                        btnResourceDelete.Visible = true;
+                        btnResourceDelete.Attributes["onclick"] = string.Format( "javascript: return Rock.dialogs.confirmDelete(event, '{0}', '{1}');", "check-in area", "This action cannot be undone." );
                     }
                     else
                     {
@@ -4239,9 +4395,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                     ID = "ResourceAreaRow_" + groupType.Guid.ToString( "N" )
                 };
 
-                //resourceAreaRow.EnableAddArea = false;
-                //resourceAreaRow.EnableGroupArea = true;
+                resourceAreaRow.EnableAddAreas = false;
+                resourceAreaRow.EnableAddGroups = true;
                 resourceAreaRow.SetGroupType( groupType );
+                //resourceAreaRow.AddAreaClick += ResourceAreaRow_AddAreaClick;
                 resourceAreaRow.AddGroupClick += ResourceAreaRow_AddGroupClick;
                 parentControl.Controls.Add( resourceAreaRow );
 

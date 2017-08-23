@@ -125,11 +125,12 @@
                                     </div>
                                     <div class="col-md-6 js-area-group-details">
 
-                                        <Rock:ResourceArea ID="resourceAreaPanel" runat="server" Visible="false" />
-                                        <Rock:ResourceGroup ID="resourceGroupPanel" runat="server" Visible="false" />
+                                        <Rock:ResourceArea ID="resourceAreaPanel" runat="server" Visible="false" EnableCheckinOptions="false" />
+                                        <Rock:ResourceGroup ID="resourceGroupPanel" runat="server" Visible="false" EnableAddLocations="false" />
 
                                         <div class="actions">
                                             <asp:LinkButton ID="btnResourceSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnResourceSave_Click" Visible="false" />
+                                            <asp:LinkButton ID="btnResourceDelete" runat="server" Text="Delete" CssClass="btn btn-link" OnClick="btnResourceDelete_Click" Visible="false" />
                                         </div>
 
                                         <div class="margin-t-md">
@@ -517,6 +518,50 @@
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
             } else if ($(this).hasClass('resource-item')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
+            }
+        });
+
+        // javascript to make the Reorder buttons work on the CheckinGroupTypeEditor controls
+        $('.js-resource-area-list').sortable({
+            helper: fixHelper,
+            handle: '.resource-area-reorder',
+            containment: 'parent',
+            tolerance: 'pointer',
+            start: function (event, ui) {
+                {
+                    var start_pos = ui.item.index();
+                    ui.item.data('start_pos', start_pos);
+                }
+            },
+            update: function (event, ui) {
+                {
+                    if (!isDirty()) {
+                        var newGroupTypeIndex = $(ui.item).prevAll('li').length;
+                        __doPostBack('<%=upnlContent.ClientID %>', 're-order-area:' + ui.item.attr('data-key') + ';' + newGroupTypeIndex);
+                    }
+                }
+            }
+        });
+
+        // javascript to make the Reorder buttons work on the CheckinGroupEditor controls
+        $('.js-checkin-group-list').sortable({
+            helper: fixHelper,
+            handle: '.resource-group-reorder',
+            containment: 'parent',
+            tolerance: 'pointer',
+            start: function (event, ui) {
+                {
+                    var start_pos = ui.item.index();
+                    ui.item.data('start_pos', start_pos);
+                }
+            },
+            update: function (event, ui) {
+                {
+                    if (!isDirty()) {
+                        var newGroupIndex = $(ui.item).prevAll('li').length;
+                        __doPostBack('<%=upnlContent.ClientID %>', 're-order-group:' + ui.item.attr('data-key') + ';' + newGroupIndex);
+                    }
+                }
             }
         });
     });
