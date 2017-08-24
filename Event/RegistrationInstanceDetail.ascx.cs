@@ -612,7 +612,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     int groupMemberId = int.Parse( hfSubGroupMemberId.Value );
 
                     // Check to see if a person was selected
-                    var person = ppSubGroupMember.SelectedValue.HasValue ? new PersonService( rockContext ).Get( (int)ppSubGroupMember.SelectedValue ) : null;
+                    var person = ddlRegistrantList.SelectedValueAsGuid().HasValue ? new PersonService( rockContext ).Get( (Guid)ddlRegistrantList.SelectedValueAsGuid() ) : null;
+                    person = ppSubGroupMember.SelectedValue.HasValue ? new PersonService( rockContext ).Get( (int)ppSubGroupMember.SelectedValue ) : null;
                     if ( person == null )
                     {
                         nbErrorMessage.Title = "Please select a Person";
@@ -664,7 +665,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         return;
                     }
 
-                    // using WrapTransaction because there are three Saves
+                    // using WrapTransaction because there are three saves
                     rockContext.WrapTransaction( () =>
                     {
                         if ( groupMember.Id.Equals( 0 ) )
@@ -1397,86 +1398,89 @@ namespace RockWeb.Plugins.com_kfs.Event
                             if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
                             {
                                 var parentGroup = groupService.Get( resourceGroupGuid.Value.AsGuid() );
-                                var btnGroupAssignment = e.Row.Cells[columnIndex].Controls[0] as LinkButton;
-                                if ( btnGroupAssignment != null && parentGroup != null )
+                                if ( e.Row.Cells.Count >= columnIndex )
                                 {
-                                    //var parentGroupColumn = e.Row.FindControl( "lSubGroup_" + parentGroup.Id ) as Literal;
-                                    if ( parentGroup.Groups.Any() )
+                                    var btnGroupAssignment = e.Row.Cells[columnIndex].Controls[0] as LinkButton;
+                                    if ( btnGroupAssignment != null && parentGroup != null )
                                     {
-                                        if ( parentGroup.GroupType.Attributes == null || !parentGroup.GroupType.Attributes.Any() )
+                                        //var parentGroupColumn = e.Row.FindControl( "lSubGroup_" + parentGroup.Id ) as Literal;
+                                        if ( parentGroup.Groups.Any() )
                                         {
-                                            parentGroup.GroupType.LoadAttributes( rockContext );
-                                        }
-
-                                        var subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
-                                        var groupMemberships = memberService.Queryable().AsNoTracking()
-                                            .Where( m => m.PersonId == registrant.PersonId && subGroupIds.Contains( m.GroupId ) ).ToList();
-                                        if ( !groupMemberships.Any() )
-                                        {
-                                            btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
-
-                                            using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                            if ( parentGroup.GroupType.Attributes == null || !parentGroup.GroupType.Attributes.Any() )
                                             {
-                                                btnGroupAssignment.Controls.Add( literalControl );
+                                                parentGroup.GroupType.LoadAttributes( rockContext );
                                             }
-                                            using ( var literalControl = new LiteralControl( "<span class='grid-btn-assign-text'> Assign</span>" ) )
-                                            {
-                                                btnGroupAssignment.Controls.Add( literalControl );
-                                            }
-                                            btnGroupAssignment.CommandName = "AssignSubGroup";
-                                            btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
-                                        }
-                                        else if ( parentGroup.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
-                                        {
-                                            var subGroupControls = e.Row.Cells[columnIndex].Controls;
 
-                                            // add any group memberships
-                                            foreach ( var member in groupMemberships )
+                                            var subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
+                                            var groupMemberships = memberService.Queryable().AsNoTracking()
+                                                .Where( m => m.PersonId == registrant.PersonId && subGroupIds.Contains( m.GroupId ) ).ToList();
+                                            if ( !groupMemberships.Any() )
                                             {
-                                                using ( var subGroupButton = new LinkButton() )
+                                                btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
+
+                                                using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
                                                 {
-                                                    // TODO: Y U NO WORK?
-                                                    //subGroupButton.Command += new CommandEventHandler( MultipleSubGroup_Click );
-                                                    //btnGroupAssignment.CommandName = "ChangeSubGroup";
-                                                    //btnGroupAssignment.CommandArgument = member.Id.ToString();
-
-                                                    subGroupButton.OnClientClick = "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:" + member.Id + "' ); return false;";
-                                                    subGroupButton.Text = " " + member.Group.Name + "  ";
-                                                    subGroupControls.AddAt( 0, subGroupButton );
+                                                    btnGroupAssignment.Controls.Add( literalControl );
                                                 }
+                                                using ( var literalControl = new LiteralControl( "<span class='grid-btn-assign-text'> Assign</span>" ) )
+                                                {
+                                                    btnGroupAssignment.Controls.Add( literalControl );
+                                                }
+                                                btnGroupAssignment.CommandName = "AssignSubGroup";
+                                                btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
                                             }
-
-                                            using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                            else if ( parentGroup.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
                                             {
-                                                btnGroupAssignment.Controls.Add( literalControl );
+                                                var subGroupControls = e.Row.Cells[columnIndex].Controls;
+
+                                                // add any group memberships
+                                                foreach ( var member in groupMemberships )
+                                                {
+                                                    using ( var subGroupButton = new LinkButton() )
+                                                    {
+                                                        // TODO: Y U NO WORK?
+                                                        //subGroupButton.Command += new CommandEventHandler( MultipleSubGroup_Click );
+                                                        //btnGroupAssignment.CommandName = "ChangeSubGroup";
+                                                        //btnGroupAssignment.CommandArgument = member.Id.ToString();
+
+                                                        subGroupButton.OnClientClick = "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:" + member.Id + "' ); return false;";
+                                                        subGroupButton.Text = " " + member.Group.Name + "  ";
+                                                        subGroupControls.AddAt( 0, subGroupButton );
+                                                    }
+                                                }
+
+                                                using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                                {
+                                                    btnGroupAssignment.Controls.Add( literalControl );
+                                                }
+
+                                                // TODO: figure out why command args aren't passing
+                                                btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, registrant.Id );
+
+                                                btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
+                                                //btnGroupAssignment.CommandName = "AssignSubGroup";
+                                                //btnGroupAssignment.CommandArgument = string.Format( "subgroup_{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
                                             }
-
-                                            // TODO: figure out why command args aren't passing
-                                            btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, registrant.Id );
-
-                                            btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
-                                            //btnGroupAssignment.CommandName = "AssignSubGroup";
-                                            //btnGroupAssignment.CommandArgument = string.Format( "subgroup_{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
+                                            else
+                                            {
+                                                var groupMember = groupMemberships.FirstOrDefault();
+                                                btnGroupAssignment.Text = groupMember.Group.Name;
+                                                btnGroupAssignment.CommandName = "ChangeSubGroup";
+                                                btnGroupAssignment.CommandArgument = groupMember.Id.ToString();
+                                            }
                                         }
                                         else
                                         {
-                                            var groupMember = groupMemberships.FirstOrDefault();
-                                            btnGroupAssignment.Text = groupMember.Group.Name;
-                                            btnGroupAssignment.CommandName = "ChangeSubGroup";
-                                            btnGroupAssignment.CommandArgument = groupMember.Id.ToString();
+                                            using ( var literalControl = new LiteralControl( "<i class='fa fa-minus-circle'></i>" ) )
+                                            {
+                                                btnGroupAssignment.Controls.Add( literalControl );
+                                            }
+                                            using ( var literalControl = new LiteralControl( string.Format( "<span class='grid-btn-assign-text'> No {0}</span>", parentGroup.GroupType.GroupTerm.Pluralize() ) ) )
+                                            {
+                                                btnGroupAssignment.Controls.Add( literalControl );
+                                            }
+                                            btnGroupAssignment.Enabled = false;
                                         }
-                                    }
-                                    else
-                                    {
-                                        using ( var literalControl = new LiteralControl( "<i class='fa fa-minus-circle'></i>" ) )
-                                        {
-                                            btnGroupAssignment.Controls.Add( literalControl );
-                                        }
-                                        using ( var literalControl = new LiteralControl( string.Format( "<span class='grid-btn-assign-text'> No {0}</span>", parentGroup.GroupType.GroupTerm.Pluralize() ) ) )
-                                        {
-                                            btnGroupAssignment.Controls.Add( literalControl );
-                                        }
-                                        btnGroupAssignment.Enabled = false;
                                     }
                                 }
                             }
@@ -2385,7 +2389,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                         if ( ActiveTab == "lb" + tabName )
                         {
                             liAssociatedGroup.AddCssClass( "active" );
-                            //BuildSubGroupPanels( phGroupControl, parentGroup.Groups.ToList() );
                         }
                     }
                 }
@@ -3978,6 +3981,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
+            // just deleted this item, remove visibility
+            btnResourceSave.Visible = false;
+            btnResourceDelete.Visible = false;
             BuildRegistrationResources();
         }
 
@@ -4135,7 +4141,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         btnResourceSave.Text = "Save Group";
                         btnResourceSave.Visible = true;
                         btnResourceDelete.Visible = true;
-                        btnResourceDelete.Attributes["onclick"] = string.Format( "javascript: return Rock.dialogs.confirmDelete(event, '{0}', '{1}');", "check-in area", "This action cannot be undone." );
+                        btnResourceDelete.Attributes["onclick"] = string.Format( "javascript: return Rock.dialogs.confirmDelete(event, '{0}', '{1}');", "resource area", "This action cannot be undone." );
                     }
                     else
                     {
@@ -4944,7 +4950,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                         qryParams.Add( "GroupId", "0" );
                         qryParams.Add( "ParentGroupId", parentGroup.Id.ToString() );
 
-                        //lbAddSubGroup.HRef = "javascript: Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Add {0}&GroupId=0&ParentGroupId={1}", groupTypeGroupTerm, parentGroup.Id ) ) + "')";
                         lbAddSubGroup.HRef = "javascript: Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupModalPage", qryParams ) + "')";
 
                         if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.IconCssClass ) )
@@ -5228,8 +5233,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
 
                     // this is a registrants group, begin creating a registrant list
-                    // TODO: add a static reference Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_SERVING_AREA
                     var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable().Where( g => g.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" );
+                    //var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable().Where( g => g.Group.GroupType.GroupTypePurposeValue.Guid.ToString() == Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_SERVING_AREA );
                     if ( group.GroupType.GroupTypePurposeValue == null || group.GroupType.GroupTypePurposeValue.Value != "Serving Area" )
                     {
                         // check if registrants can be assigned to multiple groups
@@ -5271,6 +5276,14 @@ namespace RockWeb.Plugins.com_kfs.Event
                             qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroups.Contains( g.Group.Guid ) || registrationGroups.Contains( g.Group.ParentGroup.Guid ) )
                                 .DistinctBy( v => v.PersonId ).AsQueryable();
                         }
+                    }
+                    // adding someone to a serving area group, show the person picker instead of a dropdown
+                    else
+                    {
+                        ddlRegistrantList.Visible = false;
+                        ddlRegistrantList.Required = false;
+                        ppSubGroupMember.Visible = true;
+                        ppSubGroupMember.Required = true;
                     }
 
                     if ( group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
