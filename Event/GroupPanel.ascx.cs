@@ -7,6 +7,7 @@ using System.Linq;
 using System.Web.UI.WebControls;
 using Rock;
 using Rock.Data;
+using Rock.Field.Types;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
@@ -85,9 +86,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 _group = group;
             }
             // Set up group Panel widget
+            BuildSubgroupHeading( group );
             pnlGroupDescription.Visible = !string.IsNullOrWhiteSpace( group.Description );
             lblGroupDescription.Text = group.Description;
-            BuildSubgroupHeading( group );
             pnlSubGroup.Expanded = _expanded;
             hfGroupId.Value = group.Id.ToString();
             lbGroupEdit.CommandArgument = group.Id.ToString();
@@ -108,6 +109,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var entityTypeId = new GroupMember().TypeId;
                 var groupQualifier = _group.Id.ToString();
                 var groupTypeQualifier = _group.GroupTypeId.ToString();
+                
                 foreach ( var attributeModel in new AttributeService( rockContext ).Queryable()
                     .Where( a => a.EntityTypeId == entityTypeId && a.IsGridColumn &&
                         ( ( a.EntityTypeQualifierColumn.Equals( "GroupId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupQualifier ) ) ||
@@ -115,27 +117,50 @@ namespace RockWeb.Plugins.com_kfs.Event
                     .OrderByDescending( a => a.EntityTypeQualifierColumn )
                     .ThenBy( a => a.Order )
                     .ThenBy( a => a.Name ) )
-                {
+                {   
                     groupMemberAttributes.Add( AttributeCache.Read( attributeModel ) );
                 }
-            }
+            }   
 
             // Remove current attribute columns
             gGroupMembers.Columns.OfType<AttributeField>().ToList().ForEach( c => gGroupMembers.Columns.Remove( c ) );
 
+            var attributeValueService = new AttributeValueService( rockContext );
             foreach ( var attribute in groupMemberAttributes )
-            {
-                var columnExists = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
-                if ( !columnExists )
+            {                                                                    
+                var attributeColumn = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id );
+                if ( attributeColumn == null )
                 {
                     var boundField = new AttributeField();
                     boundField.DataField = attribute.Key;
                     boundField.AttributeId = attribute.Id;
                     boundField.HeaderText = attribute.Name;
 
+                    decimal needsFilled = 0;
                     if ( attribute.FieldType != null )
                     {
-                        boundField.ItemStyle.HorizontalAlign = attribute.FieldType.Field.AlignValue;
+                        boundField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+
+                        var attributeValues = attributeValueService.GetByAttributeId( attribute.Id )
+                            .Where( v => !( v.Value == null || v.Value.Trim() == string.Empty ) )
+                            .Select( v => v.Value ).ToList();
+
+                        // if the values are numeric, sum a number value
+                        if ( attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.INTEGER.AsGuid() ) || attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.DECIMAL.AsGuid() ) )
+                        {
+                            needsFilled = attributeValues.Sum( v => v.AsDecimal() );
+                        }
+                        else
+                        {
+                            // handles checkboxes as well as non-empty (true) strings
+                            needsFilled = attributeValues.Count( v => v.AsBoolean( true ) );
+                        }
+                    }
+
+                    if ( needsFilled > 0 )
+                    {
+                        gGroupMembers.ShowFooter = true;
+                        boundField.FooterText = needsFilled.ToString();
                     }
 
                     gGroupMembers.Columns.Add( boundField );
@@ -151,20 +176,11 @@ namespace RockWeb.Plugins.com_kfs.Event
             var deleteField = new DeleteField();
             gGroupMembers.Columns.Add( deleteField );
             deleteField.Click += gGroupMembers_DeleteClick;
-
+            
             gGroupMembers.DataSource = group.Members;
             gGroupMembers.DataBind();
         }
-       
-        /// <summary>
-        /// Binds the member grid.
-        /// </summary>
-        public void BindGroupMembersGrid()
-        {
-            gGroupMembers.DataSource = _group.Members;
-            gGroupMembers.DataBind();
-        }
-
+      
         /// <summary>
         /// Builds the subgroup heading.
         /// </summary>
@@ -190,6 +206,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
                 pnlSubGroup.Title += capacityRatio;
             }
+            
+
         }
 
         /// <summary>
@@ -233,7 +251,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 groupMemberService.Delete( groupMember );
 
                 rockContext.SaveChanges();
-                var group = new GroupService( rockContext ).Get( groupMember.GroupId );
+                var group = new GroupService( rockContext ).Get( groupMember.GroupId );                
                 gGroupMembers.DataSource = group.Members;
                 gGroupMembers.DataBind();
                 BuildSubgroupHeading( group );
