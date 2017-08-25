@@ -608,12 +608,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     // add or remove group membership
                     GroupMember groupMember;
+                    var groupId = hfSubGroupId.ValueAsInt() > 0 ? hfSubGroupId.ValueAsInt() : ddlSubGroup.SelectedValue.AsInteger();
                     var groupMemberService = new GroupMemberService( rockContext );
                     int groupMemberId = int.Parse( hfSubGroupMemberId.Value );
 
                     // Check to see if a person was selected
                     var person = ddlRegistrantList.SelectedValueAsGuid().HasValue ? new PersonService( rockContext ).Get( (Guid)ddlRegistrantList.SelectedValueAsGuid() ) : null;
-                    person = ppSubGroupMember.SelectedValue.HasValue ? new PersonService( rockContext ).Get( (int)ppSubGroupMember.SelectedValue ) : null;
+                    person = person ?? ( ppSubGroupMember.SelectedValue.HasValue ? new PersonService( rockContext ).Get( (int)ppSubGroupMember.SelectedValue ) : null );
                     if ( person == null )
                     {
                         nbErrorMessage.Title = "Please select a Person";
@@ -633,7 +634,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // if adding a new group member
                     if ( groupMemberId.Equals( 0 ) )
                     {
-                        var groupId = hfSubGroupId.ValueAsInt() > 0 ? hfSubGroupId.ValueAsInt() : ddlSubGroup.SelectedValue.AsInteger();
                         groupMember = new GroupMember
                         {
                             Id = 0,
@@ -642,7 +642,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                     else
                     {
-                        // load existing group member
+                        // load existing group member and move if needed
                         groupMember = groupMemberService.Get( groupMemberId );
                         groupMember.GroupId = ddlSubGroup.SelectedValue.AsInteger();
                     }
@@ -653,7 +653,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupMember.GroupMemberStatus = rblStatus.SelectedValueAsEnum<GroupMemberStatus>();
                     groupMember.LoadAttributes();
                     Rock.Attribute.Helper.GetEditValues( phAttributes, groupMember );
-
+                    
                     if ( groupMember.GroupId != 0 && ( !groupMember.IsValid || !Page.IsValid ) )
                     {
                         if ( groupMember.ValidationResults.Any() )
