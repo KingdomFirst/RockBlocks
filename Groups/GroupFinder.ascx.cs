@@ -29,7 +29,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
     /// <summary>
     /// Block for people to find a group that matches their search parameters.
     /// </summary>
-    [DisplayName( "Group Finder" )]
+    [DisplayName( "Group Finder KFS" )]
     [Category( "Groups" )]
     [Description( "Block for people to find a group that matches their search parameters." )]
 
