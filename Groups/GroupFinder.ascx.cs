@@ -33,6 +33,9 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [Category( "Groups" )]
     [Description( "Block for people to find a group that matches their search parameters." )]
 
+    [BooleanField( "Auto Load", "When set to true, all results will be loaded to begin.", false )]
+    [CampusField( "Default Location", "The campus address that should be used as fallback for the search criteria.", false, "", "" )]
+
     // Linked Pages
     [LinkedPage( "Group Detail Page", "The page to navigate to for group details.", false, "", "CustomSetting" )]
     [LinkedPage( "Register Page", "The page to navigate to when registering for a group.", false, "", "CustomSetting" )]
@@ -594,7 +597,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             btnClear.Visible = btnSearch.Visible;
 
             // If we've already displayed results, then re-display them
-            if ( pnlResults.Visible )
+            if ( pnlResults.Visible || GetAttributeValue( "AutoLoad" ).AsBoolean() )
             {
                 ShowResults();
             }
@@ -911,8 +914,15 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 if ( fenceGroupTypeId.HasValue || showProximity )
                 {
                     personLocation = new LocationService( rockContext )
-                        .Get( acAddress.Street1, acAddress.Street2, acAddress.City,
-                            acAddress.State, acAddress.PostalCode, acAddress.Country );
+                            .Get( acAddress.Street1, acAddress.Street2, acAddress.City,
+                                acAddress.State, acAddress.PostalCode, acAddress.Country );
+
+                    Guid? campusGuid = GetAttributeValue( "DefaultLocation" ).AsGuidOrNull();
+                    if ( campusGuid != null && personLocation == null )
+                    {
+                        var campusLocation = CampusCache.Read( (Guid)campusGuid ).LocationId;
+                        personLocation = new LocationService( rockContext ).Get( (int)campusLocation );
+                    }
                 }
 
                 // If showing a map, and person's location was found, save a mapitem for this location
