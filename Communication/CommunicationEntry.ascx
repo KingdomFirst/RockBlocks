@@ -1,5 +1,6 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CommunicationEntry.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Communication.CommunicationEntry" %>
-<%@ Register src="CommunicationDetail.ascx" TagName="communicationDetail" TagPrefix="cd" %>
+<%@ Reference Control="~/Blocks/Communication/CommunicationDetail.ascx" %>
+<%@ Register src="~/Blocks/Communication/CommunicationDetail.ascx" TagName="communicationDetail" TagPrefix="cd" %>
 
 <script>
     //Sys.WebForms.PageRequestManager.getInstance().add_endRequest(scrollToGrid);
