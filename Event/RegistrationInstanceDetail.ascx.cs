@@ -5232,9 +5232,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                         group.GroupType.LoadAttributes();
                     }
 
-                    // this is a registrants group, begin creating a registrant list
+                    // start a list of available volunteers, will be filtered below
                     var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable().Where( g => g.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" );
-                    //var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable().Where( g => g.Group.GroupType.GroupTypePurposeValue.Guid.ToString() == Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_SERVING_AREA );
+
+                    // limited to registrants or volunteers assigned to this registration
                     if ( group.GroupType.GroupTypePurposeValue == null || group.GroupType.GroupTypePurposeValue.Value != "Serving Area" )
                     {
                         // check if registrants can be assigned to multiple groups
@@ -5271,13 +5272,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                         var registrationInstance = new RegistrationInstanceService( rockContext ).Get( registrationInstanceId );
                         registrationInstance.LoadAttributes( rockContext );
                         if ( registrationInstance.AttributeValues.Any() )
-                        {
+                        {   
                             var registrationGroups = registrationInstance.AttributeValues.Values.Select( v => v.Value.AsGuid() ).ToList();
                             qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroups.Contains( g.Group.Guid ) || registrationGroups.Contains( g.Group.ParentGroup.Guid ) )
                                 .DistinctBy( v => v.PersonId ).AsQueryable();
                         }
                     }
-                    // adding someone to a serving area group, show the person picker instead of a dropdown
+                    // adding a volunteer instead of registrants, show the person picker instead of a dropdown
                     else
                     {
                         ddlRegistrantList.Visible = false;
@@ -5292,7 +5293,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
                         {
                             var volunteerItem = new ListItem( volunteer.Person.FullNameReversed, volunteer.Person.Guid.ToString() );
-                            volunteerItem.Attributes["optiongroup"] = "Volunteers";
+                            volunteerItem.Attributes["optiongroup"] = group.GroupType.GroupMemberTerm;
                             ddlRegistrantList.Items.Add( volunteerItem );
                         }
                     }
