@@ -40,6 +40,7 @@ namespace RockWeb.Plugins.com_kfs.Communication
     [BooleanField( "Send When Approved", "Should communication be sent once it's approved (vs. just being queued for scheduled job to send)?", true, "", 5 )]
     [CustomDropdownListField( "Mode", "The mode to use ( 'Simple' mode will prevent users from searching/adding new people to communication).", "Full,Simple", true, "Full", "", 6 )]
     [BooleanField( "Show Attachment Uploader", "Should the attachment uploader be shown for email communications.", true, "", 7 )]
+    [BooleanField( "Show Bulk Communication", "Should the Bulk Communication option be displayed.", true, "", 8 )]
     public partial class CommunicationEntry : RockBlock
     {
 
@@ -47,6 +48,7 @@ namespace RockWeb.Plugins.com_kfs.Communication
 
         private bool _fullMode = true;
         private bool _editingApproved = false;
+        private bool _showBulk = true;
 
         #endregion
 
@@ -196,10 +198,12 @@ namespace RockWeb.Plugins.com_kfs.Communication
 ";
             ScriptManager.RegisterStartupScript( lbRemoveAllRecipients, lbRemoveAllRecipients.GetType(), "ConfirmRemoveAll", script, true );
 
+            _showBulk = GetAttributeValue( "ShowBulkCommunication" ).AsBoolean();
+
             string mode = GetAttributeValue( "Mode" );
             _fullMode = string.IsNullOrWhiteSpace( mode ) || mode != "Simple";
             ppAddPerson.Visible = _fullMode;
-            cbBulk.Visible = _fullMode;
+            cbBulk.Visible = ( _showBulk ) ? _fullMode : _showBulk;
             ddlTemplate.Visible = _fullMode;
             dtpFutureSend.Visible = _fullMode;
             btnTest.Visible = _fullMode;
@@ -944,7 +948,7 @@ namespace RockWeb.Plugins.com_kfs.Communication
                     nbInvalidTransport.Visible = false;
                 }
 
-                cbBulk.Visible = _fullMode && component.SupportsBulkCommunication;
+                cbBulk.Visible = ( _showBulk ) ? ( _fullMode && component.SupportsBulkCommunication ) : _showBulk;
 
                 return mediumControl;
             }
