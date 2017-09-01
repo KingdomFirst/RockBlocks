@@ -1,20 +1,4 @@
-﻿// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
@@ -32,12 +16,12 @@ using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Blocks.CheckIn.Manager
+namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 {
     /// <summary>
     /// Block used to view current check-in counts and locations
     /// </summary>
-    [DisplayName( "Locations" )]
+    [DisplayName( "Locations KFS" )]
     [Category( "Check-in > Manager" )]
     [Description( "Block used to view current check-in counts and locations." )]
     [CustomRadioListField( "Navigation Mode", "Navigation and attendance counts can be grouped and displayed either by 'Group Type > Group Type (etc) > Group > Location' or by 'location > location (etc).'  Select the navigation heirarchy that is most appropriate for your organization.", "T^Group Type,L^Location,", true, "T", "", 0, "Mode" )]
