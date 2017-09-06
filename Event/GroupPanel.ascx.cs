@@ -206,8 +206,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
                 pnlSubGroup.Title += capacityRatio;
             }
-            
-
         }
 
         /// <summary>

@@ -1,5 +1,7 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationInstanceDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.KFSRegistrationInstanceDetail" %>
-<%@ Reference Control="~/Plugins/com_kfs/Event/GroupPanel.ascx" %>
+<%@ Register TagPrefix="KFS" Namespace="com.kfs.EventRegistration.Advanced" Assembly="com.kfs.EventRegistration.Advanced" %>
+<%@ Register TagPrefix="KFS" TagName="KFSGroupPanel" Src="~/Plugins/com_kfs/Event/GroupPanel.ascx" %>
+
 <script type="text/javascript">
     Sys.Application.add_load(function () {
         $('.js-follow-status').tooltip();
@@ -124,9 +126,8 @@
                                         </ul>
                                     </div>
                                     <div class="col-md-6 js-area-group-details">
-
-                                        <Rock:ResourceArea ID="resourceAreaPanel" runat="server" Visible="false" EnableCheckinOptions="false" />
-                                        <Rock:ResourceGroup ID="resourceGroupPanel" runat="server" Visible="false" EnableAddLocations="false" />
+                                        <KFS:ResourceArea ID="resourceAreaPanel" runat="server" Visible="false" EnableCheckinOptions="false" />
+                                        <KFS:ResourceGroup ID="resourceGroupPanel" runat="server" Visible="false" EnableAddLocations="false" />
 
                                         <div class="actions">
                                             <asp:LinkButton ID="btnResourceSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnResourceSave_Click" Visible="false" />

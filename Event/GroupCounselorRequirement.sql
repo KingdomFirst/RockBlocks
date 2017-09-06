@@ -1,30 +1,32 @@
-;with targetGroup as (
-	select gm.PersonId
-	from GroupMember gm
-	where groupid = 1393
-	--where GroupId = {{ Group.Id }}
-), counselorGroups as (
-	select gm.PersonId, g.Id GroupId, g.Name GroupName, gtr.IsLeader
-	from groupmember gm
-	inner join [group] g
-	on gm.groupid = g.id
-	inner join grouptype gt
-	on g.GroupTypeId = gt.id
-	and gt.GroupTypePurposeValueId IS NULL
-	inner join grouptyperole gtr
-	on gm.GroupRoleId = gtr.id
+WITH targetGroup AS (
+    SELECT [gm].[PersonId]
+    FROM [GroupMember] [gm]
+    WHERE GroupId = {{ Group.Id }}
+), counselorGroups AS (
+    SELECT [gm].[PersonId],
+        [g].[Id] [GroupId],
+        [g].[Name] [GroupName],
+        [gtr].[IsLeader]
+    FROM [groupmember] [gm]
+    INNER JOIN [Group] [g]
+    ON [gm].[groupid] = [g].[id]
+    INNER JOIN [grouptype] [gt]
+    ON [g].[GroupTypeId] = [gt].[id]
+    AND [gt].[GroupTypePurposeValueId] IS NULL
+    INNER JOIN [grouptyperole] [gtr]
+    ON [gm].[GroupRoleId] = [gtr].[id]
 )
-select a.PersonId
-from counselorGroups a
-where a.groupid in (
-	select c.groupid
-	from counselorGroups c
-	inner join targetGroup t
-	on c.personid = t.PersonId
-	and c.IsLeader = 1
+SELECT [a].[PersonId]
+FROM [counselorGroups] [a]
+WHERE [a].[groupid] IN (
+    SELECT [c].[groupid]
+    FROM [counselorGroups] [c]
+    INNER JOIN [targetGroup] [t]
+    ON [c].[personid] = [t].[PersonId]
+    AND [c].[IsLeader] = 1
 )
-union all
-select PersonId
-from counselorGroups
-where IsLeader = 1
+UNION ALL
+SELECT [PersonId]
+FROM [counselorGroups]
+WHERE [IsLeader] = 1;
 

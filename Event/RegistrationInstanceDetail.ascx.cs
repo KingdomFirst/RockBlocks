@@ -9,6 +9,7 @@ using System.Linq;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
+using com.kfs.EventRegistration.Advanced;
 using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
@@ -653,7 +654,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupMember.GroupMemberStatus = rblStatus.SelectedValueAsEnum<GroupMemberStatus>();
                     groupMember.LoadAttributes();
                     Rock.Attribute.Helper.GetEditValues( phAttributes, groupMember );
-                    
+
                     if ( groupMember.GroupId != 0 && ( !groupMember.IsValid || !Page.IsValid ) )
                     {
                         if ( groupMember.ValidationResults.Any() )
@@ -4987,7 +4988,10 @@ namespace RockWeb.Plugins.com_kfs.Event
             foreach ( Group group in subGroups )
             {
                 var groupPanel = (KFSGroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
+                //var groupPanel = new KFSGroupPanel();
+
                 groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
+
                 foreach ( string control in _expandedGroupPanels )
                 {
                     if ( control.Contains( groupPanel.ID ) )
@@ -5272,7 +5276,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         var registrationInstance = new RegistrationInstanceService( rockContext ).Get( registrationInstanceId );
                         registrationInstance.LoadAttributes( rockContext );
                         if ( registrationInstance.AttributeValues.Any() )
-                        {   
+                        {
                             var registrationGroups = registrationInstance.AttributeValues.Values.Select( v => v.Value.AsGuid() ).ToList();
                             qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroups.Contains( g.Group.Guid ) || registrationGroups.Contains( g.Group.ParentGroup.Guid ) )
                                 .DistinctBy( v => v.PersonId ).AsQueryable();
