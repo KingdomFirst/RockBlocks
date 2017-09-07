@@ -332,11 +332,21 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     ResourceGroupTypes.Add( GroupTypeCache.Read( id, rockContext ) );
                 }
+
+                Group group = null;
+                if ( _currentGroupGuid.HasValue )
+                {
+                    group = new GroupService( rockContext ).Get( _currentGroupGuid.Value );
+                    if ( group != null )
+                    {
+                        resourceGroupPanel.CreateGroupAttributeControls( group, rockContext );
+                    }
+                }
             }
 
-            AddDynamicControls();
-            BuildSubGroupTabs();
+            // Rebuilds dynamic group area controls after postbacks
             BuildRegistrationResources();
+            BuildSubGroupTabs();
         }
 
         #endregion
@@ -393,7 +403,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var instance = service.Get( hfRegistrationInstanceId.Value.AsInteger() );
 
                 BuildRegistrationGroupHierarchy( rockContext, instance );
-                BuildRegistrationResources();
                 ShowEditDetails( instance, rockContext );
             }
         }
@@ -1401,7 +1410,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 var parentGroup = groupService.Get( resourceGroupGuid.Value.AsGuid() );
                                 if ( e.Row.Cells.Count >= columnIndex )
                                 {
-                                    var btnGroupAssignment = e.Row.Cells[columnIndex].Controls[0] as LinkButton;
+                                    var groupAssignments = e.Row.Cells[columnIndex];
+                                    var btnGroupAssignment = groupAssignments.Controls.Count > 0 ? groupAssignments.Controls[0] as LinkButton : null;
                                     if ( btnGroupAssignment != null && parentGroup != null )
                                     {
                                         //var parentGroupColumn = e.Row.FindControl( "lSubGroup_" + parentGroup.Id ) as Literal;
@@ -2161,9 +2171,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 BuildRegistrationGroupHierarchy( rockContext, instance );
-                AddDynamicControls( instance );
                 BuildSubGroupTabs( instance );
-                BuildRegistrationResources();
+
 
                 // TODO: are all of these still necessary?
                 BindLinkagesFilter();
@@ -2395,6 +2404,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
+            AddDynamicControls();
             BindResourcePanels();
 
             switch ( ActiveTab ?? string.Empty )
@@ -3762,8 +3772,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     SelectGroup( checkinGroup.Guid );
                 }
             }
-
-            BuildRegistrationResources();
         }
 
         /// <summary>
@@ -3800,8 +3808,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     SelectGroup( newGuid );
                 }
             }
-
-            BuildRegistrationResources();
         }
 
         /// <summary>
@@ -3833,8 +3839,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     SelectGroup( null );
                 }
             }
-
-            BuildRegistrationResources();
         }
 
         /// <summary>
@@ -3866,7 +3870,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             rockContext.SaveChanges();
                             groupType.SaveAttributeValues( rockContext );
-
+                            
                             // Make sure default role is set
                             if ( !groupType.DefaultGroupRoleId.HasValue && groupType.Roles.Any() )
                             {
@@ -3874,7 +3878,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
 
                             rockContext.SaveChanges();
-
+                            
                             GroupTypeCache.Flush( groupType.Id );
                             nbSaveSuccess.Visible = true;
                         }
@@ -3916,6 +3920,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
+            // rebuilds the group display on change
             BuildRegistrationResources();
         }
 
@@ -4083,8 +4088,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 _currentGroupTypeGuid = null;
             }
-
-            BuildRegistrationResources();
         }
 
         /// <summary>
@@ -4155,8 +4158,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 _currentGroupGuid = null;
                 resourceGroupPanel.CreateGroupAttributeControls( null, null );
             }
-
-            BuildRegistrationResources();
         }
 
         /// <summary>
@@ -4253,7 +4254,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         parentCategoryGroup = CreateGroup( rockContext, templateGroupType, null, parentCategory.Name );
                     }
 
-                    if ( childCategoryGroup.ParentGroup == null )
+                    if ( childCategoryGroup.ParentGroup == null && childCategoryGroup != parentCategoryGroup )
                     {
                         childCategoryGroup.ParentGroup = parentCategoryGroup;
                     }
@@ -4943,7 +4944,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                         phGroupControl.Controls.Clear();
 
                         // TODO: move this to ShowTab method so it fires once per postback
-
                         BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList() );
 
                         var qryParams = new Dictionary<string, string>();
@@ -4988,7 +4988,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             foreach ( Group group in subGroups )
             {
                 var groupPanel = (KFSGroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
-                //var groupPanel = new KFSGroupPanel();
+                //groupPanel = new KFSGroupPanel();
 
                 groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
 
