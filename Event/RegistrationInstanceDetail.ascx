@@ -489,7 +489,6 @@
         // If the offset is more than 58-80 then scroll to the js-area-group-details instead.
         if ($('#<%=hfAreaGroupClicked.ClientID %>').val() == "true" && $('.js-area-group-details').length && $('.js-panel-details').length) {
             $('#<%=hfAreaGroupClicked.ClientID %>').val("false");
-            alert("triggered");
             var panelDelta = $('.js-area-group-details').offset().top - $('.js-panel-details').offset().top;
             var scrollToPanel = ".js-panel-details";
             if (panelDelta > 80) {

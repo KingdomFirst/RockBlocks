@@ -600,7 +600,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             AddDynamicControls( instance );
             BuildSubGroupTabs( instance );
-            BindRegistrantsGrid();
         }
 
         /// <summary>
@@ -2057,7 +2056,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     .FirstOrDefault( i => i.Id == registrationInstanceId );
                 instance.LoadAttributes( rockContext );
 
-                // TODO: make sure this isn't firing unnecessarily
                 RockPage.SaveSharedItem( key, instance );
             }
 
@@ -2178,7 +2176,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 BindLinkagesFilter();
                 BindRegistrationsFilter();
                 BindRegistrantsFilter( instance );
-                BindRegistrantsGrid();
             }
         }
 
@@ -4943,7 +4940,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         hfParentGroupId.Value = parentGroup.Guid.ToString();
                         phGroupControl.Controls.Clear();
 
-                        // TODO: move this to ShowTab method so it fires once per postback
+                        // TODO: move this to ShowTab so it fires once per tab
                         BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList() );
 
                         var qryParams = new Dictionary<string, string>();
@@ -4952,18 +4949,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                         qryParams.Add( "ParentGroupId", parentGroup.Id.ToString() );
 
                         lbAddSubGroup.HRef = "javascript: Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupModalPage", qryParams ) + "')";
-
-                        if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.IconCssClass ) )
-                        {
-                            // TODO: set modal icon based on the css class
-                            modalIconString = string.Format( "<i class='{0}'></i> ", parentGroup.GroupType.IconCssClass );
-                        }
                     }
                 }
             }
 
             pnlAssociatedGroup.Visible = ActiveTab == ( "lb" + tabName );
-
+            
             // build header section
             var header = new HtmlGenericControl( "h1" );
             header.Attributes.Add( "class", "panel-title" );
@@ -4974,7 +4965,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 header.Controls.Add( faIcon );
             }
 
-            header.Controls.Add( new LiteralControl( tabName ) );
+            header.Controls.Add( new LiteralControl( string.Format( " {0}", tabName ) ) );
             phGroupHeading.Controls.Add( header );
         }
 
@@ -5025,7 +5016,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 qryParams.Add( "t", string.Format( "Edit {0}", group.Name ) );
                 qryParams.Add( "GroupId", group.Id.ToString() );
 
-                //string script = "Rock.controls.modal.show($(this), '" + ResolveUrl( string.Format( "~/page/478?t=Edit {0}&GroupId={1}", group.Name, group.Id ) ) + "');";
                 string script = "Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupModalPage", qryParams ) + "');";
                 ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + e.CommandArgument.ToString(), script, true );
             }
@@ -5095,6 +5085,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void BindResourcePanels()
         {
+            // TODO make sure this doesn't fire all the time
             rpResourcePanels.DataSource = ResourceGroupTypes.OrderBy( g => g.Name );
             rpResourcePanels.DataBind();
         }
@@ -5343,7 +5334,10 @@ namespace RockWeb.Plugins.com_kfs.Event
             Rock.Attribute.Helper.AddEditControls( groupMember, phAttributes, true, string.Empty, true );
 
             mdlAddSubGroupMember.Show();
-            BindRegistrantsGrid();
+
+            // render dynamic group controls beneath modal
+            AddDynamicControls();
+            BindRegistrantsGrid();            
         }
 
         #endregion
