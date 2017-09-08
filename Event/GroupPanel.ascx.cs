@@ -2,12 +2,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.Entity;
 using System.Linq;
 using System.Web.UI.WebControls;
 using Rock;
 using Rock.Data;
-using Rock.Field.Types;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
@@ -109,7 +107,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var entityTypeId = new GroupMember().TypeId;
                 var groupQualifier = _group.Id.ToString();
                 var groupTypeQualifier = _group.GroupTypeId.ToString();
-                
+
                 foreach ( var attributeModel in new AttributeService( rockContext ).Queryable()
                     .Where( a => a.EntityTypeId == entityTypeId && a.IsGridColumn &&
                         ( ( a.EntityTypeQualifierColumn.Equals( "GroupId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupQualifier ) ) ||
@@ -117,17 +115,17 @@ namespace RockWeb.Plugins.com_kfs.Event
                     .OrderByDescending( a => a.EntityTypeQualifierColumn )
                     .ThenBy( a => a.Order )
                     .ThenBy( a => a.Name ) )
-                {   
+                {
                     groupMemberAttributes.Add( AttributeCache.Read( attributeModel ) );
                 }
-            }   
+            }
 
             // Remove current attribute columns
             gGroupMembers.Columns.OfType<AttributeField>().ToList().ForEach( c => gGroupMembers.Columns.Remove( c ) );
 
             var attributeValueService = new AttributeValueService( rockContext );
             foreach ( var attribute in groupMemberAttributes )
-            {                                                                    
+            {
                 var attributeColumn = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id );
                 if ( attributeColumn == null )
                 {
@@ -165,7 +163,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     gGroupMembers.Columns.Add( boundField );
                 }
-            }  
+            }
 
             // Add edit column
             var editField = new EditField();
@@ -176,11 +174,11 @@ namespace RockWeb.Plugins.com_kfs.Event
             var deleteField = new DeleteField();
             gGroupMembers.Columns.Add( deleteField );
             deleteField.Click += gGroupMembers_DeleteClick;
-            
+
             gGroupMembers.DataSource = group.Members;
             gGroupMembers.DataBind();
         }
-      
+
         /// <summary>
         /// Builds the subgroup heading.
         /// </summary>
@@ -247,7 +245,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         private void gGroupMembers_DeleteClick( object sender, RowEventArgs e )
         {
-
             // TODO: enforce counselor delete support
 
             var rockContext = new RockContext();
@@ -258,7 +255,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 groupMemberService.Delete( groupMember );
 
                 rockContext.SaveChanges();
-                var group = new GroupService( rockContext ).Get( groupMember.GroupId );                
+                var group = new GroupService( rockContext ).Get( groupMember.GroupId );
                 gGroupMembers.DataSource = group.Members;
                 gGroupMembers.DataBind();
                 BuildSubgroupHeading( group );
