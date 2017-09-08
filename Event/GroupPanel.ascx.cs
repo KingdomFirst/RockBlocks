@@ -187,7 +187,13 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="group">The group.</param>
         private void BuildSubgroupHeading( Group group )
         {
-            pnlSubGroup.Title = string.Format( "<span class='span-panel-heading'>{0}</span>", group.Name );
+            var groupIconString = string.Empty;
+            if ( !string.IsNullOrWhiteSpace( group.GroupType.IconCssClass ) )
+            {
+                groupIconString = string.Format( "<i class='{0}'></i> ", group.GroupType.IconCssClass );
+            }
+
+            pnlSubGroup.Title = string.Format( "{0} <span class='span-panel-heading'>{1}</span>", groupIconString, group.Name );
             var memCount = group.Members.Count( m => m.GroupMemberStatus == GroupMemberStatus.Active || m.GroupMemberStatus == GroupMemberStatus.Pending );
             if ( group.GroupCapacity.HasValue && group.GroupCapacity > 0 )
             {

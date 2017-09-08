@@ -204,7 +204,7 @@
 
                 <asp:Panel ID="pnlRegistrations" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-user"></i>Registrations</h1>
+                        <h1 class="panel-title"><i class="fa fa-user"></i> Registrations</h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdRegistrationsGridWarning" runat="server" />
@@ -261,7 +261,7 @@
 
                 <asp:Panel ID="pnlRegistrants" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-users"></i>Registrants</h1>
+                        <h1 class="panel-title"><i class="fa fa-users"></i> Registrants</h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdRegistrantsGridWarning" runat="server" />
@@ -323,7 +323,7 @@
 
                 <asp:Panel ID="pnlPayments" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-credit-card"></i>Payments</h1>
+                        <h1 class="panel-title"><i class="fa fa-credit-card"></i> Payments</h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdPaymentsGridWarning" runat="server" />
@@ -358,7 +358,7 @@
 
                 <asp:Panel ID="pnlLinkages" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-link"></i>Linkages</h1>
+                        <h1 class="panel-title"><i class="fa fa-link"></i> Linkages</h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdLinkagesGridWarning" runat="server" />
@@ -392,7 +392,7 @@
 
                 <asp:Panel ID="pnlGroupPlacement" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-link"></i>Group Placement</h1>
+                        <h1 class="panel-title"><i class="fa fa-link"></i> Group Placement</h1>
                     </div>
                     <div class="panel-body">
                         <div class="row">
@@ -489,6 +489,7 @@
         // If the offset is more than 58-80 then scroll to the js-area-group-details instead.
         if ($('#<%=hfAreaGroupClicked.ClientID %>').val() == "true" && $('.js-area-group-details').length && $('.js-panel-details').length) {
             $('#<%=hfAreaGroupClicked.ClientID %>').val("false");
+            alert("triggered");
             var panelDelta = $('.js-area-group-details').offset().top - $('.js-panel-details').offset().top;
             var scrollToPanel = ".js-panel-details";
             if (panelDelta > 80) {
@@ -519,50 +520,6 @@
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
             } else if ($(this).hasClass('resource-item')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
-            }
-        });
-
-        // javascript to make the Reorder buttons work on the CheckinGroupTypeEditor controls
-        $('.js-resource-area-list').sortable({
-            helper: fixHelper,
-            handle: '.resource-area-reorder',
-            containment: 'parent',
-            tolerance: 'pointer',
-            start: function (event, ui) {
-                {
-                    var start_pos = ui.item.index();
-                    ui.item.data('start_pos', start_pos);
-                }
-            },
-            update: function (event, ui) {
-                {
-                    if (!isDirty()) {
-                        var newGroupTypeIndex = $(ui.item).prevAll('li').length;
-                        __doPostBack('<%=upnlContent.ClientID %>', 're-order-area:' + ui.item.attr('data-key') + ';' + newGroupTypeIndex);
-                    }
-                }
-            }
-        });
-
-        // javascript to make the Reorder buttons work on the CheckinGroupEditor controls
-        $('.js-checkin-group-list').sortable({
-            helper: fixHelper,
-            handle: '.resource-group-reorder',
-            containment: 'parent',
-            tolerance: 'pointer',
-            start: function (event, ui) {
-                {
-                    var start_pos = ui.item.index();
-                    ui.item.data('start_pos', start_pos);
-                }
-            },
-            update: function (event, ui) {
-                {
-                    if (!isDirty()) {
-                        var newGroupIndex = $(ui.item).prevAll('li').length;
-                        __doPostBack('<%=upnlContent.ClientID %>', 're-order-group:' + ui.item.attr('data-key') + ';' + newGroupIndex);
-                    }
-                }
             }
         });
     });
