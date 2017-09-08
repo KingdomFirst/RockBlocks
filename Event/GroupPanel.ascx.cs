@@ -247,6 +247,9 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         private void gGroupMembers_DeleteClick( object sender, RowEventArgs e )
         {
+
+            // TODO: enforce counselor delete support
+
             var rockContext = new RockContext();
             var groupMemberService = new GroupMemberService( rockContext );
             var groupMember = groupMemberService.Get( e.RowKeyId );

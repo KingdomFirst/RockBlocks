@@ -204,7 +204,7 @@
 
                 <asp:Panel ID="pnlRegistrations" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-user"></i> Registrations</h1>
+                        <h1 class="panel-title"><i class="fa fa-user"></i>Registrations</h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdRegistrationsGridWarning" runat="server" />
@@ -261,7 +261,7 @@
 
                 <asp:Panel ID="pnlRegistrants" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-users"></i> Registrants</h1>
+                        <h1 class="panel-title"><i class="fa fa-users"></i>Registrants</h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdRegistrantsGridWarning" runat="server" />
@@ -323,7 +323,7 @@
 
                 <asp:Panel ID="pnlPayments" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-credit-card"></i> Payments</h1>
+                        <h1 class="panel-title"><i class="fa fa-credit-card"></i>Payments</h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdPaymentsGridWarning" runat="server" />
@@ -358,7 +358,7 @@
 
                 <asp:Panel ID="pnlLinkages" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-link"></i> Linkages</h1>
+                        <h1 class="panel-title"><i class="fa fa-link"></i>Linkages</h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdLinkagesGridWarning" runat="server" />
@@ -392,7 +392,7 @@
 
                 <asp:Panel ID="pnlGroupPlacement" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-link"></i> Group Placement</h1>
+                        <h1 class="panel-title"><i class="fa fa-link"></i>Group Placement</h1>
                     </div>
                     <div class="panel-body">
                         <div class="row">
@@ -466,6 +466,11 @@
                                 <Rock:RockDropDownList ID="ddlSubGroup" runat="server" ValidationGroup="vgAddGroupMember" Visible="false" />
                                 <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMember" />
+                                <Rock:RockRadioButtonList ID="rblMoveRegistrants" runat="server" Label="Move Other Registrants" Help="Should registrants led by this person be moved as well?"
+                                    RepeatDirection="Horizontal" ValidationGroup="vgAddGroupMember" Required="true" Visible="false">
+                                    <asp:ListItem Value="Y" Text="Yes"></asp:ListItem>
+                                    <asp:ListItem Value="N" Text="No" Selected="True"></asp:ListItem>
+                                </Rock:RockRadioButtonList>
                             </div>
                             <div class="col-md-12">
                                 <asp:PlaceHolder ID="phAttributes" runat="server" EnableViewState="false"></asp:PlaceHolder>

@@ -674,16 +674,51 @@ namespace RockWeb.Plugins.com_kfs.Event
                         return;
                     }
 
-                    // using WrapTransaction because there are three saves
+                    var groupMemberChanges = new List<GroupMember>();
+                    groupMemberChanges.Add( groupMember );
+                    // check for moving other registrants
+                    if ( rblMoveRegistrants.Visible && rblMoveRegistrants.SelectedValue.AsBoolean() )
+                    {
+                        // find the group this member is a leader of
+                        var membersBeingLed = groupMemberService.GetByPersonId( groupMember.PersonId )
+                            .Where( gm => gm.GroupRole.IsLeader )
+                            .Select( gm => gm.Group ).SelectMany( g => g.Members )
+                            .Where( gm => gm.PersonId != groupMember.PersonId )
+                            .Select( gm => gm.PersonId ).ToList();
+
+                        if ( groupMember.GroupId > 0 )
+                        {
+                            // add those people's group memberships
+                            groupMemberChanges.AddRange( membersBeingLed.Select(
+                                memberPerson => new GroupMember
+                                {
+                                    PersonId = memberPerson,
+                                    GroupId = groupMember.GroupId,
+                                    GroupRoleId = role.GroupType.DefaultGroupRoleId ?? role.Id,
+                                    GroupMemberStatus = groupMember.GroupMemberStatus,
+                                }
+                            ) );
+                        }
+                        else
+                        {
+                            // delete those people's group memberships
+                            var groupToRemoveFrom = new GroupService( rockContext ).Get( groupId );
+                            groupMemberChanges.AddRange( groupToRemoveFrom.Members
+                                .Where( m => membersBeingLed.Contains( m.PersonId ) )
+                            );
+                        }
+                    }
+
+                    // using WrapTransaction because there are three context writes
                     rockContext.WrapTransaction( () =>
                     {
-                        if ( groupMember.Id.Equals( 0 ) )
+                        if ( groupMember.Id.Equals( 0 ) && groupMember.GroupId > 0 )
                         {
-                            groupMemberService.Add( groupMember );
+                            groupMemberService.AddRange( groupMemberChanges );
                         }
-                        else if ( groupMember.GroupId == 0 )
+                        else if ( groupMember.Id > 0 && groupMember.GroupId == 0 )
                         {
-                            groupMemberService.Delete( groupMember );
+                            groupMemberService.DeleteRange( groupMemberChanges );
                         }
                         rockContext.SaveChanges();
                         groupMember.SaveAttributeValues( rockContext );
@@ -705,6 +740,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
 
+                AddDynamicControls();
                 BindResourcePanels();
                 BindRegistrantsGrid();
                 mdlAddSubGroupMember.Hide();
@@ -777,19 +813,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             NavigateToParentPage( qryParams );
-        }
-
-        /// <summary>
-        /// Handles the Click event of the MultipleSubGroup control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="CommandEventArgs"/> instance containing the event data.</param>
-        public void MultipleSubGroup_Click( object sender, CommandEventArgs e )
-        {
-            var asdf = e.CommandName;
-            var fdjs = e.CommandArgument;
-
-            //RenderGroupMemberModal( new RockContext(), null, null, null, null );
         }
 
         #endregion
@@ -2170,7 +2193,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 BuildRegistrationGroupHierarchy( rockContext, instance );
                 BuildSubGroupTabs( instance );
-
 
                 // TODO: are all of these still necessary?
                 BindLinkagesFilter();
@@ -3867,7 +3889,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             rockContext.SaveChanges();
                             groupType.SaveAttributeValues( rockContext );
-                            
+
                             // Make sure default role is set
                             if ( !groupType.DefaultGroupRoleId.HasValue && groupType.Roles.Any() )
                             {
@@ -3875,7 +3897,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
 
                             rockContext.SaveChanges();
-                            
+
                             GroupTypeCache.Flush( groupType.Id );
                             nbSaveSuccess.Visible = true;
                         }
@@ -3895,6 +3917,17 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         group.LoadAttributes( rockContext );
                         resourceGroupPanel.GetGroupValues( group );
+
+                        // add requirements to child groups
+                        foreach ( var requirement in group.ParentGroup.GroupRequirements )
+                        {
+                            group.GroupRequirements.Add( new GroupRequirement
+                            {
+                                GroupId = group.Id,
+                                GroupRoleId = group.GroupType.DefaultGroupRoleId,
+                                GroupRequirementTypeId = requirement.GroupRequirementTypeId
+                            } );
+                        }
 
                         // make sure child groups can be created
                         if ( !group.GroupType.ChildGroupTypes.Contains( group.GroupType ) )
@@ -4954,7 +4987,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             pnlAssociatedGroup.Visible = ActiveTab == ( "lb" + tabName );
-            
+
             // build header section
             var header = new HtmlGenericControl( "h1" );
             header.Attributes.Add( "class", "panel-title" );
@@ -5172,6 +5205,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             // TODO: this method needs refactoring
 
             // Clear modal controls
+            nbErrorMessage.Visible = false;
             ddlRegistrantList.Items.Clear();
             ddlGroupRole.Items.Clear();
             tbNote.Text = string.Empty;
@@ -5179,6 +5213,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
             var ris = new RegistrationInstanceService( new RockContext() );
             rblStatus.BindToEnum<GroupMemberStatus>();
+            rblMoveRegistrants.SelectedValue = "N";
             var groupMemberTerm = "Member";
             if ( group != null )
             {
@@ -5191,11 +5226,13 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
             else if ( parentGroup != null )
             {
+                hfSubGroupId.Value = string.Empty;
                 if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupMemberTerm ) )
                 {
                     groupMemberTerm = parentGroup.GroupType.GroupMemberTerm;
                 }
             }
+
             ddlGroupRole.DataSource = parentGroup.GroupType.Roles.OrderBy( a => a.Order ).ToList();
             ddlGroupRole.DataBind();
 
@@ -5288,9 +5325,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                         foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
                         {
                             var volunteerItem = new ListItem( volunteer.Person.FullNameReversed, volunteer.Person.Guid.ToString() );
-                            volunteerItem.Attributes["optiongroup"] = group.GroupType.GroupMemberTerm;
+                            volunteerItem.Attributes["optiongroup"] = "Volunteers"; //group.GroupType.GroupMemberTerm;
                             ddlRegistrantList.Items.Add( volunteerItem );
                         }
+
+                        // since volunteers are allowed, display the move other registrants option
+                        rblMoveRegistrants.Visible = true;
                     }
 
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0} to {1}", groupMemberTerm, group.Name );
@@ -5337,7 +5377,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             // render dynamic group controls beneath modal
             AddDynamicControls();
-            BindRegistrantsGrid();            
+            BindRegistrantsGrid();
         }
 
         #endregion
