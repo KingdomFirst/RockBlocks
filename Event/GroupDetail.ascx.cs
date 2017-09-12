@@ -1,25 +1,10 @@
-﻿// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
+﻿// KFS Group Detail
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
-using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Humanizer;
@@ -39,8 +24,8 @@ using Attribute = Rock.Model.Attribute;
 
 namespace RockWeb.Plugins.com_kfs.Event
 {
-    [DisplayName( "Group Detail" )]
-    [Category( "KFS > Event" )]
+    [DisplayName( "Advanced Registration Group Detail" )]
+    [Category( "KFS > Advanced Event Registration" )]
     [Description( "Displays the details of the given group." )]
     [GroupTypesField( "Group Types Include", "Select group types to show in this block.  Leave all unchecked to show all but the excluded group types.", false, key: "GroupTypes", order: 0 )]
     [GroupTypesField( "Group Types Exclude", "Select group types to exclude from this block.", false, key: "GroupTypesExclude", order: 1 )]
@@ -223,7 +208,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             btnSecurity.EntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Group ) ).Id;
 
             rblScheduleSelect.BindToEnum<ScheduleType>();
-            
+
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlGroupDetail );
@@ -690,7 +675,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 cvGroup.ErrorMessage = group.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" );
                 return;
             }
-            
+
             // use WrapTransaction since SaveAttributeValues does it's own RockContext.SaveChanges()
             rockContext.WrapTransaction( () =>
             {
@@ -704,7 +689,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( adding )
                 {
-                    // add ADMINISTRATE to the person who added the group 
+                    // add ADMINISTRATE to the person who added the group
                     Rock.Security.Authorization.AllowPerson( group, Authorization.ADMINISTRATE, this.CurrentPerson, rockContext );
                 }
 
@@ -777,7 +762,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 GroupMemberWorkflowTriggerService.FlushCachedTriggers();
             }
-           
+
             if ( !GetAttributeValue( "EnableDialogMode" ).AsBoolean() )
             {
                 var qryParams = new Dictionary<string, string>();
@@ -1009,7 +994,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // get all the allowed GroupTypes as defined by the parent group type
                         var allowedChildGroupTypesOfParentGroup = GetAllowedGroupTypes( parentGroup, rockContext ).ToList();
 
-                        // narrow it down to group types that the current user is allowed to edit 
+                        // narrow it down to group types that the current user is allowed to edit
                         var authorizedGroupTypes = new List<GroupType>();
                         foreach ( var allowedGroupType in allowedChildGroupTypesOfParentGroup )
                         {
@@ -1361,10 +1346,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                         case ScheduleType.Named:
                             spSchedule.SetValue( group.Schedule );
                             break;
+
                         case ScheduleType.Custom:
                             hfUniqueScheduleId.Value = group.Schedule.Id.ToString();
                             sbSchedule.iCalendarContent = group.Schedule.iCalendarContent;
                             break;
+
                         case ScheduleType.Weekly:
                             hfUniqueScheduleId.Value = group.Schedule.Id.ToString();
                             dowWeekly.SelectedDayOfWeek = group.Schedule.WeeklyDayOfWeek;
@@ -1474,7 +1461,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     int activeGroupMemberCount = group.Members.Where( m => m.GroupMemberStatus == GroupMemberStatus.Active ).Count();
                     if ( activeGroupMemberCount > group.GroupCapacity )
                     {
-                        nbGroupCapacityMessage.Text = string.Format( "This group is over capacity by {0}.", "individual".ToQuantity((activeGroupMemberCount - group.GroupCapacity.Value)) );
+                        nbGroupCapacityMessage.Text = string.Format( "This group is over capacity by {0}.", "individual".ToQuantity( ( activeGroupMemberCount - group.GroupCapacity.Value ) ) );
                         nbGroupCapacityMessage.Visible = true;
 
                         if ( group.GroupType != null && group.GroupType.GroupCapacityRule == GroupCapacityRule.Hard )
@@ -1569,7 +1556,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             var googleAPIKey = GlobalAttributesCache.Read().GetValue( "GoogleAPIKey" );
 
-                            if ( groupLocation.Location.GeoPoint != null && ! string.IsNullOrWhiteSpace( googleAPIKey ) )
+                            if ( groupLocation.Location.GeoPoint != null && !string.IsNullOrWhiteSpace( googleAPIKey ) )
                             {
                                 string markerPoints = string.Format( "{0},{1}", groupLocation.Location.GeoPoint.Latitude, groupLocation.Location.GeoPoint.Longitude );
                                 string mapLink = System.Text.RegularExpressions.Regex.Replace( mapStyle, @"\{\s*MarkerPoints\s*\}", markerPoints );
@@ -1763,12 +1750,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "LOCATIONS":
                     dlgLocations.Show();
                     break;
+
                 case "GROUPMEMBERATTRIBUTES":
                     dlgGroupMemberAttribute.Show();
                     break;
+
                 case "GROUPREQUIREMENTS":
                     mdGroupRequirement.Show();
                     break;
+
                 case "MEMBERWORKFLOWTRIGGERS":
                     dlgMemberWorkflowTriggers.Show();
                     break;
@@ -1785,12 +1775,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "LOCATIONS":
                     dlgLocations.Hide();
                     break;
+
                 case "GROUPMEMBERATTRIBUTES":
                     dlgGroupMemberAttribute.Hide();
                     break;
+
                 case "GROUPREQUIREMENTS":
                     mdGroupRequirement.Hide();
                     break;
+
                 case "MEMBERWORKFLOWTRIGGERS":
                     dlgMemberWorkflowTriggers.Hide();
                     break;

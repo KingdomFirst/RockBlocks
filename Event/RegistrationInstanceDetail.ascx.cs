@@ -26,10 +26,10 @@ using Attribute = Rock.Model.Attribute;
 namespace RockWeb.Plugins.com_kfs.Event
 {
     /// <summary>
-    /// Template block for developers to use to start a new block.
+    /// Template block for editing an event registration instance.
     /// </summary>
-    [DisplayName( "KFS Registration Instance Detail" )]
-    [Category( "KFS > Event" )]
+    [DisplayName( "Advanced Registration Instance Detail" )]
+    [Category( "KFS > Advanced Event Registration" )]
     [Description( "Template block for editing an event registration instance." )]
     [AccountField( "Default Account", "The default account to use for new registration instances", false, "2A6F9E5F-6859-44F1-AB0E-CE9CF6B08EE5", "", 0 )]
     [LinkedPage( "Registration Page", "The page for editing registration and registrant information", true, "", "", 1 )]
