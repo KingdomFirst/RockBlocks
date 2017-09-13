@@ -30,6 +30,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [LinkedPage( "Area Select Page", "The page to redirect user to if area has not be configured or selected.", order: 3 )]
     [DefinedValueField( Rock.SystemGuid.DefinedType.CHART_STYLES, "Chart Style", order: 4, defaultValue: Rock.SystemGuid.DefinedValue.CHART_STYLE_ROCK )]
     [BooleanField("Search By Code", "A flag indicating if security codes should also be evaluated in the search box results.", order:5 )]
+    [BooleanField("Show Delete", "A flag indicating if the Delete button should be displayed.", true, "Attendee Actions", 0 )]
+    [BooleanField("Show Checkout", "A flag indicating if the Checkout button should be displayed.", true, "Attendee Actions", 1 )]
+    [BooleanField("Show Move", "A flag indicating if the Move Attendee buttons should be displayed.", true, "Attendee Actions", 2 )]
     public partial class Locations : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -46,6 +49,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
         public NavigationData NavData { get; set; }
 
+        public static bool ShowDelete { get; set; }
+        public static bool ShowCheckout { get; set; }
+        public static bool ShowMove { get; set; }
         #endregion
 
         #region Base Control Methods
@@ -76,6 +82,10 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
+
+            ShowDelete = GetAttributeValue( "ShowDelete" ).AsBoolean();
+            ShowCheckout = GetAttributeValue( "ShowCheckout" ).AsBoolean();
+            ShowMove = GetAttributeValue( "ShowMove" ).AsBoolean();
 
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.js" );
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.time.js" );
@@ -629,6 +639,27 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         }
 
         /// <summary>
+        /// Handles the Click event of the lbMoveAll control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void lbMoveAll_Click( object sender, EventArgs e )
+        {
+            var lb = sender as LinkButton;
+            if ( lb != null )
+            {
+                int? id = lb.Attributes["data-key"].AsIntegerOrNull();
+                string people = lb.Attributes["data-people"];
+                if ( id.HasValue && !string.IsNullOrWhiteSpace( people ) )
+                {
+                    ShowDialog( "MoveLocation", people, id.ToString(), true );
+                }
+            }
+
+            BuildNavigationControls();
+        }
+
+        /// <summary>
         /// Handles the CheckedChanged event of the tglRoom control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -762,6 +793,188 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     }
                 }
             }
+
+            if ( e.CommandName == "Checkout" )
+            {
+                int personId = e.CommandArgument.ToString().AsInteger();
+
+                if ( string.IsNullOrWhiteSpace( CurrentNavPath ) || !CurrentNavPath.StartsWith( _configuredMode ) )
+                {
+                    CurrentNavPath = _configuredMode;
+                }
+
+                var pathParts = CurrentNavPath.Split( new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries );
+                int partIndex = pathParts.Length - 1;
+
+                if ( partIndex >= 0 )
+                {
+                    string itemKey = pathParts[partIndex];
+                    if ( itemKey.Length > 0 )
+                    {
+                        string itemType = itemKey.Left( 1 );
+                        int? itemId = itemKey.Length > 1 ? itemKey.Substring( 1 ).AsIntegerOrNull() : null;
+
+                        if ( itemType == "L" && itemId.HasValue )
+                        {
+                            var dayStart = RockDateTime.Today;
+                            var now = RockDateTime.Now;
+
+                            using ( var rockContext = new RockContext() )
+                            {
+                                var activeSchedules = new List<int>();
+                                foreach ( var schedule in new ScheduleService( rockContext )
+                                    .Queryable().AsNoTracking()
+                                    .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
+                                {
+                                    if ( schedule.IsScheduleOrCheckInActive )
+                                    {
+                                        activeSchedules.Add( schedule.Id );
+                                    }
+                                }
+
+                                var attendanceService = new AttendanceService( rockContext );
+                                foreach ( var attendance in attendanceService
+                                    .Queryable()
+                                    .Where( a =>
+                                        a.StartDateTime > dayStart &&
+                                        a.StartDateTime < now &&
+                                        !a.EndDateTime.HasValue &&
+                                        a.LocationId.HasValue &&
+                                        a.LocationId.Value == itemId.Value &&
+                                        a.PersonAlias != null &&
+                                        a.PersonAlias.PersonId == personId &&
+                                        a.DidAttend.HasValue &&
+                                        a.DidAttend.Value &&
+                                        a.ScheduleId.HasValue &&
+                                        activeSchedules.Contains( a.ScheduleId.Value ) ) )
+                                {
+                                    attendance.EndDateTime = now;
+                                }
+
+                                rockContext.SaveChanges();
+
+                                Rock.CheckIn.KioskLocationAttendance.Flush( itemId.Value );
+                            }
+
+                            int? campusId = CurrentCampusId.AsIntegerOrNull();
+                            if ( campusId.HasValue )
+                            {
+                                int? scheduleId = CurrentScheduleId.AsIntegerOrNull();
+                                NavData = GetNavigationData( CampusCache.Read( campusId.Value ), scheduleId );
+                            }
+                            BuildNavigationControls();
+                        }
+                    }
+                }
+            }
+
+            if ( e.CommandName == "Move" )
+            {
+                var personId = e.CommandArgument.ToString();
+                if ( string.IsNullOrWhiteSpace( CurrentNavPath ) || !CurrentNavPath.StartsWith( _configuredMode ) )
+                {
+                    CurrentNavPath = _configuredMode;
+                }
+
+                var pathParts = CurrentNavPath.Split( new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries );
+                int partIndex = pathParts.Length - 1;
+
+                if ( partIndex >= 0 )
+                {
+                    string itemKey = pathParts[partIndex];
+                    if ( itemKey.Length > 0 )
+                    {
+                        string itemType = itemKey.Left( 1 );
+                        int? itemId = itemKey.Length > 1 ? itemKey.Substring( 1 ).AsIntegerOrNull() : null;
+
+                        if ( itemType == "L" && itemId.HasValue )
+                        {
+                            ShowDialog( "MoveLocation", personId, itemId.Value.ToString(), true );
+                        }
+                    }
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// Handles the SaveClick event of the dlgMoveLocation control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void dlgMoveLocation_SaveClick( object sender, EventArgs e )
+        {
+            var newLocationId = lpNewLocation.Location.Id;
+            lpNewLocation.Location = null;
+
+            var personIds = hfPersonId.Value;
+            var locationId = hfLocationId.Value.AsInteger();
+
+            if ( !string.IsNullOrWhiteSpace( personIds ) && locationId > 0 && newLocationId > 0 )
+            {
+                var dayStart = RockDateTime.Today;
+                var now = RockDateTime.Now;
+
+                using ( var rockContext = new RockContext() )
+                {
+
+                    foreach ( var personId in personIds.Split( ',' ).AsIntegerList() )
+                    {
+                        var activeSchedules = new List<int>();
+                        foreach ( var schedule in new ScheduleService( rockContext )
+                            .Queryable().AsNoTracking()
+                            .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
+                        {
+                            if ( schedule.IsScheduleOrCheckInActive )
+                            {
+                                activeSchedules.Add( schedule.Id );
+                            }
+                        }
+
+                        var movedAttendance = new List<Attendance>();
+
+                        var attendanceService = new AttendanceService( rockContext );
+                        foreach ( var attendance in attendanceService
+                            .Queryable()
+                            .Where( a =>
+                                a.StartDateTime > dayStart &&
+                                a.StartDateTime < now &&
+                                !a.EndDateTime.HasValue &&
+                                a.LocationId.HasValue &&
+                                a.LocationId.Value == locationId &&
+                                a.PersonAlias != null &&
+                                a.PersonAlias.PersonId == personId &&
+                                a.DidAttend.HasValue &&
+                                a.DidAttend.Value &&
+                                a.ScheduleId.HasValue &&
+                                activeSchedules.Contains( a.ScheduleId.Value ) ) )
+                        {
+                            var newAttendance = new Attendance();
+                            newAttendance.CopyPropertiesFrom( attendance );
+                            newAttendance.LocationId = newLocationId;
+                            newAttendance.StartDateTime = now;
+                            movedAttendance.Add( newAttendance );
+
+                            attendance.EndDateTime = now;
+                        }
+
+                        attendanceService.AddRange( movedAttendance );
+
+                        rockContext.SaveChanges();
+
+                        Rock.CheckIn.KioskLocationAttendance.Flush( locationId );
+                    }
+                }
+
+                int? campusId = CurrentCampusId.AsIntegerOrNull();
+                if ( campusId.HasValue )
+                {
+                    int? scheduleId = CurrentScheduleId.AsIntegerOrNull();
+                    NavData = GetNavigationData( CampusCache.Read( campusId.Value ), scheduleId );
+                }
+                BuildNavigationControls();
+            }
+            HideDialog();
         }
 
         #endregion
@@ -1502,10 +1715,29 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         rptPeople.Visible = true;
                         rptPeople.DataSource = people;
                         rptPeople.DataBind();
+
+                        if ( attendees.Any() )
+                        {
+                            var attendeeIds = new List<int>();
+                            var attendeeList = attendees.ToList();
+                            foreach ( var attendee in attendeeList )
+                            {
+                                attendeeIds.Add( attendee.PersonAlias.PersonId );
+                            }
+
+                            lbMoveAll.Visible = true;
+                            lbMoveAll.Attributes["data-key"] = locationItem.Id.ToString();
+                            lbMoveAll.Attributes["data-people"] = string.Join( ",", attendeeIds );
+                        }
+                        else
+                        {
+                            lbMoveAll.Visible = false;
+                        }
                     }
                     else
                     {
                         tglHeadingRoom.Visible = false;
+                        lbMoveAll.Visible = false;
                         pnlThreshold.Visible = false;
                         rptPeople.Visible = false;
                     }
@@ -1526,6 +1758,52 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             }
         }
 
+        #endregion
+
+        #region Modal
+        /// <summary>
+        /// Shows the dialog.
+        /// </summary>
+        /// <param name="dialog">The dialog.</param>
+        /// <param name="setValues">if set to <c>true</c> [set values].</param>
+        private void ShowDialog( string dialog, string personId, string locationId, bool setValues = false )
+        {
+            hfActiveDialog.Value = dialog.ToUpper().Trim();
+            hfPersonId.Value = personId;
+            hfLocationId.Value = locationId;
+            ShowDialog( setValues );
+        }
+
+        /// <summary>
+        /// Shows the dialog.
+        /// </summary>
+        /// <param name="setValues">if set to <c>true</c> [set values].</param>
+        private void ShowDialog( bool setValues = false )
+        {
+            switch ( hfActiveDialog.Value )
+            {
+                case "MOVELOCATION":
+                    dlgMoveLocation.Show();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Hides the dialog.
+        /// </summary>
+        private void HideDialog()
+        {
+            switch ( hfActiveDialog.Value )
+            {
+                case "MOVELOCATION":
+                    dlgMoveLocation.Hide();
+                    break;
+            }
+
+            hfActiveDialog.Value = string.Empty;
+            hfPersonId.Value = string.Empty;
+            hfLocationId.Value = string.Empty;
+        }
         #endregion
 
         #endregion
@@ -1675,15 +1953,21 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             public string ScheduleGroupNames { get; set; }
             public string Age { get; set; }
             public bool ShowCancel { get; set; }
+            public bool ShowCheckout { get; set; }
+            public bool ShowMove { get; set; }
 
             public PersonResult()
             {
                 ShowCancel = false;
+                ShowCheckout = false;
+                ShowMove = false;
             }
 
             public PersonResult( List<Attendance> attendances )
             {
-                ShowCancel = true;
+                ShowCancel = Locations.ShowDelete;
+                ShowCheckout = Locations.ShowCheckout;
+                ShowMove = Locations.ShowMove;
                 if ( attendances.Any() )
                 {
                     var person = attendances.First().PersonAlias.Person;

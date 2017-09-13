@@ -7,7 +7,16 @@
             var personName = $(this).closest(".list-group-item").find(".js-checkin-person-name").first().text();
             return Rock.dialogs.confirmDelete(event, 'Checkin for ' + personName);
         });
+        $('.js-checkout').click(function (event) {
+            event.stopImmediatePropagation();
+            var personName = $(this).closest(".list-group-item").find(".js-checkin-person-name").first().text();
+            return Rock.dialogs.confirmDelete(event, 'Checkin and Check Out: ' + personName);
+        });
     });
+
+    function clearActiveDialog() {
+        $('#<%=hfActiveDialog.ClientID %>').val('');
+    }
 </script>
 <Rock:RockUpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
@@ -43,6 +52,9 @@
                         </div>
                         <div class="pull-right margin-v-sm">
                             <Rock:Toggle ID="tglHeadingRoom" runat="server" OnText="Open" OffText="Close" ButtonSizeCssClass="btn-xs" OnCssClass="btn-success" OffCssClass="btn-danger" OnCheckedChanged="tglRoom_CheckedChanged" />
+                        </div>
+                        <div class="pull-right margin-v-sm">
+                            <asp:LinkButton CssClass="btn-sm btn-info" ID="lbMoveAll" runat="server" OnClick="lbMoveAll_Click"><i class="fa fa-sign-out"></i> Move All</asp:LinkButton>&nbsp;&nbsp;
                         </div>
                         <asp:Panel ID="pnlThreshold" runat="server" CssClass="pull-right margin-r-md margin-t-sm js-threshold paneleditor">
                             <span class="paneleditor-label">Threshold:</span> 
@@ -82,6 +94,10 @@
                                 </div>
                                 <span class="pull-right margin-t-sm">
                                     <asp:Literal ID="lStatus" runat="server" />
+                                    <asp:LinkButton ID="lbMovePerson" runat="server" CssClass="js-move-person btn btn-info" 
+                                        CommandArgument='<%# Eval("Id") %>' CommandName="Move" Visible='<%# (bool)Eval("ShowMove") %>'><i class="fa fa-sign-out"></i> Move</asp:LinkButton>
+                                    <asp:LinkButton ID="lbCheckOut" runat="server" CssClass="js-checkout btn btn-warning" 
+                                        CommandArgument='<%# Eval("Id") %>' CommandName="Checkout" Visible='<%# (bool)Eval("ShowCheckout") %>'><i class="fa fa-minus-circle"></i> Checkout</asp:LinkButton>
                                     <asp:LinkButton ID="lbRemoveAttendance" runat="server" CssClass="js-cancel-checkin btn btn-xs btn-danger" 
                                         CommandArgument='<%# Eval("Id") %>' CommandName="Delete" Visible='<%# (bool)Eval("ShowCancel") %>'><i class="fa fa-times"></i></asp:LinkButton>
                                 </span>
@@ -94,6 +110,18 @@
             </div>
 
         </asp:Panel>
+
+        <asp:HiddenField ID="hfActiveDialog" runat="server" />
+        <asp:HiddenField ID="hfPersonId" runat="server" />
+        <asp:HiddenField ID="hfLocationId" runat="server" />
+
+        <Rock:ModalDialog ID="dlgMoveLocation" runat="server" Title="Move Location" OnSaveClick="dlgMoveLocation_SaveClick" OnCancelScript="clearActiveDialog();" ValidationGroup="MoveLocation">
+            <Content>
+                <asp:ValidationSummary ID="valSummaryTop" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" ValidationGroup="MoveLocation" />
+
+                <Rock:LocationPicker ID="lpNewLocation" runat="server" ValidationGroup="MoveLocation" Required="true" Label="New Location" AllowedPickerModes="Named" />
+            </Content>
+        </Rock:ModalDialog>
 
     </ContentTemplate>
 </Rock:RockUpdatePanel>
