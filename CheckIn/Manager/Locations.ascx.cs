@@ -1716,7 +1716,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         rptPeople.DataSource = people;
                         rptPeople.DataBind();
 
-                        if ( attendees.Any() )
+                        if ( ShowMove && attendees.Any() )
                         {
                             var attendeeIds = new List<int>();
                             var attendeeList = attendees.ToList();
