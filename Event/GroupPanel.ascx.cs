@@ -169,6 +169,12 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     gGroupMembers.Columns.Add( boundField );
                 }
+
+                if ( gGroupMembers.ShowFooter )
+                {
+                    gGroupMembers.Columns[1].FooterText = "Total";
+                    gGroupMembers.Columns[1].FooterStyle.HorizontalAlign = HorizontalAlign.Left;
+                }
             }
 
             // Add edit column
