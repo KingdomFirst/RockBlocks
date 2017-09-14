@@ -467,7 +467,7 @@
                                 <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockRadioButtonList ID="rblMoveRegistrants" runat="server" Label="Move Other Registrants" Help="Should registrants led by this person be moved as well?"
-                                    RepeatDirection="Horizontal" ValidationGroup="vgAddGroupMember" Required="true" Visible="false">
+                                    RepeatDirection="Horizontal" ValidationGroup="vgAddGroupMember" Required="true">
                                     <asp:ListItem Value="Y" Text="Yes"></asp:ListItem>
                                     <asp:ListItem Value="N" Text="No" Selected="True"></asp:ListItem>
                                 </Rock:RockRadioButtonList>

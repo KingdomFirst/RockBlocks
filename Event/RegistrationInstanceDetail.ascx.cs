@@ -609,17 +609,16 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void mdlAddSubGroupMember_SaveClick( object sender, EventArgs e )
         {
-            // TODO: refactor this method
-
             if ( Page.IsValid )
             {
                 using ( var rockContext = new RockContext() )
                 {
                     // add or remove group membership
                     GroupMember groupMember;
-                    var groupId = hfSubGroupId.ValueAsInt() > 0 ? hfSubGroupId.ValueAsInt() : ddlSubGroup.SelectedValue.AsInteger();
+                    var originalGroupId = hfSubGroupId.ValueAsInt();
+                    var newGroupId = ddlSubGroup.SelectedValue.AsInteger();
                     var groupMemberService = new GroupMemberService( rockContext );
-                    int groupMemberId = int.Parse( hfSubGroupMemberId.Value );
+                    var groupMemberId = int.Parse( hfSubGroupMemberId.Value );
 
                     // Check to see if a person was selected
                     var person = ddlRegistrantList.SelectedValueAsGuid().HasValue ? new PersonService( rockContext ).Get( (Guid)ddlRegistrantList.SelectedValueAsGuid() ) : null;
@@ -639,21 +638,21 @@ namespace RockWeb.Plugins.com_kfs.Event
                         nbErrorMessage.Visible = true;
                         return;
                     }
-
-                    // if adding a new group member
-                    if ( groupMemberId.Equals( 0 ) )
-                    {
-                        groupMember = new GroupMember
-                        {
-                            Id = 0,
-                            GroupId = groupId
-                        };
-                    }
-                    else
+                    
+                    if ( groupMemberId > 0 )
                     {
                         // load existing group member and move if needed
                         groupMember = groupMemberService.Get( groupMemberId );
-                        groupMember.GroupId = ddlSubGroup.SelectedValue.AsInteger();
+                        groupMember.GroupId = newGroupId;
+                    }
+                    else
+                    {
+                        // if adding a new group member
+                        groupMember = new GroupMember
+                        {
+                            Id = 0,
+                            GroupId = originalGroupId
+                        }; 
                     }
 
                     groupMember.PersonId = person.Id;
@@ -663,7 +662,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupMember.LoadAttributes();
                     Rock.Attribute.Helper.GetEditValues( phAttributes, groupMember );
 
-                    if ( groupMember.GroupId != 0 && ( !groupMember.IsValid || !Page.IsValid ) )
+                    // check for valid group membership
+                    if ( groupMember.GroupId != 0 && !groupMember.IsValid )
                     {
                         if ( groupMember.ValidationResults.Any() )
                         {
@@ -674,23 +674,32 @@ namespace RockWeb.Plugins.com_kfs.Event
                         return;
                     }
 
-                    var groupMemberChanges = new List<GroupMember>();
-                    groupMemberChanges.Add( groupMember );
                     // check for moving other registrants
+                    var membersBeingLed = new List<int>();
                     if ( rblMoveRegistrants.Visible && rblMoveRegistrants.SelectedValue.AsBoolean() )
                     {
                         // find the group this member is a leader of
-                        var membersBeingLed = groupMemberService.GetByPersonId( groupMember.PersonId )
+                        membersBeingLed = groupMemberService.GetByPersonId( groupMember.PersonId )
                             .Where( gm => gm.GroupRole.IsLeader )
                             .Select( gm => gm.Group ).SelectMany( g => g.Members )
                             .Where( gm => gm.PersonId != groupMember.PersonId )
                             .Select( gm => gm.PersonId ).ToList();
+                    }
 
+                    // use WrapTransaction because there are three context writes
+                    rockContext.WrapTransaction( () =>
+                    {
+                        // add any members to the new group
                         if ( groupMember.GroupId > 0 )
                         {
-                            // add those people's group memberships
-                            groupMemberChanges.AddRange( membersBeingLed.Select(
-                                memberPerson => new GroupMember
+                            if ( groupMember.Id == 0 )
+                            {
+                                groupMemberService.Add( groupMember );
+                            }
+
+                            var groupToAddTo = new GroupService( rockContext ).Get( groupMember.GroupId );
+                            groupMemberService.AddRange( membersBeingLed.Except( groupToAddTo.Members.Select( cm => cm.PersonId ) )
+                                .Select( memberPerson => new GroupMember
                                 {
                                     PersonId = memberPerson,
                                     GroupId = groupMember.GroupId,
@@ -699,27 +708,21 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 }
                             ) );
                         }
-                        else
+
+                        // delete any members from the existing group
+                        if ( groupMember.GroupId != originalGroupId )
                         {
-                            // delete those people's group memberships
-                            var groupToRemoveFrom = new GroupService( rockContext ).Get( groupId );
-                            groupMemberChanges.AddRange( groupToRemoveFrom.Members
+                            if ( groupMember.GroupId == 0 && groupMember.Id > 0 )
+                            {
+                                groupMemberService.Delete( groupMember );
+                            }
+
+                            var groupToRemoveFrom = new GroupService( rockContext ).Get( originalGroupId );
+                            groupMemberService.DeleteRange( groupToRemoveFrom.Members
                                 .Where( m => membersBeingLed.Contains( m.PersonId ) )
                             );
                         }
-                    }
 
-                    // using WrapTransaction because there are three context writes
-                    rockContext.WrapTransaction( () =>
-                    {
-                        if ( groupMember.Id.Equals( 0 ) && groupMember.GroupId > 0 )
-                        {
-                            groupMemberService.AddRange( groupMemberChanges );
-                        }
-                        else if ( groupMember.Id > 0 && groupMember.GroupId == 0 )
-                        {
-                            groupMemberService.DeleteRange( groupMemberChanges );
-                        }
                         rockContext.SaveChanges();
                         groupMember.SaveAttributeValues( rockContext );
                     } );
@@ -5202,8 +5205,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="registrant">The registrant.</param>
         protected void RenderGroupMemberModal( RockContext rockContext, Group parentGroup, Group group, GroupMember groupMember, RegistrationRegistrant registrant )
         {
-            // TODO: this method needs refactoring
-
             // Clear modal controls
             nbErrorMessage.Visible = false;
             ddlRegistrantList.Items.Clear();
@@ -5330,7 +5331,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
 
                         // since volunteers are allowed, display the move other registrants option
-                        rblMoveRegistrants.Visible = true;
+                        //rblMoveRegistrants.Visible = true;
                     }
 
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0} to {1}", groupMemberTerm, group.Name );
