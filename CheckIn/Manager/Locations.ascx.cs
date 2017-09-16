@@ -1555,6 +1555,12 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                 .ToList()
                                 .ForEach( l => navItems.Add( l ) );
 
+                            var location = new LocationService( new RockContext() ).Get( ( int ) itemId );
+                            if ( location != null )
+                            {
+                                lpNewLocation.Location = location;
+                            }
+
                             break;
                         }
 

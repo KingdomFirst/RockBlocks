@@ -115,11 +115,11 @@
         <asp:HiddenField ID="hfPersonId" runat="server" />
         <asp:HiddenField ID="hfLocationId" runat="server" />
 
-        <Rock:ModalDialog ID="dlgMoveLocation" runat="server" Title="Move Location" OnSaveClick="dlgMoveLocation_SaveClick" OnCancelScript="clearActiveDialog();" ValidationGroup="MoveLocation">
+        <Rock:ModalDialog ID="dlgMoveLocation" runat="server" Title="Select Move Location" OnSaveClick="dlgMoveLocation_SaveClick" OnCancelScript="clearActiveDialog();" ValidationGroup="MoveLocation">
             <Content>
                 <asp:ValidationSummary ID="valSummaryTop" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" ValidationGroup="MoveLocation" />
 
-                <Rock:LocationPicker ID="lpNewLocation" runat="server" ValidationGroup="MoveLocation" Required="true" Label="New Location" AllowedPickerModes="Named" />
+                <Rock:LocationPicker ID="lpNewLocation" runat="server" ValidationGroup="MoveLocation" Required="true" Label="Selected Location" AllowedPickerModes="Named" />
             </Content>
         </Rock:ModalDialog>
 
