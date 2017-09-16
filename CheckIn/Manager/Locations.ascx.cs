@@ -330,9 +330,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         {
                             if ( matchingAttendees.Any() )
                             {
-                                var personList = new List<Person>();
+                                var personList = new List<Rock.Model.Person>();
                                 var person = matchingAttendees.First().PersonAlias.Person;
-                                personList.Add( person );
+                                personList.Add( ( Rock.Model.Person )person );
 
                                 results.AddRange(
                                     personList.GroupJoin(
