@@ -638,7 +638,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         nbErrorMessage.Visible = true;
                         return;
                     }
-                    
+
                     if ( groupMemberId > 0 )
                     {
                         // load existing group member and move if needed
@@ -652,7 +652,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             Id = 0,
                             GroupId = originalGroupId
-                        }; 
+                        };
                     }
 
                     groupMember.PersonId = person.Id;
@@ -5015,7 +5015,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             foreach ( Group group in subGroups )
             {
                 var groupPanel = (KFSGroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
-                //groupPanel = new KFSGroupPanel();
+                //var groupPanel = new KFSGroupPanel();
 
                 groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
 
@@ -5320,7 +5320,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         ppSubGroupMember.Required = true;
                     }
 
-                    if ( group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
+                    if ( !ppSubGroupMember.Visible && group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
                     {
                         // display active volunteers not already in this group
                         foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
