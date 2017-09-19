@@ -154,10 +154,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             needsFilled = attributeValues.Sum( v => v.AsDecimal() );
                         }
+                        else if ( attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.MULTI_SELECT.AsGuid() ) )
+                        {
+                            // handles checkboxes and non-empty strings
+                            needsFilled = attributeValues.Count( v => !string.IsNullOrWhiteSpace( v ) );
+                        }
                         else
                         {
-                            // handles checkboxes as well as non-empty (true) strings
-                            needsFilled = attributeValues.Count( v => v.AsBoolean( true ) );
+                            // handles single select and boolean
+                            needsFilled = attributeValues.Count( v => v.AsBoolean() );
                         }
                     }
 
