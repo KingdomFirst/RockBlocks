@@ -2336,42 +2336,34 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             phGroupTabs.Controls.Clear();
             instance = instance ?? GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
-            if ( instance != null )
+            if ( instance != null && instance.AttributeValues.Any() )
             {
-                foreach ( var groupType in ResourceGroupTypes )
+                foreach ( var groupType in ResourceGroupTypes.Where( gt => instance.AttributeValues.ContainsKey( gt.Name ) ) )
                 {
-                    if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
+                    var associatedGroupGuid = instance.AttributeValues[groupType.Name].Value.AsGuid();
+                    if ( !associatedGroupGuid.Equals( Guid.Empty ) )
                     {
                         var tabName = groupType.Name;
-                        bool createTab = true;
-                        if ( instance != null && instance.AttributeValues.ContainsKey( groupType.Name ) )
+                        
+                        var group = new GroupService( new RockContext() ).Get( associatedGroupGuid );
+                        if ( group != null )
                         {
-                            var resourceGroupGuid = instance.AttributeValues[groupType.Name].Value.ToStringSafe();
-                            var group = new GroupService( new RockContext() ).Get( resourceGroupGuid.AsGuid() );
-                            if ( group != null )
-                            {
-                                tabName = group.Name;
-                            }
-
-                            createTab = resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid ) && !Guid.Empty.Equals( resourceGroupGuid.AsGuid() );
+                            tabName = group.Name;
                         }
-
-                        if ( createTab )
+                        
+                        var item = new HtmlGenericControl( "li" )
                         {
-                            var item = new HtmlGenericControl( "li" )
-                            {
-                                ID = "li" + tabName
-                            };
-                            var lb = new LinkButton
-                            {
-                                ID = "lb" + tabName,
-                                Text = tabName
-                            };
+                            ID = "li" + tabName
+                        };
+                        var lb = new LinkButton
+                        {
+                            ID = "lb" + tabName,
+                            Text = tabName
+                        };
 
-                            lb.Click += lbTab_Click;
-                            item.Controls.Add( lb );
-                            phGroupTabs.Controls.Add( item );
-                        }
+                        lb.Click += lbTab_Click;
+                        item.Controls.Add( lb );
+                        phGroupTabs.Controls.Add( item );
                     }
                 }
             }
@@ -5214,6 +5206,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             ddlRegistrantList.Items.Clear();
             ddlGroupRole.Items.Clear();
             tbNote.Text = string.Empty;
+
+            // TODO is registration instance already in registrant?
 
             var registrationGroupGuids = new List<Guid>();
             var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
