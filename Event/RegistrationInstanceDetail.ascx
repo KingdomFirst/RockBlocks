@@ -454,6 +454,7 @@
                     <Content>
                         <asp:HiddenField ID="hfSubGroupId" runat="server" />
                         <asp:HiddenField ID="hfSubGroupMemberId" runat="server" />
+                        <asp:HiddenField ID="hfRegistrationGroupGuid" runat="server" />
                         <Rock:NotificationBox ID="nbErrorMessage" runat="server" NotificationBoxType="Danger" />
                         <asp:ValidationSummary ID="vsSubGroupMember" runat="server" ValidationGroup="vgAddGroupMember" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
                         <fieldset>

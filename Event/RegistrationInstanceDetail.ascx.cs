@@ -678,9 +678,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var membersBeingLed = new List<int>();
                     if ( rblMoveRegistrants.Visible && rblMoveRegistrants.SelectedValue.AsBoolean() )
                     {
-                        // find the group this member is a leader of
+                        var registrationGroupGuids = hfRegistrationGroupGuid.Value.SplitDelimitedValues()
+                            .Select( g => g.AsGuid() ).ToList();
+
+                        // look for a registration group this member is a leader of
                         membersBeingLed = groupMemberService.GetByPersonId( groupMember.PersonId )
                             .Where( gm => gm.GroupRole.IsLeader )
+                            .Where( gm => registrationGroupGuids.Contains( gm.Group.Guid ) || registrationGroupGuids.Contains( gm.Group.ParentGroup.Guid ) )
                             .Select( gm => gm.Group ).SelectMany( g => g.Members )
                             .Where( gm => gm.PersonId != groupMember.PersonId )
                             .Select( gm => gm.PersonId ).ToList();
@@ -5211,8 +5215,16 @@ namespace RockWeb.Plugins.com_kfs.Event
             ddlGroupRole.Items.Clear();
             tbNote.Text = string.Empty;
 
+            var registrationGroupGuids = new List<Guid>();
             var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-            var ris = new RegistrationInstanceService( new RockContext() );
+            var registrationInstance = GetRegistrationInstance( registrationInstanceId, rockContext );            
+            if ( registrationInstance.AttributeValues.Any() )
+            {
+                registrationGroupGuids = registrationInstance.AttributeValues.Values
+                    .Where( v => !string.IsNullOrWhiteSpace( v.Value ) ).Select( v => v.Value.AsGuid() ).ToList();
+                hfRegistrationGroupGuid.Value = string.Join( ",", registrationGroupGuids );
+            }
+
             rblStatus.BindToEnum<GroupMemberStatus>();
             rblMoveRegistrants.SelectedValue = "N";
             var groupMemberTerm = "Member";
@@ -5268,7 +5280,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // start a list of available volunteers, will be filtered below
                     var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable().Where( g => g.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" );
 
-                    // limited to registrants or volunteers assigned to this registration
+                    // dropdown is limited to registrants or non-serving areas
                     if ( group.GroupType.GroupTypePurposeValue == null || group.GroupType.GroupTypePurposeValue.Value != "Serving Area" )
                     {
                         // check if registrants can be assigned to multiple groups
@@ -5290,7 +5302,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             ddlRegistrantList.Help = null;
                         }
 
-                        // add the registrants who haven't already been placed
+                        // add registrants who haven't already been placed
                         var allowedRegistrations = new RegistrationRegistrantService( rockContext ).Queryable().AsNoTracking()
                             .Where( r => r.Registration.RegistrationInstanceId == registrationInstanceId && r.PersonAlias != null && r.PersonAlias.Person != null
                                 && !placedMembers.Contains( r.PersonAlias.Person.Id ) );
@@ -5302,13 +5314,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
 
                         // restrict any volunteer lists to this registration's resources
-                        var registrationInstance = new RegistrationInstanceService( rockContext ).Get( registrationInstanceId );
-                        registrationInstance.LoadAttributes( rockContext );
                         if ( registrationInstance.AttributeValues.Any() )
                         {
-                            var registrationGroups = registrationInstance.AttributeValues.Values.Select( v => v.Value.AsGuid() ).ToList();
-                            qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroups.Contains( g.Group.Guid ) || registrationGroups.Contains( g.Group.ParentGroup.Guid ) )
-                                .DistinctBy( v => v.PersonId ).AsQueryable();
+                            qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroupGuids.Contains( g.Group.Guid ) || registrationGroupGuids.Contains( g.Group.ParentGroup.Guid ) )
+                                .DistinctBy( v => v.PersonId ).AsQueryable();                            
                         }
                     }
                     // adding a volunteer instead of registrants, show the person picker instead of a dropdown
