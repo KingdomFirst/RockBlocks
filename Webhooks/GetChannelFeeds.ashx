@@ -1,4 +1,4 @@
-﻿<%@ WebHandler Language="C#" Class="RockWeb.Plugins.com_kfs.Cms.GetChannelFeed" %>
+﻿<%@ WebHandler Language="C#" Class="RockWeb.Plugins.com_kfs.Cms.GetChannelFeeds" %>
 // <copyright>
 // Copyright by the Spark Development Network
 //
@@ -34,7 +34,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
     /// <summary>
     /// Handles retrieving file data from storage
     /// </summary>
-    public class GetChannelFeed : IHttpHandler
+    public class GetChannelFeeds : IHttpHandler
     {
 
         private HttpRequest request;
