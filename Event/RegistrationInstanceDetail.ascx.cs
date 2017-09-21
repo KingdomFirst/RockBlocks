@@ -601,159 +601,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             AddDynamicControls( instance );
             BuildSubGroupTabs( instance );
         }
-
-        /// <summary>
-        /// Handles the SaveClick event of the mdlAddSubGroupMember control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void mdlAddSubGroupMember_SaveClick( object sender, EventArgs e )
-        {
-            if ( Page.IsValid )
-            {
-                using ( var rockContext = new RockContext() )
-                {
-                    // add or remove group membership
-                    GroupMember groupMember;
-                    var originalGroupId = hfSubGroupId.ValueAsInt();
-                    var newGroupId = ddlSubGroup.SelectedValue.AsInteger();
-                    var groupMemberService = new GroupMemberService( rockContext );
-                    var groupMemberId = int.Parse( hfSubGroupMemberId.Value );
-
-                    // Check to see if a person was selected
-                    var person = ddlRegistrantList.SelectedValueAsGuid().HasValue ? new PersonService( rockContext ).Get( (Guid)ddlRegistrantList.SelectedValueAsGuid() ) : null;
-                    person = person ?? ( ppSubGroupMember.SelectedValue.HasValue ? new PersonService( rockContext ).Get( (int)ppSubGroupMember.SelectedValue ) : null );
-                    if ( person == null )
-                    {
-                        nbErrorMessage.Title = "Please select a Person";
-                        nbErrorMessage.Visible = true;
-                        return;
-                    }
-
-                    // check to see if the user selected a role
-                    var role = new GroupTypeRoleService( rockContext ).Get( ddlGroupRole.SelectedValueAsInt() ?? 0 );
-                    if ( role == null )
-                    {
-                        nbErrorMessage.Title = "Please select a Role";
-                        nbErrorMessage.Visible = true;
-                        return;
-                    }
-
-                    if ( groupMemberId > 0 )
-                    {
-                        // load existing group member and move if needed
-                        groupMember = groupMemberService.Get( groupMemberId );
-                        groupMember.GroupId = newGroupId;
-                    }
-                    else
-                    {
-                        // if adding a new group member
-                        groupMember = new GroupMember
-                        {
-                            Id = 0,
-                            GroupId = originalGroupId
-                        };
-                    }
-
-                    groupMember.PersonId = person.Id;
-                    groupMember.GroupRoleId = role.Id;
-                    groupMember.Note = tbNote.Text;
-                    groupMember.GroupMemberStatus = rblStatus.SelectedValueAsEnum<GroupMemberStatus>();
-                    groupMember.LoadAttributes();
-                    Rock.Attribute.Helper.GetEditValues( phAttributes, groupMember );
-
-                    // check for valid group membership
-                    if ( groupMember.GroupId != 0 && !groupMember.IsValid )
-                    {
-                        if ( groupMember.ValidationResults.Any() )
-                        {
-                            nbErrorMessage.Text = groupMember.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" );
-                        }
-
-                        nbErrorMessage.Visible = true;
-                        return;
-                    }
-
-                    // check for moving other registrants
-                    var membersBeingLed = new List<int>();
-                    if ( rblMoveRegistrants.Visible && rblMoveRegistrants.SelectedValue.AsBoolean() )
-                    {
-                        var registrationGroupGuids = hfRegistrationGroupGuid.Value.SplitDelimitedValues()
-                            .Select( g => g.AsGuid() ).ToList();
-
-                        // look for a registration group this member is a leader of
-                        membersBeingLed = groupMemberService.GetByPersonId( groupMember.PersonId )
-                            .Where( gm => gm.GroupRole.IsLeader )
-                            .Where( gm => registrationGroupGuids.Contains( gm.Group.Guid ) || registrationGroupGuids.Contains( gm.Group.ParentGroup.Guid ) )
-                            .Select( gm => gm.Group ).SelectMany( g => g.Members )
-                            .Where( gm => gm.PersonId != groupMember.PersonId )
-                            .Select( gm => gm.PersonId ).ToList();
-                    }
-
-                    // use WrapTransaction because there are three context writes
-                    rockContext.WrapTransaction( () =>
-                    {
-                        // add any members to the new group
-                        if ( groupMember.GroupId > 0 )
-                        {
-                            if ( groupMember.Id == 0 )
-                            {
-                                groupMemberService.Add( groupMember );
-                            }
-
-                            var groupToAddTo = new GroupService( rockContext ).Get( groupMember.GroupId );
-                            groupMemberService.AddRange( membersBeingLed.Except( groupToAddTo.Members.Select( cm => cm.PersonId ) )
-                                .Select( memberPerson => new GroupMember
-                                {
-                                    PersonId = memberPerson,
-                                    GroupId = groupMember.GroupId,
-                                    GroupRoleId = role.GroupType.DefaultGroupRoleId ?? role.Id,
-                                    GroupMemberStatus = groupMember.GroupMemberStatus,
-                                }
-                            ) );
-                        }
-
-                        // delete any members from the existing group
-                        if ( groupMember.GroupId != originalGroupId )
-                        {
-                            if ( groupMember.GroupId == 0 && groupMember.Id > 0 )
-                            {
-                                groupMemberService.Delete( groupMember );
-                            }
-
-                            var groupToRemoveFrom = new GroupService( rockContext ).Get( originalGroupId );
-                            groupMemberService.DeleteRange( groupToRemoveFrom.Members
-                                .Where( m => membersBeingLed.Contains( m.PersonId ) )
-                            );
-                        }
-
-                        rockContext.SaveChanges();
-                        groupMember.SaveAttributeValues( rockContext );
-                    } );
-
-                    if ( groupMember != null && groupMember.Id > 0 )
-                    {
-                        hfSubGroupMemberId.Value = groupMember.Id.ToString();
-
-                        if ( groupMember.GroupId > 0 )
-                        {
-                            hfSubGroupId.Value = groupMember.GroupId.ToString();
-                        }
-                    }
-
-                    if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
-                    {
-                        BindRegistrantsFilter( new RegistrationInstanceService( rockContext ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
-                    }
-                }
-
-                AddDynamicControls();
-                BindResourcePanels();
-                BindRegistrantsGrid();
-                mdlAddSubGroupMember.Hide();
-            }
-        }
-
+        
         /// <summary>
         /// Handles the Click event of the btnCancel control.
         /// </summary>
@@ -5204,11 +5052,11 @@ namespace RockWeb.Plugins.com_kfs.Event
             // Clear modal controls
             nbErrorMessage.Visible = false;
             ddlRegistrantList.Items.Clear();
+            ddlSubGroup.Items.Clear();
             ddlGroupRole.Items.Clear();
             tbNote.Text = string.Empty;
 
-            // TODO is registration instance already in registrant?
-
+            // registrant may be empty, so get instance from URL
             var registrationGroupGuids = new List<Guid>();
             var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
             var registrationInstance = GetRegistrationInstance( registrationInstanceId, rockContext );            
@@ -5261,7 +5109,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     ddlSubGroup.DataBind();
                     ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
                     ddlSubGroup.SelectedIndex = parentGroup.Groups.Any() ? 1 : 0;
-                    ddlSubGroup.Label = !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupTerm ) ? parentGroup.GroupType.GroupTerm : "Sub-Group";
+                    ddlSubGroup.Label = !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupTerm ) ? parentGroup.GroupType.GroupTerm : parentGroup.Name;
                     group = parentGroup.Groups.Any() ? parentGroup.Groups.FirstOrDefault() : null;
                 }
                 else if ( group != null )
@@ -5369,7 +5217,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 ddlSubGroup.DataValueField = "Id";
                 ddlSubGroup.DataBind();
                 ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
-                ddlSubGroup.Label = !string.IsNullOrWhiteSpace( group.GroupType.GroupTerm ) ? group.GroupType.GroupTerm : "Sub-Group";
+                ddlSubGroup.Label = !string.IsNullOrWhiteSpace( group.GroupType.GroupTerm ) ? group.GroupType.GroupTerm : group.ParentGroup.Name;
                 ddlSubGroup.SelectedValue = group.Id.ToString();
             }
 
@@ -5382,6 +5230,164 @@ namespace RockWeb.Plugins.com_kfs.Event
             // render dynamic group controls beneath modal
             AddDynamicControls();
             BindRegistrantsGrid();
+        }
+
+        /// <summary>
+        /// Handles the SaveClick event of the mdlAddSubGroupMember control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void mdlAddSubGroupMember_SaveClick( object sender, EventArgs e )
+        {
+            if ( Page.IsValid )
+            {
+                using ( var rockContext = new RockContext() )
+                {
+                    // add or remove group membership
+                    GroupMember groupMember;
+                    var originalGroupId = hfSubGroupId.ValueAsInt();
+                    var newGroupId = ddlSubGroup.SelectedValue.AsInteger();
+                    var groupMemberService = new GroupMemberService( rockContext );
+                    var groupMemberId = int.Parse( hfSubGroupMemberId.Value );
+
+                    // Check to see if a person was selected
+                    var person = ddlRegistrantList.SelectedValueAsGuid().HasValue ? new PersonService( rockContext ).Get( (Guid)ddlRegistrantList.SelectedValueAsGuid() ) : null;
+                    person = person ?? ( ppSubGroupMember.SelectedValue.HasValue ? new PersonService( rockContext ).Get( (int)ppSubGroupMember.SelectedValue ) : null );
+                    if ( person == null )
+                    {
+                        nbErrorMessage.Title = "Please select a Person";
+                        nbErrorMessage.Visible = true;
+                        return;
+                    }
+
+                    // check to see if the user selected a role
+                    var role = new GroupTypeRoleService( rockContext ).Get( ddlGroupRole.SelectedValueAsInt() ?? 0 );
+                    if ( role == null )
+                    {
+                        nbErrorMessage.Title = "Please select a Role";
+                        nbErrorMessage.Visible = true;
+                        return;
+                    }
+
+                    if ( groupMemberId > 0 )
+                    {
+                        // load existing group member and move if needed
+                        groupMember = groupMemberService.Get( groupMemberId );
+                        groupMember.GroupId = newGroupId;
+                    }
+                    else
+                    {
+                        // if adding a new group member
+                        groupMember = new GroupMember
+                        {
+                            Id = 0,
+                            GroupId = originalGroupId > 0 ? originalGroupId : newGroupId
+                        };
+                    }
+
+                    groupMember.PersonId = person.Id;
+                    groupMember.GroupRoleId = role.Id;
+                    groupMember.Note = tbNote.Text;
+                    groupMember.GroupMemberStatus = rblStatus.SelectedValueAsEnum<GroupMemberStatus>();
+                    groupMember.LoadAttributes();
+                    Rock.Attribute.Helper.GetEditValues( phAttributes, groupMember );
+
+                    // check for valid group membership
+                    if ( groupMember.GroupId != 0 && !groupMember.IsValid )
+                    {
+                        if ( groupMember.ValidationResults.Any() )
+                        {
+                            nbErrorMessage.Text = groupMember.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" );
+                        }
+
+                        nbErrorMessage.Visible = true;
+                        return;
+                    }
+
+                    // check for moving other registrants
+                    var membersBeingLed = new List<int>();
+                    if ( rblMoveRegistrants.Visible && rblMoveRegistrants.SelectedValue.AsBoolean() )
+                    {
+                        var registrationGroupGuids = hfRegistrationGroupGuid.Value.SplitDelimitedValues()
+                            .Select( g => g.AsGuid() ).ToList();
+
+                        // look for a registration group this member is a leader of
+                        membersBeingLed = groupMemberService.GetByPersonId( groupMember.PersonId )
+                            .Where( gm => gm.GroupRole.IsLeader )
+                            .Where( gm => registrationGroupGuids.Contains( gm.Group.Guid ) || registrationGroupGuids.Contains( gm.Group.ParentGroup.Guid ) )
+                            .Select( gm => gm.Group ).SelectMany( g => g.Members )
+                            .Where( gm => gm.PersonId != groupMember.PersonId )
+                            .Select( gm => gm.PersonId ).ToList();
+                    }
+
+                    // use WrapTransaction because there are three context writes
+                    rockContext.WrapTransaction( () =>
+                    {
+                        // add any members to the new group
+                        if ( groupMember.GroupId > 0 )
+                        {
+                            if ( groupMember.Id == 0 )
+                            {
+                                groupMemberService.Add( groupMember );
+                            }
+
+                            if ( membersBeingLed.Any() )
+                            {
+                                var groupToAddTo = new GroupService( rockContext ).Get( groupMember.GroupId );
+                                groupMemberService.AddRange( membersBeingLed.Except( groupToAddTo.Members.Select( cm => cm.PersonId ) )
+                                    .Select( memberPerson => new GroupMember
+                                    {
+                                        PersonId = memberPerson,
+                                        GroupId = groupMember.GroupId,
+                                        GroupRoleId = role.GroupType.DefaultGroupRoleId ?? role.Id,
+                                        GroupMemberStatus = groupMember.GroupMemberStatus,
+                                    }
+                                ) );
+                            }
+                        }
+
+                        // delete any members from the existing group
+                        if ( groupMember.GroupId != originalGroupId )
+                        {
+                            if ( groupMember.GroupId == 0 && groupMember.Id > 0 )
+                            {
+                                groupMemberService.Delete( groupMember );
+                            }
+
+                            if ( membersBeingLed.Any() )
+                            {
+                                var groupToRemoveFrom = new GroupService( rockContext ).Get( originalGroupId );
+                                groupMemberService.DeleteRange( groupToRemoveFrom.Members
+                                    .Where( m => membersBeingLed.Contains( m.PersonId ) )
+                                );
+                            }
+                        }
+
+                        rockContext.SaveChanges();
+                        groupMember.SaveAttributeValues( rockContext );
+                    } );
+
+                    if ( groupMember != null && groupMember.Id > 0 )
+                    {
+                        hfSubGroupMemberId.Value = groupMember.Id.ToString();
+
+                        if ( groupMember.GroupId > 0 )
+                        {
+                            hfSubGroupId.Value = groupMember.GroupId.ToString();
+                        }
+                    }
+
+                    if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
+                    {
+                        BindRegistrantsFilter( new RegistrationInstanceService( rockContext ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
+                    }
+                }
+
+                AddDynamicControls();
+                BindResourcePanels();
+                BindRegistrantsGrid();
+                mdlAddSubGroupMember.Hide();
+            }
         }
 
         #endregion
