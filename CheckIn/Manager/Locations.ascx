@@ -16,6 +16,9 @@
 
     function clearActiveDialog() {
         $('#<%=hfActiveDialog.ClientID %>').val('');
+        $('#<%=hfPersonId.ClientID %>').val('');
+        $('#<%=hfLocationId.ClientID %>').val('');
+        $('#<%=hfGroupIds.ClientID %>').val('');
     }
 </script>
 <Rock:RockUpdatePanel ID="upnlContent" runat="server">
