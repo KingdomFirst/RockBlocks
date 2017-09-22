@@ -58,14 +58,26 @@ namespace RockWeb.Plugins.com_kfs.Cms
 
             if ( request.QueryString["ChannelId"] != null )
             {
-                int channelId;
                 int templateDefinedValueId;
                 DefinedValueCache dvRssTemplate;
                 string rssTemplate;
+                var channelIds = new List<int>();
 
-                if ( !int.TryParse( request.QueryString["ChannelId"] , out channelId ))
+                if ( !string.IsNullOrWhiteSpace( request.QueryString["ChannelId"] ) )
                 {
-                    response.Write( "Invalid channel id." );
+                    var channelIdQueryString = request.QueryString["ChannelId"];
+                    int channelId;
+                    foreach ( var id in channelIdQueryString.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ) )
+                    {
+                        if ( int.TryParse( id, out channelId ) )
+                        {
+                            channelIds.Add( channelId );
+                        }
+                    }
+                }
+                if ( channelIds.Count < 1 )
+                {
+                    response.Write( "Invalid channel id(s)." );
                     response.StatusCode = 200;
                     return;
                 }
@@ -86,7 +98,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
                 {
                     // when in debug mode we need to export as html and linkin styles so that the debug info will be displayed
                     string appPath = HttpContext.Current.Request.ApplicationPath;
-                    
+
                     response.Write( "<html>" );
                     response.Write( "<head>" );
                     response.Write( string.Format( "<link rel='stylesheet' type='text/css' href='{0}Themes/Rock/Styles/bootstrap.css'>", appPath ) );
@@ -107,46 +119,46 @@ namespace RockWeb.Plugins.com_kfs.Cms
                         response.ContentType = dvRssTemplate.GetAttributeValue( "MimeType" );
                     }
                 }
-                
-                
+
+
                 ContentChannelService channelService = new ContentChannelService( rockContext );
 
-                var channel = channelService.Queryable( "ContentChannelType" ).Where( c => c.Id == channelId ).FirstOrDefault();
+                var channels = channelService.Queryable( "ContentChannelType" ).Where( c => channelIds.Contains( c.Id ) && c.EnableRss == true );
 
-                if ( channel != null )
+                if ( channels.Count() > 0 )
                 {
-                    if ( channel.EnableRss )
+                    // load merge fields
+                    var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( null );
+                    mergeFields.Add( "Channels", channels );
+
+                    Dictionary<string, object> requestObjects = new Dictionary<string, object>();
+                    requestObjects.Add( "Scheme", request.Url.Scheme );
+                    requestObjects.Add( "Host", request.Url.Host );
+                    requestObjects.Add( "Authority", request.Url.Authority );
+                    requestObjects.Add( "LocalPath", request.Url.LocalPath );
+                    requestObjects.Add( "AbsoluteUri", request.Url.AbsoluteUri );
+                    requestObjects.Add( "AbsolutePath", request.Url.AbsolutePath );
+                    requestObjects.Add( "Port", request.Url.Port );
+                    requestObjects.Add( "Query", request.Url.Query );
+                    requestObjects.Add( "OriginalString", request.Url.OriginalString );
+
+                    mergeFields.Add( "Request", requestObjects );
+
+                    // check for new rss item limit
+                    if ( request.QueryString["Count"] != null )
                     {
-                        // load merge fields
-                        var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( null );
-                        mergeFields.Add( "Channel", channel );
-
-                        Dictionary<string, object> requestObjects = new Dictionary<string, object>();
-                        requestObjects.Add( "Scheme", request.Url.Scheme );
-                        requestObjects.Add( "Host", request.Url.Host );
-                        requestObjects.Add( "Authority", request.Url.Authority );
-                        requestObjects.Add( "LocalPath", request.Url.LocalPath );
-                        requestObjects.Add( "AbsoluteUri", request.Url.AbsoluteUri );
-                        requestObjects.Add( "AbsolutePath", request.Url.AbsolutePath );
-                        requestObjects.Add( "Port", request.Url.Port );
-                        requestObjects.Add( "Query", request.Url.Query );
-                        requestObjects.Add( "OriginalString", request.Url.OriginalString );
-
-                        mergeFields.Add( "Request", requestObjects );
-                        
-                        // check for new rss item limit
-                        if ( request.QueryString["Count"] != null )
-                        {
-                            int.TryParse( request.QueryString["Count"], out rssItemLimit );
-                        }
-
+                        int.TryParse( request.QueryString["Count"], out rssItemLimit );
+                    }
+                    ContentChannelItemService contentService = new ContentChannelItemService( rockContext );
+                    var finalContent = contentService.Queryable( "ContentChannelType" ).Where(c => c == null);
+                    foreach ( var channel in channels )
+                    {
                         // get channel items
-                        ContentChannelItemService contentService = new ContentChannelItemService( rockContext );
 
                         var content = contentService.Queryable( "ContentChannelType" )
-                                        .Where( c => 
-                                            c.ContentChannelId == channel.Id && 
-                                            ( c.Status == ContentChannelItemStatus.Approved || c.ContentChannel.RequiresApproval == false ) && 
+                                        .Where( c =>
+                                            channelIds.Contains( c.ContentChannelId ) &&
+                                            ( c.Status == ContentChannelItemStatus.Approved || c.ContentChannel.RequiresApproval == false ) &&
                                             c.StartDateTime <= RockDateTime.Now );
 
                         if ( channel.ContentChannelType.DateRangeType == ContentChannelDateType.DateRange && request.QueryString["IgnoreExpire"] == null )
@@ -171,7 +183,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
                         }
 
                         content = content.Take( rssItemLimit );
-                        
+
                         foreach ( var item in content )
                         {
                             item.Content = item.Content.ResolveMergeFields( mergeFields );
@@ -189,42 +201,36 @@ namespace RockWeb.Plugins.com_kfs.Cms
                                 attributeValue.Value.Value = attributeValue.Value.Value.ResolveMergeFields( mergeFields );
                             }
                         }
+                        finalContent = finalContent.Concat( content );
+                    }
+                    mergeFields.Add( "Items", finalContent );
 
-                        mergeFields.Add( "Items", content );
 
-                        mergeFields.Add( "RockVersion", Rock.VersionInfo.VersionInfo.GetRockProductVersionNumber() );
+                    mergeFields.Add( "RockVersion", Rock.VersionInfo.VersionInfo.GetRockProductVersionNumber() );
 
-                        // show debug info
-                        if ( request.QueryString["EnableDebug"] != null )
-                        {
-                            response.Write( mergeFields.lavaDebugInfo() );
-                            response.Write( "<pre>" );
-                            response.Write( WebUtility.HtmlEncode(rssTemplate.ResolveMergeFields( mergeFields )) );
-                            response.Write( "</pre>" );
-                            response.Write( "</body>" );
-                            response.Write( "</html" );
-                        }
-                        else
-                        {
-                            response.Write( rssTemplate.ResolveMergeFields( mergeFields ) );
-                        }
+                    // show debug info
+                    if ( request.QueryString["EnableDebug"] != null )
+                    {
+                        response.Write( mergeFields.lavaDebugInfo() );
+                        response.Write( "<pre>" );
+                        response.Write( WebUtility.HtmlEncode( rssTemplate.ResolveMergeFields( mergeFields ) ) );
+                        response.Write( "</pre>" );
+                        response.Write( "</body>" );
+                        response.Write( "</html" );
                     }
                     else
                     {
-                        response.Write( "RSS is not enabled for this channel." );
-                        response.StatusCode = 200;
-                        return;
+                        response.Write( rssTemplate.ResolveMergeFields( mergeFields ) );
                     }
                 }
                 else
                 {
                     response.StatusCode = 200;
-                    response.Write( "Invalid channel id." );
+                    response.Write( "Invalid channel ids or RSS is not enabled for the channel(s)." );
                     response.StatusCode = 200;
                     return;
                 }
 
-                
             }
             else
             {
