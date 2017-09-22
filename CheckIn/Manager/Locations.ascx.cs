@@ -922,6 +922,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
             if ( e.CommandName == "PrintLabel" )
             {
+                lbPrintLabel.Visible = false;
+
                 var commandArgs = e.CommandArgument.ToString().Split( new char[] { '^' } , StringSplitOptions.RemoveEmptyEntries );
                 var personId = commandArgs[0];
                 var groupIds = commandArgs[1];
@@ -2290,6 +2292,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                 pnlLabel.Controls.Add( new LiteralControl( string.Format( "<iframe id='ifReprint' src='{0}' style='width:100%; height:25em;'></iframe>", pdfLabel ) ) );
                 pnlLabel.Visible = true;
+                lbPrintLabel.Visible = true;
             }
         }
 
