@@ -94,6 +94,8 @@
                                 </div>
                                 <span class="pull-right margin-t-sm">
                                     <asp:Literal ID="lStatus" runat="server" />
+                                    <asp:LinkButton ID="lbPrintLabel" runat="server" CssClass="js-pring-label btn btn-success" 
+                                        CommandName="PrintLabel" Visible='<%# (bool)Eval("ShowPrintLabel") %>'><i class="fa fa-print"></i> Print Label</asp:LinkButton>
                                     <asp:LinkButton ID="lbMovePerson" runat="server" CssClass="js-move-person btn btn-info" 
                                         CommandArgument='<%# Eval("Id") %>' CommandName="Move" Visible='<%# (bool)Eval("ShowMove") %>'><i class="fa fa-sign-out"></i> Move</asp:LinkButton>
                                     <asp:LinkButton ID="lbCheckOut" runat="server" CssClass="js-checkout btn btn-warning" 
@@ -114,12 +116,46 @@
         <asp:HiddenField ID="hfActiveDialog" runat="server" />
         <asp:HiddenField ID="hfPersonId" runat="server" />
         <asp:HiddenField ID="hfLocationId" runat="server" />
+        <asp:HiddenField ID="hfGroupIds" runat="server" />
 
         <Rock:ModalDialog ID="dlgMoveLocation" runat="server" Title="Select Move Location" OnSaveClick="dlgMoveLocation_SaveClick" OnCancelScript="clearActiveDialog();" ValidationGroup="MoveLocation">
             <Content>
                 <asp:ValidationSummary ID="valSummaryTop" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" ValidationGroup="MoveLocation" />
 
                 <Rock:LocationPicker ID="lpNewLocation" runat="server" ValidationGroup="MoveLocation" Required="true" Label="Selected Location" AllowedPickerModes="Named" />
+            </Content>
+        </Rock:ModalDialog>
+
+        <Rock:ModalDialog ID="dlgPrintLabel" runat="server" Title="Print Label" OnCancelScript="clearActiveDialog();" ValidationGroup="PrintLabel">
+            <Content>
+                <div class="margin-t-md">
+                    <div class="form-inline">
+                        <Rock:RockDropDownList ID="ddlLabelToPrint" runat="server" Label="Select Label" AppendDataBoundItems="false" ValidationGroup="PrintLabel" Required="true"></Rock:RockDropDownList>
+                        <Rock:RockControlWrapper ID="rcwPrint" runat="server" Label=" " FormGroupCssClass="margin-l-md">
+                            <asp:LinkButton ID="lbViewLabel" runat="server" Text="View Label" CssClass="btn btn-default margin-l-lg" OnClick="btnViewLabel_Click" ValidationGroup="PrintLabel" />
+                        </Rock:RockControlWrapper>
+                    </div>
+                </div>
+                <br />
+                <Rock:PanelWidget ID="wpAdvancedPrintOptions" runat="server" Title="Advanced Print Options" Visible="false">
+                    <div class="panel-body form-inline">
+                        <Rock:RockDropDownList ID="ddlPrintDensity" runat="server" Label="Print Density">
+                            <asp:ListItem Text="6 dpmm (152 dpi)" Value="6"></asp:ListItem>
+                            <asp:ListItem Text="8 dpmm (203 dpi)" Value="8"></asp:ListItem>
+                            <asp:ListItem Text="12 dpmm (300 dpi)" Value="12"></asp:ListItem>
+                            <asp:ListItem Text="24 dpmm (600 dpi)" Value="24"></asp:ListItem>
+                        </Rock:RockDropDownList>
+                        <Rock:RockControlWrapper ID="rcwLabelSize" runat="server" Label="Label Size" FormGroupCssClass="margin-l-md">
+                            <Rock:NumberBox ID="nbLabelWidth" runat="server" CssClass="input-width-xs" NumberType="Double"></Rock:NumberBox>
+                            X
+                            <Rock:NumberBox ID="nbLabelHeight" runat="server" CssClass="input-width-xs" NumberType="Double"></Rock:NumberBox>
+                        </Rock:RockControlWrapper>
+                        <Rock:RockControlWrapper ID="rcwShowLabel" runat="server" Label="Show Label" Help="(0 = first label, 1 = second label, etc.)" FormGroupCssClass="margin-l-md">
+                            <Rock:NumberBox ID="nbShowLabel" runat="server" CssClass="input-width-xs" Text="0" NumberType="Integer"></Rock:NumberBox>
+                        </Rock:RockControlWrapper>
+                    </div>
+                </Rock:PanelWidget>
+                <asp:Panel ID="pnlLabel" runat="server" Visible="false"></asp:Panel>
             </Content>
         </Rock:ModalDialog>
 

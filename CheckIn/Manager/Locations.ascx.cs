@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -11,6 +12,7 @@ using Newtonsoft.Json;
 
 using Rock;
 using Rock.Attribute;
+using Rock.CheckIn;
 using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
@@ -33,11 +35,18 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [BooleanField("Show Delete", "A flag indicating if the Delete button should be displayed.", true, "Attendee Actions", 0 )]
     [BooleanField("Show Checkout", "A flag indicating if the Checkout button should be displayed.", true, "Attendee Actions", 1 )]
     [BooleanField("Show Move", "A flag indicating if the Move Attendee buttons should be displayed.", true, "Attendee Actions", 2 )]
+    [BooleanField( "Show Print Label", "A flag indicating if the Print Label button should be displayed.", true, "Attendee Actions", 3 )]
+    [BooleanField( "Show Advanced Print Options", "A flag indicating if the Advanced Print Options should be displayed.", false, "Print Actions", 0 )]
+    [CustomDropdownListField( "Print Density", "The default print density for reprint.", "6^6 dpmm (152 dpi),8^8 dpmm (203 dpi),12^12 dpmm (300 dpi),24^24 dpmm (600 dpi)", true, "8", "Print Actions", 1 )]
+    [TextField( "Label Width", "The default width of label for reprint.", true, "4", "Print Actions", 2 )]
+    [TextField( "Label Height", "The default height of label for reprint.", true, "2", "Print Actions", 3 )]
+
     public partial class Locations : Rock.Web.UI.RockBlock
     {
         #region Fields
 
         private string _configuredMode = "L";
+        private bool _showAdvancedPrintOptions = false;
 
         #endregion
 
@@ -52,6 +61,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         public static bool ShowDelete { get; set; }
         public static bool ShowCheckout { get; set; }
         public static bool ShowMove { get; set; }
+        public static bool ShowPrintLabel { get; set; }
         #endregion
 
         #region Base Control Methods
@@ -86,6 +96,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             ShowDelete = GetAttributeValue( "ShowDelete" ).AsBoolean();
             ShowCheckout = GetAttributeValue( "ShowCheckout" ).AsBoolean();
             ShowMove = GetAttributeValue( "ShowMove" ).AsBoolean();
+            ShowPrintLabel = GetAttributeValue( "ShowPrintLabel" ).AsBoolean();
+            _showAdvancedPrintOptions = GetAttributeValue( "ShowAdvancedPrintOptions" ).AsBoolean();
 
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.js" );
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.time.js" );
@@ -178,6 +190,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                     SetChartOptions();
                     BuildNavigationControls();
+                    SetPrintControls();
                 }
             }
             else
@@ -277,7 +290,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         PhotoId = null,
                         LastCheckin = g.Max( a => a.StartDateTime ),
                         CheckedInNow = false,
-                        ScheduleGroupNames = ""
+                        ScheduleGroupNames = "",
+                        ScheduleGroupIds = ""
                     } );
 
                 // Do the person search
@@ -352,7 +366,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                                     Age = p.Age.ToString() ?? "",
                                                     LastCheckin = c.LastCheckin,
                                                     CheckedInNow = currentAttendeeIds.Contains( p.Id ),
-                                                    ScheduleGroupNames = c.ScheduleGroupNames
+                                                    ScheduleGroupNames = c.ScheduleGroupNames,
+                                                    ScheduleGroupIds = c.ScheduleGroupIds
                                                 } )
                                             .DefaultIfEmpty(
                                                 new PersonResult
@@ -366,7 +381,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                                     Age = p.Age.ToString() ?? "",
                                                     LastCheckin = null,
                                                     CheckedInNow = false,
-                                                    ScheduleGroupNames = ""
+                                                    ScheduleGroupNames = "",
+                                                    ScheduleGroupIds = ""
                                                 } ) )
                                                 .SelectMany( a => a )
                                     .Distinct()
@@ -402,7 +418,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                     Age = p.Age.ToString() ?? "",
                                     LastCheckin = c.LastCheckin,
                                     CheckedInNow = currentAttendeeIds.Contains( p.Id ),
-                                    ScheduleGroupNames = ""
+                                    ScheduleGroupNames = "",
+                                    ScheduleGroupIds = ""
                                 } )
                             .DefaultIfEmpty(
                                 new PersonResult
@@ -416,7 +433,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                     Age = p.Age.ToString() ?? "",
                                     LastCheckin = null,
                                     CheckedInNow = false,
-                                    ScheduleGroupNames = ""
+                                    ScheduleGroupNames = "",
+                                    ScheduleGroupIds = ""
                                 } ) )
                     .SelectMany( a => a )
                     .Distinct()
@@ -448,6 +466,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         {
             SetChartOptions();
             BuildNavigationControls();
+            SetPrintControls();
         }
 
         /// <summary>
@@ -599,6 +618,12 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             string.IsNullOrWhiteSpace( person.ScheduleGroupNames ) ? "<br/>" : " ",
                             person.Age );
                     }
+                }
+
+                var lbPrintLabel = e.Item.FindControl( "lbPrintLabel" ) as LinkButton;
+                if ( lbPrintLabel != null )
+                {
+                    lbPrintLabel.CommandArgument = string.Format( "{0}^{1}", person.Id, person.ScheduleGroupIds );
                 }
             }
         }
@@ -895,6 +920,79 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 }
             }
 
+            if ( e.CommandName == "PrintLabel" )
+            {
+                var commandArgs = e.CommandArgument.ToString().Split( new char[] { '^' } , StringSplitOptions.RemoveEmptyEntries );
+                var personId = commandArgs[0];
+                var groupIds = commandArgs[1];
+
+                if ( string.IsNullOrWhiteSpace( CurrentNavPath ) || !CurrentNavPath.StartsWith( _configuredMode ) )
+                {
+                    CurrentNavPath = _configuredMode;
+                }
+
+                var pathParts = CurrentNavPath.Split( new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries );
+                int partIndex = pathParts.Length - 1;
+
+                if ( partIndex >= 0 )
+                {
+                    string itemKey = pathParts[partIndex];
+                    if ( itemKey.Length > 0 )
+                    {
+                        string itemType = itemKey.Left( 1 );
+                        int? itemId = itemKey.Length > 1 ? itemKey.Substring( 1 ).AsIntegerOrNull() : null;
+
+                        if ( itemType == "L" && itemId.HasValue )
+                        {
+                            ddlLabelToPrint.Items.Clear();
+                            ddlLabelToPrint.Items.Add( "" );
+                            using ( var rockContext = new RockContext() )
+                            {
+                                foreach ( var groupId in groupIds.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ) )
+                                {
+                                    var group = new GroupService( rockContext ).Get( groupId.AsInteger() );
+                                    var groupType = group.GroupType;
+                                    groupType.LoadAttributes();
+                                    var labels = new List<KioskLabel>();
+
+                                    foreach ( var attribute in groupType.Attributes.OrderBy( a => a.Value.Order ) )
+                                    {
+                                        if ( attribute.Value.FieldType.Guid == Rock.SystemGuid.FieldType.BINARY_FILE.AsGuid() &&
+                                            attribute.Value.QualifierValues.ContainsKey( "binaryFileType" ) &&
+                                            attribute.Value.QualifierValues["binaryFileType"].Value.Equals( Rock.SystemGuid.BinaryFiletype.CHECKIN_LABEL, StringComparison.OrdinalIgnoreCase ) )
+                                        {
+                                            Guid? binaryFileGuid = groupType.GetAttributeValue( attribute.Key ).AsGuidOrNull();
+                                            if ( binaryFileGuid != null )
+                                            {
+                                                var labelCache = KioskLabel.Read( binaryFileGuid.Value );
+                                                labelCache.Order = attribute.Value.Order;
+                                                if ( labelCache != null )
+                                                {
+                                                    labels.Add( labelCache );
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    if ( labels.Any() )
+                                    {
+                                        foreach ( var label in labels )
+                                        {
+                                            var file = new BinaryFileService( rockContext ).Get( label.Guid );
+
+                                            var listItem = new ListItem( file.FileName, string.Format( "{0}^{1}", label.Guid, groupId ) );
+                                            listItem.Attributes.Add( "OptionGroup", group.Name );
+                                            ddlLabelToPrint.Items.Add( listItem );
+                                        }
+                                    }
+                                }
+                            }
+
+                            ShowDialog( "PrintLabel", personId, itemId.Value.ToString(), true, groupIds );
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -1517,6 +1615,18 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
         #region Rebuild Controls
 
+        private void SetPrintControls()
+        {
+            if ( ShowPrintLabel )
+            {
+                wpAdvancedPrintOptions.Visible = _showAdvancedPrintOptions;
+
+                ddlPrintDensity.SelectedValue = GetAttributeValue( "PrintDensity" );
+                nbLabelWidth.Text = GetAttributeValue( "LabelWidth" );
+                nbLabelHeight.Text = GetAttributeValue( "LabelHeight" );
+            }
+        }
+
         private void BuildNavigationControls()
         {
             if ( NavData != null )
@@ -1775,11 +1885,12 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         /// </summary>
         /// <param name="dialog">The dialog.</param>
         /// <param name="setValues">if set to <c>true</c> [set values].</param>
-        private void ShowDialog( string dialog, string personId, string locationId, bool setValues = false )
+        private void ShowDialog( string dialog, string personId, string locationId, bool setValues = false, string groupIds = "" )
         {
             hfActiveDialog.Value = dialog.ToUpper().Trim();
             hfPersonId.Value = personId;
             hfLocationId.Value = locationId;
+            hfGroupIds.Value = groupIds;
             ShowDialog( setValues );
         }
 
@@ -1794,6 +1905,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 case "MOVELOCATION":
                     dlgMoveLocation.Show();
                     break;
+                case "PRINTLABEL":
+                    dlgPrintLabel.Show();
+                    break;
             }
         }
 
@@ -1807,11 +1921,15 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 case "MOVELOCATION":
                     dlgMoveLocation.Hide();
                     break;
+                case "PRINTLABEL":
+                    dlgPrintLabel.Hide();
+                    break;
             }
 
             hfActiveDialog.Value = string.Empty;
             hfPersonId.Value = string.Empty;
             hfLocationId.Value = string.Empty;
+            hfGroupIds.Value = string.Empty;
         }
         #endregion
 
@@ -1936,7 +2054,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             public List<int> ChildLocationIds { get; set; }
             public List<int> ChildGroupIds { get; set; }
 
-            public NavigationGroup( Group group, List<DateTime> chartTimes )
+            public NavigationGroup( Rock.Model.Group group, List<DateTime> chartTimes )
             {
                 Id = group.Id;
                 Name = group.Name;
@@ -1960,16 +2078,19 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             public DateTime? LastCheckin { get; set; }
             public bool CheckedInNow { get; set; }
             public string ScheduleGroupNames { get; set; }
+            public string ScheduleGroupIds { get; set; }
             public string Age { get; set; }
             public bool ShowCancel { get; set; }
             public bool ShowCheckout { get; set; }
             public bool ShowMove { get; set; }
+            public bool ShowPrintLabel { get; set; }
 
             public PersonResult()
             {
                 ShowCancel = false;
                 ShowCheckout = false;
                 ShowMove = false;
+                ShowPrintLabel = false;
             }
 
             public PersonResult( List<Attendance> attendances )
@@ -1977,6 +2098,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 ShowCancel = Locations.ShowDelete;
                 ShowCheckout = Locations.ShowCheckout;
                 ShowMove = Locations.ShowMove;
+                ShowPrintLabel = Locations.ShowPrintLabel;
                 if ( attendances.Any() )
                 {
                     var person = attendances.First().PersonAlias.Person;
@@ -1995,12 +2117,194 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         .Distinct()
                         .ToList()
                         .AsDelimited( "\r\n" );
+
+                    ScheduleGroupIds = attendances
+                        .Select( a => a.Group.Id )
+                        .Distinct()
+                        .ToList()
+                        .AsDelimited(",");
                 }
             }
         }
 
         #endregion
 
+        #region Print
+        
+        protected void btnViewLabel_Click( object sender, EventArgs e )
+        {
+            var ddlValues = ddlLabelToPrint.SelectedValue.Split( new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries );
+            var labelGuid = ddlValues[0].AsGuid();
+            var groupId = ddlValues[1].AsInteger();
+            var personId = hfPersonId.Value.AsInteger();
 
+            if ( personId > 0 && groupId > 0 && labelGuid != Guid.Empty )
+            {
+                var dayStart = RockDateTime.Today;
+                var now = RockDateTime.Now;
+                var locationId = hfLocationId.Value.AsInteger();
+                
+                var schedule = new CheckInSchedule();
+                var location = new CheckInLocation();
+                var group = new CheckInGroup();
+                var groupType = new CheckInGroupType();
+                var person = new CheckInPerson();
+                var people = new List<CheckInPerson>();
+
+                using ( var rockContext = new RockContext() )
+                {
+                    var activeSchedules = new List<int>();
+                    foreach ( var activeSchedule in new ScheduleService( rockContext )
+                        .Queryable().AsNoTracking()
+                        .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
+                    {
+                        if ( activeSchedule.IsScheduleOrCheckInActive )
+                        {
+                            activeSchedules.Add( activeSchedule.Id );
+                        }
+                    }
+
+                    var rockPerson = new Person();
+                    var code = string.Empty;
+                    var schedules = new List<Schedule>();
+
+                    var attendanceService = new AttendanceService( rockContext );
+                    var firstTime = !attendanceService
+                            .Queryable()
+                            .AsNoTracking()
+                            .Where( a =>
+                                a.PersonAlias != null &&
+                                a.PersonAlias.PersonId == personId &&
+                                a.StartDateTime < dayStart
+                                )
+                            .Any();
+
+                    foreach ( var attendance in attendanceService
+                                    .Queryable()
+                                    .AsNoTracking()
+                                    .Where( a =>
+                                        a.StartDateTime > dayStart &&
+                                        a.StartDateTime < now &&
+                                        !a.EndDateTime.HasValue &&
+                                        a.LocationId.HasValue &&
+                                        a.LocationId.Value == locationId &&
+                                        a.PersonAlias != null &&
+                                        a.PersonAlias.PersonId == personId &&
+                                        a.DidAttend.HasValue &&
+                                        a.DidAttend.Value &&
+                                        a.ScheduleId.HasValue &&
+                                        activeSchedules.Contains( a.ScheduleId.Value ) )
+                                    .OrderBy( t => t.Schedule.WeeklyTimeOfDay )
+                                    .OrderBy( t => t.Schedule.Name ) )
+                    {
+                        rockPerson = attendance.PersonAlias.Person;
+                        code = attendance.AttendanceCode.ToString();
+                        if ( !schedules.Contains( attendance.Schedule ) )
+                        {
+                            schedules.Add( attendance.Schedule );
+                            var test = attendance.Location;
+                        }  
+                    }
+
+                    schedule.Schedule = schedules.OrderBy( t => t.WeeklyTimeOfDay ).OrderBy( t => t.Name ).FirstOrDefault();
+
+                    var loc = new LocationService( rockContext)
+                        .Queryable()
+                        .AsNoTracking()
+                        .Where( l => l.Id == locationId )
+                        .FirstOrDefault();
+
+                    foreach ( var s in schedules )
+                    {
+                        var sch = new CheckInSchedule();
+                        sch.Schedule = s;
+                        location.Location = loc;
+                        location.Schedules.Add( sch );
+                        location.SelectedForSchedule.Add( s.Id );
+                    }
+
+                    var gr = new GroupService( rockContext )
+                        .Queryable()
+                        .AsNoTracking()
+                        .Where( g => g.Id == groupId )
+                        .FirstOrDefault();
+
+                    group.Group = gr;
+                    group.Locations.Add( location );
+                    group.SelectedForSchedule.Add( schedule.Schedule.Id );
+
+                    groupType.GroupType = GroupTypeCache.Read( gr.GroupTypeId );
+                    groupType.Groups.Add( group );
+                    groupType.SelectedForSchedule.Add( schedule.Schedule.Id );
+
+                    person.Person = rockPerson;
+                    person.SecurityCode = code;
+                    person.GroupTypes.Add( groupType );
+                    person.FirstTime = firstTime;
+                    people.Add( person );
+                }
+                
+                var dpmm = ddlPrintDensity.SelectedValue;
+                var width = nbLabelWidth.Text;
+                var height = nbLabelHeight.Text;
+                var index = nbShowLabel.Text;
+                var zpl = string.Empty;
+                
+                var kioskLabel = KioskLabel.Read( labelGuid );
+                if ( kioskLabel != null )
+                {
+                    var mergeObjects = new Dictionary<string, object>();
+                    var commonMergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( null );
+                    foreach ( var keyValue in commonMergeFields )
+                    {
+                        mergeObjects.Add( keyValue.Key, keyValue.Value );
+                    }
+
+                    mergeObjects.Add( "Location", location );
+                    mergeObjects.Add( "Group", group );
+                    mergeObjects.Add( "Person", person );
+                    mergeObjects.Add( "People", people );
+                    mergeObjects.Add( "GroupType", groupType );
+
+                    var checkinLabel = new CheckInLabel( kioskLabel, mergeObjects, personId );
+
+                    string printContent = kioskLabel.FileContent;
+                    foreach ( var mergeField in checkinLabel.MergeFields )
+                    {
+                        if ( !string.IsNullOrWhiteSpace( mergeField.Value ) )
+                        {
+                            printContent = Regex.Replace( printContent, string.Format( @"(?<=\^FD){0}(?=\^FS)", mergeField.Key ), ZebraFormatString( mergeField.Value ) );
+                        }
+                        else
+                        {
+                            // Remove the box preceding merge field
+                            printContent = Regex.Replace( printContent, string.Format( @"\^FO.*\^FS\s*(?=\^FT.*\^FD{0}\^FS)", mergeField.Key ), string.Empty );
+                            // Remove the merge field
+                            printContent = Regex.Replace( printContent, string.Format( @"\^FD{0}\^FS", mergeField.Key ), "^FD^FS" );
+                        }
+                    }
+                    zpl = printContent.UrlEncode();
+                }
+                
+                var pdfLabel = string.Format( "/Webhooks/ZPLtoPDF.ashx?dpmm={0}&width={1}&height={2}&index={3}&zpl={4}", dpmm, width, height, index, zpl );
+
+                pnlLabel.Controls.Add( new LiteralControl( string.Format( "<iframe id='ifReprint' src='{0}' style='width:100%; height:25em;'></iframe>", pdfLabel ) ) );
+                pnlLabel.Visible = true;
+            }
+        }
+
+        private string ZebraFormatString( string input, bool isJson = false )
+        {
+            if ( isJson )
+            {
+                return input.Replace( "é", @"\\82" );  // fix acute e
+            }
+            else
+            {
+                return input.Replace( "é", @"\82" );  // fix acute e
+            }
+        }
+
+        #endregion
     }
 }
