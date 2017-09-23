@@ -157,7 +157,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
 
                         var content = contentService.Queryable( "ContentChannelType" )
                                         .Where( c =>
-                                            channelIds.Contains( c.ContentChannelId ) &&
+                                            c.ContentChannelId == channel.Id &&
                                             ( c.Status == ContentChannelItemStatus.Approved || c.ContentChannel.RequiresApproval == false ) &&
                                             c.StartDateTime <= RockDateTime.Now );
 
