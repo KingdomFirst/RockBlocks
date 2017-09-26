@@ -188,6 +188,13 @@ namespace RockWeb.Plugins.com_kfs.Cms
                         {
                             item.Content = item.Content.ResolveMergeFields( mergeFields );
 
+                            foreach ( var child in item.ChildItems )
+                            {
+                                child.AdditionalLavaFields = new Dictionary<string, object>();
+                                child.AdditionalLavaFields.Add( "StartDateTime", child.ChildContentChannelItem.StartDateTime );
+                                child.AdditionalLavaFields.Add( "ExpireDateTime", child.ChildContentChannelItem.ExpireDateTime );
+                            }
+
                             // resolve any relative links
                             var globalAttributes = Rock.Web.Cache.GlobalAttributesCache.Read();
                             string publicAppRoot = globalAttributes.GetValue( "PublicApplicationRoot" ).EnsureTrailingForwardslash();
