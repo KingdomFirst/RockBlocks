@@ -188,11 +188,38 @@ namespace RockWeb.Plugins.com_kfs.Cms
                         {
                             item.Content = item.Content.ResolveMergeFields( mergeFields );
 
+                            var childrentoAdd = new List<childItemsExtended>();
                             foreach ( var child in item.ChildItems )
                             {
-                                child.AdditionalLavaFields = new Dictionary<string, object>();
-                                child.AdditionalLavaFields.Add( "StartDateTime", child.ChildContentChannelItem.StartDateTime );
-                                child.AdditionalLavaFields.Add( "ExpireDateTime", child.ChildContentChannelItem.ExpireDateTime );
+                                var newchild = new childItemsExtended();
+                                    newchild.Attributes = child.Attributes;
+                                    newchild.AttributeValues = child.AttributeValues;
+                                    newchild.ChildContentChannelItemId = child.ChildContentChannelItemId;
+                                    newchild.ChildContentChannelItem = child.ChildContentChannelItem;
+                                    newchild.ContentChannelItem = child.ContentChannelItem;
+                                    newchild.ContentChannelItemId = child.ContentChannelItemId;
+                                    newchild.CreatedByPersonAlias = child.CreatedByPersonAlias;
+                                    newchild.CreatedByPersonAliasId = child.CreatedByPersonAliasId;
+                                    newchild.CreatedDateTime = child.CreatedDateTime;
+                                    newchild.CustomSortValue = child.CustomSortValue;
+                                    newchild.ForeignGuid = child.ForeignGuid;
+                                    newchild.ForeignId = child.ForeignId;
+                                    newchild.ForeignKey = child.ForeignKey;
+                                    newchild.ModifiedAuditValuesAlreadyUpdated = child.ModifiedAuditValuesAlreadyUpdated;
+                                    newchild.ModifiedByPersonAlias = child.ModifiedByPersonAlias;
+                                    newchild.ModifiedByPersonAliasId = child.ModifiedByPersonAliasId;
+                                    newchild.ModifiedDateTime = child.ModifiedDateTime;
+                                    newchild.Order = child.Order;
+                                    newchild.Id = child.Id;
+                                    newchild.Guid = child.Guid;
+                                    newchild.StartDateTimeTest = child.ChildContentChannelItem.StartDateTime;
+                                //item.ChildItems.Remove( child );
+                                childrentoAdd.Add( newchild );
+                            }
+                            item.ChildItems.Clear();
+                            foreach(var child in childrentoAdd)
+                            {
+                                item.ChildItems.Add( child );
                             }
 
                             // resolve any relative links
@@ -271,4 +298,10 @@ namespace RockWeb.Plugins.com_kfs.Cms
             }
         }
     }
+}
+
+public class childItemsExtended : ContentChannelItemAssociation
+{
+    [LavaInclude]
+    public DateTime StartDateTimeTest { get; set; }
 }
