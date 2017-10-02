@@ -167,7 +167,7 @@
                         </Rock:RockControlWrapper>
                     </div>
                 </Rock:PanelWidget>
-                <asp:Panel ID="pnlLabel" runat="server" Visible="false"></asp:Panel>
+                <asp:Literal ID="litLabel" runat="server"></asp:Literal>
             </Content>
         </Rock:ModalDialog>
 

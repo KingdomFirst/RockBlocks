@@ -1,6 +1,9 @@
 <%@ WebHandler Language="C#" Class="ZPLtoPDF" %>
 
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Web;
@@ -28,7 +31,22 @@ public class ZPLtoPDF : IHttpHandler
         context.Response.ContentType = "application/pdf";
         context.Response.AddHeader( "content-disposition", "inline;filename=file.pdf" );
 
-        string url = context.Request.RawUrl;
+        //string url = context.Request.RawUrl;
+
+
+        //IEnumerable<string> headerValues = request.Headers.GetValues("zpl");
+        //if ( headerValues != null )
+        //{
+        //    zpl = headerValues.FirstOrDefault();
+        //}
+
+        var reader = new StreamReader( request.InputStream );
+        zpl = reader.ReadToEnd();
+
+        if ( !string.IsNullOrWhiteSpace( request.QueryString["zpl"] ) )
+        {
+            zpl = request.QueryString["zpl"];
+        }
 
         if ( !string.IsNullOrWhiteSpace( request.QueryString["dpmm"] ) )
         {
@@ -45,10 +63,6 @@ public class ZPLtoPDF : IHttpHandler
         if ( !string.IsNullOrWhiteSpace( request.QueryString["index"] ) )
         {
             index = request.QueryString["index"];
-        }
-        if ( !string.IsNullOrWhiteSpace( request.QueryString["zpl"] ) )
-        {
-            zpl = HttpUtility.UrlDecode( request.QueryString["zpl"] );
         }
 
         if ( !string.IsNullOrWhiteSpace( zpl ) )

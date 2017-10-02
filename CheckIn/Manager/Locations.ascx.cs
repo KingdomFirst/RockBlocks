@@ -2,8 +2,12 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -923,7 +927,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             if ( e.CommandName == "PrintLabel" )
             {
                 lbPrintLabel.Visible = false;
-
+                litLabel.Text = string.Empty;
                 var commandArgs = e.CommandArgument.ToString().Split( new char[] { '^' } , StringSplitOptions.RemoveEmptyEntries );
                 var personId = commandArgs[0];
                 var groupIds = commandArgs[1];
@@ -2285,14 +2289,52 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             printContent = Regex.Replace( printContent, string.Format( @"\^FD{0}\^FS", mergeField.Key ), "^FD^FS" );
                         }
                     }
-                    zpl = printContent.UrlEncode();
+                    zpl = printContent;
                 }
                 
-                var pdfLabel = string.Format( "/Webhooks/ZPLtoPDF.ashx?dpmm={0}&width={1}&height={2}&index={3}&zpl={4}", dpmm, width, height, index, zpl );
+                byte[] zplBytes = Encoding.UTF8.GetBytes( zpl );
 
-                pnlLabel.Controls.Add( new LiteralControl( string.Format( "<iframe id='ifReprint' src='{0}' style='width:100%; height:25em;'></iframe>", pdfLabel ) ) );
-                pnlLabel.Visible = true;
-                lbPrintLabel.Visible = true;
+                var labelaryUrl = string.Format( "http://api.labelary.com/v1/printers/{0}dpmm/labels/{1}x{2}/{3}", dpmm, width, height, ( index != string.Empty ? index + "/" : string.Empty ) );
+                var request = ( HttpWebRequest ) WebRequest.Create( labelaryUrl );
+                request.Method = "POST";
+                request.Accept = "application/pdf"; // omit this line to get PNG images back
+                request.ContentType = "application/x-www-form-urlencoded";
+                request.ContentLength = zplBytes.Length;
+
+                var requestStream = request.GetRequestStream();
+                requestStream.Write( zplBytes, 0, zplBytes.Length );
+                requestStream.Close();
+
+                try
+                {
+                    var response = ( HttpWebResponse ) request.GetResponse();
+                    var responseStream = response.GetResponseStream();
+                    var memoryStream = new MemoryStream();
+                    
+                    byte[] buffer = new byte[16 * 1024];
+                    int read;
+                    while ( ( read = responseStream.Read( buffer, 0, buffer.Length ) ) > 0 )
+                    {
+                        memoryStream.Write( buffer, 0, read );
+                    }
+
+                    var labelPath = string.Format( "~/Plugins/com_kfs/CheckIn/Manager/Labels/{0}.pdf", RockDateTime.Now.ToString( "ddMMyyhhmmss" ) );
+
+                    byte[] bytes = memoryStream.ToArray();
+                    System.IO.File.WriteAllBytes( Server.MapPath( labelPath ), bytes );
+                    string embed = "<object data=\"{0}\" type=\"application/pdf\" width=\"698px\" height=\"450px\">";
+                    embed += "If you are unable to view file, you can download from <a href = \"{0}\">here</a>";
+                    embed += " or download <a target = \"_blank\" href = \"http://get.adobe.com/reader/\">Adobe PDF Reader</a> to view the file.";
+                    embed += "</object>";
+                    litLabel.Text = string.Format( embed, ResolveRockUrlIncludeRoot( labelPath ) );
+                    memoryStream.Close();
+
+                    responseStream.Close();
+                }
+                catch ( WebException ex )
+                {
+                    Console.WriteLine( "Error: {0}", ex.Status );
+                }
             }
         }
 
