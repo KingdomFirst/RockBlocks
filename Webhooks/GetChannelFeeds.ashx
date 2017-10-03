@@ -1,4 +1,4 @@
-﻿<%@ WebHandler Language="C#" Class="RockWeb.Plugins.com_kfs.Cms.GetChannelFeeds" %>
+﻿<%@ WebHandler Language="C#" Class="RockWeb.Plugins.com_kfs.Webhooks.GetChannelFeeds" %>
 // <copyright>
 // Copyright by the Spark Development Network
 //
@@ -22,14 +22,19 @@ using System.Web;
 using System.Xml;
 using System.Text;
 using System.Net;
+using System.Collections;
+using System.Collections.Generic;
+using System.Data.Entity;
+using DotLiquid;
+using DotLiquid.Util;
 using Rock;
 using Rock.Data;
 using Rock.Model;
 using Rock.Security;
 using Rock.Web.Cache;
-using System.Collections.Generic;
 
-namespace RockWeb.Plugins.com_kfs.Cms
+
+namespace RockWeb.Plugins.com_kfs.Webhooks
 {
     /// <summary>
     /// Handles retrieving file data from storage
@@ -44,6 +49,8 @@ namespace RockWeb.Plugins.com_kfs.Cms
 
         public void ProcessRequest( HttpContext context )
         {
+            Template.RegisterFilter( typeof( KFSFilters ) );
+
             request = context.Request;
             response = context.Response;
 
@@ -192,28 +199,28 @@ namespace RockWeb.Plugins.com_kfs.Cms
                             foreach ( var child in item.ChildItems )
                             {
                                 var newchild = new childItemsExtended();
-                                    newchild.Attributes = child.Attributes;
-                                    newchild.AttributeValues = child.AttributeValues;
-                                    newchild.ChildContentChannelItemId = child.ChildContentChannelItemId;
-                                    newchild.ChildContentChannelItem = child.ChildContentChannelItem;
-                                    newchild.ContentChannelItem = child.ContentChannelItem;
-                                    newchild.ContentChannelItemId = child.ContentChannelItemId;
-                                    newchild.CreatedByPersonAlias = child.CreatedByPersonAlias;
-                                    newchild.CreatedByPersonAliasId = child.CreatedByPersonAliasId;
-                                    newchild.CreatedDateTime = child.CreatedDateTime;
-                                    newchild.CustomSortValue = child.CustomSortValue;
-                                    newchild.ForeignGuid = child.ForeignGuid;
-                                    newchild.ForeignId = child.ForeignId;
-                                    newchild.ForeignKey = child.ForeignKey;
-                                    newchild.ModifiedAuditValuesAlreadyUpdated = child.ModifiedAuditValuesAlreadyUpdated;
-                                    newchild.ModifiedByPersonAlias = child.ModifiedByPersonAlias;
-                                    newchild.ModifiedByPersonAliasId = child.ModifiedByPersonAliasId;
-                                    newchild.ModifiedDateTime = child.ModifiedDateTime;
-                                    newchild.Order = child.Order;
-                                    newchild.Id = child.Id;
-                                    newchild.Guid = child.Guid;
-                                    newchild.StartDateTimeTest = child.ChildContentChannelItem.StartDateTime;
-                                //item.ChildItems.Remove( child );
+                                newchild.Attributes = child.Attributes;
+                                newchild.AttributeValues = child.AttributeValues;
+                                newchild.ChildContentChannelItemId = child.ChildContentChannelItemId;
+                                newchild.ChildContentChannelItem = child.ChildContentChannelItem;
+                                newchild.ContentChannelItem = child.ContentChannelItem;
+                                newchild.ContentChannelItemId = child.ContentChannelItemId;
+                                newchild.CreatedByPersonAlias = child.CreatedByPersonAlias;
+                                newchild.CreatedByPersonAliasId = child.CreatedByPersonAliasId;
+                                newchild.CreatedDateTime = child.CreatedDateTime;
+                                newchild.CustomSortValue = child.CustomSortValue;
+                                newchild.ForeignGuid = child.ForeignGuid;
+                                newchild.ForeignId = child.ForeignId;
+                                newchild.ForeignKey = child.ForeignKey;
+                                newchild.ModifiedAuditValuesAlreadyUpdated = child.ModifiedAuditValuesAlreadyUpdated;
+                                newchild.ModifiedByPersonAlias = child.ModifiedByPersonAlias;
+                                newchild.ModifiedByPersonAliasId = child.ModifiedByPersonAliasId;
+                                newchild.ModifiedDateTime = child.ModifiedDateTime;
+                                newchild.Order = child.Order;
+                                newchild.Id = child.Id;
+                                newchild.Guid = child.Guid;
+                                newchild.StartDateTime = child.ChildContentChannelItem.StartDateTime;
+                                newchild.ExpireDateTime = child.ChildContentChannelItem.ExpireDateTime;
                                 childrentoAdd.Add( newchild );
                             }
                             item.ChildItems.Clear();
@@ -298,10 +305,41 @@ namespace RockWeb.Plugins.com_kfs.Cms
             }
         }
     }
+    public class childItemsExtended : ContentChannelItemAssociation
+    {
+        [LavaInclude]
+        public DateTime StartDateTime { get; set; }
+        [LavaInclude]
+        public DateTime? ExpireDateTime { get; set; }
+    }
+
+    public static class KFSFilters
+    {
+        public static IEnumerable KFSSort( object input, string property = null, string sortOrder = "asc" )
+        {
+            List<object> ary;
+            if ( input is IEnumerable )
+                ary = ( ( IEnumerable ) input ).Flatten().Cast<object>().ToList();
+            else
+                ary = new List<object>( new[] { input } );
+            if ( !ary.Any() )
+                return ary;
+
+            if ( string.IsNullOrEmpty( property ) )
+                ary.Sort();
+            else if ( ( ary.All( o => o is IDictionary ) ) && ( ( IDictionary ) ary.First() ).Contains( property ) )
+                if ( sortOrder.ToLower() == "desc" )
+                    ary.Sort( ( a, b ) => Comparer.Default.Compare( ( ( IDictionary ) b )[property], ( ( IDictionary ) a )[property] ) );
+                else
+                    ary.Sort( ( a, b ) => Comparer.Default.Compare( ( ( IDictionary ) a )[property], ( ( IDictionary ) b )[property] ) );
+            else if ( ary.All( o => o.RespondTo( property ) ) )
+                if ( sortOrder.ToLower() == "desc" )
+                    ary.Sort( ( a, b ) => Comparer.Default.Compare( b.Send( property ), a.Send( property ) ) );
+                else
+                    ary.Sort( ( a, b ) => Comparer.Default.Compare( a.Send( property ), b.Send( property ) ) );
+
+            return ary;
+        }
+    }
 }
 
-public class childItemsExtended : ContentChannelItemAssociation
-{
-    [LavaInclude]
-    public DateTime StartDateTimeTest { get; set; }
-}
