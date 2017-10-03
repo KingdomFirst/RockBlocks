@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
+using System.Linq.Dynamic;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Newtonsoft.Json;
@@ -50,6 +51,14 @@ namespace RockWeb.Plugins.com_kfs.Groups
         public List<AttributeCache> AvailableAttributes { get; set; }
 
         /// <summary>
+        /// Gets or sets the available person attributes.
+        /// </summary>
+        /// <value>
+        /// The available person attributes.
+        /// </value>
+        public List<AttributeCache> AvailablePersonAttributes { get; set; }
+        
+        /// <summary>
         /// Gets or sets the signed person ids.
         /// </summary>
         /// <value>
@@ -70,6 +79,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             base.LoadViewState( savedState );
 
             AvailableAttributes = ViewState["AvailableAttributes"] as List<AttributeCache>;
+            AvailablePersonAttributes = ViewState["AvailablePersonAttributes"] as List<AttributeCache>;
 
             AddDynamicControls();
         }
@@ -243,6 +253,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         protected override object SaveViewState()
         {
             ViewState["AvailableAttributes"] = AvailableAttributes;
+            ViewState["AvailablePersonAttributes"] = AvailablePersonAttributes;
 
             return base.SaveViewState();
         }
@@ -354,6 +365,26 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 }
             }
 
+            if ( AvailablePersonAttributes != null )
+            {
+                foreach ( var attribute in AvailablePersonAttributes )
+                {
+                    var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    if ( filterControl != null )
+                    {
+                        try
+                        {
+                            var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( attribute.Key ), attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                        }
+                        catch
+                        {
+                            // intentionally ignore
+                        }
+                    }
+                }
+            }
+
             BindGroupMembersGrid();
         }
 
@@ -367,6 +398,24 @@ namespace RockWeb.Plugins.com_kfs.Groups
             if ( AvailableAttributes != null )
             {
                 var attribute = AvailableAttributes.FirstOrDefault( a => MakeKeyUniqueToGroup( a.Key ) == e.Key );
+                if ( attribute != null )
+                {
+                    try
+                    {
+                        var values = JsonConvert.DeserializeObject<List<string>>( e.Value );
+                        e.Value = attribute.FieldType.Field.FormatFilterValues( attribute.QualifierValues, values );
+                        return;
+                    }
+                    catch
+                    {
+                        // intentionally ignore
+                    }
+                }
+            }
+
+            if ( AvailablePersonAttributes != null )
+            {
+                var attribute = AvailablePersonAttributes.FirstOrDefault( a => MakeKeyUniqueToGroup( a.Key ) == e.Key );
                 if ( attribute != null )
                 {
                     try
@@ -573,6 +622,31 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
                 }
             }
+            
+            AvailablePersonAttributes = new List<AttributeCache>();
+            if ( _group != null )
+            {
+                if ( _group.Attributes == null )
+                {
+                    _group.LoadAttributes();
+                }
+
+                if ( _group.Attributes != null )
+                {
+                    var attributeFieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.ATTRIBUTE ).Id;
+                    var personAttributes = _group.Attributes.Values.FirstOrDefault( a => a.FieldTypeId == attributeFieldTypeId && a.QualifierValues.ContainsKey( "entitytype" ) && a.QualifierValues.Values.Any( v => v.Value.Equals( Rock.SystemGuid.EntityType.PERSON, StringComparison.CurrentCultureIgnoreCase ) ) );
+
+                    if ( personAttributes != null )
+                    {
+                        var personAttributeValues = _group.GetAttributeValue( personAttributes.Key );
+
+                        foreach ( var personAttribute in personAttributeValues.Split( ',' ).AsGuidList() )
+                        {
+                            AvailablePersonAttributes.Add( AttributeCache.Read( personAttribute ) );
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -599,6 +673,63 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         if ( control is IRockControl )
                         {
                             var rockControl = (IRockControl)control;
+                            rockControl.Label = attribute.Name;
+                            rockControl.Help = attribute.Description;
+                            phAttributeFilters.Controls.Add( control );
+                        }
+                        else
+                        {
+                            var wrapper = new RockControlWrapper();
+                            wrapper.ID = control.ID + "_wrapper";
+                            wrapper.Label = attribute.Name;
+                            wrapper.Controls.Add( control );
+                            phAttributeFilters.Controls.Add( wrapper );
+                        }
+
+                        string savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Key ) );
+                        if ( !string.IsNullOrWhiteSpace( savedValue ) )
+                        {
+                            try
+                            {
+                                var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
+                                attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
+                            }
+                            catch
+                            {
+                                // intentionally ignore
+                            }
+                        }
+                    }
+
+                    bool columnExists = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
+                    if ( !columnExists )
+                    {
+                        AttributeField boundField = new AttributeField();
+                        boundField.DataField = attribute.Key;
+                        boundField.AttributeId = attribute.Id;
+                        boundField.HeaderText = attribute.Name;
+
+                        var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
+                        if ( attributeCache != null )
+                        {
+                            boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;
+                        }
+
+                        gGroupMembers.Columns.Add( boundField );
+                    }
+                }
+            }
+
+            if ( AvailablePersonAttributes != null )
+            {
+                foreach ( var attribute in AvailablePersonAttributes )
+                {
+                    var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
+                    if ( control != null )
+                    {
+                        if ( control is IRockControl )
+                        {
+                            var rockControl = ( IRockControl ) control;
                             rockControl.Label = attribute.Name;
                             rockControl.Help = attribute.Description;
                             phAttributeFilters.Controls.Add( control );
@@ -989,6 +1120,34 @@ namespace RockWeb.Plugins.com_kfs.Groups
                                     attributeValues = attributeValues.Where( parameterExpression, expression, null );
 
                                     qry = qry.Where( w => attributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
+                                }
+                            }
+                        }
+                    }
+
+                    var personAttributeColumns = new List<BoundField>();
+
+                    if ( AvailablePersonAttributes != null && AvailablePersonAttributes.Any() )
+                    {
+                        var attributeValueService = new AttributeValueService( rockContext );
+                        var parameterExpression = attributeValueService.ParameterExpression;
+
+                        foreach ( var attribute in AvailablePersonAttributes )
+                        {
+                            var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                            if ( filterControl != null )
+                            {
+                                var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                                var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
+                                if ( expression != null )
+                                {
+                                    var attributeValues = attributeValueService
+                                        .Queryable()
+                                        .Where( v => v.Attribute.Id == attribute.Id );
+
+                                    attributeValues = attributeValues.Where( parameterExpression, expression, null );
+
+                                    qry = qry.Where( w => attributeValues.Select( v => v.EntityId ).Contains( w.PersonId ) );
                                 }
                             }
                         }
