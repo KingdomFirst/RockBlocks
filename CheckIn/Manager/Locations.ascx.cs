@@ -299,112 +299,44 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     } );
 
                 // Do the person search
+                var personService = new PersonService( rockContext );
+                List<Rock.Model.Person> people = null;
                 bool reversed = false;
-                var results = new List<PersonResult>();
 
-                if ( GetAttributeValue( "SearchByCode" ).AsBoolean() )
+                string searchValue = tbSearch.Text.Trim();
+                if ( string.IsNullOrWhiteSpace( searchValue ) )
                 {
-                    // Search by Code
-                    var activeSchedules = new List<int>();
-                    foreach ( var schedule in new ScheduleService( rockContext )
-                        .Queryable().AsNoTracking()
-                        .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
+                    people = new List<Rock.Model.Person>();
+                }
+                else
+                {
+                    // If searching by code is enabled, first search by the code
+                    if ( GetAttributeValue( "SearchByCode" ).AsBoolean() )
                     {
-                        if ( schedule.IsScheduleOrCheckInActive )
-                        {
-                            activeSchedules.Add( schedule.Id );
-                        }
+                        var dayStart = RockDateTime.Today;
+                        var now = RockDateTime.Now;
+                        var personIds = new AttendanceService( rockContext )
+                            .Queryable().Where( a =>
+                                a.StartDateTime >= dayStart &&
+                                a.StartDateTime <= now &&
+                                a.AttendanceCode.Code == searchValue )
+                            .Select( a => a.PersonAlias.PersonId )
+                            .Distinct();
+                        people = personService.Queryable()
+                            .Where( p => personIds.Contains( p.Id ) )
+                            .ToList();
                     }
 
-                    var dayStart = RockDateTime.Today;
-                    var now = RockDateTime.Now;
-                    var attendees = new AttendanceService( rockContext )
-                        .Queryable( "Group,PersonAlias.Person,Schedule,AttendanceCode" )
-                        .AsNoTracking()
-                        .Where( a =>
-                            a.StartDateTime > dayStart &&
-                            a.StartDateTime < now &&
-                            !a.EndDateTime.HasValue &&
-                            a.LocationId.HasValue &&
-                            a.ScheduleId.HasValue &&
-                            activeSchedules.Contains( a.ScheduleId.Value ) &&
-                            a.AttendanceCode.Code.Equals( tbSearch.Text, StringComparison.CurrentCultureIgnoreCase ) )
-                        .ToList();
-
-                    int? scheduleId = CurrentScheduleId.AsIntegerOrNull();
-
-                    var personResults = new List<PersonResult>();
-                    foreach ( var personId in attendees
-                        .OrderBy( a => a.PersonAlias.Person.NickName )
-                        .ThenBy( a => a.PersonAlias.Person.LastName )
-                        .Select( a => a.PersonAlias.PersonId )
-                        .Distinct() )
+                    if ( people == null || !people.Any() )
                     {
-                        var matchingAttendees = attendees
-                            .Where( a => a.PersonAlias.PersonId == personId )
+                        // If searching by code was disabled or nobody was found with code, search by name
+                        people = personService
+                            .GetByFullName( searchValue, false, false, false, out reversed )
                             .ToList();
-
-                        if ( !scheduleId.HasValue || matchingAttendees.Any( a => a.ScheduleId == scheduleId.Value && a.AttendanceCode != null ) )
-                        {
-                            if ( matchingAttendees.Any() )
-                            {
-                                var personList = new List<Rock.Model.Person>();
-                                var person = matchingAttendees.First().PersonAlias.Person;
-                                personList.Add( ( Rock.Model.Person )person );
-
-                                results.AddRange(
-                                    personList.GroupJoin(
-                                        attendanceQry,
-                                        p => p.Id,
-                                        a => a.Id,
-                                        ( p, a ) => a
-                                            .Select( c =>
-                                                new PersonResult
-                                                {
-                                                    Id = p.Id,
-                                                    Guid = p.Guid,
-                                                    Name = ( reversed ?
-                                                        p.LastName + ", " + p.NickName :
-                                                        p.NickName + " " + p.LastName ),
-                                                    PhotoId = p.PhotoId,
-                                                    Age = p.Age.ToString() ?? "",
-                                                    LastCheckin = c.LastCheckin,
-                                                    CheckedInNow = currentAttendeeIds.Contains( p.Id ),
-                                                    ScheduleGroupNames = c.ScheduleGroupNames,
-                                                    ScheduleGroupIds = c.ScheduleGroupIds
-                                                } )
-                                            .DefaultIfEmpty(
-                                                new PersonResult
-                                                {
-                                                    Id = p.Id,
-                                                    Guid = p.Guid,
-                                                    Name = ( reversed ?
-                                                        p.LastName + ", " + p.NickName :
-                                                        p.NickName + " " + p.LastName ),
-                                                    PhotoId = p.PhotoId,
-                                                    Age = p.Age.ToString() ?? "",
-                                                    LastCheckin = null,
-                                                    CheckedInNow = false,
-                                                    ScheduleGroupNames = "",
-                                                    ScheduleGroupIds = ""
-                                                } ) )
-                                                .SelectMany( a => a )
-                                    .Distinct()
-                                    .OrderByDescending( a => a.CheckedInNow )
-                                    .ThenByDescending( a => a.LastCheckin )
-                                    .ThenBy( a => a.Name )
-                                    .ToList()
-                                );
-                            }
-                        }
                     }
                 }
-                
-                // Search by Full name
-                results.AddRange(
-                    new PersonService( rockContext )
-                    .GetByFullName( tbSearch.Text, false, false, false, out reversed )
-                    .ToList()
+
+                var results = people
                     .GroupJoin(
                         attendanceQry,
                         p => p.Id,
@@ -422,8 +354,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                     Age = p.Age.ToString() ?? "",
                                     LastCheckin = c.LastCheckin,
                                     CheckedInNow = currentAttendeeIds.Contains( p.Id ),
-                                    ScheduleGroupNames = "",
-                                    ScheduleGroupIds = ""
+                                    ScheduleGroupNames = ""
                                 } )
                             .DefaultIfEmpty(
                                 new PersonResult
@@ -437,16 +368,14 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                     Age = p.Age.ToString() ?? "",
                                     LastCheckin = null,
                                     CheckedInNow = false,
-                                    ScheduleGroupNames = "",
-                                    ScheduleGroupIds = ""
+                                    ScheduleGroupNames = ""
                                 } ) )
                     .SelectMany( a => a )
                     .Distinct()
                     .OrderByDescending( a => a.CheckedInNow )
                     .ThenByDescending( a => a.LastCheckin )
                     .ThenBy( a => a.Name )
-                    .ToList()
-                );
+                    .ToList();
 
                 pnlNavHeading.Attributes["onClick"] = upnlContent.GetPostBackEventReference( CurrentNavPath );
                 lNavHeading.Text = "Back";
