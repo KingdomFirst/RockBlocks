@@ -31,15 +31,6 @@ public class ZPLtoPDF : IHttpHandler
         context.Response.ContentType = "application/pdf";
         context.Response.AddHeader( "content-disposition", "inline;filename=file.pdf" );
 
-        //string url = context.Request.RawUrl;
-
-
-        //IEnumerable<string> headerValues = request.Headers.GetValues("zpl");
-        //if ( headerValues != null )
-        //{
-        //    zpl = headerValues.FirstOrDefault();
-        //}
-
         var reader = new StreamReader( request.InputStream );
         zpl = reader.ReadToEnd();
 
