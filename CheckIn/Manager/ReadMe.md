@@ -1,1 +1,0 @@
-`ZPLtoPDF.ashx` needs to be placed in `~/Webhooks/`.
