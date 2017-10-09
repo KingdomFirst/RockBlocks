@@ -21,13 +21,12 @@
         $('#<%=hfGroupIds.ClientID %>').val('');
     }
 
-    function PrintLabel() {
-        var printFrame = jQuery("#ifReprint")[0];
+    function printLabel() {
+        var printFrame = jQuery("#pdfDocument")[0];
         printFrame.contentWindow.focus();
         printFrame.contentWindow.print();
         return false;
     }
-
 </script>
 <Rock:RockUpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
@@ -144,7 +143,7 @@
                         <Rock:RockDropDownList ID="ddlLabelToPrint" runat="server" Label="Select Label" AppendDataBoundItems="false" ValidationGroup="PrintLabel" Required="true"></Rock:RockDropDownList>
                         <Rock:RockControlWrapper ID="rcwPrint" runat="server" Label=" " FormGroupCssClass="margin-l-md">
                             <asp:LinkButton ID="lbViewLabel" runat="server" Text="View Label" CssClass="btn btn-default margin-l-lg" OnClick="btnViewLabel_Click" ValidationGroup="PrintLabel" />
-                            <asp:LinkButton ID="lbPrintLabel" runat="server" Visible="false" CssClass="btn btn-primary margin-l-lg" OnClientClick="return PrintLabel();"><span class="fa fa-print" aria-hidden="true"></span> Print</asp:LinkButton>
+                            <asp:LinkButton ID="lbPrintButton" runat="server" Visible="false" CssClass="btn btn-primary margin-l-lg" OnClientClick="return printLabel();"><span class="fa fa-print" aria-hidden="true"></span> Print</asp:LinkButton>
                         </Rock:RockControlWrapper>
                     </div>
                 </div>

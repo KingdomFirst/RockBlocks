@@ -855,7 +855,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
             if ( e.CommandName == "PrintLabel" )
             {
-                lbPrintLabel.Visible = false;
+                lbPrintButton.Visible = false;
                 litLabel.Text = string.Empty;
                 var commandArgs = e.CommandArgument.ToString().Split( new char[] { '^' } , StringSplitOptions.RemoveEmptyEntries );
                 var personId = commandArgs[0];
@@ -2247,23 +2247,51 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         memoryStream.Write( buffer, 0, read );
                     }
 
-                    var labelPath = string.Format( "~/Plugins/com_kfs/CheckIn/Manager/Labels/{0}.pdf", RockDateTime.Now.ToString( "ddMMyyhhmmss" ) );
+                    var labelPath = string.Format( "~/Plugins/com_kfs/CheckIn/Manager/Labels/{0}.pdf", RockDateTime.Now.ToString( "yyMMddHHmmss" ) );
 
                     byte[] bytes = memoryStream.ToArray();
                     System.IO.File.WriteAllBytes( Server.MapPath( labelPath ), bytes );
-                    string embed = "<object data=\"{0}\" type=\"application/pdf\" width=\"698px\" height=\"450px\">";
-                    embed += "If you are unable to view file, you can download from <a href = \"{0}\">here</a>";
-                    embed += " or download <a target = \"_blank\" href = \"http://get.adobe.com/reader/\">Adobe PDF Reader</a> to view the file.";
-                    embed += "</object>";
-                    litLabel.Text = string.Format( embed, ResolveRockUrlIncludeRoot( labelPath ) );
+                    var iframe = "<iframe src=\"{0}\" type=\"application/pdf\" width=\"698px\" height=\"350px\" id=\"pdfDocument\" ></iframe>";
+                    litLabel.Text = string.Format( iframe, ResolveRockUrlIncludeRoot( labelPath ) );
                     memoryStream.Close();
 
                     responseStream.Close();
+
+                    lbPrintButton.Visible = true;
                 }
                 catch ( WebException ex )
                 {
                     Console.WriteLine( "Error: {0}", ex.Status );
                 }
+            }
+            purgeLabels();
+        }
+
+        private void purgeLabels()
+        {
+            try
+            {
+                var folderPath = Server.MapPath( "~/Plugins/com_kfs/CheckIn/Manager/Labels/" );
+                var dirs = Directory.GetFiles( folderPath, "*.pdf" );
+                foreach ( var dir in dirs )
+                {
+                    var file = dir.Substring( dir.Length - 16 ).Split( '.' );
+                    var fileDate = file[0].AsDecimalOrNull();
+                    if ( fileDate.HasValue )
+                    {
+                        var currentFile = RockDateTime.Now.AddSeconds( -10 ).ToString( "yyMMddHHmmss" ).AsDecimalOrNull();
+
+                        if ( currentFile > fileDate )
+                        {
+                            var filePath = string.Format( "~/Plugins/com_kfs/CheckIn/Manager/Labels/{0}.pdf", file );
+                            File.Delete( Server.MapPath( filePath ) );
+                        }
+                    }
+                }
+            }
+            catch ( WebException ex )
+            {
+                Console.WriteLine( "Error: {0}", ex.Status );
             }
         }
 
