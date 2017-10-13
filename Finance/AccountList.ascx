@@ -14,6 +14,7 @@
                 <div class="grid grid-panel">
                     <Rock:GridFilter ID="rAccountFilter" runat="server">
                         <Rock:RockTextBox ID="txtAccountName" runat="server" Label="Name" />
+                        <Rock:RockDropDownList ID="ddlAccountType" runat="server" Label="Account Type" />
                         <Rock:RockDropDownList ID="ddlCampus" runat="server" Label="Campus" Visible="false" />
                         <Rock:RockDropDownList ID="ddlIsPublic" runat="server" Label="Public">
                             <asp:ListItem Text="" Value="" />
@@ -30,7 +31,6 @@
                             <asp:ListItem Text="Yes" Value="Yes" />
                             <asp:ListItem Text="No" Value="No" />
                         </Rock:RockDropDownList>
-                        <Rock:RockDropDownList ID="ddlAccountType" runat="server" Label="Account Type" />
                     </Rock:GridFilter>
 
                     <Rock:Grid ID="rGridAccount" runat="server" RowItemText="Account" OnRowSelected="rGridAccount_Edit" TooltipField="Description">
