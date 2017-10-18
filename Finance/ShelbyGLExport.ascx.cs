@@ -476,7 +476,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                     return;
                 }
 
-                int? modifiedByPersonAliasId = batch.ModifiedAuditValuesAlreadyUpdated ? batch.ModifiedByPersonAliasId : (int?)null;
+                int? modifiedByPersonAliasId = batch.ModifiedAuditValuesAlreadyUpdated ? batch.ModifiedByPersonAliasId : ( int? ) null;
 
                 HistoryService.SaveChanges(
                     rockContext,
@@ -565,7 +565,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                     glRevenueAccount = t.Key.glRevenueAccount,
                     glRevenueDepartment = t.Key.glRevenueDepartment,
                     projectCode = t.Key.projectCode,
-                    total = t.Sum( f => (decimal?)f.total ) ?? 0.0M,
+                    total = t.Sum( f => ( decimal? ) f.total ) ?? 0.0M,
 
                     batch = t.FirstOrDefault().batch,
                     transactionDetail = t.FirstOrDefault().transactionDetail
@@ -613,7 +613,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                 {
                     AccountingPeriod = accountingPeriod,
                     AccountNumber = transaction.glBankAccount,
-                    Amount = (decimal)transaction.total,
+                    Amount = ( decimal ) transaction.total,
                     CompanyNumber = transaction.glCompany,
                     Date = selectedDate,
                     DepartmentNumber = "",
@@ -630,7 +630,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                 {
                     AccountingPeriod = accountingPeriod,
                     AccountNumber = transaction.glRevenueAccount,
-                    Amount = new decimal( 10, 0, 0, true, 1 ) * (decimal)transaction.total,
+                    Amount = new decimal( 10, 0, 0, true, 1 ) * ( decimal ) transaction.total,
                     CompanyNumber = transaction.glCompany,
                     Date = selectedDate,
                     DepartmentNumber = transaction.glRevenueDepartment,
@@ -673,7 +673,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
             StringBuilder stringBuilder = new StringBuilder();
             int num = 0;
             string[] strArrays1 = str;
-            for ( int i = 0; i < (int)strArrays1.Length; i++ )
+            for ( int i = 0; i < ( int ) strArrays1.Length; i++ )
             {
                 string str1 = strArrays1[i];
                 if ( num > 0 )
@@ -796,7 +796,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                     Name = b.Name,
                     AccountingSystemCode = b.AccountingSystemCode,
                     TransactionCount = b.Transactions.Count(),
-                    TransactionAmount = b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M,
+                    TransactionAmount = b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M,
                     ControlAmount = b.ControlAmount,
                     CampusName = b.Campus != null ? b.Campus.Name : "",
                     Status = b.Status,
@@ -811,7 +811,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                             AccountId = s.Key,
                             AccountOrder = s.Max( d => d.Account.Order ),
                             AccountName = s.Max( d => d.Account.Name ),
-                            Amount = s.Sum( d => (decimal?)d.Amount ) ?? 0.0M
+                            Amount = s.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M
                         } )
                         .OrderBy( s => s.AccountOrder )
                         .ToList()
@@ -835,7 +835,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                 {
                     a.Key.Name,
                     a.Key.Order,
-                    TotalAmount = (decimal?)a.Sum( d => d.Amount )
+                    TotalAmount = ( decimal? ) a.Sum( d => d.Amount )
                 } ).OrderBy( a => a.Order );
 
             }
@@ -960,11 +960,11 @@ namespace RockWeb.Plugins.com_kfs.Finance
                         {
                             if ( sortProperty.Direction == SortDirection.Ascending )
                             {
-                                sortedQry = qry.OrderBy( b => b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M );
+                                sortedQry = qry.OrderBy( b => b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M );
                             }
                             else
                             {
-                                sortedQry = qry.OrderByDescending( b => b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M );
+                                sortedQry = qry.OrderByDescending( b => b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M );
                             }
 
                             break;
