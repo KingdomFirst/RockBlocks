@@ -87,7 +87,7 @@ namespace RockWeb.Plugins.com_kfs.Connection
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
-            ShowDetail();
+            Response.Redirect( Request.RawUrl );
         }
 
         #endregion
