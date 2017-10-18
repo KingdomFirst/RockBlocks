@@ -32,6 +32,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
     [AttributeField( "2C1CB26B-AB22-42D0-8164-AEDEE0DAE667", "Transaction Project Attribute", "Choose the financial transaction attribute for the Project.", false, false, "", "Export Transaction Attributes", 9 )]
     [AttributeField( "AC4AC28B-8E7E-4D7E-85DB-DFFB4F3ADCCE", "Transaction Detail Project Attribute", "Choose the financial transaction detail attribute for the Project.", false, false, "", "Export Transaction Detail Attributes", 10 )]
     [TextField( "Project Code Attribute", "Defined type's attribute key name for Project Code", false, "Code", "Export Project Attributes", 11 )]
+    [BooleanField( "Use Defined Value Code Attribute", "If the Project Code is configured as a Defined Value Attribute, set this to true.", false, "Advanced" )]
     public partial class ShelbyGLExport : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -592,7 +593,14 @@ namespace RockWeb.Plugins.com_kfs.Finance
                     {
                         foreach ( var project in projects.DefinedValues.OrderByDescending( a => a.Value.AsInteger() ).Where( p => p.Guid.ToString().ToLower() == transaction.projectCode.ToString().ToLower() ) )
                         {
-                            projectCode = project.GetAttributeValue( AttributeStr_ProjectCode );
+                            if ( GetAttributeValue( "UseDefinedValueCodeAttribute" ).AsBoolean() )
+                            {
+                                projectCode = project.GetAttributeValue( AttributeStr_ProjectCode );
+                            }
+                            else
+                            {
+                                projectCode = project.Value;
+                            }
                         }
                     }
                     if ( String.IsNullOrWhiteSpace( projectCode ) )
