@@ -56,7 +56,7 @@ namespace RockWeb.Blocks.Finance
         private bool FilterIncludedInURL = false;
 
         private Dictionary<int, List<Tuple<int, string, int?>>> _campusAccounts = null;
-        private int? AccountType;
+        private string _accountTypeId = null;
         private Panel pnlTotal;
         private Literal lTotal;
         private bool HideViewByOption = false;
@@ -73,6 +73,7 @@ namespace RockWeb.Blocks.Finance
         {
             base.LoadViewState( savedState );
 
+            _accountTypeId = ViewState["AccountType"] as string;
             _campusAccounts = ViewState["CampusAccounts"] as Dictionary<int, List<Tuple<int, string, int?>>>;
 
             BuildDynamicControls();
@@ -142,6 +143,9 @@ namespace RockWeb.Blocks.Finance
 
             if ( !Page.IsPostBack )
             {
+                string keyPrefix = string.Format( "giving-analytics-{0}-", this.BlockId );
+                _accountTypeId = GetSetting( keyPrefix, "AccountType" );
+
                 BuildDynamicControls();
 
                 LoadDropDowns();
@@ -171,6 +175,7 @@ namespace RockWeb.Blocks.Finance
         protected override object SaveViewState()
         {
             ViewState["CampusAccounts"] = _campusAccounts;
+            ViewState["AccountType"] = _accountTypeId;
 
             return base.SaveViewState();
         }
@@ -354,6 +359,7 @@ namespace RockWeb.Blocks.Finance
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void ddlAccountType_SelectedIndexChanged( object sender, EventArgs e )
         {
+            _accountTypeId = ddlAccountType.SelectedValue;
             BuildDynamicControls();
         }
 
@@ -393,7 +399,6 @@ namespace RockWeb.Blocks.Finance
 
             phAccounts.Controls.Clear();
 
-            var accountTypeId = ddlAccountType.SelectedValueAsId();
             foreach ( var campusId in _campusAccounts )
             {
                 var cbList = new RockCheckBoxList();
@@ -414,9 +419,10 @@ namespace RockWeb.Blocks.Finance
                 cbList.DataTextField = "Value";
 
                 var campusAccounts = campusId.Value;
-                if ( accountTypeId.HasValue )
+                var selectedAccountType = _accountTypeId.AsInteger();
+                if ( selectedAccountType > 0 )
                 {
-                    campusAccounts = campusAccounts.Where( t => t.Item3 == (int)accountTypeId ).ToList();
+                    campusAccounts = campusAccounts.Where( t => t.Item3 == selectedAccountType ).ToList();
                 }
 
                 cbList.DataSource = campusAccounts.Select( i => new { Key = i.Item1, Value = i.Item2 } );
@@ -582,7 +588,7 @@ function(item) {
 
             this.SetUserPreference( keyPrefix + "SlidingDateRange", drpSlidingDateRange.DelimitedValues, false );
             this.SetUserPreference( keyPrefix + "GroupBy", hfGroupBy.Value, false );
-            this.SetUserPreference( keyPrefix + "AccountType", ddlAccountType.SelectedValue, false );
+            this.SetUserPreference( keyPrefix + "AccountType", _accountTypeId, false );
             this.SetUserPreference( keyPrefix + "AmountRange", nreAmount.DelimitedValues, false );
             this.SetUserPreference( keyPrefix + "CurrencyTypeIds", cblCurrencyTypes.SelectedValues.AsDelimited( "," ), false );
             this.SetUserPreference( keyPrefix + "SourceIds", cblTransactionSource.SelectedValues.AsDelimited( "," ), false );
@@ -667,8 +673,7 @@ function(item) {
             var sourceIdList = GetSetting( keyPrefix, "SourceIds" ).Split( ',' ).ToList();
             cblTransactionSource.SetValues( sourceIdList );
 
-            var accountType = GetSetting( keyPrefix, "AccountType" );
-            ddlAccountType.SelectedValue = accountType;
+            ddlAccountType.SelectedValue = GetSetting( keyPrefix, "AccountType" );
 
             var accountIdList = GetSetting( keyPrefix, "AccountIds" ).Split( ',' ).ToList();
             foreach ( var cblAccounts in phAccounts.Controls.OfType<RockCheckBoxList>() )
@@ -1716,16 +1721,6 @@ function(item) {
         public int? CampusId { get; set; }
         public string CampusName { get; set; }
     }
-
-    public class AccountInfo
-    {
-        public int AccountId { get; set; }
-        public string AccountName { get; set; }
-        public int? AccountTypeId { get; set; }
-
-    }
-
-
 
     /// <summary>
     /// Special column type to display account amounts
