@@ -55,9 +55,10 @@ namespace RockWeb.Blocks.Security
     [GroupLocationTypeField( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Location Type",
         "The type of location that address should use.", false, Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME, "", 14 )]
     [BooleanField( "Address Required", "Whether the address is required.", false, order: 15 )]
-    [BooleanField( "Show Phone Numbers", "Allows hiding the phone numbers.", false, order: 16 )]
-    [DefinedValueField( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE, "Phone Types", "The phone numbers to display for editing.", false, true, order: 17 )]
-    [DefinedValueField( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE, "Phone Types Required", "The phone numbers that are required.", false, true, order: 18 )]
+    [BooleanField( "Campus Required", "Whether the campus is required.", false, order: 16 )]
+    [BooleanField( "Show Phone Numbers", "Allows hiding the phone numbers.", false, order: 17 )]
+    [DefinedValueField( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE, "Phone Types", "The phone numbers to display for editing.", false, true, order: 18 )]
+    [DefinedValueField( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE, "Phone Types Required", "The phone numbers that are required.", false, true, order: 19 )]
     public partial class AccountEntry : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -121,6 +122,7 @@ namespace RockWeb.Blocks.Security
                 pnlAddress.Visible = GetAttributeValue( "ShowAddress" ).AsBoolean();
                 pnlPhoneNumbers.Visible = GetAttributeValue( "ShowPhoneNumbers" ).AsBoolean();
                 acAddress.Required = GetAttributeValue( "AddressRequired" ).AsBoolean();
+                cpFamilyCampus.Required = GetAttributeValue( "CampusRequired" ).AsBoolean();
                 cpFamilyCampus.Visible = cpFamilyCampus.Items.Count > 2;
 
                 var phoneNumbers = new List<PhoneNumber>();
