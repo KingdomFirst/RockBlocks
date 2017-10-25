@@ -40,10 +40,11 @@ namespace RockWeb.Blocks.Cms
     [GroupLocationTypeField( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Address Type",
         "The type of address to be displayed / edited.", false, Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME, "", order: 3 )]
     [DefinedValueField( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE, "Phone Numbers", "The types of phone numbers to display / edit.", true, true, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME, order: 4 )]
-    [LinkedPage( "Workflow Launch Page", "Page used to launch the workflow to make a profile change request", false, order: 5 )]
-    [AttributeField( Rock.SystemGuid.EntityType.GROUP, "GroupTypeId", Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Family Attributes", "The family attributes that should be displayed / edited.", false, true, order: 6 )]
-    [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (adults)", "The person attributes that should be displayed / edited for adults.", false, true, order: 7 )]
-    [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (children)", "The person attributes that should be displayed / edited for children.", false, true, order: 8 )]
+    [BooleanField( "Campus Required", "Make the campus required.", false, order: 5 )]
+    [LinkedPage( "Workflow Launch Page", "Page used to launch the workflow to make a profile change request", false, order: 6 )]
+    [AttributeField( Rock.SystemGuid.EntityType.GROUP, "GroupTypeId", Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Family Attributes", "The family attributes that should be displayed / edited.", false, true, order: 7 )]
+    [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (adults)", "The person attributes that should be displayed / edited for adults.", false, true, order: 8 )]
+    [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (children)", "The person attributes that should be displayed / edited for children.", false, true, order: 9 )]
     public partial class PublicProfileEdit : RockBlock
     {
         #region Base Control Methods
@@ -76,6 +77,9 @@ namespace RockWeb.Blocks.Cms
                 if ( !Page.IsPostBack )
                 {
                     BindFamilies();
+
+                    cpFamilyCampus.Required = GetAttributeValue( "CampusRequired" ).AsBoolean();
+                    cpFamilyCampus.Visible = cpFamilyCampus.Items.Count > 2;
                 }
                 else
                 {
@@ -914,12 +918,6 @@ namespace RockWeb.Blocks.Cms
                 if ( String.IsNullOrWhiteSpace( GetAttributeValue( "WorkflowLaunchPage" ) ) )
                 {
                     lbRequestChanges.Visible = false;
-                }
-
-                // don't display campus picker unless multiple exist (not including none entry)
-                if ( cpFamilyCampus.Items.Count <= 2 )
-                {
-                    cpFamilyCampus.Visible = false;
                 }
             }
 
