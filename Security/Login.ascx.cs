@@ -40,6 +40,7 @@ Sorry, your account has been locked.  Please contact our office at {{ 'Global' |
     [CodeEditorField( "Prompt Message", "Optional text (HTML) to display above username and password fields.", CodeEditorMode.Html, CodeEditorTheme.Rock, 100, false, @"", "", 9 )]
     [LinkedPage( "Redirect Page", "Page to redirect user to upon successful login. The 'returnurl' query string will always override this setting for database authenticated logins. Redirect Page Setting will override third-party authentication 'returnurl'.", false, "", "", 10 )]
     [CodeEditorField( "Social Login Heading", "Optional text (HTML) to display above external logins.", CodeEditorMode.Html, CodeEditorTheme.Rock, 100, false, @"<p>Login with social account</p>", "", 11 )]
+    [BooleanField( "Hide Database Login", "Should the Database login be hidden?  This will hide the Username and Password boxes and only will be hidden if other Auth Providers are active.", false, "", 12 )]
     public partial class Login : Rock.Web.UI.RockBlock
     {
         #region Base Control Methods
@@ -137,6 +138,15 @@ Sorry, your account has been locked.  Please contact our office at {{ 'Global' |
                 divSocialLogin.Visible = false;
                 divOrgLogin.RemoveCssClass( "col-sm-6" );
                 divOrgLogin.AddCssClass( "col-sm-12" );
+            }
+            else
+            {
+                if ( GetAttributeValue( "HideDatabaseLogin" ).AsBoolean() )
+                {
+                    divOrgLogin.Visible = false;
+                    divSocialLogin.RemoveCssClass( "col-sm-6" );
+                    divSocialLogin.AddCssClass( "col-sm-12" );
+                }
             }
         }
 
