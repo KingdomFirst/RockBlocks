@@ -72,6 +72,17 @@ Sorry, your account has been locked.  Please contact our office at {{ 'Global' |
                     component.RequiresRemoteAuthentication &&
                     selectedGuids.Contains( component.EntityType.Guid ) )
                 {
+                    string loginTypeNameFriendly = string.Empty;
+                    var entityType = EntityTypeCache.Read( component.EntityType.Guid );
+                    if ( entityType != null )
+                    {
+                        loginTypeNameFriendly = entityType.FriendlyName;
+                    }
+                    else
+                    {
+                        loginTypeNameFriendly = component.GetType().GetFriendlyTypeName();
+                    }
+
                     string loginTypeName = component.GetType().Name;
 
                     // Check if returning from third-party authentication
@@ -113,7 +124,7 @@ Sorry, your account has been locked.  Please contact our office at {{ 'Global' |
                     }
                     else
                     {
-                        lbLogin.Text = loginTypeName;
+                        lbLogin.Text = loginTypeNameFriendly;
                     }
                 }
             }
