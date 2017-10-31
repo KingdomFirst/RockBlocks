@@ -7,7 +7,7 @@
 
             <div class="row">
                 <div id="divSocialLogin" runat="server" class="col-sm-6 margin-b-lg">
-                    <p>Login with social account</p>
+                    <asp:Literal ID="litSocLoginHeading" runat="server"></asp:Literal>
                     <asp:PlaceHolder ID="phExternalLogins" runat="server"></asp:PlaceHolder>
                 </div>
                 <div id="divOrgLogin" runat="server" class="col-sm-6">

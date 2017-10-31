@@ -39,6 +39,7 @@ Sorry, your account has been locked.  Please contact our office at {{ 'Global' |
     [RemoteAuthsField("Remote Authorization Types", "Which of the active remote authorization types should be displayed as an option for user to use for authentication.", false, "", "", 8)]
     [CodeEditorField( "Prompt Message", "Optional text (HTML) to display above username and password fields.", CodeEditorMode.Html, CodeEditorTheme.Rock, 100, false, @"", "", 9 )]
     [LinkedPage( "Redirect Page", "Page to redirect user to upon successful login. The 'returnurl' query string will always override this setting for database authenticated logins. Redirect Page Setting will override third-party authentication 'returnurl'.", false, "", "", 10 )]
+    [CodeEditorField( "Social Login Heading", "Optional text (HTML) to display above external logins.", CodeEditorMode.Html, CodeEditorTheme.Rock, 100, false, @"<p>Login with social account</p>", "", 11 )]
     public partial class Login : Rock.Web.UI.RockBlock
     {
         #region Base Control Methods
@@ -55,6 +56,7 @@ Sorry, your account has been locked.  Please contact our office at {{ 'Global' |
             btnNewAccount.Text = this.GetAttributeValue( "NewAccountButtonText" ) ?? "Register";
 
             phExternalLogins.Controls.Clear();
+            litSocLoginHeading.Text = GetAttributeValue( "SocialLoginHeading" );
 
             int activeAuthProviders = 0;
 
