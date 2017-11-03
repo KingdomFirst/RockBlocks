@@ -205,67 +205,70 @@ namespace RockWeb.Plugins.com_kfs.Connection
                     var types = new Type[] { typeof( CheckBox ), typeof( RadioButton ) };
                     KFSFindControlsRecursive( phConnections, types, ref checkboxes );
 
-                    foreach ( Control box in checkboxes )
+                    foreach ( CheckBox box in checkboxes )
                     {
-                        int opportunityId = box.ID.AsInteger();
-                        var opportunity = opportunityService
-                            .Queryable()
-                            .Where( o => o.Id == opportunityId )
-                            .FirstOrDefault();
-
-                        int defaultStatusId = opportunity.ConnectionType.ConnectionStatuses
-                            .Where( s => s.IsDefault )
-                            .Select( s => s.Id )
-                            .FirstOrDefault();
-
-                        // If opportunity is valid and has a default status
-                        if ( opportunity != null && defaultStatusId > 0 )
+                        if ( box.Checked )
                         {
-                            var personCampus = person.GetCampus();
-                            if ( personCampus != null )
-                            {
-                                campusId = personCampus.Id;
-                            }
+                            int opportunityId = box.ID.AsInteger();
+                            var opportunity = opportunityService
+                                .Queryable()
+                                .Where( o => o.Id == opportunityId )
+                                .FirstOrDefault();
 
-                            var connectionRequest = new ConnectionRequest();
-                            connectionRequest.PersonAliasId = person.PrimaryAliasId.Value;
-                            connectionRequest.Comments = tbComments.Text.Trim();
-                            connectionRequest.ConnectionOpportunityId = opportunity.Id;
-                            connectionRequest.ConnectionState = ConnectionState.Active;
-                            connectionRequest.ConnectionStatusId = defaultStatusId;
-                            connectionRequest.CampusId = campusId;
-                            connectionRequest.ConnectorPersonAliasId = opportunity.GetDefaultConnectorPersonAliasId( campusId );
-                            if ( campusId.HasValue &&
-                                opportunity != null &&
-                                opportunity.ConnectionOpportunityCampuses != null )
+                            int defaultStatusId = opportunity.ConnectionType.ConnectionStatuses
+                                .Where( s => s.IsDefault )
+                                .Select( s => s.Id )
+                                .FirstOrDefault();
+
+                            // If opportunity is valid and has a default status
+                            if ( opportunity != null && defaultStatusId > 0 )
                             {
-                                var campus = opportunity.ConnectionOpportunityCampuses
-                                    .Where( c => c.CampusId == campusId.Value )
-                                    .FirstOrDefault();
-                                if ( campus != null )
+                                var personCampus = person.GetCampus();
+                                if ( personCampus != null )
                                 {
-                                    connectionRequest.ConnectorPersonAliasId = campus.DefaultConnectorPersonAliasId;
+                                    campusId = personCampus.Id;
                                 }
+
+                                var connectionRequest = new ConnectionRequest();
+                                connectionRequest.PersonAliasId = person.PrimaryAliasId.Value;
+                                connectionRequest.Comments = tbComments.Text.Trim();
+                                connectionRequest.ConnectionOpportunityId = opportunity.Id;
+                                connectionRequest.ConnectionState = ConnectionState.Active;
+                                connectionRequest.ConnectionStatusId = defaultStatusId;
+                                connectionRequest.CampusId = campusId;
+                                connectionRequest.ConnectorPersonAliasId = opportunity.GetDefaultConnectorPersonAliasId( campusId );
+                                if ( campusId.HasValue &&
+                                    opportunity != null &&
+                                    opportunity.ConnectionOpportunityCampuses != null )
+                                {
+                                    var campus = opportunity.ConnectionOpportunityCampuses
+                                        .Where( c => c.CampusId == campusId.Value )
+                                        .FirstOrDefault();
+                                    if ( campus != null )
+                                    {
+                                        connectionRequest.ConnectorPersonAliasId = campus.DefaultConnectorPersonAliasId;
+                                    }
+                                }
+
+                                if ( !connectionRequest.IsValid )
+                                {
+                                    // Controls will show warnings
+                                    return;
+                                }
+
+                                connectionRequestService.Add( connectionRequest );
+
+                                rockContext.SaveChanges();
+
+                                var mergeFields = new Dictionary<string, object>();
+                                mergeFields.Add( "CurrentPerson", CurrentPerson );
+                                mergeFields.Add( "Person", person );
+
+                                lResponseMessage.Text = GetAttributeValue( "LavaTemplate" ).ResolveMergeFields( mergeFields );
+                                lResponseMessage.Visible = true;
+
+                                pnlSignup.Visible = false;
                             }
-
-                            if ( !connectionRequest.IsValid )
-                            {
-                                // Controls will show warnings
-                                return;
-                            }
-
-                            connectionRequestService.Add( connectionRequest );
-
-                            rockContext.SaveChanges();
-
-                            var mergeFields = new Dictionary<string, object>();
-                            mergeFields.Add( "CurrentPerson", CurrentPerson );
-                            mergeFields.Add( "Person", person );
-
-                            lResponseMessage.Text = GetAttributeValue( "LavaTemplate" ).ResolveMergeFields( mergeFields );
-                            lResponseMessage.Visible = true;
-
-                            pnlSignup.Visible = false;
                         }
                     }
                 }
