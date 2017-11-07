@@ -35,6 +35,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
     [BooleanField( "Auto Load", "When set to true, all results will be loaded to begin.", false )]
     [CampusField( "Default Location", "The campus address that should be used as fallback for the search criteria.", false, "", "" )]
+    [BooleanField( "Allow Url Location", "When set to true, Url Params will be evaluated for person address.", false )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page", "The page to navigate to for group details.", false, "", "CustomSetting" )]
@@ -107,6 +108,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         #region Private Variables
         private Guid _targetPersonGuid = Guid.Empty;
         Dictionary<string, string> _urlParms = new Dictionary<string, string>();
+        bool _autoLoad = false;
         #endregion
 
         #region Properties
@@ -166,6 +168,8 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// <param name="e">An <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnInit( EventArgs e )
         {
+            _autoLoad = GetAttributeValue( "AutoLoad" ).AsBoolean();
+
             base.OnInit( e );
 
             gGroups.DataKeyNames = new string[] { "Id" };
@@ -597,7 +601,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             btnClear.Visible = btnSearch.Visible;
 
             // If we've already displayed results, then re-display them
-            if ( pnlResults.Visible || GetAttributeValue( "AutoLoad" ).AsBoolean() )
+            if ( pnlResults.Visible || _autoLoad )
             {
                 ShowResults();
             }
@@ -909,13 +913,31 @@ namespace RockWeb.Plugins.com_kfs.Groups
             // If we care where these groups are located...
             if ( fenceGroupTypeId.HasValue || showMap || showProximity )
             {
+                var allowUrlLocation = GetAttributeValue( "AllowUrlLocation" ).AsBoolean();
+
                 // Get the location for the address entered
                 Location personLocation = null;
-                if ( fenceGroupTypeId.HasValue || showProximity )
+                if ( fenceGroupTypeId.HasValue || showProximity || _autoLoad || allowUrlLocation )
                 {
-                    personLocation = new LocationService( rockContext )
-                            .Get( acAddress.Street1, acAddress.Street2, acAddress.City,
-                                acAddress.State, acAddress.PostalCode, acAddress.Country );
+                    if ( allowUrlLocation )
+                    {
+                        var street1 = PageParameter( "street1" );
+                        var street2 = PageParameter( "street2" );
+                        var city = PageParameter( "city" );
+                        var state = PageParameter( "state" );
+                        var postalcode = PageParameter( "postalcode" );
+                        var country = PageParameter( "country" );
+
+                        personLocation = new LocationService( rockContext )
+                            .Get( street1, street2, city,
+                                state, postalcode, country);
+                    }
+                    else if ( personLocation == null )
+                    {
+                        personLocation = new LocationService( rockContext )
+                                .Get( acAddress.Street1, acAddress.Street2, acAddress.City,
+                                    acAddress.State, acAddress.PostalCode, acAddress.Country );
+                    }
 
                     Guid? campusGuid = GetAttributeValue( "DefaultLocation" ).AsGuidOrNull();
                     if ( campusGuid != null && personLocation == null )
@@ -927,7 +949,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                 // If showing a map, and person's location was found, save a mapitem for this location
                 FinderMapItem personMapItem = null;
-                if ( showMap && personLocation != null && personLocation.GeoPoint != null )
+                //if ( showMap && personLocation != null && personLocation.GeoPoint != null )
                 {
                     var infoWindow = string.Format( @"
 <div style='width:250px'>
