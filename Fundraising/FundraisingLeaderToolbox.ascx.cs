@@ -144,9 +144,13 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         /// </summary>
         protected void BindGroupMembersGrid()
         {
-            gGroupMembers.Columns[4].Visible = GetAttributeValue( "ShowMemberFundingGoal" ).AsBoolean();
-            gGroupMembers.Columns[5].Visible = GetAttributeValue( "ShowMemberTotalFunding" ).AsBoolean();
-            gGroupMembers.Columns[6].Visible = GetAttributeValue( "ShowMemberFundingRemaining" ).AsBoolean();
+            var showGoal = GetAttributeValue( "ShowMemberFundingGoal" ).AsBoolean();
+            var showTotal = GetAttributeValue( "ShowMemberTotalFunding" ).AsBoolean();
+            var showRemaining = GetAttributeValue( "ShowMemberFundingRemaining" ).AsBoolean();
+
+            gGroupMembers.Columns[4].Visible = showGoal;
+            gGroupMembers.Columns[5].Visible = showTotal;
+            gGroupMembers.Columns[6].Visible = showRemaining;
 
             var rockContext = new RockContext();
 
@@ -181,7 +185,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 }
 
                 var fundingRemaining = individualFundraisingGoal - contributionTotal;
-                if ( disablePublicContributionRequests )
+                if ( disablePublicContributionRequests || !showRemaining )
                 {
                     fundingRemaining = null;
                 }
@@ -193,6 +197,18 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 totalFundraisingGoal += ( individualFundraisingGoal != null ? ( decimal ) individualFundraisingGoal : 0 );
                 totalContribution += contributionTotal;
                 totalFundingRemaining += ( fundingRemaining != null ? ( decimal ) fundingRemaining : 0 );
+
+                if ( !showGoal )
+                {
+                    individualFundraisingGoal = null;
+                    totalFundraisingGoal = 0.00M;
+                }
+
+                if ( !showTotal )
+                {
+                    contributionTotal = 0.00M;
+                    totalContribution = 0.00M;
+                }
 
                 return new
                 {
