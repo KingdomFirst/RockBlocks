@@ -23,7 +23,7 @@
                 <Rock:Grid ID="gGroupMembers" runat="server" OnRowSelected="gGroupMembers_RowSelected" DataKeyNames="Id" PersonIdField="PersonId" AllowSorting="true">
                     <Columns>
                         <Rock:SelectField />
-                        <Rock:DateTimeField DataField="DateTimeAdded" HeaderText="Date Added" SortExpression="DateTimeAdded" />
+                        <Rock:DateTimeField DataField="DateTimeAdded" HeaderText="Date Added" SortExpression="DateTimeAdded" DataFormatString="{0:d}" />
                         <asp:BoundField DataField="FullName" HeaderText="Name" SortExpression="Person.LastName,Person.NickName" />
                         <Rock:EnumField DataField="Gender" HeaderText="Gender" SortExpression="Person.Gender" />
                         <Rock:CurrencyField DataField="FundingRemaining" HeaderText="Funding Remaining" NullDisplayText=""/>
