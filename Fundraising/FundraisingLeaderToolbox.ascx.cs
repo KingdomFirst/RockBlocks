@@ -43,6 +43,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
     [LinkedPage( "Main Page", "The main page for the fundraising opportunity", required: false, order: 3 )]
     public partial class FundraisingLeaderToolbox : RockBlock
     {
+        private Dictionary<string, object> groupTotals = new Dictionary<string, object>();
+
         #region Base Control Methods
 
         /// <summary>
@@ -126,9 +128,11 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
             // Top Main
             string summaryLavaTemplate = this.GetAttributeValue( "SummaryLavaTemplate" );
-            lMainTopContentHtml.Text = summaryLavaTemplate.ResolveMergeFields( mergeFields );
 
             BindGroupMembersGrid();
+
+            mergeFields.Add( "GroupTotals", groupTotals );
+            lMainTopContentHtml.Text = summaryLavaTemplate.ResolveMergeFields( mergeFields );
         }
 
         /// <summary>
@@ -139,6 +143,9 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             var rockContext = new RockContext();
 
             int groupId = hfGroupId.Value.AsInteger();
+            var totalFundraisingGoal = 0.00M;
+            var totalContribution = 0.00M;
+            var totalFundingRemaining = 0.00M;
             var groupMembersQuery = new GroupMemberService( rockContext ).Queryable().Where( a => a.GroupId == groupId );
             var group = new GroupService( rockContext ).Get( groupId );
             group.LoadAttributes( rockContext );
@@ -175,6 +182,10 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                     fundingRemaining = 0.00M;
                 }
 
+                totalFundraisingGoal += ( individualFundraisingGoal != null ? ( decimal ) individualFundraisingGoal : 0 );
+                totalContribution += contributionTotal;
+                totalFundingRemaining += ( fundingRemaining != null ? ( decimal ) fundingRemaining : 0 );
+
                 return new
                 {
                     groupMember.Id,
@@ -186,6 +197,10 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                     GroupRoleName = a.GroupRole.Name
                 };
             } ).ToList();
+
+            groupTotals.Add( "TotalFundraisingGoal", totalFundraisingGoal );
+            groupTotals.Add( "TotalContribution", totalContribution );
+            groupTotals.Add( "TotalFundingRemaining", totalFundingRemaining );
 
             gGroupMembers.DataSource = groupMemberList;
             gGroupMembers.DataBind();
