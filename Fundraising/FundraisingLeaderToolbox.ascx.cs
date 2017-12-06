@@ -41,6 +41,10 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
     [LinkedPage( "Participant Page", "The partipant page for a participant of this fundraising opportunity", required: false, order: 2 )]
     [LinkedPage( "Main Page", "The main page for the fundraising opportunity", required: false, order: 3 )]
+    [BooleanField( "Show Member Funding Goal", "Determines if the Funding Goal of the Group Member should be displayed.", order: 4 )]
+    [BooleanField( "Show Member Total Funding", "Determines if the Total Funding of the Group Member should be displayed.", order: 5 )]
+    [BooleanField( "Show Member Funding Remaining", "Determines if the Funding Remaining of the Group Member should be displayed.", true, order: 6 )]
+
     public partial class FundraisingLeaderToolbox : RockBlock
     {
         private Dictionary<string, object> groupTotals = new Dictionary<string, object>();
@@ -140,6 +144,10 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         /// </summary>
         protected void BindGroupMembersGrid()
         {
+            gGroupMembers.Columns[4].Visible = GetAttributeValue( "ShowMemberFundingGoal" ).AsBoolean();
+            gGroupMembers.Columns[5].Visible = GetAttributeValue( "ShowMemberTotalFunding" ).AsBoolean();
+            gGroupMembers.Columns[6].Visible = GetAttributeValue( "ShowMemberFundingRemaining" ).AsBoolean();
+
             var rockContext = new RockContext();
 
             int groupId = hfGroupId.Value.AsInteger();
