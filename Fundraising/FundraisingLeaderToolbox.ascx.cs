@@ -194,7 +194,9 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                     groupMember.Person.FullName,
                     groupMember.Person.Gender,
                     FundingRemaining = fundingRemaining,
-                    GroupRoleName = a.GroupRole.Name
+                    GroupRoleName = a.GroupRole.Name,
+                    FundingGoal = individualFundraisingGoal,
+                    TotalFunding = contributionTotal
                 };
             } ).ToList();
 

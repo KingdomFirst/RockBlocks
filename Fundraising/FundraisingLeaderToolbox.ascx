@@ -26,6 +26,8 @@
                         <Rock:DateTimeField DataField="DateTimeAdded" HeaderText="Date Added" SortExpression="DateTimeAdded" DataFormatString="{0:d}" />
                         <asp:BoundField DataField="FullName" HeaderText="Name" SortExpression="Person.LastName,Person.NickName" />
                         <Rock:EnumField DataField="Gender" HeaderText="Gender" SortExpression="Person.Gender" />
+                        <Rock:CurrencyField DataField="FundingGoal" HeaderText="Funding Goal" NullDisplayText=""/>
+                        <Rock:CurrencyField DataField="TotalFunding" HeaderText="Total Funding" NullDisplayText=""/>
                         <Rock:CurrencyField DataField="FundingRemaining" HeaderText="Funding Remaining" NullDisplayText=""/>
                         <asp:BoundField DataField="GroupRoleName" HeaderText="Role" SortExpression="GroupRole.Name" />
                     </Columns>
