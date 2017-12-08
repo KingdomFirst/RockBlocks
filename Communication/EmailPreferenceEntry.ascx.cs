@@ -18,7 +18,7 @@ namespace RockWeb.Plugins.com_kfs.Communication
     /// User control for editing a system email
     /// </summary>
     [DisplayName( "Email Preference Entry" )]
-    [Category( "Communication" )]
+    [Category( "com_kfs > Communication" )]
     [Description( "Allows user to set their email preference." )]
     [MemoField( "Emails Allowed Text", "Text to display for the 'Emails Allowed' option.", false, "I am still involved with {{ 'Global' | Attribute:'OrganizationName' }}, and wish to receive all emails.", "", 0, null, 3, true )]
     [MemoField( "No Mass Emails Text", "Text to display for the 'No Mass Emails' option.", false, "I am still involved with {{ 'Global' | Attribute:'OrganizationName' }}, but do not wish to receive mass emails (personal emails are fine).", "", 1, null, 3, true )]
