@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -44,10 +45,20 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
     [BooleanField( "Show Member Funding Goal", "Determines if the Funding Goal of the Group Member should be displayed.", order: 4 )]
     [BooleanField( "Show Member Total Funding", "Determines if the Total Funding of the Group Member should be displayed.", order: 5 )]
     [BooleanField( "Show Member Funding Remaining", "Determines if the Funding Remaining of the Group Member should be displayed.", true, order: 6 )]
+    [CustomDropdownListField( "Export Group Member Attributes", "Determines which Group Members Attributes should be included in the Excel export.", "0^None,1^All,2^Display In List", defaultValue: "-1", order: 7 )]
 
     public partial class FundraisingLeaderToolbox : RockBlock
     {
         private Dictionary<string, object> _groupTotals = new Dictionary<string, object>();
+        private int _gmAttributeExport = 0;
+
+        /// <summary>
+        /// Gets or sets the available attributes.
+        /// </summary>
+        /// <value>
+        /// The available attributes.
+        /// </value>
+        public List<AttributeCache> AvailableAttributes { get; set; }
 
         #region Base Control Methods
 
@@ -58,6 +69,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
+
+            _gmAttributeExport = GetAttributeValue( "ExportGroupMemberAttributes" ).AsInteger();
 
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
@@ -166,6 +179,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             groupMembersQuery = groupMembersQuery.Sort( gGroupMembers.SortProperty ?? new SortProperty { Property = "Person.LastName, Person.NickName" } );
 
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
+            var entityTypeIdPerson = EntityTypeCache.GetId<Rock.Model.Person>();
 
             var groupMemberList = groupMembersQuery.ToList().Select( a =>
             {
@@ -228,9 +242,184 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             _groupTotals.Add( "TotalFundraisingGoal", totalFundraisingGoal );
             _groupTotals.Add( "TotalContribution", totalContribution );
             _groupTotals.Add( "TotalFundingRemaining", totalFundingRemaining );
+            
+            //
+            // Attributes
+            //
 
+            BindAttributes( group );
+            AddDynamicControls( group );
+
+            // Get all the person ids in current page of query results
+            var personIds = groupMemberList
+                .Select( m => m.PersonId )
+                .Distinct()
+                .ToList();
+
+            // Get all the group member ids and the group id in current page of query results
+            var groupMemberIds = new List<int>();
+            foreach ( var groupMember in groupMemberList
+                .Select( m => m ) )
+            {
+                groupMemberIds.Add( groupMember.Id );
+            }
+
+            var groupMemberAttributesIds = new List<int>();
+            foreach (var gma in AvailableAttributes.Where(a => a.EntityTypeId == entityTypeIdGroupMember ))
+            {
+                groupMemberAttributesIds.Add( gma.Id );
+            }
+
+            var personAttributesIds = new List<int>();
+            foreach ( var pa in AvailableAttributes.Where( a => a.EntityTypeId == entityTypeIdPerson ) )
+            {
+                personAttributesIds.Add( pa.Id );
+            }
+
+            // If there are any attributes that were selected to be displayed, we're going
+            // to try and read all attribute values in one query and then put them into a
+            // custom grid ObjectList property so that the AttributeField columns don't need
+            // to do the LoadAttributes and querying of values for each row/column
+
+            // Query the attribute values for all rows and attributes
+            var attributeValues = new AttributeValueService( rockContext )
+                .Queryable( "Attribute" ).AsNoTracking()
+                .Where( v =>
+                    v.EntityId.HasValue &&
+                    (
+                        (
+                            personAttributesIds.Contains( v.AttributeId ) &&
+                            personIds.Contains( v.EntityId.Value )
+                        ) ||
+                        (
+                            groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                            groupMemberIds.Contains( v.EntityId.Value )
+                        )
+                    )
+                )
+                .ToList();
+
+            // Get the attributes to add to each row's object
+            BindAttributes( group );
+            var attributes = new Dictionary<string, AttributeCache>();
+            AvailableAttributes.ForEach( a => attributes
+                    .Add( a.Id.ToString() + a.Key, a ) );
+
+            // Initialize the grid's object list
+            gGroupMembers.ObjectList = new Dictionary<string, object>();
+
+            // Loop through each of the current page's registrants and build an attribute
+            // field object for storing attributes and the values for each of the registrants
+            foreach ( var gm in groupMemberList )
+            {
+                // Create a row attribute object
+                var attributeFieldObject = new AttributeFieldObject();
+
+                // Add the attributes to the attribute object
+                attributeFieldObject.Attributes = attributes;
+
+                // Add any person attribute values to object
+                attributeValues
+                    .Where( v =>
+                        personAttributesIds.Contains( v.AttributeId ) &&
+                        v.EntityId.Value == gm.PersonId )
+                    .ToList()
+                    .ForEach( v => attributeFieldObject.AttributeValues
+                        .Add( v.AttributeId.ToString() + v.Attribute.Key, new AttributeValueCache( v ) ) );
+
+                // Add any group member attribute values to object
+                attributeValues
+                    .Where( v =>
+                        groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                        v.EntityId.Value == gm.Id )
+                    .ToList()
+                    .ForEach( v => attributeFieldObject.AttributeValues
+                        .Add( v.AttributeId.ToString() + v.Attribute.Key, new AttributeValueCache( v ) ) );
+
+                // Add row attribute object to grid's object list
+                gGroupMembers.ObjectList.Add( gm.Id.ToString(), attributeFieldObject );
+            }
+            
             gGroupMembers.DataSource = groupMemberList;
             gGroupMembers.DataBind();
+        }
+
+        /// <summary>
+        /// Binds the attributes.
+        /// </summary>
+        private void BindAttributes( Group _group )
+        {
+            // Parse the attribute filters 
+            AvailableAttributes = new List<AttributeCache>();
+            if ( _group != null && _gmAttributeExport > 0 )
+            {
+                // GROUP MEMBER ATTRIBUTES
+                int gmEntityTypeId = new GroupMember().TypeId;
+                string groupQualifier = _group.Id.ToString();
+                string groupTypeQualifier = _group.GroupTypeId.ToString();
+                foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
+                    .Where( a =>
+                        a.EntityTypeId == gmEntityTypeId &&
+                        ( a.IsGridColumn || _gmAttributeExport == 1 ) &&
+                        ( ( a.EntityTypeQualifierColumn.Equals( "GroupId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupQualifier ) ) ||
+                         ( a.EntityTypeQualifierColumn.Equals( "GroupTypeId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupTypeQualifier ) ) ) )
+                    .OrderByDescending( a => a.EntityTypeQualifierColumn )
+                    .ThenBy( a => a.Order )
+                    .ThenBy( a => a.Name ) )
+                {
+                    AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                }
+
+                // PERSON ATTRIBUTES
+                int pEntityTypeId = new Person().TypeId;
+                foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
+                    .Where( a =>
+                        a.EntityTypeId == pEntityTypeId
+                        // TODO limit loop through the selected person attributes
+                        )
+                    .OrderByDescending( a => a.EntityTypeQualifierColumn )
+                    .OrderBy( a => a.Order )
+                    .ThenBy( a => a.Name ) )
+                {
+                    AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds the attribute columns.
+        /// </summary>
+        private void AddDynamicControls( Group _group )
+        {
+            // Remove attribute columns
+            foreach ( var column in gGroupMembers.Columns.OfType<AttributeField>().ToList() )
+            {
+                gGroupMembers.Columns.Remove( column );
+            }
+
+            if ( AvailableAttributes != null )
+            {
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    bool columnExists = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
+                    if ( !columnExists )
+                    {
+                        AttributeField boundField = new AttributeField();
+                        boundField.DataField = attribute.Id.ToString() + attribute.Key;
+                        boundField.AttributeId = attribute.Id;
+                        boundField.HeaderText = attribute.Name;
+                        boundField.Visible = false;
+
+                        var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
+                        if ( attributeCache != null )
+                        {
+                            boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;
+                        }
+
+                        gGroupMembers.Columns.Add( boundField );
+                    }
+                }
+            }
         }
 
         #endregion
