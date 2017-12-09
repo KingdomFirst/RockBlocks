@@ -220,7 +220,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                     FundingRemaining = fundingRemaining,
                     GroupRoleName = a.GroupRole.Name,
                     FundingGoal = individualFundraisingGoal,
-                    TotalFunding = contributionTotal
+                    TotalFunding = contributionTotal,
+                    Email = groupMember.Person.Email
                 };
             } ).ToList();
 
