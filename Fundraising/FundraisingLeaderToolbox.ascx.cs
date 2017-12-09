@@ -11,6 +11,7 @@ using Rock.Attribute;
 using Rock.Data;
 using Rock.Lava;
 using Rock.Model;
+using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
@@ -46,6 +47,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
     [BooleanField( "Show Member Total Funding", "Determines if the Total Funding of the Group Member should be displayed.", order: 5 )]
     [BooleanField( "Show Member Funding Remaining", "Determines if the Funding Remaining of the Group Member should be displayed.", true, order: 6 )]
     [CustomDropdownListField( "Export Group Member Attributes", "Determines which Group Members Attributes should be included in the Excel export.", "0^None,1^All,2^Display In List", defaultValue: "-1", order: 7 )]
+    [BooleanField( "Bypass Attribute Security", "Determines if the field level security on each attribute should be ignored.", order: 8 )]
 
     public partial class FundraisingLeaderToolbox : RockBlock
     {
@@ -349,6 +351,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         /// </summary>
         private void BindAttributes( Group _group )
         {
+            var bypassSecurity = GetAttributeValue( "BypassAttributeSecurity" ).AsBoolean();
+
             // Parse the attribute filters 
             AvailableAttributes = new List<AttributeCache>();
             if ( _group != null && _gmAttributeExport > 0 )
@@ -367,21 +371,52 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                     .ThenBy( a => a.Order )
                     .ThenBy( a => a.Name ) )
                 {
-                    AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                    if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
+                    {
+                        AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                    }
                 }
 
                 // PERSON ATTRIBUTES
+                var AvailablePersonAttributeIds = new List<int>();
+                if ( _group.Attributes == null )
+                {
+                    _group.LoadAttributes();
+                }
+
+                if ( _group.Attributes != null )
+                {
+                    var attributeFieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.ATTRIBUTE ).Id;
+                    var personAttributes = _group.Attributes.Values.FirstOrDefault( a => 
+                                                a.FieldTypeId == attributeFieldTypeId &&
+                                                a.QualifierValues.ContainsKey( "entitytype" ) &&
+                                                a.QualifierValues.Values.Any( v => v.Value.Equals( Rock.SystemGuid.EntityType.PERSON, StringComparison.CurrentCultureIgnoreCase ) )
+                                                );
+
+                    if ( personAttributes != null )
+                    {
+                        var personAttributeValues = _group.GetAttributeValue( personAttributes.Key );
+
+                        foreach ( var personAttribute in personAttributeValues.Split( ',' ).AsGuidList() )
+                        {
+                            AvailablePersonAttributeIds.Add( AttributeCache.Read( personAttribute ).Id );
+                        }
+                    }
+                }
                 int pEntityTypeId = new Person().TypeId;
                 foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
                     .Where( a =>
-                        a.EntityTypeId == pEntityTypeId
-                        // TODO limit loop through the selected person attributes
+                        a.EntityTypeId == pEntityTypeId &&
+                        AvailablePersonAttributeIds.Contains( a.Id )
                         )
                     .OrderByDescending( a => a.EntityTypeQualifierColumn )
                     .OrderBy( a => a.Order )
                     .ThenBy( a => a.Name ) )
                 {
-                    AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                    if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
+                    {
+                        AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                    }
                 }
             }
         }
