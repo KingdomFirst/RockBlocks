@@ -47,7 +47,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
     public partial class FundraisingLeaderToolbox : RockBlock
     {
-        private Dictionary<string, object> groupTotals = new Dictionary<string, object>();
+        private Dictionary<string, object> _groupTotals = new Dictionary<string, object>();
 
         #region Base Control Methods
 
@@ -135,7 +135,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
             BindGroupMembersGrid();
 
-            mergeFields.Add( "GroupTotals", groupTotals );
+            mergeFields.Add( "GroupTotals", _groupTotals );
             lMainTopContentHtml.Text = summaryLavaTemplate.ResolveMergeFields( mergeFields );
         }
 
@@ -224,9 +224,9 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 };
             } ).ToList();
 
-            groupTotals.Add( "TotalFundraisingGoal", totalFundraisingGoal );
-            groupTotals.Add( "TotalContribution", totalContribution );
-            groupTotals.Add( "TotalFundingRemaining", totalFundingRemaining );
+            _groupTotals.Add( "TotalFundraisingGoal", totalFundraisingGoal );
+            _groupTotals.Add( "TotalContribution", totalContribution );
+            _groupTotals.Add( "TotalFundingRemaining", totalFundingRemaining );
 
             gGroupMembers.DataSource = groupMemberList;
             gGroupMembers.DataBind();
