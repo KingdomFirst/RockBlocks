@@ -651,6 +651,46 @@ namespace RockWeb.Plugins.com_kfs.Groups
             {
                 foreach ( var attribute in AvailableAttributes )
                 {
+                    var addColumn = false;
+                    if ( ( attribute.EntityTypeId == _gmEntityTypeId && attribute.IsGridColumn ) || attribute.EntityTypeId == _pEntityTypeId )
+                    {
+                        addColumn = true;
+                    }
+
+                    var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
+                    if ( control != null && addColumn )
+                    {
+                        if ( control is IRockControl )
+                        {
+                            var rockControl = ( IRockControl ) control;
+                            rockControl.Label = attribute.Name;
+                            rockControl.Help = attribute.Description;
+                            phAttributeFilters.Controls.Add( control );
+                        }
+                        else
+                        {
+                            var wrapper = new RockControlWrapper();
+                            wrapper.ID = control.ID + "_wrapper";
+                            wrapper.Label = attribute.Name;
+                            wrapper.Controls.Add( control );
+                            phAttributeFilters.Controls.Add( wrapper );
+                        }
+
+                        string savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Key ) );
+                        if ( !string.IsNullOrWhiteSpace( savedValue ) )
+                        {
+                            try
+                            {
+                                var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
+                                attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
+                            }
+                            catch
+                            {
+                                // intentionally ignore
+                            }
+                        }
+                    }
+
                     bool columnExists = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
                     if ( !columnExists )
                     {
@@ -658,10 +698,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         boundField.DataField = attribute.Id.ToString() + attribute.Key;
                         boundField.AttributeId = attribute.Id;
                         boundField.HeaderText = attribute.Name;
-                        if ( attribute.EntityTypeId == _gmEntityTypeId )
-                        {
-                            boundField.Visible = attribute.IsGridColumn;
-                        }
+                        boundField.Visible = addColumn;
 
                         var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
                         if ( attributeCache != null )
@@ -1016,7 +1053,9 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                                     attributeValues = attributeValues.Where( parameterExpression, expression, null );
 
-                                    qry = qry.Where( w => attributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
+                                    qry = qry.Where( w =>
+                                                    ( attributeValues.Where( t => t.Attribute.EntityTypeId == _gmEntityTypeId ).Select( v => v.EntityId ).Contains( w.Id ) ) ||
+                                                    ( attributeValues.Where( y => y.Attribute.EntityTypeId == _pEntityTypeId ).Select( v => v.EntityId ).Contains( w.PersonId ) ) );
                                 }
                             }
                         }
