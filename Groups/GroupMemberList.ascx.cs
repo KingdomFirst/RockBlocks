@@ -16,7 +16,6 @@ using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
-using com.kfs.Attribute;
 
 namespace RockWeb.Plugins.com_kfs.Groups
 {
@@ -30,6 +29,9 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [LinkedPage( "Registration Page", "Page used for viewing the registration(s) associated with a particular group member", false, "", "", 3 )]
     [BooleanField("Show Campus Filter", "Setting to show/hide campus filter.", true, order: 4)]
     [BooleanField( "Show First/Last Attendance", "If the group allows attendance, should the first and last attendance date be displayed for each group member?", false, "", 5, "ShowAttendance" )]
+    [BooleanField( "Bypass Attribute Security", "Determines if the field level security on each attribute should be ignored.", order: 8 )]
+    [BooleanField( "Include All Group Member Attributes In Export", "Determines if all group member attributes should be exported along with those set to 'Show in Grid'.", order: 9 )]
+
     public partial class GroupMemberList : RockBlock, ISecondaryBlock
     {
         #region Private Variables
@@ -38,6 +40,9 @@ namespace RockWeb.Plugins.com_kfs.Groups
         private Group _group = null;
         private bool _canView = false;
         private Dictionary<int, Dictionary<int, string>> _groupMembersWithRegistrations = new Dictionary<int, Dictionary<int, string>>();
+        private int _gmEntityTypeId = 0;
+        private int _pEntityTypeId = 0;
+        private bool _exportAll = false;
 
         #endregion
 
@@ -51,14 +56,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// </value>
         public List<AttributeCache> AvailableAttributes { get; set; }
 
-        /// <summary>
-        /// Gets or sets the available person attributes.
-        /// </summary>
-        /// <value>
-        /// The available person attributes.
-        /// </value>
-        public List<AttributeCache> AvailablePersonAttributes { get; set; }
-        
         /// <summary>
         /// Gets or sets the signed person ids.
         /// </summary>
@@ -80,8 +77,8 @@ namespace RockWeb.Plugins.com_kfs.Groups
             base.LoadViewState( savedState );
 
             AvailableAttributes = ViewState["AvailableAttributes"] as List<AttributeCache>;
-            AvailablePersonAttributes = ViewState["AvailablePersonAttributes"] as List<AttributeCache>;
 
+            BindAttributes();
             AddDynamicControls();
         }
 
@@ -92,6 +89,10 @@ namespace RockWeb.Plugins.com_kfs.Groups
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
+
+            _pEntityTypeId = new Person().TypeId;
+            _gmEntityTypeId = new GroupMember().TypeId;
+            _exportAll = GetAttributeValue( "IncludeAllGroupMemberAttributesInExport" ).AsBoolean();
 
             this.BlockUpdated += GroupMemberList_BlockUpdated;
 
@@ -254,7 +255,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
         protected override object SaveViewState()
         {
             ViewState["AvailableAttributes"] = AvailableAttributes;
-            ViewState["AvailablePersonAttributes"] = AvailablePersonAttributes;
 
             return base.SaveViewState();
         }
@@ -356,27 +356,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         try
                         {
                             var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( attribute.Key ), attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
-                        }
-                        catch
-                        {
-                            // intentionally ignore
-                        }
-                    }
-                }
-            }
-
-            if ( AvailablePersonAttributes != null )
-            {
-                foreach ( var attribute in AvailablePersonAttributes )
-                {
-                    var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                    if ( filterControl != null )
-                    {
-                        try
-                        {
-                            var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( attribute.Key ), attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( attribute.Id.ToString() + attribute.Key ), attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
                         }
                         catch
                         {
@@ -399,24 +379,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
             if ( AvailableAttributes != null )
             {
                 var attribute = AvailableAttributes.FirstOrDefault( a => MakeKeyUniqueToGroup( a.Key ) == e.Key );
-                if ( attribute != null )
-                {
-                    try
-                    {
-                        var values = JsonConvert.DeserializeObject<List<string>>( e.Value );
-                        e.Value = attribute.FieldType.Field.FormatFilterValues( attribute.QualifierValues, values );
-                        return;
-                    }
-                    catch
-                    {
-                        // intentionally ignore
-                    }
-                }
-            }
-
-            if ( AvailablePersonAttributes != null )
-            {
-                var attribute = AvailablePersonAttributes.FirstOrDefault( a => MakeKeyUniqueToGroup( a.Key ) == e.Key );
                 if ( attribute != null )
                 {
                     try
@@ -562,15 +524,15 @@ namespace RockWeb.Plugins.com_kfs.Groups
             {
                 cblRole.DataSource = _group.GroupType.Roles.OrderBy( a => a.Order ).ToList();
                 cblRole.DataBind();
+
+                BindAttributes();
+                AddDynamicControls();
             }
 
             cblGroupMemberStatus.BindToEnum<GroupMemberStatus>();
 
             cpCampusFilter.Campuses = CampusCache.All();
-
-            BindAttributes();
-            AddDynamicControls();
-
+            
             tbFirstName.Text = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "First Name" ) );
             tbLastName.Text = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Last Name" ) );
             cpCampusFilter.SelectedCampusId = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Campus" ) ).AsIntegerOrNull();
@@ -603,30 +565,33 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// </summary>
         private void BindAttributes()
         {
+            var bypassSecurity = GetAttributeValue( "BypassAttributeSecurity" ).AsBoolean();
+
             // Parse the attribute filters 
             AvailableAttributes = new List<AttributeCache>();
             if ( _group != null )
             {
-                int entityTypeId = new GroupMember().TypeId;
+                // GROUP MEMBER ATTRIBUTES
                 string groupQualifier = _group.Id.ToString();
                 string groupTypeQualifier = _group.GroupTypeId.ToString();
                 foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
                     .Where( a =>
-                        a.EntityTypeId == entityTypeId &&
-                        a.IsGridColumn &&
+                        a.EntityTypeId == _gmEntityTypeId &&
+                        ( a.IsGridColumn || _exportAll ) &&
                         ( ( a.EntityTypeQualifierColumn.Equals( "GroupId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupQualifier ) ) ||
                          ( a.EntityTypeQualifierColumn.Equals( "GroupTypeId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupTypeQualifier ) ) ) )
                     .OrderByDescending( a => a.EntityTypeQualifierColumn )
                     .ThenBy( a => a.Order )
                     .ThenBy( a => a.Name ) )
                 {
-                    AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                    if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
+                    {
+                        AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                    }
                 }
-            }
-            
-            AvailablePersonAttributes = new List<AttributeCache>();
-            if ( _group != null )
-            {
+
+                // PERSON ATTRIBUTES
+                var AvailablePersonAttributeIds = new List<int>();
                 if ( _group.Attributes == null )
                 {
                     _group.LoadAttributes();
@@ -635,7 +600,11 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 if ( _group.Attributes != null )
                 {
                     var attributeFieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.ATTRIBUTE ).Id;
-                    var personAttributes = _group.Attributes.Values.FirstOrDefault( a => a.FieldTypeId == attributeFieldTypeId && a.QualifierValues.ContainsKey( "entitytype" ) && a.QualifierValues.Values.Any( v => v.Value.Equals( Rock.SystemGuid.EntityType.PERSON, StringComparison.CurrentCultureIgnoreCase ) ) );
+                    var personAttributes = _group.Attributes.Values.FirstOrDefault( a =>
+                                                a.FieldTypeId == attributeFieldTypeId &&
+                                                a.QualifierValues.ContainsKey( "entitytype" ) &&
+                                                a.QualifierValues.Values.Any( v => v.Value.Equals( Rock.SystemGuid.EntityType.PERSON, StringComparison.CurrentCultureIgnoreCase ) )
+                                                );
 
                     if ( personAttributes != null )
                     {
@@ -643,8 +612,22 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                         foreach ( var personAttribute in personAttributeValues.Split( ',' ).AsGuidList() )
                         {
-                            AvailablePersonAttributes.Add( AttributeCache.Read( personAttribute ) );
+                            AvailablePersonAttributeIds.Add( AttributeCache.Read( personAttribute ).Id );
                         }
+                    }
+                }
+                foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
+                    .Where( a =>
+                        a.EntityTypeId == _pEntityTypeId &&
+                        AvailablePersonAttributeIds.Contains( a.Id )
+                        )
+                    .OrderByDescending( a => a.EntityTypeQualifierColumn )
+                    .OrderBy( a => a.Order )
+                    .ThenBy( a => a.Name ) )
+                {
+                    if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
+                    {
+                        AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
                     }
                 }
             }
@@ -668,104 +651,17 @@ namespace RockWeb.Plugins.com_kfs.Groups
             {
                 foreach ( var attribute in AvailableAttributes )
                 {
-                    var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
-                    if ( control != null )
-                    {
-                        if ( control is IRockControl )
-                        {
-                            var rockControl = (IRockControl)control;
-                            rockControl.Label = attribute.Name;
-                            rockControl.Help = attribute.Description;
-                            phAttributeFilters.Controls.Add( control );
-                        }
-                        else
-                        {
-                            var wrapper = new RockControlWrapper();
-                            wrapper.ID = control.ID + "_wrapper";
-                            wrapper.Label = attribute.Name;
-                            wrapper.Controls.Add( control );
-                            phAttributeFilters.Controls.Add( wrapper );
-                        }
-
-                        string savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Key ) );
-                        if ( !string.IsNullOrWhiteSpace( savedValue ) )
-                        {
-                            try
-                            {
-                                var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
-                                attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
-                            }
-                            catch
-                            {
-                                // intentionally ignore
-                            }
-                        }
-                    }
-
                     bool columnExists = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
                     if ( !columnExists )
                     {
                         AttributeField boundField = new AttributeField();
-                        boundField.DataField = attribute.Key;
+                        boundField.DataField = attribute.Id.ToString() + attribute.Key;
                         boundField.AttributeId = attribute.Id;
                         boundField.HeaderText = attribute.Name;
-
-                        var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
-                        if ( attributeCache != null )
+                        if ( attribute.EntityTypeId == _gmEntityTypeId )
                         {
-                            boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;
+                            boundField.Visible = attribute.IsGridColumn;
                         }
-
-                        gGroupMembers.Columns.Add( boundField );
-                    }
-                }
-            }
-
-            if ( AvailablePersonAttributes != null )
-            {
-                foreach ( var attribute in AvailablePersonAttributes )
-                {
-                    var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
-                    if ( control != null )
-                    {
-                        if ( control is IRockControl )
-                        {
-                            var rockControl = ( IRockControl ) control;
-                            rockControl.Label = attribute.Name;
-                            rockControl.Help = attribute.Description;
-                            phAttributeFilters.Controls.Add( control );
-                        }
-                        else
-                        {
-                            var wrapper = new RockControlWrapper();
-                            wrapper.ID = control.ID + "_wrapper";
-                            wrapper.Label = attribute.Name;
-                            wrapper.Controls.Add( control );
-                            phAttributeFilters.Controls.Add( wrapper );
-                        }
-
-                        string savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Key ) );
-                        if ( !string.IsNullOrWhiteSpace( savedValue ) )
-                        {
-                            try
-                            {
-                                var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
-                                attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
-                            }
-                            catch
-                            {
-                                // intentionally ignore
-                            }
-                        }
-                    }
-
-                    bool columnExists = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
-                    if ( !columnExists )
-                    {
-                        AttributeField boundField = new AttributeField();
-                        boundField.DataField = attribute.Key;
-                        boundField.AttributeId = attribute.Id;
-                        boundField.HeaderText = attribute.Name;
 
                         var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
                         if ( attributeCache != null )
@@ -1126,34 +1022,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         }
                     }
 
-                    var personAttributeColumns = new List<BoundField>();
-
-                    if ( AvailablePersonAttributes != null && AvailablePersonAttributes.Any() )
-                    {
-                        var attributeValueService = new AttributeValueService( rockContext );
-                        var parameterExpression = attributeValueService.ParameterExpression;
-
-                        foreach ( var attribute in AvailablePersonAttributes )
-                        {
-                            var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                            if ( filterControl != null )
-                            {
-                                var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                if ( expression != null )
-                                {
-                                    var attributeValues = attributeValueService
-                                        .Queryable()
-                                        .Where( v => v.Attribute.Id == attribute.Id );
-
-                                    attributeValues = attributeValues.Where( parameterExpression, expression, null );
-
-                                    qry = qry.Where( w => attributeValues.Select( v => v.EntityId ).Contains( w.PersonId ) );
-                                }
-                            }
-                        }
-                    }
-
                     _inactiveStatus = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_INACTIVE );
 
                     SortProperty sortProperty = gGroupMembers.SortProperty;
@@ -1185,7 +1053,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     // Since we're not binding to actual group member list, but are using AttributeField columns,
                     // we need to save the group members into the grid's object list
                     gGroupMembers.ObjectList = new Dictionary<string, object>();
-                    groupMembersList.ForEach( m => gGroupMembers.ObjectList.Add( m.Id.ToString(), m ) );
                     gGroupMembers.EntityTypeId = EntityTypeCache.Read( Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid() ).Id;
 
                     var homePhoneType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
@@ -1339,6 +1206,94 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         }
                     }
 
+                    //
+                    // Attributes
+                    //
+
+                    // Get all the person ids in current page of query results
+                    var personIds = groupMembersList
+                        .Select( m => m.PersonId )
+                        .Distinct()
+                        .ToList();
+
+                    var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
+                    var entityTypeIdPerson = EntityTypeCache.GetId<Rock.Model.Person>();
+
+                    var groupMemberAttributesIds = new List<int>();
+                    foreach ( var gma in AvailableAttributes.Where( a => a.EntityTypeId == entityTypeIdGroupMember ) )
+                    {
+                        groupMemberAttributesIds.Add( gma.Id );
+                    }
+
+                    var personAttributesIds = new List<int>();
+                    foreach ( var pa in AvailableAttributes.Where( a => a.EntityTypeId == entityTypeIdPerson ) )
+                    {
+                        personAttributesIds.Add( pa.Id );
+                    }
+
+                    // If there are any attributes that were selected to be displayed, we're going
+                    // to try and read all attribute values in one query and then put them into a
+                    // custom grid ObjectList property so that the AttributeField columns don't need
+                    // to do the LoadAttributes and querying of values for each row/column
+
+                    // Query the attribute values for all rows and attributes
+                    var customAttributeValues = new AttributeValueService( rockContext )
+                        .Queryable( "Attribute" ).AsNoTracking()
+                        .Where( v =>
+                            v.EntityId.HasValue &&
+                            (
+                                (
+                                    personAttributesIds.Contains( v.AttributeId ) &&
+                                    personIds.Contains( v.EntityId.Value )
+                                ) ||
+                                (
+                                    groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                                    groupMemberIds.Contains( v.EntityId.Value )
+                                )
+                            )
+                        )
+                        .ToList();
+
+                    // Get the attributes to add to each row's object
+                    var attributes = new Dictionary<string, AttributeCache>();
+                    AvailableAttributes.ForEach( a => attributes
+                            .Add( a.Id.ToString() + a.Key, a ) );
+                    
+                    // Loop through each of the current page's registrants and build an attribute
+                    // field object for storing attributes and the values for each of the registrants
+                    foreach ( var gm in groupMembersList )
+                    {
+                        if ( attributes.Count > 0 )
+                        {
+                            // Create a row attribute object
+                            var attributeFieldObject = new AttributeFieldObject();
+
+                            // Add the attributes to the attribute object
+                            attributeFieldObject.Attributes = attributes;
+
+                            // Add any person attribute values to object
+                            customAttributeValues
+                                .Where( v =>
+                                    personAttributesIds.Contains( v.AttributeId ) &&
+                                    v.EntityId.Value == gm.PersonId )
+                                .ToList()
+                                .ForEach( v => attributeFieldObject.AttributeValues
+                                    .Add( v.AttributeId.ToString() + v.Attribute.Key, new AttributeValueCache( v ) ) );
+
+                            // Add any group member attribute values to object
+                            customAttributeValues
+                                .Where( v =>
+                                    groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                                    v.EntityId.Value == gm.Id )
+                                .ToList()
+                                .ForEach( v => attributeFieldObject.AttributeValues
+                                    .Add( v.AttributeId.ToString() + v.Attribute.Key, new AttributeValueCache( v ) ) );
+
+                            // Add row attribute object to grid's object list
+                            gGroupMembers.ObjectList.Add( gm.Id.ToString(), attributeFieldObject );
+                        }
+                    }
+                    
                     gGroupMembers.DataSource = dataSource;
                     gGroupMembers.DataBind();
                 }
