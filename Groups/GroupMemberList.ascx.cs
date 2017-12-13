@@ -78,7 +78,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             AvailableAttributes = ViewState["AvailableAttributes"] as List<AttributeCache>;
 
-            BindAttributes();
             AddDynamicControls();
         }
 
@@ -524,15 +523,15 @@ namespace RockWeb.Plugins.com_kfs.Groups
             {
                 cblRole.DataSource = _group.GroupType.Roles.OrderBy( a => a.Order ).ToList();
                 cblRole.DataBind();
-
-                BindAttributes();
-                AddDynamicControls();
             }
 
             cblGroupMemberStatus.BindToEnum<GroupMemberStatus>();
 
             cpCampusFilter.Campuses = CampusCache.All();
-            
+
+            BindAttributes();
+            AddDynamicControls();
+
             tbFirstName.Text = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "First Name" ) );
             tbLastName.Text = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Last Name" ) );
             cpCampusFilter.SelectedCampusId = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Campus" ) ).AsIntegerOrNull();
