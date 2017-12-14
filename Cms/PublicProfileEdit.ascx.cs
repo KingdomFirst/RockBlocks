@@ -33,7 +33,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
     /// <summary>
     /// The main Person Profile block the main information about a peron 
     /// </summary>
-    [DisplayName( "KFS > Public Profile Edit" )]
+    [DisplayName( "Public Profile Edit KFS" )]
     [Category( "CMS" )]
     [Description( "Public block for users to manage their accounts" )]
 
@@ -41,11 +41,12 @@ namespace RockWeb.Plugins.com_kfs.Cms
     [GroupLocationTypeField( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Address Type",
         "The type of address to be displayed / edited.", false, Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME, "", order: 3 )]
     [DefinedValueField( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE, "Phone Numbers", "The types of phone numbers to display / edit.", true, true, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME, order: 4 )]
-    [LinkedPage( "Workflow Launch Page", "Page used to launch the workflow to make a profile change request", false, order: 5 )]
-    [AttributeField( Rock.SystemGuid.EntityType.GROUP, "GroupTypeId", Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Family Attributes", "The family attributes that should be displayed / edited.", false, true, order: 6 )]
-    [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (adults)", "The person attributes that should be displayed / edited for adults.", false, true, order: 7 )]
-    [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (children)", "The person attributes that should be displayed / edited for children.", false, true, order: 8 )]
-    [BooleanField( "Impersonation", "Allow (only use on an internal page used by staff)", "Don't Allow", "Should the current user be able to view and edit other people's transactions?  IMPORTANT: This should only be enabled on an internal page that is secured to trusted users", false, "", 9 )]
+    [BooleanField( "Campus Required", "Make the campus required.", false, order: 5 )]
+    [LinkedPage( "Workflow Launch Page", "Page used to launch the workflow to make a profile change request", false, order: 6 )]
+    [AttributeField( Rock.SystemGuid.EntityType.GROUP, "GroupTypeId", Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Family Attributes", "The family attributes that should be displayed / edited.", false, true, order: 7 )]
+    [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (adults)", "The person attributes that should be displayed / edited for adults.", false, true, order: 8 )]
+    [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (children)", "The person attributes that should be displayed / edited for children.", false, true, order: 9 )]
+    [BooleanField( "Impersonation", "Allow (only use on an internal page used by staff)", "Don't Allow", "Should the current user be able to view and edit other people's transactions?  IMPORTANT: This should only be enabled on an internal page that is secured to trusted users", false, "", 10 )]
 
     public partial class PublicProfileEdit : RockBlock
     {
@@ -63,6 +64,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
             ScriptManager.RegisterStartupScript( ddlGradePicker, ddlGradePicker.GetType(), "grade-selection-" + BlockId.ToString(), ddlGradePicker.GetJavascriptForYearPicker( ypGraduation ), true );
             ddlTitle.BindToDefinedType( DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ), true );
             ddlSuffix.BindToDefinedType( DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) ), true );
+            cpFamilyCampus.Campuses = CampusCache.All().Where( c => c.IsActive == true ).ToList();
             RockPage.AddCSSLink( ResolveRockUrl( "~/Styles/fluidbox.css" ) );
             RockPage.AddScriptLink( ResolveRockUrl( "~/Scripts/imagesloaded.min.js" ) );
             RockPage.AddScriptLink( ResolveRockUrl( "~/Scripts/jquery.fluidbox.min.js" ) );
@@ -95,6 +97,9 @@ namespace RockWeb.Plugins.com_kfs.Cms
                 if ( !Page.IsPostBack )
                 {
                     BindFamilies();
+
+                    cpFamilyCampus.Required = GetAttributeValue( "CampusRequired" ).AsBoolean();
+                    cpFamilyCampus.Visible = cpFamilyCampus.Items.Count > 2;
                 }
                 else
                 {
@@ -116,7 +121,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
                         }
 
                         // Family Attributes
-                        if ( person.Id == person.Id )
+                        if ( person.Id == _person.Id )
                         {
                             List<Guid> familyAttributeGuidList = GetAttributeValue( "FamilyAttributes" ).SplitDelimitedValues().AsGuidList();
                             if ( familyAttributeGuidList.Any() )
@@ -574,6 +579,10 @@ namespace RockWeb.Plugins.com_kfs.Cms
                             var newEmailPreference = rblEmailPreference.SelectedValue.ConvertToEnum<EmailPreference>();
                             History.EvaluateChange( changes, "Email Preference", person.EmailPreference, newEmailPreference );
                             person.EmailPreference = newEmailPreference;
+                            
+                            var familyGroupCampus = group.Campus != null ? group.Campus.Name : string.Empty;
+                            History.EvaluateChange( changes, "Family Campus", familyGroupCampus, cpFamilyCampus.SelectedItem.Text );
+                            group.CampusId = cpFamilyCampus.SelectedCampusId;
 
                             person.LoadAttributes();
                             Rock.Attribute.Helper.GetEditValues( phPersonAttributes, person );
@@ -867,7 +876,6 @@ namespace RockWeb.Plugins.com_kfs.Cms
                         var group = new GroupService( rockContext ).Get( ddlGroup.SelectedValueAsId().Value );
                         if ( group != null )
                         {
-
                             // Family Name
                             lGroupName.Text = group.Name;
 
@@ -969,7 +977,6 @@ namespace RockWeb.Plugins.com_kfs.Cms
 
                     if ( ddlGroup.SelectedValueAsId().HasValue )
                     {
-
                         if ( person != null )
                         {
                             imgPhoto.BinaryFileId = person.PhotoId;
@@ -1014,6 +1021,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
 
                             tbEmail.Text = person.Email;
                             rblEmailPreference.SelectedValue = person.EmailPreference.ConvertToString( false );
+                            cpFamilyCampus.SelectedCampusId = group.CampusId;
 
                             // Person Attributes
                             var displayedAttributeGuids = GetPersonAttributeGuids( person.Id );
@@ -1028,7 +1036,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
                             }
 
                             // Family Attributes
-                            if ( person.Id == person.Id )
+                            if ( person.Id == _person.Id )
                             {
                                 List<Guid> familyAttributeGuidList = GetAttributeValue( "FamilyAttributes" ).SplitDelimitedValues().AsGuidList();
                                 if ( familyAttributeGuidList.Any() )
@@ -1165,6 +1173,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
         /// <param name="displayedAttributeGuids">The displayed attribute guids.</param>
         /// <param name="phAttributes">The ph attributes.</param>
         /// <param name="pnlAttributes">The PNL attributes.</param>
+        /// <param name="setValue">if set to <c>true</c> [set value].</param>
         private void DisplayEditAttributes( IHasAttributes item, List<Guid> displayedAttributeGuids, PlaceHolder phAttributes, Panel pnlAttributes, bool setValue )
         {
             phAttributes.Controls.Clear();
@@ -1193,7 +1202,7 @@ namespace RockWeb.Plugins.com_kfs.Cms
             string n = number as string ?? string.Empty;
             return PhoneNumber.FormattedNumber( cc, n );
         }
-
-        #endregion                          
+        
+        #endregion
     }
 }

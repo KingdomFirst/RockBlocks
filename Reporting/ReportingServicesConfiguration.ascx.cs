@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Web;
 using System.Web.UI;
-using System.Web.UI.WebControls;
-
 using com.kfs.Reporting.SQLReportingServices;
-
 using Rock;
 using Rock.Attribute;
 using Rock.Web.UI;
@@ -15,24 +9,37 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Reporting
 {
-
-    [DisplayName("Reporting Services Configuration")]
-    [Category("KFS > Reporting")]
-    [BooleanField("Use Separate Content Manager User", "Use separate Content Manager user and Browser user.", false, "", 0, "UseCMUser")]
-    
-    [Description("SQL Server Reporting Services Setup and Configuration.")]
+    /// <summary>
+    /// KFS Reporting Services Configuration Block
+    /// </summary>
+    /// <seealso cref="Rock.Web.UI.RockBlock" />
+    [DisplayName( "Reporting Services Configuration" )]
+    [Category( "KFS > Reporting" )]
+    [BooleanField( "Use Separate Content Manager User", "Use separate Content Manager user and Browser user.", false, "", 0, "UseCMUser" )]
+    [Description( "SQL Server Reporting Services Setup and Configuration." )]
     public partial class ReportingServicesConfiguration : RockBlock
     {
-
         #region fields
-        bool useCMUser = false;
+
+        private bool useCMUser = false;
+
         #endregion
+
         #region Page Events
+
+        /// <summary>
+        /// Raises the <see cref="E:System.Web.UI.Control.Init" /> event.
+        /// </summary>
+        /// <param name="e">An <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
         }
 
+        /// <summary>
+        /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
+        /// </summary>
+        /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
@@ -40,25 +47,39 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             LoadBlockSettings();
             if ( !Page.IsPostBack )
             {
-                SetAdminFieldVisibility();
-                
+                pnlAdminUser.Visible = useCMUser;
+
                 TestConnection();
                 LoadCredentials();
                 //btnConfigure.Visible = true;
-                
             }
         }
 
+        /// <summary>
+        /// Handles the Click event of the btnSave control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnSave_Click( object sender, EventArgs e )
         {
             SaveCredentials();
         }
 
+        /// <summary>
+        /// Handles the Click event of the btnConfigure control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnConfigure_Click( object sender, EventArgs e )
         {
             ReportingServiceItem.GetFoldersTree( "", true, true );
         }
 
+        /// <summary>
+        /// Handles the Click event of the btnVerify control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnVerify_Click( object sender, EventArgs e )
         {
             TestConnection();
@@ -67,27 +88,42 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         #endregion
 
         #region Private Events
+
+        /// <summary>
+        /// Displays the message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         private void DisplayMessage( string message )
         {
             DisplayMessage( message, NotificationBoxType.Default );
         }
 
+        /// <summary>
+        /// Displays the message with a custom notification type.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="nbType">Type of the nb.</param>
         private void DisplayMessage( string message, NotificationBoxType nbType )
         {
             nbReportingServices.Text = message;
             nbReportingServices.NotificationBoxType = nbType;
-            nbReportingServices.Visible = !String.IsNullOrWhiteSpace( message );
-
+            nbReportingServices.Visible = !string.IsNullOrWhiteSpace( message );
         }
 
+        /// <summary>
+        /// Loads the block settings.
+        /// </summary>
         private void LoadBlockSettings()
         {
             useCMUser = GetAttributeValue( "UseCMUser" ).AsBoolean();
         }
 
+        /// <summary>
+        /// Loads the credentials.
+        /// </summary>
         private void LoadCredentials()
         {
-            ReportingServicesProvider provider = new ReportingServicesProvider();
+            var provider = new ReportingServicesProvider();
             btnVerify.Visible = provider.CredentialsStored;
             tbReportingServicesURL.Text = provider.ServerUrl;
             tbReportRootFolder.Text = provider.ReportPath;
@@ -96,17 +132,16 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             {
                 tbAdminUserName.Text = provider.ContentManagerUser;
                 tbAdminUserName.Required = true;
-                tbAdminPassword.Text = String.Empty;
+                tbAdminPassword.Text = string.Empty;
                 if ( !string.IsNullOrWhiteSpace( provider.ContentManagerPassword ) )
                 {
                     tbAdminPassword.Placeholder = "Stored";
                     tbAdminPassword.Required = false;
                     hfAdminPasswordSet.Value = bool.TrueString;
-
                 }
                 else
                 {
-                    tbAdminPassword.Placeholder = String.Empty;
+                    tbAdminPassword.Placeholder = string.Empty;
                     tbAdminPassword.Required = true;
                     hfAdminPasswordSet.Value = bool.FalseString;
                 }
@@ -127,23 +162,23 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             }
             else
             {
-                tbPassword.Placeholder = String.Empty;
+                tbPassword.Placeholder = string.Empty;
                 tbPassword.Required = true;
                 hfPasswordSet.Value = bool.FalseString;
             }
         }
 
-        private void SetAdminFieldVisibility()
-        {
-            pnlAdminUser.Visible = useCMUser;
-        }
-
+        /// <summary>
+        /// Saves the credentials.
+        /// </summary>
         private void SaveCredentials()
         {
-            ReportingServicesProvider provider = new ReportingServicesProvider();
-            provider.ServerUrl = tbReportingServicesURL.Text.Trim();
+            var provider = new ReportingServicesProvider
+            {
+                ServerUrl = tbReportingServicesURL.Text.Trim()
+            };
 
-            if ( String.IsNullOrWhiteSpace( provider.ServerUrl ) )
+            if ( string.IsNullOrWhiteSpace( provider.ServerUrl ) )
             {
                 DisplayMessage( "<strong>Error</strong> - Server URL is not formatted properly.", NotificationBoxType.Danger );
                 return;
@@ -152,7 +187,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
             provider.BrowserUser = tbUserName.Text.Trim();
 
-            if ( !hfPasswordSet.Value.AsBoolean() || !String.IsNullOrWhiteSpace( tbPassword.Text ) )
+            if ( !hfPasswordSet.Value.AsBoolean() || !string.IsNullOrWhiteSpace( tbPassword.Text ) )
             {
                 provider.BrowserPassword = tbPassword.Text;
             }
@@ -160,22 +195,21 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             if ( useCMUser )
             {
                 provider.ContentManagerUser = tbAdminUserName.Text.Trim();
-                if ( !hfAdminPasswordSet.Value.AsBoolean() || !String.IsNullOrWhiteSpace( tbAdminPassword.Text ) )
+                if ( !hfAdminPasswordSet.Value.AsBoolean() || !string.IsNullOrWhiteSpace( tbAdminPassword.Text ) )
                 {
                     provider.ContentManagerPassword = tbAdminPassword.Text.Trim();
                 }
-
             }
             else
             {
                 provider.ContentManagerUser = tbUserName.Text.Trim();
-                if ( !hfPasswordSet.Value.AsBoolean() || !String.IsNullOrWhiteSpace( tbPassword.Text ) )
+                if ( !hfPasswordSet.Value.AsBoolean() || !string.IsNullOrWhiteSpace( tbPassword.Text ) )
                 {
                     provider.ContentManagerPassword = tbPassword.Text;
                 }
             }
 
-            string message = String.Empty;
+            var message = string.Empty;
             if ( provider.SaveCredentials( out message ) )
             {
                 LoadCredentials();
@@ -187,16 +221,19 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             }
         }
 
+        /// <summary>
+        /// Tests the connection.
+        /// </summary>
         private void TestConnection()
         {
-            ReportingServicesProvider provider = new ReportingServicesProvider();
+            var provider = new ReportingServicesProvider();
 
             if ( !provider.CredentialsStored )
             {
                 return;
             }
-            string message = String.Empty;
-            bool connectionSuccess = provider.TestConnection( out message, UserType.Browser  );
+            var message = string.Empty;
+            var connectionSuccess = provider.TestConnection( out message, UserType.Browser );
 
             if ( !connectionSuccess )
             {
@@ -220,8 +257,8 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             }
 
             DisplayMessage( "<strong>Success</strong> - Successfully Configured.", NotificationBoxType.Success );
-            
         }
+
         #endregion
     }
 }

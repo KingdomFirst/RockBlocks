@@ -25,12 +25,10 @@ using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Financial;
-using Rock.Security;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
-using Rock.Communication;
 
 namespace RockWeb.Plugins.com_kfs.Giving
 {
@@ -101,11 +99,11 @@ namespace RockWeb.Plugins.com_kfs.Giving
         CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "Text Options", 25 )]
     [DefinedValueField( "2E6540EA-63F0-40FE-BE50-F2A84735E600", "Connection Status", "The connection status to use for new individuals (default: 'Web Prospect'.)", true, false, "368DD475-242C-49C4-A42C-7278BE690CC2", "", 26 )]
     [DefinedValueField( "8522BADD-2871-45A5-81DD-C76DA07E2E7E", "Record Status", "The record status to use for new individuals (default: 'Pending'.)", true, false, "283999EC-7346-42E3-B807-BCE9B2BABB49", "", 27 )]
-
     [SystemEmailField( "Receipt Email", "The system email to use to send the receipt.", false, "", "Email Templates", 28 )]
     [TextField( "Payment Comment", "The comment to include with the payment transaction when sending to Gateway", false, "Online Contribution", "", 29 )]
     [BooleanField( "Enable Comment Entry", "Allows the guest to enter the the value that's put into the comment field (will be appended to the 'Payment Comment' setting)", false, "", 30 )]
     [TextField( "Comment Entry Label", "The label to use on the comment edit field (e.g. Trip Name to give to a specific trip).", false, "Comment", "", 31 )]
+
     #endregion
 
     public partial class KFSTransactionEntry : Rock.Web.UI.RockBlock
@@ -290,8 +288,8 @@ namespace RockWeb.Plugins.com_kfs.Giving
                         .Where( f =>
                         accountParameter.Contains( f.Id ) &&
                         f.IsActive &&
-                        (f.StartDate == null || f.StartDate <= RockDateTime.Today) &&
-                        (f.EndDate == null || f.EndDate >= RockDateTime.Today) ).ToList();
+                        ( f.StartDate == null || f.StartDate <= RockDateTime.Today ) &&
+                        ( f.EndDate == null || f.EndDate >= RockDateTime.Today ) ).ToList();
                     if ( _parameterAccounts.Count > 0 )
                     {
                         accountParameterType = "valid";
@@ -300,12 +298,12 @@ namespace RockWeb.Plugins.com_kfs.Giving
                 if ( !string.IsNullOrWhiteSpace( PageParameter( "glaccount" ) ) )
                 {
                     List<string> glAccountParameter = PageParameter( "glaccount" ).Split( ',' ).ToList();
-                    _parameterAccounts.AddRange ( new FinancialAccountService( rockContext ).Queryable()
+                    _parameterAccounts.AddRange( new FinancialAccountService( rockContext ).Queryable()
                         .Where( f =>
                         glAccountParameter.Contains( f.GlCode ) &&
                         f.IsActive &&
-                        (f.StartDate == null || f.StartDate <= RockDateTime.Today) &&
-                        (f.EndDate == null || f.EndDate >= RockDateTime.Today) ).ToList() );
+                        ( f.StartDate == null || f.StartDate <= RockDateTime.Today ) &&
+                        ( f.EndDate == null || f.EndDate >= RockDateTime.Today ) ).ToList() );
                     if ( _parameterAccounts.Count > 0 )
                     {
                         accountParameterType = "valid";
@@ -346,7 +344,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
             }
             else
             {
-
                 // Save amounts from controls to the viewstate list
                 foreach ( RepeaterItem item in rptAccountList.Items )
                 {
@@ -363,7 +360,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
                         }
                     }
                 }
-
             }
 
             // Update the total amount
@@ -398,7 +394,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
             // Show save account info based on if checkbox is checked
             divSaveAccount.Style[HtmlTextWriterStyle.Display] = cbSaveAccount.Checked ? "block" : "none";
-
         }
 
         #endregion
@@ -433,7 +428,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
             BindAccounts();
         }
 
-
         protected void btnFrequency_SelectionChanged( object sender, EventArgs e )
         {
             int oneTimeFrequencyId = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME ).Id;
@@ -443,7 +437,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
             if ( !oneTime && ( !dtpStartDate.SelectedDate.HasValue || dtpStartDate.SelectedDate.Value.Date <= RockDateTime.Today ) )
             {
-                dtpStartDate.SelectedDate = RockDateTime.Today.AddDays( 1 ); 
+                dtpStartDate.SelectedDate = RockDateTime.Today.AddDays( 1 );
             }
 
             using ( var rockContext = new RockContext() )
@@ -452,7 +446,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
             }
 
             SetPage( 1 );
-
         }
 
         /// <summary>
@@ -487,7 +480,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
                     this.AddHistory( "GivingDetail", "1", null );
                     SetPage( 3 );
                 }
-
             }
             else
             {
@@ -857,10 +849,9 @@ namespace RockWeb.Plugins.com_kfs.Giving
                     dtpStartDate.SelectedDate = RockDateTime.Today;
                 }
             }
-
         }
 
-        private string GetSavedAcccountFreqSupported ( GatewayComponent component )
+        private string GetSavedAcccountFreqSupported( GatewayComponent component )
         {
             if ( component != null )
             {
@@ -899,7 +890,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         }
 
         private GatewayComponent GetGatewayComponent( RockContext rockContext, FinancialGateway gateway )
-        { 
+        {
             if ( gateway != null )
             {
                 gateway.LoadAttributes( rockContext );
@@ -937,8 +928,8 @@ namespace RockWeb.Plugins.com_kfs.Giving
                 var ccSavedAccountIds = new List<int>();
                 var ccCurrencyType = DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_CREDIT_CARD ) );
                 if ( _ccGateway != null &&
-                    _ccGatewayComponent != null && 
-                    _ccGatewayComponent.SupportsSavedAccount( !oneTime ) && 
+                    _ccGatewayComponent != null &&
+                    _ccGatewayComponent.SupportsSavedAccount( !oneTime ) &&
                     _ccGatewayComponent.SupportsSavedAccount( ccCurrencyType ) )
                 {
                     ccSavedAccountIds = savedAccounts
@@ -987,11 +978,8 @@ namespace RockWeb.Plugins.com_kfs.Giving
                         rblSavedAccount.Items[0].Selected = true;
                     }
                 }
-
             }
-
         }
-
 
         private void SetControlOptions()
         {
@@ -1107,7 +1095,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
             // Determine if billing address should be displayed
             cbBillingAddress.Visible = _ccGatewayComponent.PromptForBillingAddress( _ccGateway );
             divBillingAddress.Visible = _ccGatewayComponent.PromptForBillingAddress( _ccGateway );
-
         }
 
         #endregion
@@ -1145,8 +1132,8 @@ namespace RockWeb.Plugins.com_kfs.Giving
                         f.IsActive &&
                         f.IsPublic.HasValue &&
                         f.IsPublic.Value &&
-                        (f.StartDate == null || f.StartDate <= RockDateTime.Today) &&
-                        (f.EndDate == null || f.EndDate >= RockDateTime.Today) )
+                        ( f.StartDate == null || f.StartDate <= RockDateTime.Today ) &&
+                        ( f.EndDate == null || f.EndDate >= RockDateTime.Today ) )
                     .OrderBy( f => f.Order ) )
                 {
                     var accountItem = new AccountItem( account.Id, account.Order, account.Name, account.CampusId, account.PublicName );
@@ -1480,7 +1467,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             }
 
             tdWhenConfirm.Description = schedule != null ? schedule.ToString() : "Today";
-            
+
             return true;
         }
 
@@ -1753,7 +1740,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
             }
         }
 
-
         private bool ProcessStep3( string resultQueryString, out string errorMessage )
         {
             var rockContext = new RockContext();
@@ -1836,7 +1822,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
             errorMessage = string.Empty;
             return true;
-
         }
 
         private PaymentInfo GetTxnPaymentInfo( Person person, out string errorMessage )
@@ -1970,7 +1955,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             {
                 transaction.FinancialPaymentDetail = new FinancialPaymentDetail();
             }
-            transaction.FinancialPaymentDetail.SetFromPaymentInfo( paymentInfo, gateway, rockContext, txnChanges );
+            transaction.FinancialPaymentDetail.SetFromPaymentInfo( paymentInfo, gateway, rockContext );
 
             Guid sourceGuid = Guid.Empty;
             if ( Guid.TryParse( GetAttributeValue( "Source" ), out sourceGuid ) )
@@ -2021,7 +2006,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             transaction.LoadAttributes( rockContext );
             foreach ( KeyValuePair<string, AttributeValueCache> attr in transaction.AttributeValues )
             {
-                if ( PageParameters().ContainsKey ( attr.Key ) )
+                if ( PageParameters().ContainsKey( attr.Key ) )
                 {
                     attr.Value.Value = PageParameter( attr.Key );
                 }
@@ -2101,7 +2086,6 @@ namespace RockWeb.Plugins.com_kfs.Giving
                 pnlSaveAccount.Visible = false;
             }
         }
-
 
         private void SendReceipt( int transactionId )
         {
@@ -2280,7 +2264,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
                     $form.find('.billing-state').val( $('#{17}_ddlState').val() );
                     $form.find('.billing-postal').val( $('#{17}_tbPostalCode').val() );
                 }}
-        
+
                 if ( $('#{1}').val() == 'CreditCard' ) {{
                     $form.find('.cc-first-name').val( $('#{18}').val() );
                     $form.find('.cc-last-name').val( $('#{19}').val() );
@@ -2311,7 +2295,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
     $('#iframeStep2').on('load', function(e) {{
         var location = this.contentWindow.location;
         var qryString = this.contentWindow.location.search;
-        if ( qryString && qryString != '' && qryString.startsWith('?token-id') ) {{ 
+        if ( qryString && qryString != '' && qryString.startsWith('?token-id') ) {{
             $('#{5}').val(qryString);
             {6};
         }} else {{
@@ -2326,9 +2310,9 @@ namespace RockWeb.Plugins.com_kfs.Giving
     }});
 
 ";
-            string script = string.Format( 
+            string script = string.Format(
                 scriptFormat,
-                divCCPaymentInfo.ClientID,      // {0} 
+                divCCPaymentInfo.ClientID,      // {0}
                 hfPaymentTab.ClientID,          // {1}
                 oneTimeFrequencyId,             // {2}
                 GlobalAttributesCache.Value( "CurrencySymbol" ), // {3)
@@ -2349,7 +2333,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
                 txtCardFirstName.ClientID,      // {18}
                 txtCardLastName.ClientID,       // {19}
                 txtCardName.ClientID            // {20}
-            ); 
+            );
 
             ScriptManager.RegisterStartupScript( upPayment, this.GetType(), "giving-profile", script, true );
 
@@ -2413,6 +2397,5 @@ namespace RockWeb.Plugins.com_kfs.Giving
         #endregion
 
         #endregion
-
     }
 }
