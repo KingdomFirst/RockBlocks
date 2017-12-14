@@ -589,6 +589,40 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     }
                 }
 
+                // INHERITED GROUP MEMBER ATTRIBUTES
+                int? inheritedGroupTypeId = _group.GroupType.InheritedGroupTypeId;
+                if ( inheritedGroupTypeId.HasValue )
+                {
+                    while ( inheritedGroupTypeId.HasValue )
+                    {
+                        var inheritedGroupType = GroupTypeCache.Read( inheritedGroupTypeId.Value );
+
+                        if ( inheritedGroupType != null )
+                        {
+                            string qualifierValue = inheritedGroupType.Id.ToString();
+
+                            foreach ( var attributeModel in new AttributeService( new RockContext() ).GetByEntityTypeId( new GroupMember().TypeId ).AsQueryable()
+                                .Where( a =>
+                                    a.EntityTypeQualifierColumn.Equals( "GroupTypeId", StringComparison.OrdinalIgnoreCase ) &&
+                                    a.EntityTypeQualifierValue.Equals( qualifierValue ) )
+                                .OrderBy( a => a.Order )
+                                .ThenBy( a => a.Name ) )
+                            {
+                                if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
+                                {
+                                    AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                                }
+                            }
+
+                            inheritedGroupTypeId = inheritedGroupType.InheritedGroupTypeId;
+                        }
+                        else
+                        {
+                            inheritedGroupTypeId = null;
+                        }
+                    }
+                }
+
                 // PERSON ATTRIBUTES
                 var AvailablePersonAttributeIds = new List<int>();
                 if ( _group.Attributes == null )
