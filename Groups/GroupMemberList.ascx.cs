@@ -29,8 +29,8 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [LinkedPage( "Registration Page", "Page used for viewing the registration(s) associated with a particular group member", false, "", "", 3 )]
     [BooleanField("Show Campus Filter", "Setting to show/hide campus filter.", true, order: 4)]
     [BooleanField( "Show First/Last Attendance", "If the group allows attendance, should the first and last attendance date be displayed for each group member?", false, "", 5, "ShowAttendance" )]
-    [BooleanField( "Bypass Attribute Security", "Determines if the field level security on each attribute should be ignored.", order: 8 )]
-    [BooleanField( "Include All Group Member Attributes In Export", "Determines if all group member attributes should be exported along with those set to 'Show in Grid'.", order: 9 )]
+    [BooleanField( "Include All Group Member Attributes In Export", "Determines if all group member attributes should be exported. False will only the attributes set to 'Show in Grid'.", order: 8 )]
+    [BooleanField( "Bypass Attribute Security", "Determines if the field level security on each attribute should be ignored.", order: 9 )]
 
     public partial class GroupMemberList : RockBlock, ISecondaryBlock
     {
