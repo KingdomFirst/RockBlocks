@@ -2,9 +2,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.Entity;
+using System.ComponentModel;
 using System.Linq;
 using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Data;
 using Rock.Model;
@@ -17,6 +18,10 @@ namespace RockWeb.Plugins.com_kfs.Event
     /// The KFS Group Panel that displays for resource subgroups
     /// </summary>
     /// <seealso cref="System.Web.UI.UserControl" />
+
+    [DisplayName( "Advanced Registration Group Detail" )]
+    [Category( "KFS > Advanced Event Registration" )]
+    [Description( "The KFS Group Panel that displays for resource subgroups." )]
     public partial class KFSGroupPanel : System.Web.UI.UserControl
     {
         /// <summary>
@@ -85,9 +90,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 _group = group;
             }
             // Set up group Panel widget
+            BuildSubgroupHeading( group );
             pnlGroupDescription.Visible = !string.IsNullOrWhiteSpace( group.Description );
             lblGroupDescription.Text = group.Description;
-            BuildSubgroupHeading( group );
             pnlSubGroup.Expanded = _expanded;
             hfGroupId.Value = group.Id.ToString();
             lbGroupEdit.CommandArgument = group.Id.ToString();
@@ -108,6 +113,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var entityTypeId = new GroupMember().TypeId;
                 var groupQualifier = _group.Id.ToString();
                 var groupTypeQualifier = _group.GroupTypeId.ToString();
+
                 foreach ( var attributeModel in new AttributeService( rockContext ).Queryable()
                     .Where( a => a.EntityTypeId == entityTypeId && a.IsGridColumn &&
                         ( ( a.EntityTypeQualifierColumn.Equals( "GroupId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupQualifier ) ) ||
@@ -123,24 +129,58 @@ namespace RockWeb.Plugins.com_kfs.Event
             // Remove current attribute columns
             gGroupMembers.Columns.OfType<AttributeField>().ToList().ForEach( c => gGroupMembers.Columns.Remove( c ) );
 
+            var attributeValueService = new AttributeValueService( rockContext );
             foreach ( var attribute in groupMemberAttributes )
             {
-                var columnExists = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
-                if ( !columnExists )
+                var attributeColumn = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id );
+                if ( attributeColumn == null )
                 {
                     var boundField = new AttributeField();
                     boundField.DataField = attribute.Key;
                     boundField.AttributeId = attribute.Id;
                     boundField.HeaderText = attribute.Name;
 
+                    decimal needsFilled = 0;
                     if ( attribute.FieldType != null )
                     {
-                        boundField.ItemStyle.HorizontalAlign = attribute.FieldType.Field.AlignValue;
+                        boundField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+
+                        var attributeValues = attributeValueService.GetByAttributeId( attribute.Id )
+                            .Where( v => !( v.Value == null || v.Value.Trim() == string.Empty ) )
+                            .Select( v => v.Value ).ToList();
+
+                        // if the values are numeric, sum a number value
+                        if ( attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.INTEGER.AsGuid() ) || attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.DECIMAL.AsGuid() ) )
+                        {
+                            needsFilled = attributeValues.Sum( v => v.AsDecimal() );
+                        }
+                        else if ( attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.MULTI_SELECT.AsGuid() ) )
+                        {
+                            // handles checkboxes and non-empty strings
+                            needsFilled = attributeValues.Count( v => !string.IsNullOrWhiteSpace( v ) );
+                        }
+                        else
+                        {
+                            // handles single select and boolean
+                            needsFilled = attributeValues.Count( v => v.AsBoolean() );
+                        }
+                    }
+
+                    if ( needsFilled > 0 )
+                    {
+                        gGroupMembers.ShowFooter = true;
+                        boundField.FooterText = needsFilled.ToString();
                     }
 
                     gGroupMembers.Columns.Add( boundField );
                 }
-            }  
+
+                if ( gGroupMembers.ShowFooter )
+                {
+                    gGroupMembers.Columns[1].FooterText = "Total";
+                    gGroupMembers.Columns[1].FooterStyle.HorizontalAlign = HorizontalAlign.Left;
+                }
+            }
 
             // Add edit column
             var editField = new EditField();
@@ -155,15 +195,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMembers.DataSource = group.Members;
             gGroupMembers.DataBind();
         }
-       
-        /// <summary>
-        /// Binds the member grid.
-        /// </summary>
-        public void BindGroupMembersGrid()
-        {
-            gGroupMembers.DataSource = _group.Members;
-            gGroupMembers.DataBind();
-        }
 
         /// <summary>
         /// Builds the subgroup heading.
@@ -171,7 +202,13 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="group">The group.</param>
         private void BuildSubgroupHeading( Group group )
         {
-            pnlSubGroup.Title = string.Format( "<span class='span-panel-heading'>{0}</span>", group.Name );
+            var groupIconString = string.Empty;
+            if ( !string.IsNullOrWhiteSpace( group.GroupType.IconCssClass ) )
+            {
+                groupIconString = string.Format( "<i class='{0}'></i> ", group.GroupType.IconCssClass );
+            }
+
+            pnlSubGroup.Title = string.Format( "{0} <span class='span-panel-heading'>{1}</span>", groupIconString, group.Name );
             var memCount = group.Members.Count( m => m.GroupMemberStatus == GroupMemberStatus.Active || m.GroupMemberStatus == GroupMemberStatus.Pending );
             if ( group.GroupCapacity.HasValue && group.GroupCapacity > 0 )
             {
@@ -225,6 +262,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         private void gGroupMembers_DeleteClick( object sender, RowEventArgs e )
         {
+            // TODO: enforce counselor delete support
+
             var rockContext = new RockContext();
             var groupMemberService = new GroupMemberService( rockContext );
             var groupMember = groupMemberService.Get( e.RowKeyId );

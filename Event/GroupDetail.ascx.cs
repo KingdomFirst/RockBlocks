@@ -1,25 +1,10 @@
-﻿// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
+﻿// KFS Group Detail
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
-using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Humanizer;
@@ -37,10 +22,10 @@ using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using Attribute = Rock.Model.Attribute;
 
-namespace RockWeb.Blocks.Groups
+namespace RockWeb.Plugins.com_kfs.Event
 {
-    [DisplayName( "KFS Group Detail" )]
-    [Category( "KFS > Groups" )]
+    [DisplayName( "Advanced Registration Group Detail" )]
+    [Category( "KFS > Advanced Event Registration" )]
     [Description( "Displays the details of the given group." )]
     [GroupTypesField( "Group Types Include", "Select group types to show in this block.  Leave all unchecked to show all but the excluded group types.", false, key: "GroupTypes", order: 0 )]
     [GroupTypesField( "Group Types Exclude", "Select group types to exclude from this block.", false, key: "GroupTypesExclude", order: 1 )]
@@ -53,7 +38,7 @@ namespace RockWeb.Blocks.Groups
     [LinkedPage( "Registration Instance Page", "The page to display registration details.", false, "", "", 7 )]
     [LinkedPage( "Event Item Occurrence Page", "The page to display event item occurrence details.", false, "", "", 8 )]
     [LinkedPage( "Content Item Page", "The page to display registration details.", false, "", "", 9 )]
-    [BooleanField( "Use in Dialog Modal", "Set to true when being used in a Layout of type Modal. This will cause only edit fields to be displayed, and the Save/Cancel buttons of the Modal layout will replace the same from the block itself.", false, "", 9, key: "useDialog" )]
+    [BooleanField( "Enable Dialog Mode", "When enabled, the Save and Cancel buttons will be associated with the buttons of the Modal.", false, "", 13 )]
     public partial class GroupDetail : RockBlock, IDetailBlock
     {
         #region Constants
@@ -66,7 +51,6 @@ namespace RockWeb.Blocks.Groups
         #region Fields
 
         private readonly List<string> _tabs = new List<string> { MEMBER_LOCATION_TAB_TITLE, OTHER_LOCATION_TAB_TITLE };
-        private bool _useDialog = false;
 
         #endregion
 
@@ -229,16 +213,10 @@ namespace RockWeb.Blocks.Groups
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlGroupDetail );
 
-            //evalute if page is dialoge
-            _useDialog = GetAttributeValue( "useDialog" ).AsBoolean();
-            if ( _useDialog )
+            if ( GetAttributeValue( "EnableDialogMode" ).AsBoolean() && this.Page is DialogPage )
             {
-                var dialogPage = this.Page as DialogPage;
-                if ( dialogPage != null )
-                {
-                    dialogPage.OnSave += btnSave_Click;
-                    pnlActions.Visible = false;
-                }
+                ( (DialogPage)this.Page ).OnSave += btnSave_Click;
+                pnlActions.Visible = false;
             }
         }
 
@@ -697,7 +675,7 @@ namespace RockWeb.Blocks.Groups
                 cvGroup.ErrorMessage = group.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" );
                 return;
             }
-            
+
             // use WrapTransaction since SaveAttributeValues does it's own RockContext.SaveChanges()
             rockContext.WrapTransaction( () =>
             {
@@ -711,7 +689,7 @@ namespace RockWeb.Blocks.Groups
 
                 if ( adding )
                 {
-                    // add ADMINISTRATE to the person who added the group 
+                    // add ADMINISTRATE to the person who added the group
                     Rock.Security.Authorization.AllowPerson( group, Authorization.ADMINISTRATE, this.CurrentPerson, rockContext );
                 }
 
@@ -785,7 +763,7 @@ namespace RockWeb.Blocks.Groups
                 GroupMemberWorkflowTriggerService.FlushCachedTriggers();
             }
 
-            if ( !_useDialog )
+            if ( !GetAttributeValue( "EnableDialogMode" ).AsBoolean() )
             {
                 var qryParams = new Dictionary<string, string>();
                 qryParams["GroupId"] = group.Id.ToString();
@@ -795,7 +773,6 @@ namespace RockWeb.Blocks.Groups
             }
             else
             {
-                lReadOnlyTitle.Text = group.Name.FormatAsHtmlTitle();
                 string script = "if (typeof window.parent.Rock.controls.modal.close === 'function') window.parent.Rock.controls.modal.close('Done');";
                 ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "close-modal", script, true );
             }
@@ -1017,7 +994,7 @@ namespace RockWeb.Blocks.Groups
                         // get all the allowed GroupTypes as defined by the parent group type
                         var allowedChildGroupTypesOfParentGroup = GetAllowedGroupTypes( parentGroup, rockContext ).ToList();
 
-                        // narrow it down to group types that the current user is allowed to edit 
+                        // narrow it down to group types that the current user is allowed to edit
                         var authorizedGroupTypes = new List<GroupType>();
                         foreach ( var allowedGroupType in allowedChildGroupTypesOfParentGroup )
                         {
@@ -1072,31 +1049,9 @@ namespace RockWeb.Blocks.Groups
                 nbEditModeMessage.Text = EditModeMessage.System( Group.FriendlyTypeName );
             }
 
-            var roleLimitWarnings = new StringBuilder();
-
-            if ( group.GroupType != null && group.GroupType.Roles != null && group.GroupType.Roles.Any() )
-            {
-                foreach ( var role in group.GroupType.Roles.Where( a => a.MinCount.HasValue || a.MaxCount.HasValue ) )
-                {
-                    var groupMemberService = new GroupMemberService( rockContext );
-                    int curCount = groupMemberService.Queryable().Where( m => m.GroupId == group.Id && m.GroupRoleId == role.Id && m.GroupMemberStatus == GroupMemberStatus.Active ).Count();
-
-                    if ( role.MinCount.HasValue && role.MinCount.Value > curCount )
-                    {
-                        string format = "The <strong>{1}</strong> role is currently below its minimum requirement of {2:N0} active {3}.<br/>";
-                        roleLimitWarnings.AppendFormat( format, role.Name.Pluralize(), role.Name, role.MinCount, role.MinCount == 1 ? group.GroupType.GroupMemberTerm : group.GroupType.GroupMemberTerm.Pluralize() );
-                    }
-
-                    if ( role.MaxCount.HasValue && role.MaxCount.Value < curCount )
-                    {
-                        string format = "The <strong>{1}</strong> role is currently above its maximum limit of {2:N0} active {3}.<br/>";
-                        roleLimitWarnings.AppendFormat( format, role.Name.Pluralize(), role.Name, role.MaxCount, role.MaxCount == 1 ? group.GroupType.GroupMemberTerm : group.GroupType.GroupMemberTerm.Pluralize() );
-                    }
-                }
-            }
-
-            nbRoleLimitWarning.Text = roleLimitWarnings.ToString();
-            nbRoleLimitWarning.Visible = roleLimitWarnings.Length > 0;
+            string roleLimitWarnings;
+            nbRoleLimitWarning.Visible = group.GetGroupTypeRoleLimitWarnings( out roleLimitWarnings );
+            nbRoleLimitWarning.Text = roleLimitWarnings;
 
             FollowingsHelper.SetFollowing( group, pnlFollowing, this.CurrentPerson );
 
@@ -1110,7 +1065,7 @@ namespace RockWeb.Blocks.Groups
             {
                 btnEdit.Visible = true;
                 btnDelete.Visible = !group.IsSystem;
-                if ( group.Id > 0 && string.IsNullOrWhiteSpace( PageParameter( "Edit" ) ) && !_useDialog )
+                if ( group.Id > 0 && !GetAttributeValue( "EnableDialogMode" ).AsBoolean() )
                 {
                     ShowReadonlyDetails( group );
                 }
@@ -1391,10 +1346,12 @@ namespace RockWeb.Blocks.Groups
                         case ScheduleType.Named:
                             spSchedule.SetValue( group.Schedule );
                             break;
+
                         case ScheduleType.Custom:
                             hfUniqueScheduleId.Value = group.Schedule.Id.ToString();
                             sbSchedule.iCalendarContent = group.Schedule.iCalendarContent;
                             break;
+
                         case ScheduleType.Weekly:
                             hfUniqueScheduleId.Value = group.Schedule.Id.ToString();
                             dowWeekly.SelectedDayOfWeek = group.Schedule.WeeklyDayOfWeek;
@@ -1504,7 +1461,7 @@ namespace RockWeb.Blocks.Groups
                     int activeGroupMemberCount = group.Members.Where( m => m.GroupMemberStatus == GroupMemberStatus.Active ).Count();
                     if ( activeGroupMemberCount > group.GroupCapacity )
                     {
-                        nbGroupCapacityMessage.Text = string.Format( "This group is over capacity by {0}.", "individual".ToQuantity((activeGroupMemberCount - group.GroupCapacity.Value)) );
+                        nbGroupCapacityMessage.Text = string.Format( "This group is over capacity by {0}.", "individual".ToQuantity( ( activeGroupMemberCount - group.GroupCapacity.Value ) ) );
                         nbGroupCapacityMessage.Visible = true;
 
                         if ( group.GroupType != null && group.GroupType.GroupCapacityRule == GroupCapacityRule.Hard )
@@ -1597,12 +1554,14 @@ namespace RockWeb.Blocks.Groups
                     {
                         if ( groupLocation.Location != null )
                         {
-                            if ( groupLocation.Location.GeoPoint != null )
+                            var googleAPIKey = GlobalAttributesCache.Read().GetValue( "GoogleAPIKey" );
+
+                            if ( groupLocation.Location.GeoPoint != null && !string.IsNullOrWhiteSpace( googleAPIKey ) )
                             {
                                 string markerPoints = string.Format( "{0},{1}", groupLocation.Location.GeoPoint.Latitude, groupLocation.Location.GeoPoint.Longitude );
                                 string mapLink = System.Text.RegularExpressions.Regex.Replace( mapStyle, @"\{\s*MarkerPoints\s*\}", markerPoints );
                                 mapLink = System.Text.RegularExpressions.Regex.Replace( mapLink, @"\{\s*PolygonPoints\s*\}", string.Empty );
-                                mapLink += "&sensor=false&size=450x250&zoom=13&format=png";
+                                mapLink += "&sensor=false&size=450x250&zoom=13&format=png&key=" + googleAPIKey;
                                 var literalcontrol = new Literal()
                                 {
                                     Text = string.Format(
@@ -1614,12 +1573,12 @@ namespace RockWeb.Blocks.Groups
                                 };
                                 phMaps.Controls.Add( literalcontrol );
                             }
-                            else if ( groupLocation.Location.GeoFence != null )
+                            else if ( groupLocation.Location.GeoFence != null && !string.IsNullOrWhiteSpace( googleAPIKey ) )
                             {
                                 string polygonPoints = "enc:" + groupLocation.Location.EncodeGooglePolygon();
                                 string mapLink = System.Text.RegularExpressions.Regex.Replace( mapStyle, @"\{\s*MarkerPoints\s*\}", string.Empty );
                                 mapLink = System.Text.RegularExpressions.Regex.Replace( mapLink, @"\{\s*PolygonPoints\s*\}", polygonPoints );
-                                mapLink += "&sensor=false&size=350x200&format=png";
+                                mapLink += "&sensor=false&size=350x200&format=png&key=" + googleAPIKey;
                                 phMaps.Controls.Add(
                                     new LiteralControl( string.Format(
                                         "<div class='group-location-map'>{0}<a href='{1}'><img class='img-thumbnail' src='{2}'/></a></div>",
@@ -1791,12 +1750,15 @@ namespace RockWeb.Blocks.Groups
                 case "LOCATIONS":
                     dlgLocations.Show();
                     break;
+
                 case "GROUPMEMBERATTRIBUTES":
                     dlgGroupMemberAttribute.Show();
                     break;
+
                 case "GROUPREQUIREMENTS":
                     mdGroupRequirement.Show();
                     break;
+
                 case "MEMBERWORKFLOWTRIGGERS":
                     dlgMemberWorkflowTriggers.Show();
                     break;
@@ -1813,12 +1775,15 @@ namespace RockWeb.Blocks.Groups
                 case "LOCATIONS":
                     dlgLocations.Hide();
                     break;
+
                 case "GROUPMEMBERATTRIBUTES":
                     dlgGroupMemberAttribute.Hide();
                     break;
+
                 case "GROUPREQUIREMENTS":
                     mdGroupRequirement.Hide();
                     break;
+
                 case "MEMBERWORKFLOWTRIGGERS":
                     dlgMemberWorkflowTriggers.Hide();
                     break;
