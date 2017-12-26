@@ -23,7 +23,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
     [BooleanField( "Sync Name", "Flag indicating if video name should be stored.", true, "", 2 )]
     [BooleanField( "Sync Description", "Flag indicating if video description should be stored.", true, "", 3 )]
     [TextField( "Image Attribute Key", "The Image Attribute Key that the Vimeo Image URL should be stored in. Leave blank to never sync.", false, "", "", 4 )]
-    [IntegerField( "Image Width", "The desired width of image to store link to.", true, 1920, "", 5 )]
+    [IntegerField( "Image Width", "The desired width of image to store link to.", false, 1920, "", 5 )]
     [TextField( "Duration Attribute Key", "The Duration Attribute Key that the Vimeo Duration should be stored in. Leave blank to never sync.", false, "", "", 6 )]
     [TextField( "HD Video Attribute Key", "The HD Video Attribute Key that the HD Video should be stored in. Leave blank to never sync.", false, "", "", 7 )]
     [TextField( "SD Video Attribute Key", "The SD Video Attribute Key that the SD Video should be stored in. Leave blank to never sync.", false, "", "", 8 )]
@@ -110,6 +110,8 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
                 }
                 else
                 {
+                    cblSyncOptions.Items.Clear();
+
                     _imageAttributeKey = GetAttributeValue( "ImageAttributeKey" );
                     _durationAttributeKey = GetAttributeValue( "DurationAttributeKey" );
                     _hdVideoAttributeKey = GetAttributeValue( "HDVideoAttributeKey" );
@@ -168,7 +170,14 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
                         cblSyncOptions.Items.Add( item );
                     }
 
-                    pnlVimeoSync.Visible = true;
+                    if ( cblSyncOptions.Items.Count > 0 )
+                    {
+                        pnlVimeoSync.Visible = true;
+                    }
+                    else
+                    {
+                        pnlVimeoSync.Visible = false;
+                    }
                 }
             }
         }
@@ -196,45 +205,47 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
             long videoId = _vimeoId;
             var client = new VimeoClient( _accessToken );
             var vimeo = new Video();
+            var width = GetAttributeValue( "ImageWidth" ).AsInteger();
+            var video = vimeo.GetVideoInfo( client, videoId, width );
 
-            if ( cblSyncOptions.Items.FindByValue( "Image" ).Selected == true )
-            {
-                var width = GetAttributeValue( "ImageWidth" ).AsInteger();
-                var link = vimeo.GetPicture( client, videoId, width );
-                if ( !string.IsNullOrWhiteSpace( link ) )
-                {
-                    contentItem.AttributeValues[_imageAttributeKey].Value = link;
-                }
-            }
-
-            var video = vimeo.GetVideoInfo( client, videoId );
-
-            if ( cblSyncOptions.Items.FindByValue( "Name" ).Selected == true )
+            var cbName = cblSyncOptions.Items.FindByValue( "Name" );
+            if ( cbName != null && cbName.Selected == true )
             {
                 contentItem.Title = video.name;
             }
 
-            if ( cblSyncOptions.Items.FindByValue( "Description" ).Selected == true )
+            var cbDescription = cblSyncOptions.Items.FindByValue( "Description" );
+            if ( cbDescription != null && cbDescription.Selected == true )
             {
                 contentItem.Content = video.description;
             }
 
-            if ( cblSyncOptions.Items.FindByValue( "Duration" ).Selected == true )
+            var cbImage = cblSyncOptions.Items.FindByValue( "Image" );
+            if ( cbImage != null && cbImage.Selected == true )
+            {
+                contentItem.AttributeValues[_imageAttributeKey].Value = video.imageUrl;
+            }
+
+            var cbDuration = cblSyncOptions.Items.FindByValue( "Duration" );
+            if ( cbDuration != null && cbDuration.Selected == true )
             {
                 contentItem.AttributeValues[_durationAttributeKey].Value = video.duration.ToString();
             }
 
-            if ( cblSyncOptions.Items.FindByValue( "HD Video" ).Selected == true && !string.IsNullOrWhiteSpace( video.hdLink ) )
+            var cbHDVideo = cblSyncOptions.Items.FindByValue( "HD Video" );
+            if ( cbHDVideo != null && cbHDVideo.Selected == true && !string.IsNullOrWhiteSpace( video.hdLink ) )
             {
                 contentItem.AttributeValues[_hdVideoAttributeKey].Value = video.hdLink;
             }
 
-            if ( cblSyncOptions.Items.FindByValue( "SD Video" ).Selected == true && !string.IsNullOrWhiteSpace( video.sdLink ) )
+            var cbSDVideo = cblSyncOptions.Items.FindByValue( "SD Video" );
+            if ( cbSDVideo != null && cbSDVideo.Selected == true && !string.IsNullOrWhiteSpace( video.sdLink ) )
             {
                 contentItem.AttributeValues[_sdVideoAttributeKey].Value = video.sdLink;
             }
 
-            if ( cblSyncOptions.Items.FindByValue( "HLS Video" ).Selected == true && !string.IsNullOrWhiteSpace( video.hlsLink ) )
+            var cbHLSVideo = cblSyncOptions.Items.FindByValue( "HLS Video" );
+            if ( cbHLSVideo != null && cbHLSVideo.Selected == true && !string.IsNullOrWhiteSpace( video.hlsLink ) )
             {
                 contentItem.AttributeValues[_hlsVideoAttributeKey].Value = video.hlsLink;
             }
