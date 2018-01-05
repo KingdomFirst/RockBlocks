@@ -33,13 +33,13 @@ using Rock.Store;
 using System.Text;
 using Rock.Security;
 
-namespace RockWeb.Blocks.Event
+namespace RockWeb.Plugins.com_kfs.Event
 {
     /// <summary>
     /// Renders a particular calendar using Lava.
     /// </summary>
-    [DisplayName( "Calendar Lava" )]
-    [Category( "Event" )]
+    [DisplayName( "KFS Calendar Lava" )]
+    [Category( "KFS > Event" )]
     [Description( "Renders a particular calendar using Lava." )]
 
     [EventCalendarField( "Event Calendar", "The event calendar to be displayed", true, "1", order: 0 )]
@@ -56,18 +56,20 @@ namespace RockWeb.Blocks.Event
     [BooleanField( "Show Week View", "Determines whether the week view option is shown", true, order: 9 )]
     [BooleanField( "Show Month View", "Determines whether the month view option is shown", true, order: 10 )]
 
-    [BooleanField( "Enable Campus Context", "If the page has a campus context it's value will be used as a filter", order: 11 )]
-    [CodeEditorField( "Lava Template", "Lava template to use to display the list of events.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, true, @"{% include '~~/Assets/Lava/Calendar.lava' %}", "", 12 )]
+    [BooleanField( "Include Inactive Campuses", "Should inactive campuses be listed as well?", false, "", order: 11 )]
+    [BooleanField( "Enable Campus Context", "If the page has a campus context it's value will be used as a filter", order: 12 )]
+    [CodeEditorField( "Lava Template", "Lava template to use to display the list of events.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, true, @"{% include '~~/Assets/Lava/Calendar.lava' %}", "", 13 )]
 
-    [DayOfWeekField( "Start of Week Day", "Determines what day is the start of a week.", true, DayOfWeek.Sunday, order: 13 )]
+    [DayOfWeekField( "Start of Week Day", "Determines what day is the start of a week.", true, DayOfWeek.Sunday, order: 14 )]
 
-    [BooleanField( "Enable Debug", "Display a list of merge fields available for lava.", false, "", 14 )]
-    [BooleanField( "Set Page Title", "Determines if the block should set the page title with the calendar name.", false, order: 15 )]
+    [BooleanField( "Enable Debug", "Display a list of merge fields available for lava.", false, "", 15 )]
+    [BooleanField( "Set Page Title", "Determines if the block should set the page title with the calendar name.", false, order: 16 )]
 
-    [TextField( "Campus Parameter Name", "The page parameter name that contains the id of the campus entity.", false, "campusId", order: 16 )]
-    [TextField( "Category Parameter Name", "The page parameter name that contains the id of the category entity.", false, "categoryId", order: 17 )]
+    [TextField( "Campus Parameter Name", "The page parameter name that contains the id of the campus entity.", false, "campusId", order: 17 )]
+    [TextField( "Category Parameter Name", "The page parameter name that contains the id of the category entity.", false, "categoryId", order: 18 )]
+    [TextField( "Date Parameter Name", "The page parameter name that contains the selected date.", false, "date", order: 19 )]
 
-    public partial class CalendarLava : Rock.Web.UI.RockBlock
+    public partial class KFSCalendarLava : Rock.Web.UI.RockBlock
     {
         #region Fields
 
@@ -415,6 +417,8 @@ namespace RockWeb.Blocks.Event
 
             var mergeFields = new Dictionary<string, object>();
             mergeFields.Add( "TimeFrame", ViewMode );
+            mergeFields.Add( "StartDate", FilterStartDate );
+            mergeFields.Add( "EndDate", FilterEndDate );
             mergeFields.Add( "DetailsPage", LinkedPageRoute( "DetailsPage" ) );
             mergeFields.Add( "EventItems", eventSummaries );
             mergeFields.Add( "EventItemOccurrences", eventOccurrenceSummaries );
@@ -479,9 +483,21 @@ namespace RockWeb.Blocks.Event
             calEventCalendar.SelectedDates.Clear();
             calEventCalendar.SelectedDates.SelectRange( FilterStartDate.Value, FilterEndDate.Value );
 
+            // Setup different dates if QueryString is set on load
+            var selectedDate = PageParameter( GetAttributeValue( "DateParameterName" ) ).AsDateTime();
+            if ( selectedDate.HasValue )
+            {
+                if ( selectedDate != null )
+                {
+                    SelectedDate = selectedDate;
+                    ResetCalendarSelection();
+                }
+            }
+
             // Setup Campus Filter
+            bool includeInactive = GetAttributeValue( "IncludeInactiveCampuses" ).AsBoolean();
             rcwCampus.Visible = GetAttributeValue( "CampusFilterDisplayMode" ).AsInteger() > 1;
-            cblCampus.DataSource = CampusCache.All();
+            cblCampus.DataSource = CampusCache.All( includeInactive );
             cblCampus.DataBind();
 
             //Check for Campus Parameter
