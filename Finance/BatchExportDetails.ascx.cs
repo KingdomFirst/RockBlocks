@@ -47,7 +47,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
 
                 if ( attValue != null )
                 {
-                    exportDate = (DateTime)attValue.AsDateTime();
+                    exportDate = ( DateTime ) attValue.AsDateTime();
                 }
             }
 
