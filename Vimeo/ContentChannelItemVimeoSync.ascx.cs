@@ -20,14 +20,16 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
 
     [TextField( "Vimeo Id Key", "The attribute key containing the Vimeo Id", true, "", "", 0 )]
     [EncryptedTextField( "Access Token", "The authentication token for Vimeo.", true, "", "", 1 )]
-    [BooleanField( "Sync Name", "Flag indicating if video name should be stored.", true, "", 2 )]
-    [BooleanField( "Sync Description", "Flag indicating if video description should be stored.", true, "", 3 )]
-    [TextField( "Image Attribute Key", "The Image Attribute Key that the Vimeo Image URL should be stored in. Leave blank to never sync.", false, "", "", 4 )]
-    [IntegerField( "Image Width", "The desired width of image to store link to.", false, 1920, "", 5 )]
-    [TextField( "Duration Attribute Key", "The Duration Attribute Key that the Vimeo Duration should be stored in. Leave blank to never sync.", false, "", "", 6 )]
-    [TextField( "HD Video Attribute Key", "The HD Video Attribute Key that the HD Video should be stored in. Leave blank to never sync.", false, "", "", 7 )]
-    [TextField( "SD Video Attribute Key", "The SD Video Attribute Key that the SD Video should be stored in. Leave blank to never sync.", false, "", "", 8 )]
-    [TextField( "HLS Video Attribute Key", "The HLS Video Attribute Key that the HLS Video should be stored in. Leave blank to never sync.", false, "", "", 9 )]
+    [BooleanField( "Preview", "Flag indicating if a preview of the Vimeo video should displayed.", true, "", 2 )]
+    [TextField( "Preview Width", "The bootstrap column width to display the preview in. Default: col-sm-3", false, "col-sm-3", "", 3 )]
+    [BooleanField( "Sync Name", "Flag indicating if video name should be stored.", true, "", 4 )]
+    [BooleanField( "Sync Description", "Flag indicating if video description should be stored.", true, "", 5 )]
+    [TextField( "Image Attribute Key", "The Image Attribute Key that the Vimeo Image URL should be stored in. Leave blank to never sync.", false, "", "", 6 )]
+    [IntegerField( "Image Width", "The desired width of image to store link to.", false, 1920, "", 7 )]
+    [TextField( "Duration Attribute Key", "The Duration Attribute Key that the Vimeo Duration should be stored in. Leave blank to never sync.", false, "", "", 8 )]
+    [TextField( "HD Video Attribute Key", "The HD Video Attribute Key that the HD Video should be stored in. Leave blank to never sync.", false, "", "", 9 )]
+    [TextField( "SD Video Attribute Key", "The SD Video Attribute Key that the SD Video should be stored in. Leave blank to never sync.", false, "", "", 10 )]
+    [TextField( "HLS Video Attribute Key", "The HLS Video Attribute Key that the HLS Video should be stored in. Leave blank to never sync.", false, "", "", 11 )]
 
     #endregion
 
@@ -117,6 +119,16 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
                     _hdVideoAttributeKey = GetAttributeValue( "HDVideoAttributeKey" );
                     _sdVideoAttributeKey = GetAttributeValue( "SDVideoAttributeKey" );
                     _hlsVideoAttributeKey = GetAttributeValue( "HLSVideoAttributeKey" );
+
+                    if ( GetAttributeValue( "Preview" ).AsBoolean() )
+                    {
+                        litPreview.Text = string.Format( "<div class=\"{0}\"><div class=\"embed-responsive embed-responsive-16by9\"><iframe class=\"embed-responsive-item\" src=\"https://player.vimeo.com/video/{1}\"></iframe></div></div>", GetAttributeValue( "PreviewWidth" ), _vimeoId );
+                        litPreview.Visible = true;
+                    }
+                    else
+                    {
+                        litPreview.Visible = false;
+                    }
 
                     if ( GetAttributeValue( "SyncName" ).AsBoolean() )
                     {
