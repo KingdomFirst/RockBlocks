@@ -96,11 +96,11 @@
 
             <div class="panel panel-block">
 
-                <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
-
                 <div class="panel-heading panel-follow clearfix">
-                    <h1 class="panel-title"><i class="fa fa-file-o"></i>
-                        <asp:Literal ID="lReadOnlyTitle" runat="server" /></h1>
+                    <h1 class="panel-title">
+                        <i class="fa fa-file-o"></i>
+                        <asp:Literal ID="lReadOnlyTitle" runat="server" />
+                    </h1>
                     <div class="panel-labels">
                         <Rock:HighlightLabel ID="hlInactive" runat="server" LabelType="Danger" Text="Inactive" />
                         <Rock:HighlightLabel ID="hlType" runat="server" LabelType="Type" />
@@ -108,6 +108,8 @@
                     <asp:Panel runat="server" ID="pnlFollowing" CssClass="panel-follow-status js-follow-status" data-toggle="tooltip" data-placement="top" title="Click to Follow"></asp:Panel>
                 </div>
                 <div class="panel-body">
+
+                    <asp:ValidationSummary ID="vsDetails" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
 
                     <div id="pnlEditDetails" runat="server">
 
@@ -204,13 +206,15 @@
 
                 <asp:Panel ID="pnlRegistrations" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-user"></i>Registrations</h1>
+                        <h1 class="panel-title">
+                            <i class="fa fa-user"></i>Registrations
+                        </h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdRegistrationsGridWarning" runat="server" />
                         <div class="grid grid-panel">
-                            <Rock:GridFilter ID="fRegistrations" runat="server" OnDisplayFilterValue="fRegistrations_DisplayFilterValue">
-                                <Rock:DateRangePicker ID="drpRegistrationDateRange" runat="server" Label="Date Range" />
+                            <Rock:GridFilter ID="fRegistrations" runat="server" OnDisplayFilterValue="fRegistrations_DisplayFilterValue" OnClearFilterClick="fRegistrations_ClearFilterClick">
+                                <Rock:SlidingDateRangePicker ID="sdrpRegistrationDateRange" runat="server" Label="Registration Date Range" />
                                 <Rock:RockDropDownList ID="ddlRegistrationPaymentStatus" runat="server" Label="Payment Status">
                                     <asp:ListItem Text="" Value="" />
                                     <asp:ListItem Text="Paid in Full" Value="Paid in Full" />
@@ -230,6 +234,7 @@
                                             <asp:Literal ID="lRegisteredBy" runat="server"></asp:Literal>
                                         </ItemTemplate>
                                     </Rock:RockTemplateField>
+                                    <Rock:RockBoundField DataField="ConfirmationEmail" HeaderText="Confirmation Email" ExcelExportBehavior="AlwaysInclude" Visible="false" />
                                     <Rock:RockTemplateField HeaderText="Registrants">
                                         <ItemTemplate>
                                             <asp:Literal ID="lRegistrants" runat="server"></asp:Literal>
@@ -238,7 +243,7 @@
                                     <Rock:DateTimeField DataField="CreatedDateTime" HeaderText="When" SortExpression="CreatedDateTime" />
                                     <Rock:RockTemplateField HeaderText="Discount Code" ItemStyle-HorizontalAlign="Center" SortExpression="DiscountCode" Visible="false">
                                         <ItemTemplate>
-                                            <asp:Label ID="lDiscount" runat="server" CssClass="label" />
+                                            <asp:Label ID="lDiscount" runat="server" CssClass="label label-default" />
                                         </ItemTemplate>
                                     </Rock:RockTemplateField>
                                     <Rock:RockTemplateField HeaderText="Total Cost" ItemStyle-HorizontalAlign="Right" SortExpression="TotalCost">
@@ -266,17 +271,22 @@
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdRegistrantsGridWarning" runat="server" />
                         <div class="grid grid-panel">
-                            <Rock:GridFilter ID="fRegistrants" runat="server" OnDisplayFilterValue="fRegistrants_DisplayFilterValue">
-                                <Rock:DateRangePicker ID="drpRegistrantDateRange" runat="server" Label="Date Range" />
+                            <Rock:GridFilter ID="fRegistrants" runat="server" OnDisplayFilterValue="fRegistrants_DisplayFilterValue" OnClearFilterClick="fRegistrants_ClearFilterClick">
+                                <Rock:SlidingDateRangePicker ID="sdrpRegistrantsRegistrantDateRange" runat="server" Label="Registration Date Range" />
                                 <Rock:RockTextBox ID="tbRegistrantFirstName" runat="server" Label="First Name" />
                                 <Rock:RockTextBox ID="tbRegistrantLastName" runat="server" Label="Last Name" />
                                 <Rock:RockDropDownList ID="ddlInGroup" runat="server" Label="In Group" />
-                                <Rock:RockDropDownList ID="ddlSignedDocument" runat="server" Label="Signed Document" />
+                                <Rock:RockDropDownList ID="ddlRegistrantsSignedDocument" runat="server" Label="Signed Document" />
                                 <asp:PlaceHolder ID="phRegistrantFormFieldFilters" runat="server" />
                             </Rock:GridFilter>
                             <Rock:Grid ID="gRegistrants" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gRegistrants_RowSelected" RowItemText="Registrant" PersonIdField="PersonId" ExportSource="ColumnOutput">
                                 <Columns>
                                     <Rock:SelectField ItemStyle-Width="48px" />
+                                    <Rock:RockTemplateField HeaderText="Registrant" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" ExcelExportBehavior="NeverInclude">
+                                        <ItemTemplate>
+                                            <asp:Literal ID="lRegistrant" runat="server"></asp:Literal>
+                                        </ItemTemplate>
+                                    </Rock:RockTemplateField>
                                     <Rock:RockBoundField HeaderText="First Name" DataField="Person.NickName" ExcelExportBehavior="AlwaysInclude" Visible="false" />
                                     <Rock:RockBoundField HeaderText="Last Name" DataField="Person.LastName" ExcelExportBehavior="AlwaysInclude" Visible="false" />
                                     <Rock:RockTemplateFieldUnselected HeaderText="Group">
@@ -328,8 +338,8 @@
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdPaymentsGridWarning" runat="server" />
                         <div class="grid grid-panel">
-                            <Rock:GridFilter ID="fPayments" runat="server" OnDisplayFilterValue="fPayments_DisplayFilterValue">
-                                <Rock:DateRangePicker ID="drpPaymentDateRange" runat="server" Label="Date Range" />
+                            <Rock:GridFilter ID="fPayments" runat="server" OnDisplayFilterValue="fPayments_DisplayFilterValue" OnClearFilterClick="fPayments_ClearFilterClick">
+                                <Rock:SlidingDateRangePicker ID="sdrpPaymentDateRange" runat="server" Label="Transaction Date Range" />
                             </Rock:GridFilter>
                             <Rock:Grid ID="gPayments" runat="server" DisplayType="Full" AllowSorting="true" RowItemText="Payment" OnRowSelected="gPayments_RowSelected" ExportSource="ColumnOutput">
                                 <Columns>
@@ -363,7 +373,7 @@
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdLinkagesGridWarning" runat="server" />
                         <div class="grid grid-panel">
-                            <Rock:GridFilter ID="fLinkages" runat="server" OnDisplayFilterValue="fLinkages_DisplayFilterValue">
+                            <Rock:GridFilter ID="fLinkages" runat="server" OnDisplayFilterValue="fLinkages_DisplayFilterValue" OnClearFilterClick="fLinkages_ClearFilterClick">
                                 <Rock:RockCheckBoxList ID="cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" />
                             </Rock:GridFilter>
                             <Rock:Grid ID="gLinkages" runat="server" DisplayType="Full" AllowSorting="true" RowItemText="Linkage" ExportSource="ColumnOutput">
@@ -394,13 +404,22 @@
                     <div class="panel-heading">
                         <h1 class="panel-title"><i class="fa fa-link"></i>Group Placement</h1>
                     </div>
+                     <Rock:GridFilter ID="fGroupPlacements" runat="server" OnDisplayFilterValue="fGroupPlacements_DisplayFilterValue" OnClearFilterClick="fGroupPlacements_ClearFilterClick">
+                        <Rock:SlidingDateRangePicker ID="sdrpGroupPlacementsDateRange" runat="server" Label="Registration Date Range" />
+                        <Rock:RockTextBox ID="tbGroupPlacementsFirstName" runat="server" Label="First Name" />
+                        <Rock:RockTextBox ID="tbGroupPlacementsLastName" runat="server" Label="Last Name" />
+                        <Rock:RockDropDownList ID="ddlGroupPlacementsSignedDocument" runat="server" Label="Signed Document" />
+                        <asp:PlaceHolder ID="phGroupPlacementsFormFieldFilters" runat="server" />
+                    </Rock:GridFilter>
                     <div class="panel-body">
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-sm-6">
                                 <Rock:GroupPicker ID="gpGroupPlacementParentGroup" runat="server" Label="Parent Group"
                                     OnSelectItem="gpGroupPlacementParentGroup_SelectItem" />
                             </div>
-                            <div>
+                            <div class="col-sm-6">
+                                <Rock:RockCheckBox ID="cbSetGroupAttributes" runat="server" Label="Set Group Member Attributes" Text="Yes"
+                                    Help="If there are group member attributes on the target group that have the same key as a registrant attribute, should the registrant attribute value be copied to the group member attribute value?" />
                             </div>
                         </div>
                         <Rock:ModalAlert ID="mdGroupPlacementGridWarning" runat="server" />
