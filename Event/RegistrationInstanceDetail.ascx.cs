@@ -610,7 +610,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            AddDynamicControls( instance );
+            AddDynamicControls( true, instance );
             BuildSubGroupTabs( instance );
         }
 
@@ -1794,6 +1794,17 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
+        /// Handles the ClearFilterClick event of the fLinkages control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void fLinkages_ClearFilterClick( object sender, EventArgs e )
+        {
+            fLinkages.DeleteUserPreferences();
+            BindLinkagesFilter();
+        }
+
+        /// <summary>
         /// Fs the campusEventItems_ display filter value.
         /// </summary>
         /// <param name="sender">The sender.</param>
@@ -2441,7 +2452,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            AddDynamicControls();
+            AddDynamicControls( true );
             BindResourcePanels();
 
             switch ( ActiveTab ?? string.Empty )
@@ -3770,36 +3781,77 @@ namespace RockWeb.Plugins.com_kfs.Event
                     else if ( field.Attribute != null )
                     {
                         var attribute = field.Attribute;
-                        var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
-                        if ( control != null )
+
+                        // add dynamic filter to registrant grid
+                        var registrantsControl = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
+                        if ( registrantsControl != null )
                         {
-                            if ( control is IRockControl )
+                            if ( registrantsControl is IRockControl )
                             {
-                                var rockControl = (IRockControl)control;
+                                var rockControl = (IRockControl)registrantsControl;
                                 rockControl.Label = attribute.Name;
                                 rockControl.Help = attribute.Description;
-                                phRegistrantFormFieldFilters.Controls.Add( control );
+                                phRegistrantFormFieldFilters.Controls.Add( registrantsControl );
                             }
                             else
                             {
                                 var wrapper = new RockControlWrapper
                                 {
-                                    ID = control.ID + "_wrapper",
+                                    ID = registrantsControl.ID + "_wrapper",
                                     Label = attribute.Name
                                 };
-                                wrapper.Controls.Add( control );
+                                wrapper.Controls.Add( registrantsControl );
                                 phRegistrantFormFieldFilters.Controls.Add( wrapper );
                             }
 
-                            var savedValue = fRegistrants.GetUserPreference( attribute.Key );
-                            if ( !string.IsNullOrWhiteSpace( savedValue ) )
+                            if ( setValues )
                             {
-                                try
+                                var savedValue = fRegistrants.GetUserPreference( attribute.Key );
+                                if ( !string.IsNullOrWhiteSpace( savedValue ) )
                                 {
-                                    var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
-                                    attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
+                                    try
+                                    {
+                                        var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
+                                        attribute.FieldType.Field.SetFilterValues( registrantsControl, attribute.QualifierValues, values );
+                                    }
+                                    catch { }
                                 }
-                                catch { }
+                            }
+                        }
+
+                        var groupPlacementsControl = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filterGroupPlacements_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
+                        if ( groupPlacementsControl != null )
+                        {
+                            if ( groupPlacementsControl is IRockControl )
+                            {
+                                var rockControl = (IRockControl)groupPlacementsControl;
+                                rockControl.Label = attribute.Name;
+                                rockControl.Help = attribute.Description;
+                                phGroupPlacementsFormFieldFilters.Controls.Add( groupPlacementsControl );
+                            }
+                            else
+                            {
+                                var wrapper = new RockControlWrapper()
+                                {
+                                    ID = groupPlacementsControl.ID + "_wrapper",
+                                    Label = attribute.Name
+                                };
+                                wrapper.Controls.Add( groupPlacementsControl );
+                                phGroupPlacementsFormFieldFilters.Controls.Add( wrapper );
+                            }
+
+                            if ( setValues )
+                            {
+                                string savedValue = fRegistrants.GetUserPreference( "GroupPlacements-" + attribute.Key );
+                                if ( !string.IsNullOrWhiteSpace( savedValue ) )
+                                {
+                                    try
+                                    {
+                                        var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
+                                        attribute.FieldType.Field.SetFilterValues( groupPlacementsControl, attribute.QualifierValues, values );
+                                    }
+                                    catch { }
+                                }
                             }
                         }
 
@@ -4658,7 +4710,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void BindPaymentsFilter()
         {
-            drpPaymentDateRange.DelimitedValues = fPayments.GetUserPreference( "Date Range" );
+            sdrpPaymentDateRange.DelimitedValues = fPayments.GetUserPreference( "Payments Date Range" );
         }
 
         /// <summary>
@@ -4701,19 +4753,17 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 registrationIds.Contains( d.EntityId.Value ) ) );
 
                     // Date Range
-                    var drp = new DateRangePicker
-                    {
-                        DelimitedValues = fPayments.GetUserPreference( "Date Range" )
-                    };
-                    if ( drp.LowerValue.HasValue )
-                    {
-                        qry = qry.Where( t => t.TransactionDateTime >= drp.LowerValue.Value );
-                    }
+                    var dateRange = SlidingDateRangePicker.CalculateDateRangeFromDelimitedValues( sdrpPaymentDateRange.DelimitedValues );
 
-                    if ( drp.UpperValue.HasValue )
+                    if ( dateRange.Start.HasValue )
                     {
-                        var upperDate = drp.UpperValue.Value.Date.AddDays( 1 );
-                        qry = qry.Where( t => t.TransactionDateTime < upperDate );
+                        qry = qry.Where( r =>
+                            r.TransactionDateTime >= dateRange.Start.Value );
+                    }
+                    if ( dateRange.End.HasValue )
+                    {
+                        qry = qry.Where( r =>
+                            r.TransactionDateTime < dateRange.End.Value );
                     }
 
                     var sortProperty = gPayments.SortProperty;
@@ -4833,6 +4883,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         .Where( r =>
                             r.Registration.RegistrationInstanceId == instanceId.Value &&
                             r.PersonAlias != null &&
+                            r.OnWaitList == false &&
                             r.PersonAlias.Person != null );
 
                     if ( groupId.HasValue )
@@ -4850,6 +4901,53 @@ namespace RockWeb.Plugins.com_kfs.Event
                         qry = qry.Where( r => !existingPeopleInGroups.Contains( r.PersonAlias.PersonId ) );
                     }
 
+                    // Filter by daterange
+                    var dateRange = SlidingDateRangePicker.CalculateDateRangeFromDelimitedValues( sdrpRegistrationDateRange.DelimitedValues );
+
+                    if ( dateRange.Start.HasValue )
+                    {
+                        qry = qry.Where( r =>
+                            r.CreatedDateTime.HasValue &&
+                            r.CreatedDateTime.Value >= dateRange.Start.Value );
+                    }
+
+                    if ( dateRange.End.HasValue )
+                    {
+                        qry = qry.Where( r =>
+                            r.CreatedDateTime.HasValue &&
+                            r.CreatedDateTime.Value < dateRange.End.Value );
+                    }
+
+                    // Filter by first name
+                    if ( !string.IsNullOrWhiteSpace( tbGroupPlacementsFirstName.Text ) )
+                    {
+                        var rfname = tbGroupPlacementsFirstName.Text;
+                        qry = qry.Where( r =>
+                            r.PersonAlias.Person.NickName.StartsWith( rfname ) ||
+                            r.PersonAlias.Person.FirstName.StartsWith( rfname ) );
+                    }
+
+                    // Filter by last name
+                    if ( !string.IsNullOrWhiteSpace( tbGroupPlacementsLastName.Text ) )
+                    {
+                        var rlname = tbGroupPlacementsLastName.Text;
+                        qry = qry.Where( r =>
+                            r.PersonAlias.Person.LastName.StartsWith( rlname ) );
+                    }
+
+                    // Filter by signed documents
+                    if ( Signers != null )
+                    {
+                        if ( ddlGroupPlacementsSignedDocument.SelectedValue.AsBooleanOrNull() == true )
+                        {
+                            qry = qry.Where( r => Signers.Contains( r.PersonAlias.PersonId ) );
+                        }
+                        else if ( ddlGroupPlacementsSignedDocument.SelectedValue.AsBooleanOrNull() == false )
+                        {
+                            qry = qry.Where( r => !Signers.Contains( r.PersonAlias.PersonId ) );
+                        }
+                    }
+
                     var preloadCampusValues = false;
                     var registrantAttributeIds = new List<int>();
                     var personAttributesIds = new List<int>();
@@ -4857,14 +4955,141 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     if ( RegistrantFields != null )
                     {
-                        // Check if campus is used
-                        preloadCampusValues = RegistrantFields
-                            .Any( f =>
+                        // Filter by any selected
+                        foreach ( var personFieldType in RegistrantFields
+                            .Where( f =>
                                 f.FieldSource == RegistrationFieldSource.PersonField &&
-                                f.PersonFieldType.HasValue &&
-                                f.PersonFieldType.Value == RegistrationPersonFieldType.Campus );
+                                f.PersonFieldType.HasValue )
+                            .Select( f => f.PersonFieldType.Value ) )
+                        {
+                            switch ( personFieldType )
+                            {
+                                case RegistrationPersonFieldType.Campus:
+                                    {
+                                        preloadCampusValues = true;
 
-                        // Get all the registrant attributes selected
+                                        var ddlCampus = phGroupPlacementsFormFieldFilters.FindControl( "ddlGroupPlacementsCampus" ) as RockDropDownList;
+                                        if ( ddlCampus != null )
+                                        {
+                                            var campusId = ddlCampus.SelectedValue.AsIntegerOrNull();
+                                            if ( campusId.HasValue )
+                                            {
+                                                var familyGroupTypeGuid = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY.AsGuid();
+                                                qry = qry.Where( r =>
+                                                    r.PersonAlias.Person.Members.Any( m =>
+                                                        m.Group.GroupType.Guid == familyGroupTypeGuid &&
+                                                        m.Group.CampusId.HasValue &&
+                                                        m.Group.CampusId.Value == campusId ) );
+                                            }
+                                        }
+
+                                        break;
+                                    }
+
+                                case RegistrationPersonFieldType.Email:
+                                    {
+                                        var tbEmailFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsEmailFilter" ) as RockTextBox;
+                                        if ( tbEmailFilter != null && !string.IsNullOrWhiteSpace( tbEmailFilter.Text ) )
+                                        {
+                                            qry = qry.Where( r =>
+                                                r.PersonAlias.Person.Email != null &&
+                                                r.PersonAlias.Person.Email.Contains( tbEmailFilter.Text ) );
+                                        }
+
+                                        break;
+                                    }
+
+                                case RegistrationPersonFieldType.Birthdate:
+                                    {
+                                        var drpBirthdateFilter = phGroupPlacementsFormFieldFilters.FindControl( "drpGroupPlacementsBirthdateFilter" ) as DateRangePicker;
+                                        if ( drpBirthdateFilter != null )
+                                        {
+                                            if ( drpBirthdateFilter.LowerValue.HasValue )
+                                            {
+                                                qry = qry.Where( r =>
+                                                    r.PersonAlias.Person.BirthDate.HasValue &&
+                                                    r.PersonAlias.Person.BirthDate.Value >= drpBirthdateFilter.LowerValue.Value );
+                                            }
+                                            if ( drpBirthdateFilter.UpperValue.HasValue )
+                                            {
+                                                qry = qry.Where( r =>
+                                                    r.PersonAlias.Person.BirthDate.HasValue &&
+                                                    r.PersonAlias.Person.BirthDate.Value <= drpBirthdateFilter.UpperValue.Value );
+                                            }
+                                        }
+                                        break;
+                                    }
+
+                                case RegistrationPersonFieldType.Grade:
+                                    {
+                                        var gpGradeFilter = phGroupPlacementsFormFieldFilters.FindControl( "gpGroupPlacementsGradeFilter" ) as GradePicker;
+                                        if ( gpGradeFilter != null )
+                                        {
+                                            int? graduationYear = Person.GraduationYearFromGradeOffset( gpGradeFilter.SelectedValueAsInt( false ) );
+                                            if ( graduationYear.HasValue )
+                                            {
+                                                qry = qry.Where( r =>
+                                                    r.PersonAlias.Person.GraduationYear.HasValue &&
+                                                    r.PersonAlias.Person.GraduationYear == graduationYear.Value );
+                                            }
+                                        }
+                                        break;
+                                    }
+
+                                case RegistrationPersonFieldType.Gender:
+                                    {
+                                        var ddlGenderFilter = phGroupPlacementsFormFieldFilters.FindControl( "ddlGroupPlacementsGenderFilter" ) as RockDropDownList;
+                                        if ( ddlGenderFilter != null )
+                                        {
+                                            var gender = ddlGenderFilter.SelectedValue.ConvertToEnumOrNull<Gender>();
+                                            if ( gender.HasValue )
+                                            {
+                                                qry = qry.Where( r =>
+                                                    r.PersonAlias.Person.Gender == gender );
+                                            }
+                                        }
+
+                                        break;
+                                    }
+
+                                case RegistrationPersonFieldType.MaritalStatus:
+                                    {
+                                        var ddlMaritalStatusFilter = phGroupPlacementsFormFieldFilters.FindControl( "ddlGroupPlacementsMaritalStatusFilter" ) as RockDropDownList;
+                                        if ( ddlMaritalStatusFilter != null )
+                                        {
+                                            var maritalStatusId = ddlMaritalStatusFilter.SelectedValue.AsIntegerOrNull();
+                                            if ( maritalStatusId.HasValue )
+                                            {
+                                                qry = qry.Where( r =>
+                                                    r.PersonAlias.Person.MaritalStatusValueId.HasValue &&
+                                                    r.PersonAlias.Person.MaritalStatusValueId.Value == maritalStatusId.Value );
+                                            }
+                                        }
+
+                                        break;
+                                    }
+                                case RegistrationPersonFieldType.MobilePhone:
+                                    {
+                                        var tbPhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsPhoneFilter" ) as RockTextBox;
+                                        if ( tbPhoneFilter != null && !string.IsNullOrWhiteSpace( tbPhoneFilter.Text ) )
+                                        {
+                                            string numericPhone = tbPhoneFilter.Text.AsNumeric();
+
+                                            if ( !string.IsNullOrEmpty( numericPhone ) )
+                                            {
+                                                var phoneNumberPersonIdQry = new PhoneNumberService( rockContext ).Queryable().Where( a => a.Number.Contains( numericPhone ) ).
+                                                    Select( a => a.PersonId );
+
+                                                qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
+                                            }
+                                        }
+
+                                        break;
+                                    }
+                            }
+                        }
+
+                        // Get all the registrant attributes selected to be on grid
                         var registrantAttributes = RegistrantFields
                             .Where( f =>
                                 f.Attribute != null &&
@@ -4873,7 +5098,32 @@ namespace RockWeb.Plugins.com_kfs.Event
                             .ToList();
                         registrantAttributeIds = registrantAttributes.Select( a => a.Id ).Distinct().ToList();
 
-                        // Get all the person attributes selected
+                        // Filter query by any configured registrant attribute filters
+                        if ( registrantAttributes != null && registrantAttributes.Any() )
+                        {
+                            var attributeValueService = new AttributeValueService( rockContext );
+                            var parameterExpression = attributeValueService.ParameterExpression;
+                            foreach ( var attribute in registrantAttributes )
+                            {
+                                var filterControl = phGroupPlacementsFormFieldFilters.FindControl( "filterGroupPlacements_" + attribute.Id.ToString() );
+                                if ( filterControl != null )
+                                {
+                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
+                                    if ( expression != null )
+                                    {
+                                        var attributeValues = attributeValueService
+                                            .Queryable()
+                                            .Where( v => v.Attribute.Id == attribute.Id );
+                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
+                                        qry = qry
+                                            .Where( r => attributeValues.Select( v => v.EntityId ).Contains( r.Id ) );
+                                    }
+                                }
+                            }
+                        }
+
+                        // Get all the person attributes selected to be on grid
                         var personAttributes = RegistrantFields
                             .Where( f =>
                                 f.Attribute != null &&
@@ -4881,6 +5131,30 @@ namespace RockWeb.Plugins.com_kfs.Event
                             .Select( f => f.Attribute )
                             .ToList();
                         personAttributesIds = personAttributes.Select( a => a.Id ).Distinct().ToList();
+
+                        // Filter query by any configured person attribute filters
+                        if ( personAttributes != null && personAttributes.Any() )
+                        {
+                            var attributeValueService = new AttributeValueService( rockContext );
+                            var parameterExpression = attributeValueService.ParameterExpression;
+                            foreach ( var attribute in personAttributes )
+                            {
+                                var filterControl = phGroupPlacementsFormFieldFilters.FindControl( "filterGroupPlacements_" + attribute.Id.ToString() );
+                                if ( filterControl != null )
+                                {
+                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
+                                    if ( expression != null )
+                                    {
+                                        var attributeValues = attributeValueService.Queryable()
+                                            .Where( v => v.Attribute.Id == attribute.Id );
+                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
+                                        qry = qry
+                                            .Where( r => attributeValues.Select( v => v.EntityId ).Contains( r.PersonAlias.PersonId ) );
+                                    }
+                                }
+                            }
+                        }
 
                         // Get all the group member attributes selected to be on grid
                         var groupMemberAttributes = RegistrantFields
@@ -4890,6 +5164,30 @@ namespace RockWeb.Plugins.com_kfs.Event
                             .Select( f => f.Attribute )
                             .ToList();
                         groupMemberAttributesIds = groupMemberAttributes.Select( a => a.Id ).Distinct().ToList();
+
+                        // Filter query by any configured person attribute filters
+                        if ( groupMemberAttributes != null && groupMemberAttributes.Any() )
+                        {
+                            var attributeValueService = new AttributeValueService( rockContext );
+                            var parameterExpression = attributeValueService.ParameterExpression;
+                            foreach ( var attribute in groupMemberAttributes )
+                            {
+                                var filterControl = phGroupPlacementsFormFieldFilters.FindControl( "filterGroupPlacements_" + attribute.Id.ToString() );
+                                if ( filterControl != null )
+                                {
+                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
+                                    if ( expression != null )
+                                    {
+                                        var attributeValues = attributeValueService.Queryable()
+                                            .Where( v => v.Attribute.Id == attribute.Id );
+                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
+                                        qry = qry
+                                            .Where( r => r.GroupMemberId.HasValue && attributeValues.Select( v => v.EntityId ).Contains( r.GroupMemberId.Value ) );
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // Sort the query
@@ -5061,6 +5359,360 @@ namespace RockWeb.Plugins.com_kfs.Event
                     gGroupPlacements.DataBind();
                 }
             }
+        }
+
+        /// <summary>
+        /// Handles the ApplyFilterClick event of the fGroupPlacements control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void fGroupPlacements_ApplyFilterClick( object sender, EventArgs e )
+        {
+            fGroupPlacements.SaveUserPreference( "GroupPlacements-Date Range", "Date Range", sdrpGroupPlacementsDateRange.DelimitedValues );
+            fGroupPlacements.SaveUserPreference( "GroupPlacements-First Name", "First Name", tbGroupPlacementsFirstName.Text );
+            fGroupPlacements.SaveUserPreference( "GroupPlacements-Last Name", "Last Name", tbGroupPlacementsLastName.Text );
+            fGroupPlacements.SaveUserPreference( "GroupPlacements-Signed Document", "Signed Document", ddlGroupPlacementsSignedDocument.SelectedValue );
+
+            if ( RegistrantFields != null )
+            {
+                foreach ( var field in RegistrantFields )
+                {
+                    if ( field.FieldSource == RegistrationFieldSource.PersonField && field.PersonFieldType.HasValue )
+                    {
+                        switch ( field.PersonFieldType.Value )
+                        {
+                            case RegistrationPersonFieldType.Campus:
+                                {
+                                    var ddlCampus = phGroupPlacementsFormFieldFilters.FindControl( "ddlGroupPlacementsCampus" ) as RockDropDownList;
+                                    if ( ddlCampus != null )
+                                    {
+                                        fGroupPlacements.SaveUserPreference( "GroupPlacements-Home Campus", "Home Campus", ddlCampus.SelectedValue );
+                                    }
+
+                                    break;
+                                }
+
+                            case RegistrationPersonFieldType.Email:
+                                {
+                                    var tbEmailFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsEmailFilter" ) as RockTextBox;
+                                    if ( tbEmailFilter != null )
+                                    {
+                                        fGroupPlacements.SaveUserPreference( "GroupPlacements-Email", "Email", tbEmailFilter.Text );
+                                    }
+
+                                    break;
+                                }
+
+                            case RegistrationPersonFieldType.Birthdate:
+                                {
+                                    var drpBirthdateFilter = phGroupPlacementsFormFieldFilters.FindControl( "drpGroupPlacementsBirthdateFilter" ) as DateRangePicker;
+                                    if ( drpBirthdateFilter != null )
+                                    {
+                                        fGroupPlacements.SaveUserPreference( "GroupPlacements-Birthdate Range", "Birthdate Range", drpBirthdateFilter.DelimitedValues );
+                                    }
+
+                                    break;
+                                }
+
+                            case RegistrationPersonFieldType.Grade:
+                                {
+                                    var gpGradeFilter = phGroupPlacementsFormFieldFilters.FindControl( "gpGroupPlacementsGradeFilter" ) as GradePicker;
+                                    if ( gpGradeFilter != null )
+                                    {
+                                        var gradeOffset = gpGradeFilter.SelectedValueAsInt( false );
+                                        fGroupPlacements.SaveUserPreference( "GroupPlacements-Grade", "Grade", gradeOffset.HasValue ? gradeOffset.Value.ToString() : "" );
+                                    }
+
+                                    break;
+                                }
+                            case RegistrationPersonFieldType.Gender:
+                                {
+                                    var ddlGenderFilter = phGroupPlacementsFormFieldFilters.FindControl( "ddlGroupPlacementsGenderFilter" ) as RockDropDownList;
+                                    if ( ddlGenderFilter != null )
+                                    {
+                                        fGroupPlacements.SaveUserPreference( "GroupPlacements-Gender", "Gender", ddlGenderFilter.SelectedValue );
+                                    }
+
+                                    break;
+                                }
+
+                            case RegistrationPersonFieldType.MaritalStatus:
+                                {
+                                    var ddlMaritalStatusFilter = phGroupPlacementsFormFieldFilters.FindControl( "ddlGroupPlacementsMaritalStatusFilter" ) as RockDropDownList;
+                                    if ( ddlMaritalStatusFilter != null )
+                                    {
+                                        fGroupPlacements.SaveUserPreference( "GroupPlacements-Marital Status", "Marital Status", ddlMaritalStatusFilter.SelectedValue );
+                                    }
+
+                                    break;
+                                }
+                            case RegistrationPersonFieldType.MobilePhone:
+                                {
+                                    var tbPhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsPhoneFilter" ) as RockTextBox;
+                                    if ( tbPhoneFilter != null )
+                                    {
+                                        fGroupPlacements.SaveUserPreference( "GroupPlacements-Phone", "Phone", tbPhoneFilter.Text );
+                                    }
+
+                                    break;
+                                }
+                        }
+                    }
+
+                    if ( field.Attribute != null )
+                    {
+                        var attribute = field.Attribute;
+                        var filterControl = phGroupPlacementsFormFieldFilters.FindControl( "filterGroupPlacements_" + attribute.Id.ToString() );
+                        if ( filterControl != null )
+                        {
+                            try
+                            {
+                                var values = attribute.FieldType.Field.GetFilterValues( filterControl, field.Attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                                fGroupPlacements.SaveUserPreference( "GroupPlacements-" + attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                            }
+                            catch { }
+                        }
+                    }
+                }
+            }
+
+            BindGroupPlacementGrid();
+        }
+
+        /// <summary>
+        /// Handles the ClearFilterClick event of the fGroupPlacements control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void fGroupPlacements_ClearFilterClick( object sender, EventArgs e )
+        {
+            fGroupPlacements.DeleteUserPreferences();
+
+            foreach ( var control in phGroupPlacementsFormFieldFilters.ControlsOfTypeRecursive<Control>().Where( a => a.ID != null && a.ID.StartsWith( "filter" ) && a.ID.Contains( "_" ) ) )
+            {
+                var attributeId = control.ID.Split( '_' )[1].AsInteger();
+                var attribute = AttributeCache.Read( attributeId );
+                if ( attribute != null )
+                {
+                    attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, new List<string>() );
+                }
+            }
+
+            if ( RegistrantFields != null )
+            {
+                foreach ( var field in RegistrantFields )
+                {
+                    if ( field.FieldSource == RegistrationFieldSource.PersonField && field.PersonFieldType.HasValue )
+                    {
+                        switch ( field.PersonFieldType.Value )
+                        {
+                            case RegistrationPersonFieldType.Campus:
+                                {
+                                    var ddlCampus = phGroupPlacementsFormFieldFilters.FindControl( "ddlGroupPlacementsCampus" ) as RockDropDownList;
+                                    if ( ddlCampus != null )
+                                    {
+                                        ddlCampus.SetValue( (Guid?)null );
+                                    }
+
+                                    break;
+                                }
+
+                            case RegistrationPersonFieldType.Email:
+                                {
+                                    var tbEmailFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsEmailFilter" ) as RockTextBox;
+                                    if ( tbEmailFilter != null )
+                                    {
+                                        tbEmailFilter.Text = string.Empty;
+                                    }
+
+                                    break;
+                                }
+
+                            case RegistrationPersonFieldType.Birthdate:
+                                {
+                                    var drpBirthdateFilter = phGroupPlacementsFormFieldFilters.FindControl( "drpGroupPlacementsBirthdateFilter" ) as DateRangePicker;
+                                    if ( drpBirthdateFilter != null )
+                                    {
+                                        drpBirthdateFilter.LowerValue = null;
+                                        drpBirthdateFilter.UpperValue = null;
+                                    }
+
+                                    break;
+                                }
+
+                            case RegistrationPersonFieldType.Grade:
+                                {
+                                    var gpGradeFilter = phGroupPlacementsFormFieldFilters.FindControl( "gpGroupPlacementsGradeFilter" ) as GradePicker;
+                                    if ( gpGradeFilter != null )
+                                    {
+                                        gpGradeFilter.SetValue( (Guid?)null );
+                                    }
+
+                                    break;
+                                }
+                            case RegistrationPersonFieldType.Gender:
+                                {
+                                    var ddlGenderFilter = phGroupPlacementsFormFieldFilters.FindControl( "ddlGroupPlacementsGenderFilter" ) as RockDropDownList;
+                                    if ( ddlGenderFilter != null )
+                                    {
+                                        ddlGenderFilter.SetValue( (Guid?)null );
+                                    }
+
+                                    break;
+                                }
+
+                            case RegistrationPersonFieldType.MaritalStatus:
+                                {
+                                    var ddlMaritalStatusFilter = phGroupPlacementsFormFieldFilters.FindControl( "ddlGroupPlacementsMaritalStatusFilter" ) as RockDropDownList;
+                                    if ( ddlMaritalStatusFilter != null )
+                                    {
+                                        ddlMaritalStatusFilter.SetValue( (Guid?)null );
+                                    }
+
+                                    break;
+                                }
+                            case RegistrationPersonFieldType.MobilePhone:
+                                {
+                                    var tbPhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsPhoneFilter" ) as RockTextBox;
+                                    if ( tbPhoneFilter != null )
+                                    {
+                                        tbPhoneFilter.Text = string.Empty;
+                                    }
+
+                                    break;
+                                }
+                        }
+                    }
+                }
+            }
+
+            BindGroupPlacementsFilter( null );
+        }
+
+        /// <summary>
+        /// fs the group placements display filter value.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The e.</param>
+        protected void fGroupPlacements_DisplayFilterValue( object sender, GridFilter.DisplayFilterValueArgs e )
+        {
+            if ( e.Key.StartsWith( "GroupPlacements-" ) )
+            {
+                var key = e.Key.Remove( 0, "GroupPlacements-".Length );
+
+                if ( RegistrantFields != null )
+                {
+                    var attribute = RegistrantFields
+                        .Where( a =>
+                            a.Attribute != null &&
+                            a.Attribute.Key == key )
+                        .Select( a => a.Attribute )
+                        .FirstOrDefault();
+
+                    if ( attribute != null )
+                    {
+                        try
+                        {
+                            var values = JsonConvert.DeserializeObject<List<string>>( e.Value );
+                            e.Value = attribute.FieldType.Field.FormatFilterValues( attribute.QualifierValues, values );
+                            return;
+                        }
+                        catch { }
+                    }
+                }
+
+                switch ( key )
+                {
+                    case "Date Range":
+                    case "Birthdate Range":
+                        {
+                            // The value might either be from a SlidingDateRangePicker or a DateRangePicker, so try both
+                            var storedValue = e.Value;
+                            e.Value = SlidingDateRangePicker.FormatDelimitedValues( storedValue );
+                            if ( string.IsNullOrWhiteSpace( e.Value ) )
+                            {
+                                e.Value = DateRangePicker.FormatDelimitedValues( storedValue );
+                            }
+
+                            break;
+                        }
+                    case "Grade":
+                        {
+                            e.Value = Person.GradeFormattedFromGradeOffset( e.Value.AsIntegerOrNull() );
+                            break;
+                        }
+                    case "First Name":
+                    case "Last Name":
+                    case "Email":
+                    case "Phone":
+                    case "Signed Document":
+                        {
+                            break;
+                        }
+                    case "Gender":
+                        {
+                            var gender = e.Value.ConvertToEnumOrNull<Gender>();
+                            e.Value = gender.HasValue ? gender.ConvertToString() : string.Empty;
+                            break;
+                        }
+                    case "Campus":
+                        {
+                            int? campusId = e.Value.AsIntegerOrNull();
+                            if ( campusId.HasValue )
+                            {
+                                var campus = CampusCache.Read( campusId.Value );
+                                e.Value = campus != null ? campus.Name : string.Empty;
+                            }
+                            else
+                            {
+                                e.Value = string.Empty;
+                            }
+                            break;
+                        }
+                    case "Marital Status":
+                        {
+                            int? dvId = e.Value.AsIntegerOrNull();
+                            if ( dvId.HasValue )
+                            {
+                                var maritalStatus = DefinedValueCache.Read( dvId.Value );
+                                e.Value = maritalStatus != null ? maritalStatus.Value : string.Empty;
+                            }
+                            else
+                            {
+                                e.Value = string.Empty;
+                            }
+                            break;
+                        }
+                    case "In Group":
+                        {
+                            e.Value = e.Value;
+                            break;
+                        }
+                    default:
+                        {
+                            e.Value = string.Empty;
+                            break;
+                        }
+                }
+            }
+            else
+            {
+                e.Value = "";
+            }
+        }
+
+        /// <summary>
+        /// Binds the group placements filter.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        private void BindGroupPlacementsFilter( RegistrationInstance instance )
+        {
+            sdrpGroupPlacementsDateRange.DelimitedValues = fGroupPlacements.GetUserPreference( "GroupPlacements-Date Range" );
+            tbGroupPlacementsFirstName.Text = fGroupPlacements.GetUserPreference( "GroupPlacements-First Name" );
+            tbGroupPlacementsLastName.Text = fGroupPlacements.GetUserPreference( "GroupPlacements-Last Name" );
+
+            ddlGroupPlacementsSignedDocument.SetValue( fGroupPlacements.GetUserPreference( "GroupPlacements-Signed Document" ) );
+            ddlGroupPlacementsSignedDocument.Visible = instance != null && instance.RegistrationTemplate != null && instance.RegistrationTemplate.RequiredSignatureDocumentTemplateId.HasValue;
         }
 
         #endregion
@@ -5525,7 +6177,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             mdlAddSubGroupMember.Show();
 
             // render dynamic group controls beneath modal
-            AddDynamicControls();
+            AddDynamicControls( true );
             BindRegistrantsGrid();
         }
 
@@ -5680,7 +6332,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
 
-                AddDynamicControls();
+                AddDynamicControls( true );
                 BindResourcePanels();
                 BindRegistrantsGrid();
                 mdlAddSubGroupMember.Hide();
