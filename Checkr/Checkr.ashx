@@ -35,17 +35,21 @@ namespace RockWeb.Webhooks.com.kfs
 
             if ( request.HttpMethod != "POST" )
             {
+                response.StatusCode = 403;
                 response.Write( "Invalid request type." );
                 return;
             }
 
-            if ( request.Form["REQUEST"] != null )
+            var stream = new StreamReader( request.InputStream );
+            var body = stream.ReadToEnd();
+
+            if ( !string.IsNullOrWhiteSpace( body ) )
             {
                 try
                 {
                     var rockContext = new Rock.Data.RockContext();
 
-                    BackgroundCheck.RootObject rootObject = JsonConvert.DeserializeObject<BackgroundCheck.RootObject>( request.Form["REQUEST"] );
+                    BackgroundCheck.RootObject rootObject = JsonConvert.DeserializeObject<BackgroundCheck.RootObject>( body );
 
                     if ( rootObject.type == "report.completed" )
                     {
@@ -55,7 +59,7 @@ namespace RockWeb.Webhooks.com.kfs
                         if ( workflow != null )
                         {
                             workflow.LoadAttributes();
-                            
+
                             BackgroundCheck.Checkr.SaveResults( rootObject, workflow, rockContext );
 
                             rockContext.WrapTransaction( () =>
@@ -67,27 +71,28 @@ namespace RockWeb.Webhooks.com.kfs
                                     activity.SaveAttributeValues( rockContext );
                                 }
                             } );
+
+                            response.StatusCode = 200;
+                            response.Write( "report.completed processed" );
+                        }
+                        else
+                        {
+                            response.StatusCode = 202;
+                            response.Write( "candidate_id not found" );
                         }
                     }
-
-                    try
-                    {
-                        // Return the success XML to PMM
-                        XDocument xdocResult = new XDocument( new XDeclaration( "1.0", "UTF-8", "yes" ),
-                            new XElement( "OrderXML",
-                                new XElement( "Success", "TRUE" ) ) );
-
-                        response.StatusCode = 200;
-                        response.ContentType = "text/xml";
-                        response.AddHeader( "Content-Type", "text/xml" );
-                        xdocResult.Save( response.OutputStream );
-                    }
-                    catch { }
                 }
                 catch ( SystemException ex )
                 {
                     ExceptionLogService.LogException( ex, context );
+                    response.StatusCode = 202;
+                    response.Write( string.Format( "{0}", ex ) );
                 }
+            }
+            else
+            {
+                response.StatusCode = 202;
+                response.Write( "nothing processed" );
             }
         }
 
