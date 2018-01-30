@@ -5,16 +5,23 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
+using System.Text;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 using Newtonsoft.Json;
 using Rock;
+using Rock.Attribute;
+using Rock.Constants;
 using Rock.Data;
+using Rock.Financial;
 using Rock.Model;
+using Rock.Security;
+using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
+using Attribute = Rock.Model.Attribute;
 
 namespace RockWeb.Plugins.com_kfs.Event
 {
@@ -24,8 +31,10 @@ namespace RockWeb.Plugins.com_kfs.Event
     [DisplayName( "Registrant Detail" )]
     [Category( "Event" )]
     [Description( "Displays interface for editing the registration attribute values and fees for a given registrant." )]
+
     public partial class RegistrantDetail : RockBlock
     {
+
         #region Properties
 
         private RegistrationTemplate TemplateState { get; set; }
@@ -137,6 +146,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                     registrant = registrantService.Get( RegistrantState.Id );
                 }
 
+                var previousRegistrantPersonIds = registrantService.Queryable().Where( a => a.RegistrationId == RegistrantState.RegistrationId )
+                                .Where( r => r.PersonAlias != null )
+                                .Select( r => r.PersonAlias.PersonId )
+                                .ToList();
+
                 bool newRegistrant = false;
                 var registrantChanges = new List<string>();
 
@@ -154,6 +168,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     string prevPerson = ( registrant.PersonAlias != null && registrant.PersonAlias.Person != null ) ?
                         registrant.PersonAlias.Person.FullName : string.Empty;
                     string newPerson = ppPerson.PersonName;
+                    newRegistrant = true;
                     History.EvaluateChange( registrantChanges, "Person", prevPerson, newPerson );
                 }
                 int? personId = ppPerson.PersonId.Value;
@@ -170,15 +185,21 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
 
+                // set their status (wait list / registrant)
+                registrant.OnWaitList = !tglWaitList.Checked;
+
                 History.EvaluateChange( registrantChanges, "Cost", registrant.Cost, cbCost.Text.AsDecimal() );
                 registrant.Cost = cbCost.Text.AsDecimal();
+
+                // v7 //History.EvaluateChange( registrantChanges, "Discount Applies", registrant.DiscountApplies, cbDiscountApplies.Checked );
+                // v7 //registrant.DiscountApplies = cbDiscountApplies.Checked;
 
                 if ( !Page.IsValid )
                 {
                     return;
                 }
 
-                // Remove/delete any registrant fees that are no longer in UI with quantity
+                // Remove/delete any registrant fees that are no longer in UI with quantity 
                 foreach ( var dbFee in registrant.Fees.ToList() )
                 {
                     if ( !RegistrantState.FeeValues.Keys.Contains( dbFee.RegistrationTemplateFeeId ) ||
@@ -300,7 +321,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( !registrant.IsValid )
                 {
-                    // Controls will render the error messages
+                    // Controls will render the error messages                    
                     return;
                 }
 
@@ -393,6 +414,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 {
                                     registrantChanges.Add( string.Format( "Registrant group member reference updated to existing person in {0} group", reloadedRegistrant.Registration.Group.Name ) );
                                 }
+
+                                // Record this to the Person's and Registrants Notes and History...
+                                // v7 //reloadedRegistrant.Registration.SavePersonNotesAndHistory( reloadedRegistrant.Registration.PersonAlias.Person, this.CurrentPersonAliasId, previousRegistrantPersonIds );
 
                                 reloadedRegistrant.GroupMemberId = groupMember.Id;
                                 newRockContext.SaveChanges();
@@ -508,6 +532,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         lWizardInstanceName.Text = registrant.Registration.RegistrationInstance.Name;
                         lWizardRegistrationName.Text = registrant.Registration.ToString();
                         lWizardRegistrantName.Text = registrant.ToString();
+
+                        tglWaitList.Checked = !registrant.OnWaitList;
                     }
                 }
 
@@ -531,6 +557,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                         lWizardRegistrationName.Text = registration.ToString();
                         lWizardRegistrantName.Text = "New Registrant";
                     }
+                }
+
+                if ( TemplateState != null )
+                {
+                    tglWaitList.Visible = TemplateState.WaitListEnabled;
                 }
 
                 if ( TemplateState != null && RegistrantState == null )
@@ -595,6 +626,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( RegistrantState != null )
                 {
                     cbCost.Text = RegistrantState.Cost.ToString( "N2" );
+                    // v7 //cbDiscountApplies.Checked = RegistrantState.DiscountApplies;
                 }
             }
         }
@@ -858,7 +890,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                     else
                     {
-                        RegistrantState.FeeValues.Remove( fee.Id );
+                        // not possible since fee is null:
+                        //RegistrantState.FeeValues.Remove( fee.Id );
                     }
                 }
             }
@@ -948,5 +981,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         #endregion
 
         #endregion
+
     }
 }
