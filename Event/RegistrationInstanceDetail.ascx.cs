@@ -153,6 +153,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             // Rebuilds dynamic group area controls after postbacks
             BuildRegistrationResources();
             BuildSubGroupTabs();
+            AddDynamicControls( setValues );
         }
 
         /// <summary>
@@ -610,7 +611,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            AddDynamicControls( true, instance );
             BuildSubGroupTabs( instance );
         }
 
@@ -994,6 +994,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var registrationInstanceId = registration.RegistrationInstanceId;
 
                     if ( !UserCanEdit &&
+                        !registration.IsAuthorized( "Register", CurrentPerson ) &&
                         !registration.IsAuthorized( Authorization.EDIT, this.CurrentPerson ) &&
                         !registration.IsAuthorized( Authorization.ADMINISTRATE, this.CurrentPerson ) )
                     {
@@ -1351,7 +1352,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 // Set the Group Name
-                if ( registrant.GroupMember != null && GroupLinks != null && GroupLinks.ContainsKey( registrant.GroupMember.GroupId ) )
+                if ( registrant.GroupMember != null && GroupLinks.ContainsKey( registrant.GroupMember.GroupId ) )
                 {
                     var lGroup = e.Row.FindControl( "lGroup" ) as Literal;
                     if ( lGroup != null )
@@ -2196,8 +2197,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     btnEdit.Visible = false;
                     btnDelete.Visible = false;
-                    gRegistrations.Actions.ShowAdd = false;
-                    gRegistrations.IsDeleteEnabled = false;
+
+                    bool allowRegistrationEdit = instance.IsAuthorized( "Register", CurrentPerson );
+                    gRegistrations.Actions.ShowAdd = allowRegistrationEdit;
+                    gRegistrations.IsDeleteEnabled = allowRegistrationEdit;
                     ShowReadonlyDetails( instance );
                 }
                 else
@@ -2452,7 +2455,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            AddDynamicControls( true );
             BindResourcePanels();
 
             switch ( ActiveTab ?? string.Empty )
@@ -2490,13 +2492,18 @@ namespace RockWeb.Plugins.com_kfs.Event
                         break;
                     }
 
-                default:
+                case "lbRegistrations":
                     {
                         liRegistrations.AddCssClass( "active" );
                         pnlRegistrations.Visible = true;
                         BindRegistrationsGrid();
                         break;
                     }
+
+                case "":
+                    goto case "lbRegistrations";
+
+
             }
         }
 
@@ -6177,7 +6184,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             mdlAddSubGroupMember.Show();
 
             // render dynamic group controls beneath modal
-            AddDynamicControls( true );
             BindRegistrantsGrid();
         }
 
@@ -6332,7 +6338,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
 
-                AddDynamicControls( true );
                 BindResourcePanels();
                 BindRegistrantsGrid();
                 mdlAddSubGroupMember.Hide();
