@@ -164,7 +164,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             base.OnInit( e );
 
-            // NOTE: The 3 Grid Filters had a bug where all were sing the same "Date Range" key
+            // NOTE: The 3 Grid Filters had a bug where all were using the same "Date Range" key
             // in a prior version and they didn't really work quite right, so wipe them out
             fRegistrations.SaveUserPreference( "Date Range", null );
             fRegistrants.SaveUserPreference( "Date Range", null );
@@ -2169,7 +2169,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 hlType.Text = instance.RegistrationTemplate != null ? instance.RegistrationTemplate.Name : string.Empty;
 
                 lWizardTemplateName.Text = hlType.Text;
-
+                
                 pnlDetails.Visible = true;
                 hfRegistrationInstanceId.Value = instance.Id.ToString();
                 SetHasPayments( instance.Id, rockContext );
@@ -2369,8 +2369,13 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             phGroupTabs.Controls.Clear();
             instance = instance ?? GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
-            if ( instance != null && instance.AttributeValues.Any() )
+            if ( instance != null )
             {
+                if ( instance.Attributes == null )
+                {
+                    instance.LoadAttributes();
+                }
+
                 foreach ( var groupType in ResourceGroupTypes.Where( gt => instance.AttributeValues.ContainsKey( gt.Name ) ) )
                 {
                     var associatedGroupGuid = instance.AttributeValues[groupType.Name].Value.AsGuid();
