@@ -28,8 +28,8 @@ namespace RockWeb.Plugins.com_kfs.Event
     /// <summary>
     /// Displays interface for editing the registration attribute values and fees for a given registrant.
     /// </summary>
-    [DisplayName( "Registrant Detail" )]
-    [Category( "Event" )]
+    [DisplayName( "Advanced Registrant Detail" )]
+    [Category( "KFS > Advanced Event Registration" )]
     [Description( "Displays interface for editing the registration attribute values and fees for a given registrant." )]
 
     public partial class RegistrantDetail : RockBlock
