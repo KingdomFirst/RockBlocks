@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -14,6 +15,7 @@ using Rock;
 using Rock.Attribute;
 using Rock.Constants;
 using Rock.Data;
+using Rock.Field.Types;
 using Rock.Financial;
 using Rock.Model;
 using Rock.Security;
@@ -165,6 +167,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 bool newRegistrant = false;
                 var registrantChanges = new List<string>();
+                var personChanges = new List<string>();
 
                 if ( registrant == null )
                 {
@@ -188,9 +191,10 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 // Get the name of registrant for history
                 string registrantName = "Unknown";
+                var person = new Person();
                 if ( ppPerson.PersonId.HasValue )
                 {
-                    var person = personService.Get( ppPerson.PersonId.Value );
+                    person = personService.Get( ppPerson.PersonId.Value );
                     if ( person != null )
                     {
                         registrantName = person.FullName;
@@ -275,8 +279,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( TemplateState.RequiredSignatureDocumentTemplate != null )
                 {
-                    var person = new PersonService( rockContext ).Get( personId.Value );
-
                     var documentService = new SignatureDocumentService( rockContext );
                     var binaryFileService = new BinaryFileService( rockContext );
                     SignatureDocument document = null;
@@ -337,54 +339,322 @@ namespace RockWeb.Plugins.com_kfs.Event
                     return;
                 }
 
-                // use WrapTransaction since SaveAttributeValues does it's own RockContext.SaveChanges()
-                rockContext.WrapTransaction( () =>
-                {
-                    rockContext.SaveChanges();
+                var familyGroupType = GroupTypeCache.Read( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY );
+                var adultRoleId = familyGroupType.Roles
+                .Where( r => r.Guid.Equals( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ) )
+                .Select( r => r.Id )
+                .FirstOrDefault();
+                var childRoleId = familyGroupType.Roles
+                    .Where( r => r.Guid.Equals( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid() ) )
+                    .Select( r => r.Id )
+                    .FirstOrDefault();
+                var multipleFamilyGroupIds = new Dictionary<Guid, int>();
 
-                    registrant.LoadAttributes();
-                    foreach ( var field in TemplateState.Forms
-                        .SelectMany( f => f.Fields
-                            .Where( t =>
-                                t.FieldSource == RegistrationFieldSource.RegistrationAttribute &&
-                                t.AttributeId.HasValue ) ) )
+                try
+                {
+                    // use WrapTransaction since SaveAttributeValues does it's own RockContext.SaveChanges()
+                    rockContext.WrapTransaction( () =>
                     {
-                        var attribute = AttributeCache.Read( field.AttributeId.Value );
-                        if ( attribute != null )
+                        rockContext.SaveChanges();
+
+                        int? campusId = null;
+                        Location location = null;
+
+                        //
+                        // causes null exception
+                        //
+                        //Task.Run( () =>
+                        //HistoryService.SaveChanges(
+                        //    new RockContext(),
+                        //    typeof( Registration ),
+                        //    Rock.SystemGuid.Category.HISTORY_EVENT_REGISTRATION.AsGuid(),
+                        //    registrant.Registration.Id,
+                        //    registrantChanges, true, CurrentPersonAliasId )
+                        //);
+
+                        // Set any of the template's person fields
+                        foreach ( var field in TemplateState.Forms
+                            .SelectMany( f => f.Fields
+                                .Where( t => t.FieldSource == RegistrationFieldSource.PersonField ) ) )
                         {
-                            string originalValue = registrant.GetAttributeValue( attribute.Key );
                             var fieldValue = RegistrantState.FieldValues
                                 .Where( f => f.Key == field.Id )
                                 .Select( f => f.Value.FieldValue )
                                 .FirstOrDefault();
-                            string newValue = fieldValue != null ? fieldValue.ToString() : string.Empty;
 
-                            if ( ( originalValue ?? string.Empty ).Trim() != ( newValue ?? string.Empty ).Trim() )
-                            {
-                                string formattedOriginalValue = string.Empty;
-                                if ( !string.IsNullOrWhiteSpace( originalValue ) )
-                                {
-                                    formattedOriginalValue = attribute.FieldType.Field.FormatValue( null, originalValue, attribute.QualifierValues, false );
-                                }
-
-                                string formattedNewValue = string.Empty;
-                                if ( !string.IsNullOrWhiteSpace( newValue ) )
-                                {
-                                    formattedNewValue = attribute.FieldType.Field.FormatValue( null, newValue, attribute.QualifierValues, false );
-                                }
-
-                                History.EvaluateChange( registrantChanges, attribute.Name, formattedOriginalValue, formattedNewValue );
-                            }
 
                             if ( fieldValue != null )
                             {
-                                registrant.SetAttributeValue( attribute.Key, fieldValue.ToString() );
+                                switch ( field.PersonFieldType )
+                                {
+                                    case RegistrationPersonFieldType.Campus:
+                                        {
+                                            if ( fieldValue != null )
+                                            {
+                                                campusId = fieldValue.ToString().AsIntegerOrNull();
+                                            }
+                                            break;
+                                        }
+
+                                    case RegistrationPersonFieldType.Address:
+                                        {
+                                            location = fieldValue as Location;
+                                            break;
+                                        }
+
+                                    case RegistrationPersonFieldType.Birthdate:
+                                        {
+                                            var birthMonth = person.BirthMonth;
+                                            var birthDay = person.BirthDay;
+                                            var birthYear = person.BirthYear;
+
+                                            person.SetBirthDate( fieldValue as DateTime? );
+
+                                            History.EvaluateChange( personChanges, "Birth Month", birthMonth, person.BirthMonth );
+                                            History.EvaluateChange( personChanges, "Birth Day", birthDay, person.BirthDay );
+                                            History.EvaluateChange( personChanges, "Birth Year", birthYear, person.BirthYear );
+
+                                            break;
+                                        }
+
+                                    case RegistrationPersonFieldType.Grade:
+                                        {
+                                            var newGraduationYear = fieldValue.ToString().AsIntegerOrNull();
+                                            History.EvaluateChange( personChanges, "Graduation Year", person.GraduationYear, newGraduationYear );
+                                            person.GraduationYear = newGraduationYear;
+
+                                            break;
+                                        }
+
+                                    case RegistrationPersonFieldType.Gender:
+                                        {
+                                            var newGender = fieldValue.ToString().ConvertToEnumOrNull<Gender>() ?? Gender.Unknown;
+                                            History.EvaluateChange( personChanges, "Gender", person.Gender, newGender );
+                                            person.Gender = newGender;
+                                            break;
+                                        }
+
+                                    case RegistrationPersonFieldType.MaritalStatus:
+                                        {
+                                            if ( fieldValue != null )
+                                            {
+                                                int? newMaritalStatusId = fieldValue.ToString().AsIntegerOrNull();
+                                                History.EvaluateChange( personChanges, "Marital Status", DefinedValueCache.GetName( person.MaritalStatusValueId ), DefinedValueCache.GetName( newMaritalStatusId ) );
+                                                person.MaritalStatusValueId = newMaritalStatusId;
+                                            }
+                                            break;
+                                        }
+
+                                    case RegistrationPersonFieldType.MobilePhone:
+                                        {
+                                            SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid(), personChanges );
+                                            break;
+                                        }
+
+                                    case RegistrationPersonFieldType.HomePhone:
+                                        {
+                                            SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid(), personChanges );
+                                            break;
+                                        }
+
+                                    case RegistrationPersonFieldType.WorkPhone:
+                                        {
+                                            SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid(), personChanges );
+                                            break;
+                                        }
+
+                                    case RegistrationPersonFieldType.Email:
+                                        {
+                                            var newEmail = fieldValue.ToString() ?? string.Empty;
+                                            History.EvaluateChange( personChanges, "Email", person.Email, newEmail );
+                                            person.Email = newEmail;
+                                            break;
+                                        }
+                                }
                             }
                         }
-                    }
 
-                    registrant.SaveAttributeValues( rockContext );
-                } );
+                        var family = person.GetFamily();
+                        int? singleFamilyId = null;
+                        singleFamilyId = family.Id;
+
+                        // Save the person ( and family if needed )
+                        SavePerson( rockContext, person, family.Guid, campusId, location, adultRoleId, childRoleId, multipleFamilyGroupIds, ref singleFamilyId );
+
+                        // Load the person's attributes
+                        person.LoadAttributes();
+
+                        // Set any of the template's person fields
+                        foreach ( var field in TemplateState.Forms
+                            .SelectMany( f => f.Fields
+                                .Where( t =>
+                                    t.FieldSource == RegistrationFieldSource.PersonAttribute &&
+                                    t.AttributeId.HasValue ) ) )
+                        {
+                            // Find the registrant's value
+                            var fieldValue = RegistrantState.FieldValues
+                                .Where( f => f.Key == field.Id )
+                                .Select( f => f.Value.FieldValue )
+                                .FirstOrDefault();
+
+                            if ( fieldValue != null )
+                            {
+                                var attribute = AttributeCache.Read( field.AttributeId.Value );
+                                if ( attribute != null )
+                                {
+                                    string originalValue = person.GetAttributeValue( attribute.Key );
+                                    string newValue = fieldValue.ToString();
+                                    person.SetAttributeValue( attribute.Key, fieldValue.ToString() );
+
+                                    // DateTime values must be stored in ISO8601 format as http://www.rockrms.com/Rock/Developer/BookContent/16/16#datetimeformatting
+                                    if ( attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.DATE.AsGuid() ) ||
+                                        attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.DATE_TIME.AsGuid() ) )
+                                    {
+                                        DateTime aDateTime;
+                                        if ( DateTime.TryParse( newValue, out aDateTime ) )
+                                        {
+                                            newValue = aDateTime.ToString( "o" );
+                                        }
+                                    }
+
+                                    if ( ( originalValue ?? string.Empty ).Trim() != ( newValue ?? string.Empty ).Trim() )
+                                    {
+                                        string formattedOriginalValue = string.Empty;
+                                        if ( !string.IsNullOrWhiteSpace( originalValue ) )
+                                        {
+                                            formattedOriginalValue = attribute.FieldType.Field.FormatValue( null, originalValue, attribute.QualifierValues, false );
+                                        }
+
+                                        string formattedNewValue = string.Empty;
+                                        if ( !string.IsNullOrWhiteSpace( newValue ) )
+                                        {
+                                            formattedNewValue = attribute.FieldType.Field.FormatValue( null, newValue, attribute.QualifierValues, false );
+                                        }
+
+                                        Helper.SaveAttributeValue( person, attribute, newValue, rockContext );
+                                        History.EvaluateChange( personChanges, attribute.Name, formattedOriginalValue, formattedNewValue );
+
+                                    }
+                                }
+                            }
+                        }
+
+                        //
+                        // this causes duplicate phone number types to be added
+                        // leaving old phone numbers and adding new phone numbers
+                        //
+                        //personChanges.ForEach( c => registrantChanges.Add( c ) );
+
+                        rockContext.SaveChanges();
+
+                        // Set any of the templat's registrant attributes
+                        registrant.LoadAttributes();
+                        foreach ( var field in TemplateState.Forms
+                            .SelectMany( f => f.Fields
+                                .Where( t =>
+                                    t.FieldSource == RegistrationFieldSource.RegistrationAttribute &&
+                                    t.AttributeId.HasValue ) ) )
+                        {
+                            // Find the registrant's value
+                            var fieldValue = RegistrantState.FieldValues
+                                .Where( f => f.Key == field.Id )
+                                .Select( f => f.Value.FieldValue )
+                                .FirstOrDefault();
+
+                            if ( fieldValue != null )
+                            {
+                                var attribute = AttributeCache.Read( field.AttributeId.Value );
+                                if ( attribute != null )
+                                {
+                                    string originalValue = registrant.GetAttributeValue( attribute.Key );
+                                    string newValue = fieldValue.ToString();
+                                    registrant.SetAttributeValue( attribute.Key, fieldValue.ToString() );
+
+                                    // DateTime values must be stored in ISO8601 format as http://www.rockrms.com/Rock/Developer/BookContent/16/16#datetimeformatting
+                                    if ( attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.DATE.AsGuid() ) ||
+                                        attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.DATE_TIME.AsGuid() ) )
+                                    {
+                                        DateTime aDateTime;
+                                        if ( DateTime.TryParse( fieldValue.ToString(), out aDateTime ) )
+                                        {
+                                            newValue = aDateTime.ToString( "o" );
+                                        }
+                                    }
+
+                                    if ( ( originalValue ?? string.Empty ).Trim() != ( newValue ?? string.Empty ).Trim() )
+                                    {
+                                        string formattedOriginalValue = string.Empty;
+                                        if ( !string.IsNullOrWhiteSpace( originalValue ) )
+                                        {
+                                            formattedOriginalValue = attribute.FieldType.Field.FormatValue( null, originalValue, attribute.QualifierValues, false );
+                                        }
+
+                                        string formattedNewValue = string.Empty;
+                                        if ( !string.IsNullOrWhiteSpace( newValue ) )
+                                        {
+                                            formattedNewValue = attribute.FieldType.Field.FormatValue( null, newValue, attribute.QualifierValues, false );
+                                        }
+
+                                        Helper.SaveAttributeValue( registrant, attribute, newValue, rockContext );
+                                        History.EvaluateChange( registrantChanges, attribute.Name, formattedOriginalValue, formattedNewValue );
+                                    }
+                                }
+                            }
+                        }
+
+                        // Set any of the template's group member attributes 
+                        registrant.GroupMember.LoadAttributes();
+
+                        if ( registrant.GroupMember != null )
+                        {
+                            foreach ( var field in TemplateState.Forms
+                                .SelectMany( f => f.Fields
+                                    .Where( t =>
+                                        t.FieldSource == RegistrationFieldSource.GroupMemberAttribute &&
+                                        t.AttributeId.HasValue ) ) )
+                            {
+                                // Find the registrant's value
+                                var fieldValue = RegistrantState.FieldValues
+                                    .Where( f => f.Key == field.Id )
+                                    .Select( f => f.Value.FieldValue )
+                                    .FirstOrDefault();
+
+                                if ( fieldValue != null )
+                                {
+                                    var attribute = AttributeCache.Read( field.AttributeId.Value );
+                                    if ( attribute != null )
+                                    {
+                                        string originalValue = registrant.GroupMember.GetAttributeValue( attribute.Key );
+                                        string newValue = fieldValue.ToString();
+                                        registrant.GroupMember.SetAttributeValue( attribute.Key, fieldValue.ToString() );
+
+                                        if ( ( originalValue ?? string.Empty ).Trim() != ( newValue ?? string.Empty ).Trim() )
+                                        {
+                                            string formattedOriginalValue = string.Empty;
+                                            if ( !string.IsNullOrWhiteSpace( originalValue ) )
+                                            {
+                                                formattedOriginalValue = attribute.FieldType.Field.FormatValue( null, originalValue, attribute.QualifierValues, false );
+                                            }
+
+                                            string formattedNewValue = string.Empty;
+                                            if ( !string.IsNullOrWhiteSpace( newValue ) )
+                                            {
+                                                formattedNewValue = attribute.FieldType.Field.FormatValue( null, newValue, attribute.QualifierValues, false );
+                                            }
+
+                                            Helper.SaveAttributeValue( registrant.GroupMember, attribute, newValue, rockContext );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } );
+                }
+
+                catch ( Exception ex )
+                {
+                    throw ex;
+                }
 
                 if ( newRegistrant && TemplateState.GroupTypeId.HasValue && ppPerson.PersonId.HasValue )
                 {
@@ -676,7 +946,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         foreach ( var field in form.Fields.OrderBy( f => f.Order ) )
                         {
-                            if ( field.FieldSource == RegistrationFieldSource.RegistrationAttribute )
                             {
                                 object fieldValue = null;
                                 if ( RegistrantState.FieldValues.ContainsKey( field.Id ) )
@@ -684,7 +953,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     fieldValue = RegistrantState.FieldValues[field.Id].FieldValue;
                                 }
 
-                                if ( field.AttributeId.HasValue )
+                                if ( field.FieldSource == RegistrationFieldSource.PersonField )
+                                {
+                                    CreatePersonField( field, setValues, fieldValue );
+                                }
+                                else if ( field.AttributeId.HasValue )
                                 {
                                     var attribute = AttributeCache.Read( field.AttributeId.Value );
                                     string value = string.Empty;
@@ -858,11 +1131,145 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         foreach ( var field in form.Fields.OrderBy( f => f.Order ) )
                         {
-                            if ( field.FieldSource == RegistrationFieldSource.RegistrationAttribute )
                             {
                                 object value = null;
 
-                                if ( field.AttributeId.HasValue )
+                                if ( field.FieldSource == RegistrationFieldSource.PersonField )
+                                {
+                                    switch ( field.PersonFieldType )
+                                    {
+                                        case RegistrationPersonFieldType.FirstName:
+                                            {
+                                                Control control = phFields.FindControl( "tbFirstName" );
+                                                if ( control != null )
+                                                {
+                                                    value = ( ( RockTextBox ) control ).Text;
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.LastName:
+                                            {
+                                                Control control = phFields.FindControl( "tbLastName" );
+                                                if ( control != null )
+                                                {
+                                                    value = ( ( RockTextBox ) control ).Text;
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.Campus:
+                                            {
+                                                Control control = phFields.FindControl( "cpHomeCampus" );
+                                                if ( control != null )
+                                                {
+                                                    value = ( ( CampusPicker ) control ).SelectedValue.AsIntegerOrNull();
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.Address:
+                                            {
+                                                Control control = phFields.FindControl( "acAddress" );
+                                                if ( control != null )
+                                                {
+                                                    var address = new AddressFieldType();
+                                                    var location = new LocationService( new RockContext() ).Get( address.GetEditValue( control, null ).AsGuid() );
+                                                    value = location;
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.Email:
+                                            {
+                                                Control control = phFields.FindControl( "tbEmail" );
+                                                if ( control != null )
+                                                {
+                                                    value = ( ( EmailBox ) control ).Text;
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.Birthdate:
+                                            {
+                                                Control control = phFields.FindControl( "bpBirthday" );
+                                                if ( control != null )
+                                                {
+                                                    value = ( ( BirthdayPicker ) control ).SelectedDate;
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.Grade:
+                                            {
+                                                Control control = phFields.FindControl( "gpGrade" );
+                                                if ( control != null )
+                                                {
+                                                    value = Person.GraduationYearFromGradeOffset( ( ( GradePicker ) control ).SelectedValue.AsIntegerOrNull() );
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.Gender:
+                                            {
+                                                Control control = phFields.FindControl( "ddlGender" );
+                                                if ( control != null )
+                                                {
+                                                    value = ( ( RockDropDownList ) control ).SelectedValue;
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.MaritalStatus:
+                                            {
+                                                Control control = phFields.FindControl( "ddlMaritalStatus" );
+                                                if ( control != null )
+                                                {
+                                                    value = ( ( RockDropDownList ) control ).SelectedValue;
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.MobilePhone:
+                                            {
+                                                var phoneNumber = new PhoneNumber();
+                                                var ppMobile = phFields.FindControl( "ppMobile" ) as PhoneNumberBox;
+                                                if ( ppMobile != null )
+                                                {
+                                                    phoneNumber.CountryCode = PhoneNumber.CleanNumber( ppMobile.CountryCode );
+                                                    phoneNumber.Number = PhoneNumber.CleanNumber( ppMobile.Number );
+                                                    value = phoneNumber;
+                                                }
+                                                break;
+                                            }
+                                        case RegistrationPersonFieldType.HomePhone:
+                                            {
+                                                var phoneNumber = new PhoneNumber();
+                                                var ppHome = phFields.FindControl( "ppHome" ) as PhoneNumberBox;
+                                                if ( ppHome != null )
+                                                {
+                                                    phoneNumber.CountryCode = PhoneNumber.CleanNumber( ppHome.CountryCode );
+                                                    phoneNumber.Number = PhoneNumber.CleanNumber( ppHome.Number );
+                                                    value = phoneNumber;
+                                                }
+                                                break;
+                                            }
+
+                                        case RegistrationPersonFieldType.WorkPhone:
+                                            {
+                                                var phoneNumber = new PhoneNumber();
+                                                var ppWork = phFields.FindControl( "ppWork" ) as PhoneNumberBox;
+                                                if ( ppWork != null )
+                                                {
+                                                    phoneNumber.CountryCode = PhoneNumber.CleanNumber( ppWork.CountryCode );
+                                                    phoneNumber.Number = PhoneNumber.CleanNumber( ppWork.Number );
+                                                    value = phoneNumber;
+                                                }
+                                                break;
+                                            }
+                                    }
+                                }
+                                else if ( field.AttributeId.HasValue )
                                 {
                                     var attribute = AttributeCache.Read( field.AttributeId.Value );
                                     string fieldId = "attribute_field_" + attribute.Id.ToString();
@@ -989,6 +1396,421 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             return null;
         }
+
+        /// <summary>
+        /// Saves the person.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="person">The person.</param>
+        /// <param name="familyGuid">The family unique identifier.</param>
+        /// <param name="campusId">The campus identifier.</param>
+        /// <param name="location">The location.</param>
+        /// <param name="adultRoleId">The adult role identifier.</param>
+        /// <param name="childRoleId">The child role identifier.</param>
+        /// <param name="multipleFamilyGroupIds">The multiple family group ids.</param>
+        /// <param name="singleFamilyId">The single family identifier.</param>
+        /// <returns></returns>
+        private Person SavePerson( RockContext rockContext, Person person, Guid familyGuid, int? campusId, Location location, int adultRoleId, int childRoleId,
+            Dictionary<Guid, int> multipleFamilyGroupIds, ref int? singleFamilyId )
+        {
+            int? familyId = null;
+
+            if ( person.Id > 0 )
+            {
+                rockContext.SaveChanges();
+
+                // Set the family guid for any other registrants that were selected to be in the same family
+                var family = person.GetFamilies( rockContext ).FirstOrDefault();
+                if ( family != null )
+                {
+                    familyId = family.Id;
+                    multipleFamilyGroupIds.AddOrIgnore( familyGuid, family.Id );
+                    if ( !singleFamilyId.HasValue )
+                    {
+                        singleFamilyId = family.Id;
+                    }
+
+                    if ( campusId.HasValue )
+                    {
+                        family.CampusId = campusId;
+                    }
+                }
+            }
+            else
+            {
+                //
+                // not adding new people via this registration form
+                // relies on the person record already existing
+                //
+                //// If we've created the family aready for this registrant, add them to it
+                //if (
+                //        ( RegistrationTemplate.RegistrantsSameFamily == RegistrantsSameFamily.Ask && multipleFamilyGroupIds.ContainsKey( familyGuid ) ) ||
+                //        ( RegistrationTemplate.RegistrantsSameFamily == RegistrantsSameFamily.Yes && singleFamilyId.HasValue )
+                //    )
+                //{
+
+                //    // Add person to existing family
+                //    var age = person.Age;
+                //    int familyRoleId = age.HasValue && age < 18 ? childRoleId : adultRoleId;
+
+                //    familyId = RegistrationTemplate.RegistrantsSameFamily == RegistrantsSameFamily.Ask ?
+                //        multipleFamilyGroupIds[familyGuid] :
+                //        singleFamilyId.Value;
+                //    PersonService.AddPersonToFamily( person, true, multipleFamilyGroupIds[familyGuid], familyRoleId, rockContext );
+
+                //}
+
+                //// otherwise create a new family
+                //else
+                {
+                    // Create Person/Family
+                    var familyGroup = PersonService.SaveNewPerson( person, rockContext, campusId, false );
+                    if ( familyGroup != null )
+                    {
+                        familyId = familyGroup.Id;
+
+                        // Store the family id for next person 
+                        multipleFamilyGroupIds.AddOrIgnore( familyGuid, familyGroup.Id );
+                        if ( !singleFamilyId.HasValue )
+                        {
+                            singleFamilyId = familyGroup.Id;
+                        }
+                    }
+                }
+            }
+
+            if ( familyId.HasValue && location != null )
+            {
+                var homeLocationType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME.AsGuid() );
+                if ( homeLocationType != null )
+                {
+                    var familyGroup = new GroupService( rockContext ).Get( familyId.Value );
+                    if ( familyGroup != null )
+                    {
+                        GroupService.AddNewGroupAddress(
+                            rockContext,
+                            familyGroup,
+                            Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME,
+                            location.Street1, location.Street2, location.City, location.State, location.PostalCode, location.Country, true );
+                    }
+                }
+            }
+
+            return new PersonService( rockContext ).Get( person.Id );
+        }
+
+        /// <summary>
+        /// Saves the phone.
+        /// </summary>
+        /// <param name="fieldValue">The field value.</param>
+        /// <param name="person">The person.</param>
+        /// <param name="phoneTypeGuid">The phone type unique identifier.</param>
+        /// <param name="changes">The changes.</param>
+        private void SavePhone( object fieldValue, Person person, Guid phoneTypeGuid, List<string> changes )
+        {
+            var phoneNumber = fieldValue as PhoneNumber;
+            if ( phoneNumber != null )
+            {
+                string cleanNumber = PhoneNumber.CleanNumber( phoneNumber.Number );
+                if ( !string.IsNullOrWhiteSpace( cleanNumber ) )
+                {
+                    var numberType = DefinedValueCache.Read( phoneTypeGuid );
+                    if ( numberType != null )
+                    {
+                        var phone = person.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValueId == numberType.Id );
+                        string oldPhoneNumber = string.Empty;
+                        if ( phone == null )
+                        {
+                            phone = new PhoneNumber { NumberTypeValueId = numberType.Id };
+                            person.PhoneNumbers.Add( phone );
+                        }
+                        else
+                        {
+                            oldPhoneNumber = phone.NumberFormattedWithCountryCode;
+                        }
+                        phone.CountryCode = PhoneNumber.CleanNumber( phoneNumber.CountryCode );
+                        phone.Number = cleanNumber;
+
+                        History.EvaluateChange(
+                            changes,
+                            string.Format( "{0} Phone", numberType.Value ),
+                            oldPhoneNumber,
+                            phoneNumber.NumberFormattedWithCountryCode );
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates the person field.
+        /// </summary>
+        /// <param name="field">The field.</param>
+        /// <param name="setValue">if set to <c>true</c> [set value].</param>
+        /// <param name="fieldValue">The field value.</param>
+        private void CreatePersonField( RegistrationTemplateFormField field, bool setValue, object fieldValue )
+        {
+
+            switch ( field.PersonFieldType )
+            {
+                case RegistrationPersonFieldType.FirstName:
+                    {
+                        var tbFirstName = new RockTextBox();
+                        tbFirstName.ID = "tbFirstName";
+                        tbFirstName.Label = "First Name";
+                        tbFirstName.Required = field.IsRequired;
+                        tbFirstName.ValidationGroup = BlockValidationGroup;
+                        tbFirstName.AddCssClass( "js-first-name" );
+                        tbFirstName.Enabled = false;
+                        phFields.Controls.Add( tbFirstName );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            tbFirstName.Text = fieldValue.ToString();
+                        }
+
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.LastName:
+                    {
+                        var tbLastName = new RockTextBox();
+                        tbLastName.ID = "tbLastName";
+                        tbLastName.Label = "Last Name";
+                        tbLastName.Required = field.IsRequired;
+                        tbLastName.ValidationGroup = BlockValidationGroup;
+                        tbLastName.Enabled = false;
+                        phFields.Controls.Add( tbLastName );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            tbLastName.Text = fieldValue.ToString();
+                        }
+
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.Campus:
+                    {
+                        var cpHomeCampus = new CampusPicker();
+                        cpHomeCampus.ID = "cpHomeCampus";
+                        cpHomeCampus.Label = "Campus";
+                        cpHomeCampus.Required = field.IsRequired;
+                        cpHomeCampus.ValidationGroup = BlockValidationGroup;
+                        cpHomeCampus.Campuses = CampusCache.All( false );
+
+                        phFields.Controls.Add( cpHomeCampus );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            cpHomeCampus.SelectedCampusId = fieldValue.ToString().AsIntegerOrNull();
+                        }
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.Address:
+                    {
+                        var acAddress = new AddressControl();
+                        acAddress.ID = "acAddress";
+                        acAddress.Label = "Address";
+                        acAddress.UseStateAbbreviation = true;
+                        acAddress.UseCountryAbbreviation = false;
+                        acAddress.Required = field.IsRequired;
+                        acAddress.ValidationGroup = BlockValidationGroup;
+
+                        phFields.Controls.Add( acAddress );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            var value = fieldValue as Location;
+                            acAddress.SetValues( value );
+                        }
+
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.Email:
+                    {
+                        var tbEmail = new EmailBox();
+                        tbEmail.ID = "tbEmail";
+                        tbEmail.Label = "Email";
+                        tbEmail.Required = field.IsRequired;
+                        tbEmail.ValidationGroup = BlockValidationGroup;
+                        phFields.Controls.Add( tbEmail );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            tbEmail.Text = fieldValue.ToString();
+                        }
+
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.Birthdate:
+                    {
+                        var bpBirthday = new BirthdayPicker();
+                        bpBirthday.ID = "bpBirthday";
+                        bpBirthday.Label = "Birthday";
+                        bpBirthday.Required = field.IsRequired;
+                        bpBirthday.ValidationGroup = BlockValidationGroup;
+                        phFields.Controls.Add( bpBirthday );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            var value = fieldValue as DateTime?;
+                            bpBirthday.SelectedDate = value;
+                        }
+
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.Grade:
+                    {
+                        var gpGrade = new GradePicker();
+                        gpGrade.ID = "gpGrade";
+                        gpGrade.Label = "Grade";
+                        gpGrade.Required = field.IsRequired;
+                        gpGrade.ValidationGroup = BlockValidationGroup;
+                        gpGrade.UseAbbreviation = true;
+                        gpGrade.UseGradeOffsetAsValue = true;
+                        gpGrade.CssClass = "input-width-md";
+                        phFields.Controls.Add( gpGrade );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            var value = fieldValue.ToString().AsIntegerOrNull();
+                            gpGrade.SetValue( Person.GradeOffsetFromGraduationYear( value ) );
+                        }
+
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.Gender:
+                    {
+                        var ddlGender = new RockDropDownList();
+                        ddlGender.ID = "ddlGender";
+                        ddlGender.Label = "Gender";
+                        ddlGender.Required = field.IsRequired;
+                        ddlGender.ValidationGroup = BlockValidationGroup;
+                        ddlGender.BindToEnum<Gender>( false );
+
+                        // change the 'Unknow' value to be blank instead
+                        ddlGender.Items.FindByValue( "0" ).Text = string.Empty;
+
+                        phFields.Controls.Add( ddlGender );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            var value = fieldValue.ToString().ConvertToEnumOrNull<Gender>() ?? Gender.Unknown;
+                            ddlGender.SetValue( value.ConvertToInt() );
+                        }
+
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.MaritalStatus:
+                    {
+                        var ddlMaritalStatus = new RockDropDownList();
+                        ddlMaritalStatus.ID = "ddlMaritalStatus";
+                        ddlMaritalStatus.Label = "Marital Status";
+                        ddlMaritalStatus.Required = field.IsRequired;
+                        ddlMaritalStatus.ValidationGroup = BlockValidationGroup;
+                        ddlMaritalStatus.BindToDefinedType( DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
+                        phFields.Controls.Add( ddlMaritalStatus );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            var value = fieldValue.ToString().AsInteger();
+                            ddlMaritalStatus.SetValue( value );
+                        }
+
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.MobilePhone:
+                    {
+                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
+                        if ( dv != null )
+                        {
+                            var ppMobile = new PhoneNumberBox();
+                            ppMobile.ID = "ppMobile";
+                            ppMobile.Label = dv.Value;
+                            ppMobile.Required = field.IsRequired;
+                            ppMobile.ValidationGroup = BlockValidationGroup;
+                            ppMobile.CountryCode = PhoneNumber.DefaultCountryCode();
+
+                            phFields.Controls.Add( ppMobile );
+
+                            if ( setValue && fieldValue != null )
+                            {
+                                var value = fieldValue as PhoneNumber;
+                                if ( value != null )
+                                {
+                                    ppMobile.CountryCode = value.CountryCode;
+                                    ppMobile.Number = value.ToString();
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+                case RegistrationPersonFieldType.HomePhone:
+                    {
+                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
+                        if ( dv != null )
+                        {
+                            var ppHome = new PhoneNumberBox();
+                            ppHome.ID = "ppHome";
+                            ppHome.Label = dv.Value;
+                            ppHome.Required = field.IsRequired;
+                            ppHome.ValidationGroup = BlockValidationGroup;
+                            ppHome.CountryCode = PhoneNumber.DefaultCountryCode();
+
+                            phFields.Controls.Add( ppHome );
+
+                            if ( setValue && fieldValue != null )
+                            {
+                                var value = fieldValue as PhoneNumber;
+                                if ( value != null )
+                                {
+                                    ppHome.CountryCode = value.CountryCode;
+                                    ppHome.Number = value.ToString();
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+
+                case RegistrationPersonFieldType.WorkPhone:
+                    {
+                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK );
+                        if ( dv != null )
+                        {
+                            var ppWork = new PhoneNumberBox();
+                            ppWork.ID = "ppWork";
+                            ppWork.Label = dv.Value;
+                            ppWork.Required = field.IsRequired;
+                            ppWork.ValidationGroup = BlockValidationGroup;
+                            ppWork.CountryCode = PhoneNumber.DefaultCountryCode();
+
+                            phFields.Controls.Add( ppWork );
+
+                            if ( setValue && fieldValue != null )
+                            {
+                                var value = fieldValue as PhoneNumber;
+                                if ( value != null )
+                                {
+                                    ppWork.CountryCode = value.CountryCode;
+                                    ppWork.Number = value.ToString();
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+            }
+        }
+
 
         #endregion
 
