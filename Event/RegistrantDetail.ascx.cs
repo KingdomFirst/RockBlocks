@@ -32,6 +32,9 @@ namespace RockWeb.Plugins.com_kfs.Event
     [Category( "KFS > Advanced Event Registration" )]
     [Description( "Displays interface for editing the registration attribute values and fees for a given registrant." )]
 
+    [LinkedPage( "Add Family Link", "Select the page where a new family can be added. If specified, a link will be shown which will open in a new window when clicked", false, "6a11a13d-05ab-4982-a4c2-67a8b1950c74,af36e4c2-78c6-4737-a983-e7a78137ddc7", "", 2 )]
+    [SecurityAction( "AddFamilies", "The roles and/or users that can add new families to the system." )]
+
     public partial class RegistrantDetail : RockBlock
     {
 
@@ -81,6 +84,15 @@ namespace RockWeb.Plugins.com_kfs.Event
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlRegistrantDetail );
+
+            bool canAddFamilies = UserCanAdministrate || IsUserAuthorized( "AddFamilies" );
+            string addFamilyUrl = this.LinkedPageUrl( "AddFamilyLink" );
+            rcwAddNewFamily.Visible = ( !string.IsNullOrWhiteSpace( addFamilyUrl ) && canAddFamilies );
+            if ( rcwAddNewFamily.Visible )
+            {
+                // force the link to open a new scrollable,resizable browser window (and make it work in FF, Chrome and IE) http://stackoverflow.com/a/2315916/1755417
+                hlAddNewFamily.Attributes["onclick"] = string.Format( "javascript: window.open('{0}', '_blank', 'scrollbars=1,resizable=1,toolbar=1'); return false;", addFamilyUrl );
+            }
         }
 
         /// <summary>

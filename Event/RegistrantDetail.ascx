@@ -64,6 +64,10 @@
                     <div class="panel-labels">
                         <Rock:HighlightLabel ID="hlCost" runat="server" LabelType="Info" ToolTip="Cost" />
                     </div>
+
+                    <Rock:RockControlWrapper ID="rcwAddNewFamily" runat="server"  Visible="false">
+                    <a id="hlAddNewFamily" class="btn btn-default btn-xs margin-r-sm pull-right" runat="server" href="#">Add Family</a>
+                </Rock:RockControlWrapper>
                 </div>
 
                 <div class="panel-body">
