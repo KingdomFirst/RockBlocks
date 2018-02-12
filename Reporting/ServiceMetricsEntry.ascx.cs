@@ -196,9 +196,23 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                     .Where( v =>
                                         v.MetricId == metric.Id &&
                                         v.MetricValueDateTime.HasValue && v.MetricValueDateTime.Value == weekend.Value &&
-                                        v.MetricValuePartitions.Count == 2 &&
-                                        v.MetricValuePartitions.Any( p => p.MetricPartitionId == campusPartitionId && p.EntityId.HasValue && p.EntityId.Value == campusId.Value ) &&
-                                        v.MetricValuePartitions.Any( p => p.MetricPartitionId == schedulePartitionId && p.EntityId.HasValue && p.EntityId.Value == scheduleId.Value ) )
+                                            (
+                                                (
+                                                    v.MetricValuePartitions.Count == 2 &&
+                                                    v.MetricValuePartitions.Any( p => p.MetricPartitionId == campusPartitionId && p.EntityId.HasValue && p.EntityId.Value == campusId.Value ) &&
+                                                    v.MetricValuePartitions.Any( p => p.MetricPartitionId == schedulePartitionId && p.EntityId.HasValue && p.EntityId.Value == scheduleId.Value )
+                                                ) ||                                                (
+                                                    v.MetricValuePartitions.Count == 1 &&
+                                                    (
+                                                        v.MetricValuePartitions.Any( p => p.MetricPartitionId == campusPartitionId && p.EntityId.HasValue && p.EntityId.Value == campusId.Value ) ||
+                                                        v.MetricValuePartitions.Any( p => p.MetricPartitionId == schedulePartitionId && p.EntityId.HasValue && p.EntityId.Value == scheduleId.Value )
+                                                    )
+                                                ) ||
+                                                (
+                                                    v.MetricValuePartitions.Count == 0
+                                                )
+                                            )
+                                        )
                                     .FirstOrDefault();
 
                                 if ( metricValue == null )
@@ -209,15 +223,21 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                     metricValue.MetricValueDateTime = weekend.Value;
                                     metricValueService.Add( metricValue );
 
-                                    var campusValuePartition = new MetricValuePartition();
-                                    campusValuePartition.MetricPartitionId = campusPartitionId;
-                                    campusValuePartition.EntityId = campusId.Value;
-                                    metricValue.MetricValuePartitions.Add( campusValuePartition );
+                                    if ( campusPartitionId > 0 )
+                                    {
+                                        var campusValuePartition = new MetricValuePartition();
+                                        campusValuePartition.MetricPartitionId = campusPartitionId;
+                                        campusValuePartition.EntityId = campusId.Value;
+                                        metricValue.MetricValuePartitions.Add( campusValuePartition );
+                                    }
 
-                                    var scheduleValuePartition = new MetricValuePartition();
-                                    scheduleValuePartition.MetricPartitionId = schedulePartitionId;
-                                    scheduleValuePartition.EntityId = scheduleId.Value;
-                                    metricValue.MetricValuePartitions.Add( scheduleValuePartition );
+                                    if ( schedulePartitionId > 0 )
+                                    {
+                                        var scheduleValuePartition = new MetricValuePartition();
+                                        scheduleValuePartition.MetricPartitionId = schedulePartitionId;
+                                        scheduleValuePartition.EntityId = scheduleId.Value;
+                                        metricValue.MetricValuePartitions.Add( scheduleValuePartition );
+                                    }
                                 }
 
                                 metricValue.YValue = nbMetricValue.Text.AsDecimalOrNull();
@@ -449,10 +469,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                     var metricValueService = new MetricValueService( rockContext );
                     foreach ( var metric in new MetricService( rockContext )
                         .GetByGuids( metricGuids )
-                        .Where( m =>
-                            m.MetricPartitions.Count == 2 &&
-                            m.MetricPartitions.Any( p => p.EntityTypeId.HasValue && p.EntityTypeId.Value == campusEntityTypeId ) &&
-                            m.MetricPartitions.Any( p => p.EntityTypeId.HasValue && p.EntityTypeId.Value == scheduleEntityTypeId ) )
                         .OrderBy( m => m.Title )
                         .Select( m => new
                         {
@@ -471,9 +487,23 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                 .Where( v =>
                                     v.MetricId == metric.Id &&
                                     v.MetricValueDateTime.HasValue && v.MetricValueDateTime.Value == weekend.Value &&
-                                    v.MetricValuePartitions.Count == 2 &&
-                                    v.MetricValuePartitions.Any( p => p.MetricPartitionId == metric.CampusPartitionId && p.EntityId.HasValue && p.EntityId.Value == campusId.Value ) &&
-                                    v.MetricValuePartitions.Any( p => p.MetricPartitionId == metric.SchedulePartitionId && p.EntityId.HasValue && p.EntityId.Value == scheduleId.Value ) )
+                                        (
+                                            (
+                                                v.MetricValuePartitions.Count == 2 &&
+                                                v.MetricValuePartitions.Any( p => p.MetricPartitionId == metric.CampusPartitionId && p.EntityId.HasValue && p.EntityId.Value == campusId.Value ) &&
+                                                v.MetricValuePartitions.Any( p => p.MetricPartitionId == metric.SchedulePartitionId && p.EntityId.HasValue && p.EntityId.Value == scheduleId.Value )
+                                            ) || (
+                                                v.MetricValuePartitions.Count == 1 &&
+                                                    (
+                                                        v.MetricValuePartitions.Any( p => p.MetricPartitionId == metric.CampusPartitionId && p.EntityId.HasValue && p.EntityId.Value == campusId.Value ) ||
+                                                        v.MetricValuePartitions.Any( p => p.MetricPartitionId == metric.SchedulePartitionId && p.EntityId.HasValue && p.EntityId.Value == scheduleId.Value )
+                                                    )
+                                            ) ||
+                                            (
+                                                v.MetricValuePartitions.Count == 0
+                                            )
+                                        )
+                                    )
                                 .FirstOrDefault();
 
                             if ( metricValue != null )
