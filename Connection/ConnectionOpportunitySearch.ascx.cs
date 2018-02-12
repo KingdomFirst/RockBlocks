@@ -1,20 +1,4 @@
-﻿// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
@@ -33,23 +17,21 @@ using Rock.Attribute;
 using Rock.Store;
 using System.Text;
 using Rock.Security;
+using Rock.Web.UI;
 
-namespace RockWeb.Blocks.Connection
+namespace RockWeb.Plugins.com_kfs.Connection
 {
     [DisplayName( "Connection Opportunity Search" )]
-    [Category( "Connection" )]
-    [Description( "Allows users to search for an opportunity to join" )]
+    [Category( "com_kfs > Connection" )]
+    [Description( "Allows users to search for an opportunity to join.  Attribute keys need to be for drop down list attriute types." )]
 
     [CodeEditorField( "Lava Template", "Lava template to use to display the list of opportunities.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, true, @"{% include '~~/Assets/Lava/OpportunitySearch.lava' %}", "", 0 )]
     [BooleanField( "Enable Campus Context", "If the page has a campus context it's value will be used as a filter", true, order: 1 )]
     [BooleanField( "Set Page Title", "Determines if the block should set the page title with the connection type name.", false, order: 2 )]
-    [BooleanField( "Display Name Filter", "Display the name filter", false, order: 3 )]
-    [BooleanField( "Display Campus Filter", "Display the campus filter", true, order: 4 )]
-    [BooleanField( "Display Inactive Campuses", "Include inactive campuses in the Campus Filter", true, order: 5 )]
-    [BooleanField( "Display Attribute Filters", "Display the attribute filters", true, order: 6 )]
     [LinkedPage( "Detail Page", "The page used to view a connection opportunity.", order: 7 )]
-    [IntegerField( "Connection Type Id", "The Id of the connection type whose opportunities are displayed.", true, 1, order:8 )]
-    [BooleanField( "Show Search", "Determines if the search fields should be displayed. Sometimes listing all the options is enough.", true, order: 9 )]
+    [IntegerField( "Connection Type Id", "The Id of the connection type whose opportunities are displayed.", true, 1, order: 8 )]
+    [TextField( "Attribute One Key", "", false, "", order: 10 )]
+    [TextField( "Attribute Two Key", "", false, "", order: 11 )]
 
     public partial class OpportunitySearch : Rock.Web.UI.RockBlock
     {
@@ -61,7 +43,8 @@ namespace RockWeb.Blocks.Connection
         /// <value>
         /// The available attributes.
         /// </value>
-        public List<AttributeCache> AvailableAttributes { get; set; }
+        public AttributeCache AttributeOne { get; set; }
+        public AttributeCache AttributeTwo { get; set; }
 
         #endregion
 
@@ -75,7 +58,8 @@ namespace RockWeb.Blocks.Connection
         {
             base.LoadViewState( savedState );
 
-            AvailableAttributes = ViewState["AvailableAttributes"] as List<AttributeCache>;
+            AttributeOne = ViewState["AttributeOne"] as AttributeCache;
+            AttributeTwo = ViewState["AttributeTwo"] as AttributeCache;
 
             SetFilters( false );
         }
@@ -105,8 +89,6 @@ namespace RockWeb.Blocks.Connection
                 SetFilters( true );
                 UpdateList();
             }
-
-            pnlSearch.Visible = GetAttributeValue( "ShowSearch" ).AsBoolean();
         }
 
         /// <summary>
@@ -117,7 +99,8 @@ namespace RockWeb.Blocks.Connection
         /// </returns>
         protected override object SaveViewState()
         {
-            ViewState["AvailableAttributes"] = AvailableAttributes;
+            ViewState["AttributeOne"] = AttributeOne;
+            ViewState["AttributeTwo"] = AttributeTwo;
 
             return base.SaveViewState();
         }
@@ -166,55 +149,53 @@ namespace RockWeb.Blocks.Connection
 
                 var qrySearch = connectionOpportunityService.Queryable().Where( a => a.ConnectionTypeId == connectionTypeId && a.IsActive == true ).ToList();
 
-                if ( GetAttributeValue( "DisplayNameFilter" ).AsBoolean() )
+                if ( GetAttributeValue( "EnableCampusContext" ).AsBoolean() && !GetAttributeValue( "DisplayCampusFilter" ).AsBoolean() )
                 {
-                    if ( !string.IsNullOrWhiteSpace( tbSearchName.Text ) )
+                    var campusEntityType = EntityTypeCache.Read( "Rock.Model.Campus" );
+                    var contextCampus = RockPage.GetCurrentContext( campusEntityType ) as Campus;
+                    
+                    if ( contextCampus != null )
                     {
-                        searchSelections.Add( "tbSearchName", tbSearchName.Text );
-                        var searchTerms = tbSearchName.Text.ToLower().SplitDelimitedValues( true );
-                        qrySearch = qrySearch.Where( o => searchTerms.Any( t => t.Contains( o.Name.ToLower() ) || o.Name.ToLower().Contains( t ) ) ).ToList();
+                        var campusId = contextCampus.Id;
+                        qrySearch = qrySearch.Where( o => o.ConnectionOpportunityCampuses.Any( c => c.CampusId.Equals( campusId ) ) ).ToList();
                     }
                 }
 
-                if ( GetAttributeValue( "DisplayCampusFilter" ).AsBoolean() )
+                if ( AttributeOne != null )
                 {
-                    var searchCampuses = cblCampus.SelectedValuesAsInt;
-                    if ( searchCampuses.Count > 0 )
+                    var control = phAttributeOne.Controls[0] as DropDownList;
+                    searchSelections.Add( "ddlAttributeOne", control.SelectedValue );
+
+                    var attributeValueService = new AttributeValueService( rockContext );
+                    var parameterExpression = attributeValueService.ParameterExpression;
+
+                    var value = AttributeOne.FieldType.Field.GetEditValue( control, AttributeOne.QualifierValues );
+                    if ( !string.IsNullOrWhiteSpace( value ) )
                     {
-                        searchSelections.Add( "cblCampus", searchCampuses.AsDelimited("|") );
-                        qrySearch = qrySearch.Where( o => o.ConnectionOpportunityCampuses.Any( c => searchCampuses.Contains( c.CampusId ) ) ).ToList();
+                        var attributeValues = attributeValueService
+                            .Queryable()
+                            .Where( v => v.Attribute.Id == AttributeOne.Id )
+                            .Where( v => v.Value.Equals( value ) );
+                        qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
                     }
                 }
 
-                if ( GetAttributeValue( "DisplayAttributeFilters" ).AsBoolean() )
+                if ( AttributeTwo != null )
                 {
-                    // Filter query by any configured attribute filters
-                    if ( AvailableAttributes != null && AvailableAttributes.Any() )
+                    var control = phAttributeTwo.Controls[0] as DropDownList;
+                    searchSelections.Add( "ddlAttributeTwo", control.SelectedValue );
+
+                    var attributeValueService = new AttributeValueService( rockContext );
+                    var parameterExpression = attributeValueService.ParameterExpression;
+
+                    var value = AttributeTwo.FieldType.Field.GetEditValue( control, AttributeTwo.QualifierValues );
+                    if ( !string.IsNullOrWhiteSpace( value ) )
                     {
-                        var attributeValueService = new AttributeValueService( rockContext );
-                        var parameterExpression = attributeValueService.ParameterExpression;
-
-                        foreach ( var attribute in AvailableAttributes )
-                        {
-                            string filterControlId = "filter_" + attribute.Id.ToString();
-                            var filterControl = phAttributeFilters.FindControl( filterControlId );
-                            if ( filterControl != null )
-                            {
-                                var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                if ( expression != null )
-                                {
-                                    searchSelections.Add( filterControlId, filterValues.ToJson() );
-                                    var attributeValues = attributeValueService
-                                        .Queryable()
-                                        .Where( v => v.Attribute.Id == attribute.Id );
-
-                                    attributeValues = attributeValues.Where( parameterExpression, expression, null );
-
-                                    qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
-                                }
-                            }
-                        }
+                        var attributeValues = attributeValueService
+                            .Queryable()
+                            .Where( v => v.Attribute.Id == AttributeTwo.Id )
+                            .Where( v => v.Value.Equals( value ) );
+                        qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
                     }
                 }
 
@@ -227,10 +208,10 @@ namespace RockWeb.Blocks.Connection
                 mergeFields.Add( "CurrentPerson", CurrentPerson );
                 mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Read( "Rock.Model.Campus" ) ) as Campus );
                 var pageReference = new PageReference( GetAttributeValue( "DetailPage" ), null );
-                mergeFields.Add( "DetailPage", BuildDetailPageUrl(pageReference.BuildUrl()) );
+                mergeFields.Add( "DetailPage", BuildDetailPageUrl( pageReference.BuildUrl() ) );
 
                 // iterate through the opportunities and lava merge the summaries and descriptions
-                foreach(var opportunity in opportunities )
+                foreach ( var opportunity in opportunities )
                 {
                     opportunity.Summary = opportunity.Summary.ResolveMergeFields( mergeFields );
                     opportunity.Description = opportunity.Description.ResolveMergeFields( mergeFields );
@@ -256,10 +237,10 @@ namespace RockWeb.Blocks.Connection
         /// </summary>
         /// <param name="detailPage">The detail page.</param>
         /// <returns></returns>
-        private string BuildDetailPageUrl(string detailPage )
+        private string BuildDetailPageUrl( string detailPage )
         {
             StringBuilder sbUrlParms = new StringBuilder();
-            foreach(var parm in this.RockPage.PageParameters() )
+            foreach ( var parm in this.RockPage.PageParameters() )
             {
                 if ( parm.Key != "PageId" )
                 {
@@ -290,109 +271,95 @@ namespace RockWeb.Blocks.Connection
 
                 var connectionType = new ConnectionTypeService( rockContext ).Get( GetAttributeValue( "ConnectionTypeId" ).AsInteger() );
 
-                if ( !GetAttributeValue( "DisplayNameFilter" ).AsBoolean() )
+                if ( connectionType != null )
                 {
-                    tbSearchName.Visible = false;
-                }
+                    int entityTypeId = new ConnectionOpportunity().TypeId;
+                    var attributeOneKey = GetAttributeValue( "AttributeOneKey" );
+                    var attributeTwoKey = GetAttributeValue( "AttributeTwoKey" );
 
-                if ( GetAttributeValue( "DisplayCampusFilter" ).AsBoolean() )
-                {
-                    cblCampus.Visible = true;
-                    cblCampus.DataSource = CampusCache.All( GetAttributeValue( "DisplayInactiveCampuses" ).AsBoolean() );
-                    cblCampus.DataBind();
-                }
-                else
-                {
-                    cblCampus.Visible = false;
-                }
+                    if ( !string.IsNullOrWhiteSpace( attributeOneKey ) )
+                    {
+                        if ( !string.IsNullOrWhiteSpace( attributeTwoKey ) )
+                        {
+                            pnlAttributeOne.CssClass = "col-sm-6";
+                        }
+                        else
+                        {
+                            pnlAttributeOne.CssClass = "col-sm-12";
+                        }
 
-                if ( setValues )
-                {
-                    if ( searchSelections.ContainsKey( "tbSearchName" ) )
-                    {
-                        tbSearchName.Text = searchSelections["tbSearchName"];
-                    }
-                    if ( searchSelections.ContainsKey( "cblCampus" ) )
-                    {
-                        var selectedItems = searchSelections["cblCampus"].SplitDelimitedValues().AsIntegerList();
-                        cblCampus.SetValues( selectedItems );
-                    }
-                }
-                else if ( GetAttributeValue( "EnableCampusContext" ).AsBoolean() )
-                {
-                    var campusEntityType = EntityTypeCache.Read( "Rock.Model.Campus" );
-                    var contextCampus = RockPage.GetCurrentContext( campusEntityType ) as Campus;
-
-                    if ( contextCampus != null )
-                    {
-                        cblCampus.SetValue( contextCampus.Id.ToString() );
-                    }
-                }
-
-                if ( GetAttributeValue( "DisplayAttributeFilters" ).AsBoolean() )
-                {
-                    // Parse the attribute filters 
-                    AvailableAttributes = new List<AttributeCache>();
-                    if ( connectionType != null )
-                    {
-                        int entityTypeId = new ConnectionOpportunity().TypeId;
-                        foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
-                            .Where( a =>
+                        AttributeOne = AttributeCache.Read( new AttributeService( new RockContext() ).Queryable()
+                            .FirstOrDefault( a =>
                                 a.EntityTypeId == entityTypeId &&
                                 a.EntityTypeQualifierColumn.Equals( "ConnectionTypeId", StringComparison.OrdinalIgnoreCase ) &&
                                 a.EntityTypeQualifierValue.Equals( connectionType.Id.ToString() ) &&
-                                a.AllowSearch == true )
-                            .OrderBy( a => a.Order )
-                            .ThenBy( a => a.Name ) )
-                        {
-                            AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
-                        }
+                                a.Key == attributeOneKey ) );
                     }
 
-                    // Clear the filter controls
-                    phAttributeFilters.Controls.Clear();
-
-                    if ( AvailableAttributes != null )
+                    if ( !string.IsNullOrWhiteSpace( attributeTwoKey ) )
                     {
-                        foreach ( var attribute in AvailableAttributes )
+                        if ( !string.IsNullOrWhiteSpace( attributeOneKey ) )
                         {
-                            string controlId = "filter_" + attribute.Id.ToString();
-                            var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, controlId, false, Rock.Reporting.FilterMode.SimpleFilter );
-                            if ( control != null )
-                            {
-                                if ( control is IRockControl )
-                                {
-                                    var rockControl = (IRockControl)control;
-                                    rockControl.Label = attribute.Name;
-                                    rockControl.Help = attribute.Description;
-                                    phAttributeFilters.Controls.Add( control );
-                                }
-                                else
-                                {
-                                    var wrapper = new RockControlWrapper();
-                                    wrapper.ID = control.ID + "_wrapper";
-                                    wrapper.Label = attribute.Name;
-                                    wrapper.Controls.Add( control );
-                                    phAttributeFilters.Controls.Add( wrapper );
-                                }
-
-                                if ( setValues && searchSelections.ContainsKey(controlId))
-                                {
-                                    var values = searchSelections[controlId].FromJsonOrNull<List<string>>();
-                                    attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
-                                }
-                            }
+                            pnlAttributeTwo.CssClass = "col-sm-6";
                         }
+                        else
+                        {
+                            pnlAttributeTwo.CssClass = "col-sm-12";
+                        }
+
+                        AttributeTwo = AttributeCache.Read( new AttributeService( new RockContext() ).Queryable()
+                            .FirstOrDefault( a =>
+                                a.EntityTypeId == entityTypeId &&
+                                a.EntityTypeQualifierColumn.Equals( "ConnectionTypeId", StringComparison.OrdinalIgnoreCase ) &&
+                                a.EntityTypeQualifierValue.Equals( connectionType.Id.ToString() ) &&
+                                a.Key == attributeTwoKey ) );
                     }
                 }
-                else
+
+                if ( AttributeOne != null)
                 {
-                    phAttributeFilters.Visible = false;
+                    phAttributeOne.Controls.Clear();
+                    AttributeOne.AddControl( phAttributeOne.Controls, string.Empty, string.Empty, true, true, false );
+                    var control = phAttributeOne.Controls[0] as DropDownList;
+                    control.EnableViewState = true;
+                    control.AutoPostBack = true;
+                    control.SelectedIndexChanged += new EventHandler( ddlAttributeOne_SelectedIndexChanged );
                 }
+
+                if ( AttributeTwo != null )
+                {
+                    phAttributeTwo.Controls.Clear();
+                    AttributeTwo.AddControl( phAttributeTwo.Controls, string.Empty, string.Empty, true, true, false );
+                    var control = phAttributeTwo.Controls[0] as DropDownList;
+                    control.EnableViewState = true;
+                    control.AutoPostBack = true;
+                    control.SelectedIndexChanged += new EventHandler( ddlAttributeTwo_SelectedIndexChanged );
+                }
+
             }
         }
-
+        
         #endregion
 
+
+        protected void ddlAttributeOne_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            if ( phAttributeTwo.Controls.Count > 0 )
+            {
+                var control = phAttributeTwo.Controls[0] as DropDownList;
+                control.SelectedIndex = 0;
+            }
+            UpdateList();
+        }
+
+        protected void ddlAttributeTwo_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            if ( phAttributeOne.Controls.Count > 0 )
+            {
+                var control = phAttributeOne.Controls[0] as DropDownList;
+                control.SelectedIndex = 0;
+            }
+            UpdateList();
+        }
     }
 }
