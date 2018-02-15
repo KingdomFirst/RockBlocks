@@ -76,7 +76,7 @@
 
                     <div class="row">
                         <div class="col-md-6">
-                            <Rock:PersonPicker ID="ppPerson" runat="server" Label="Person" Required="true" />
+                            <Rock:PersonPicker ID="ppPerson" runat="server" Label="Person" Required="true" OnSelectPerson="ppPerson_SelectPerson" />
                             <asp:PlaceHolder ID="phFields" runat="server" />
                         </div>
                         <div class="col-md-6">

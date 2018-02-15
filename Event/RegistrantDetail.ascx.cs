@@ -818,7 +818,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         tglWaitList.Checked = !registrant.OnWaitList;
                     }
                 }
-
+                
                 if ( TemplateState == null && registrationId.HasValue && registrationId.Value != 0 )
                 {
                     var registration = new RegistrationService( rockContext )
@@ -1816,5 +1816,97 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         #endregion
 
+
+        protected void ppPerson_SelectPerson( object sender, EventArgs e )
+        {
+            if ( RegistrantState != null && ( ppPerson.PersonId.HasValue && ppPerson.PersonId > 0 ) )
+            {
+                RockContext rockContext = new RockContext();
+                var personService = new PersonService( rockContext );
+                var registrantService = new RegistrationRegistrantService( rockContext );
+                var registrantFeeService = new RegistrationRegistrantFeeService( rockContext );
+                var registrationTemplateFeeService = new RegistrationTemplateFeeService( rockContext );
+                RegistrationRegistrant registrant = null;
+                if ( RegistrantState.Id > 0 )
+                {
+                    registrant = registrantService.Get( RegistrantState.Id );
+                }
+
+                var registration = new RegistrationService( rockContext ).Get( RegistrantState.RegistrationId );
+                var alreadyRegistered = registrantService.Queryable().Any( r => r.PersonAliasId == ppPerson.PersonAliasId && r.Registration.RegistrationInstanceId == registration.RegistrationInstanceId );
+
+                if ( !alreadyRegistered )
+                {
+                    var registrantChanges = new List<string>();
+                    var personChanges = new List<string>();
+
+                    if ( registrant == null )
+                    {
+                        registrant = new RegistrationRegistrant();
+                        registrant.RegistrationId = RegistrantState.RegistrationId;
+                        registrantService.Add( registrant );
+                        registrantChanges.Add( "Created Registrant" );
+                    }
+
+                    if ( !registrant.PersonAliasId.Equals( ppPerson.PersonAliasId ) )
+                    {
+                        string prevPerson = ( registrant.PersonAlias != null && registrant.PersonAlias.Person != null ) ?
+                            registrant.PersonAlias.Person.FullName : string.Empty;
+                        string newPerson = ppPerson.PersonName;
+                        History.EvaluateChange( registrantChanges, "Person", prevPerson, newPerson );
+                    }
+                    registrant.PersonAliasId = ppPerson.PersonAliasId.Value;
+
+                    // Get the name of registrant for history
+                    string registrantName = "Unknown";
+                    var person = new Person();
+                    if ( ppPerson.PersonId.HasValue )
+                    {
+                        person = personService.Get( ppPerson.PersonId.Value );
+                        if ( person != null )
+                        {
+                            registrantName = person.FullName;
+                        }
+                    }
+
+                    if ( !registrant.IsValid )
+                    {
+                        // Controls will render the error messages                    
+                        return;
+                    }
+
+                    try
+                    {
+                        rockContext.SaveChanges();
+                    }
+
+                    catch ( Exception ex )
+                    {
+                        throw ex;
+                    }
+
+                    HistoryService.SaveChanges(
+                        rockContext,
+                        typeof( Registration ),
+                        Rock.SystemGuid.Category.HISTORY_EVENT_REGISTRATION.AsGuid(),
+                        registrant.RegistrationId,
+                        registrantChanges,
+                        "Registrant: " + registrantName,
+                        null, null );
+
+                    var qryParams = new Dictionary<string, string>();
+                    qryParams.Add( "RegistrationId", RegistrantState.RegistrationId.ToString() );
+                    qryParams.Add( "RegistrantId", registrant.Id.ToString() );
+                    NavigateToCurrentPage( qryParams );
+                }
+                else
+                {
+                    // person already a registrant in instance
+                    ppPerson.SelectedValue = null;
+                    ppPerson.PersonName = string.Empty;
+                    return;
+                }
+            }
+        }
     }
 }
