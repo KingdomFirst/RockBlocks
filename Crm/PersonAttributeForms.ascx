@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="PersonAttributeForms.ascx.cs" Inherits="RockWeb.Blocks.Crm.PersonAttributeForms" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="PersonAttributeForms.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Crm.PersonAttributeForms" %>
 
 <script type="text/javascript">
     function clearActiveDialog() {
