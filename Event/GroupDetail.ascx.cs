@@ -38,6 +38,7 @@ namespace RockWeb.Plugins.com_kfs.Event
     [LinkedPage( "Registration Instance Page", "The page to display registration details.", false, "", "", 7 )]
     [LinkedPage( "Event Item Occurrence Page", "The page to display event item occurrence details.", false, "", "", 8 )]
     [LinkedPage( "Content Item Page", "The page to display registration details.", false, "", "", 9 )]
+    [BooleanField( "Prevent Selecting Inactive Campus", "Should inactive campuses be excluded from the campus field when editing a group?.", false, "", 10 )]
     [BooleanField( "Enable Dialog Mode", "When enabled, the Save and Cancel buttons will be associated with the buttons of the Modal.", false, "", 13 )]
     public partial class GroupDetail : RockBlock, IDetailBlock
     {
@@ -544,7 +545,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             group.Name = tbName.Text;
             group.Description = tbDescription.Text;
-            group.CampusId = ddlCampus.SelectedValueAsInt();
+            group.CampusId = cpCampus.SelectedCampusId;
             group.GroupTypeId = CurrentGroupTypeId;
             group.ParentGroupId = gpParentGroup.SelectedValueAsInt();
             group.GroupCapacity = nbGroupCapacity.Text.AsIntegerOrNull();
@@ -689,7 +690,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( adding )
                 {
-                    // add ADMINISTRATE to the person who added the group
+                    // add ADMINISTRATE to the person who added the group 
                     Rock.Security.Authorization.AllowPerson( group, Authorization.ADMINISTRATE, this.CurrentPerson, rockContext );
                 }
 
@@ -994,7 +995,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // get all the allowed GroupTypes as defined by the parent group type
                         var allowedChildGroupTypesOfParentGroup = GetAllowedGroupTypes( parentGroup, rockContext ).ToList();
 
-                        // narrow it down to group types that the current user is allowed to edit
+                        // narrow it down to group types that the current user is allowed to edit 
                         var authorizedGroupTypes = new List<GroupType>();
                         foreach ( var allowedGroupType in allowedChildGroupTypesOfParentGroup )
                         {
@@ -1232,7 +1233,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 ddlGroupType.SetValue( CurrentGroupTypeId );
             }
 
-            ddlCampus.SetValue( group.CampusId );
+            cpCampus.IncludeInactive = !GetAttributeValue( "PreventSelectingInactiveCampus" ).AsBoolean();
+            cpCampus.SelectedCampusId = group.CampusId;
 
             GroupRequirementsState = group.GroupRequirements.ToList();
             GroupLocationsState = group.GroupLocations.ToList();
@@ -1346,12 +1348,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                         case ScheduleType.Named:
                             spSchedule.SetValue( group.Schedule );
                             break;
-
                         case ScheduleType.Custom:
                             hfUniqueScheduleId.Value = group.Schedule.Id.ToString();
                             sbSchedule.iCalendarContent = group.Schedule.iCalendarContent;
                             break;
-
                         case ScheduleType.Weekly:
                             hfUniqueScheduleId.Value = group.Schedule.Id.ToString();
                             dowWeekly.SelectedDayOfWeek = group.Schedule.WeeklyDayOfWeek;
@@ -1714,10 +1714,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void LoadDropDowns( RockContext rockContext )
         {
-            ddlCampus.DataSource = CampusCache.All();
-            ddlCampus.DataBind();
-            ddlCampus.Items.Insert( 0, new ListItem( None.Text, None.IdValue ) );
-
             ddlSignatureDocumentTemplate.Items.Clear();
             ddlSignatureDocumentTemplate.Items.Add( new ListItem() );
             foreach ( var documentType in new SignatureDocumentTemplateService( rockContext )
@@ -1750,15 +1746,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "LOCATIONS":
                     dlgLocations.Show();
                     break;
-
                 case "GROUPMEMBERATTRIBUTES":
                     dlgGroupMemberAttribute.Show();
                     break;
-
                 case "GROUPREQUIREMENTS":
                     mdGroupRequirement.Show();
                     break;
-
                 case "MEMBERWORKFLOWTRIGGERS":
                     dlgMemberWorkflowTriggers.Show();
                     break;
@@ -1775,15 +1768,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "LOCATIONS":
                     dlgLocations.Hide();
                     break;
-
                 case "GROUPMEMBERATTRIBUTES":
                     dlgGroupMemberAttribute.Hide();
                     break;
-
                 case "GROUPREQUIREMENTS":
                     mdGroupRequirement.Hide();
                     break;
-
                 case "MEMBERWORKFLOWTRIGGERS":
                     dlgMemberWorkflowTriggers.Hide();
                     break;

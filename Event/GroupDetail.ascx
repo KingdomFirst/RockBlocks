@@ -2,10 +2,9 @@
 
 <script type="text/javascript">
     function clearActiveDialog() {
-        $('#<%= hfActiveDialog.ClientID %>').val('');
+        $('#<%=hfActiveDialog.ClientID %>').val('');
     }
-
-    Sys.Application.add_load( function () {
+    Sys.Application.add_load(function () {
         $('.js-follow-status').tooltip();
     });
 </script>
@@ -83,7 +82,7 @@
                                     <Rock:NumberBox ID="nbGroupCapacity" runat="server" Label="Group Capacity" NumberType="Integer" />
                                 </div>
                                 <div class="col-md-6">
-                                    <Rock:DataDropDownList ID="ddlCampus" runat="server" DataTextField="Name" DataValueField="Id" SourceTypeName="Rock.Model.Campus, Rock" PropertyName="Name" Label="Campus" />
+                                    <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
                                     <Rock:RockDropDownList ID="ddlSignatureDocumentTemplate" runat="server" Label="Require Signed Document" 
                                         Help="If members of this group need to have signed a document, select that document type here." />
                                 </div>
@@ -382,10 +381,10 @@
         </Rock:ModalDialog>
 
         <script>
-            
+
             Sys.Application.add_load(function () {
                 function setIsActiveControls(activeCheckbox) {
-                    
+
                     var $inactiveLabel = $(activeCheckbox).closest(".js-group-panel").find('.js-inactivegroup-label');
                     if ($(activeCheckbox).is(':checked')) {
                         $inactiveLabel.hide();
@@ -393,7 +392,6 @@
                     else {
                         $inactiveLabel.show();
                     }
-
                     // if isactive was toggled from Active to Inactive, show the inactivate child groups checkbox
                     if ($(activeCheckbox).is(':checked')) {
                         $('.js-inactivatechildgroups').hide();
@@ -402,7 +400,6 @@
                         $('.js-inactivatechildgroups').show();
                     }
                 }
-
                 function setPrivateLabel(publicCheckbox) {
                     var $privateLabel = $(publicCheckbox).closest(".js-group-panel").find('.js-privategroup-label');
                     if ($(publicCheckbox).is(':checked')) {
@@ -412,24 +409,19 @@
                         $privateLabel.show();
                     }
                 }
-
                 $('.js-isactivegroup').on('click', function () {
                     setIsActiveControls(this);
                 });
-
                 $('.js-ispublicgroup').on('click', function () {
                     setPrivateLabel(this);
                 });
-
                 $('.js-isactivegroup').each(function (i) {
                     setIsActiveControls(this);
                 });
-
                 $('.js-ispublicgroup').each(function (i) {
                     setPrivateLabel(this);
                 });
             });
-
         </script>
 
     </ContentTemplate>
