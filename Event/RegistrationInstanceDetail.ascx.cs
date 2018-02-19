@@ -106,7 +106,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         private List<Guid> _resourceGroupTypes = new List<Guid>();
         private List<Guid> _resourceGroups = new List<Guid>();
         private List<Guid> _expandedRows = new List<Guid>();
-        private int _registrantGridColumnCount = 0;
         private Guid? _currentGroupTypeGuid = null;
         private Guid? _currentGroupGuid = null;
 
@@ -1437,9 +1436,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         instance.LoadAttributes();
                     }
-                    //instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
 
-                    var columnIndex = _registrantGridColumnCount;
+                    var firstResourceColumn = gRegistrants.Columns.OfType<LinkButtonField>().FirstOrDefault();
+                    var columnIndex = gRegistrants.Columns.IndexOf( firstResourceColumn ).ToString().AsInteger();
+
                     foreach ( var groupType in ResourceGroupTypes )
                     {
                         if ( groupType.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) && instance.AttributeValues.ContainsKey( groupType.Name ) )
@@ -1454,7 +1454,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     var btnGroupAssignment = groupAssignments.Controls.Count > 0 ? groupAssignments.Controls[0] as LinkButton : null;
                                     if ( btnGroupAssignment != null && parentGroup != null )
                                     {
-                                        //var parentGroupColumn = e.Row.FindControl( "lSubGroup_" + parentGroup.Id ) as Literal;
                                         if ( parentGroup.Groups.Any() )
                                         {
                                             if ( parentGroup.GroupType.Attributes == null || !parentGroup.GroupType.Attributes.Any() )
@@ -1540,8 +1539,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
                     }
                 }
-
-                
             }
         }
 
@@ -3907,7 +3904,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            _registrantGridColumnCount = gRegistrants.Columns.Count;
             //// Add dynamic columns for sub groups
             if ( ResourceGroupTypes.Any() )
             {
@@ -5823,8 +5819,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             foreach ( Group group in subGroups )
             {
-                var groupPanel = (KFSGroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
-                //var groupPanel = new KFSGroupPanel();
+                var groupPanel = (KFSGroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx");
+                //var groupPanel = new KFSGroupPanel();  // doesn't work
 
                 groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
 
@@ -5836,6 +5832,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         break;
                     }
                 }
+                groupPanel.ResourceGroupTypes = ResourceGroupTypes;
                 groupPanel.AddButtonClick += AddMemberButton_Click;
                 groupPanel.EditMemberButtonClick += EditMemberButton_Click;
                 groupPanel.BuildControl( group );
@@ -6133,11 +6130,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         ddlRegistrantList.Visible = false;
                         ddlRegistrantList.Required = false;
-                        ppSubGroupMember.Visible = true;
-                        ppSubGroupMember.Required = true;
+                        ppVolunteer.Visible = true;
+                        ppVolunteer.Required = true;
                     }
 
-                    if ( !ppSubGroupMember.Visible && group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
+                    if ( !ppVolunteer.Visible && group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
                     {
                         // display active volunteers not already in this group
                         foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
@@ -6215,9 +6212,17 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var groupMemberService = new GroupMemberService( rockContext );
                     var groupMemberId = int.Parse( hfSubGroupMemberId.Value );
 
-                    // Check to see if a person was selected
-                    var person = ddlRegistrantList.SelectedValueAsGuid().HasValue ? new PersonService( rockContext ).Get( (Guid)ddlRegistrantList.SelectedValueAsGuid() ) : null;
-                    person = person ?? ( ppSubGroupMember.SelectedValue.HasValue ? new PersonService( rockContext ).Get( (int)ppSubGroupMember.SelectedValue ) : null );
+                    // Check to see if a registrant or volunteer was selected
+                    Person person;
+                    if ( ddlRegistrantList.Visible )
+                    {
+                        person = ddlRegistrantList.SelectedValueAsGuid().HasValue ? new PersonService( rockContext ).Get( (Guid)ddlRegistrantList.SelectedValueAsGuid() ) : null;
+                    }
+                    else
+                    {
+                        person = ppVolunteer.SelectedValue.HasValue ? new PersonService( rockContext ).Get( (int)ppVolunteer.SelectedValue ) : null;
+                    }
+                    
                     if ( person == null )
                     {
                         nbErrorMessage.Title = "Please select a Person";

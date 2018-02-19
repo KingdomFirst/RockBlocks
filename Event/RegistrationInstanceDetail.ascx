@@ -479,7 +479,7 @@
                         <fieldset>
                             <div class="col-md-6">
                                 <Rock:RockDropDownList ID="ddlRegistrantList" runat="server" Label="Registrant" Required="true" ValidationGroup="vgAddGroupMember" />
-                                <Rock:PersonPicker ID="ppSubGroupMember" runat="server" Label="Volunteer" Visible="false" ValidationGroup="vgAddGroupMember" />
+                                <Rock:PersonPicker ID="ppVolunteer" runat="server" Label="Volunteer" Visible="false" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMember" />
                             </div>
                             <div class="col-md-6">
