@@ -151,7 +151,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             bool setValues = this.Request.Params["__EVENTTARGET"] == null || !this.Request.Params["__EVENTTARGET"].EndsWith( "_lbClearFilter" );
 
             // Rebuilds dynamic group area controls after postbacks
-            BuildRegistrationResources();
+            BuildResourcesInterface();
             BuildSubGroupTabs();
             AddDynamicControls( setValues );
         }
@@ -257,7 +257,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var instance = GetRegistrationInstance( registrationInstanceId.Value );
                 if ( ResourceGroupTypes == null )
                 {
-                    SetRegistrationResources( instance );
+                    LoadRegistrationResources( instance );
                 }
 
                 BindResourcePanels();
@@ -300,30 +300,29 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var postbackArgs = Request.Params["__EVENTARGUMENT"];
                 if ( !string.IsNullOrWhiteSpace( postbackArgs ) )
                 {
-                    var nameValue = postbackArgs.Split( new char[] { ':' } );
-                    if ( nameValue.Length == 2 )
+                    var eventParams = postbackArgs.Split( new char[] { ':' } );
+                    if ( eventParams.Length == 2 )
                     {
-                        string eventParam = nameValue[0];
                         hfAreaGroupClicked.Value = "false";
-                        switch ( eventParam )
+                        switch ( eventParams[0] )
                         {
                             case "select-area":
                                 {
                                     hfAreaGroupClicked.Value = "true";
-                                    SelectArea( nameValue[1].AsGuid() );
+                                    SelectArea( eventParams[1].AsGuid() );
                                     break;
                                 }
 
                             case "select-group":
                                 {
                                     hfAreaGroupClicked.Value = "true";
-                                    SelectGroup( nameValue[1].AsGuid() );
+                                    SelectGroup( eventParams[1].AsGuid() );
                                     break;
                                 }
 
                             case "select-subgroup":
                                 {
-                                    RenderEditGroupMemberModal( nameValue[1] );
+                                    RenderEditGroupMemberModal( eventParams[1] );
                                     break;
                                 }
                         }
@@ -415,6 +414,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             using ( var rockContext = new RockContext() )
             {
                 var instance = new RegistrationInstanceService( rockContext ).Get( hfRegistrationInstanceId.Value.AsInteger() );
+                BuildResourcesInterface( true ); 
                 BuildRegistrationGroupHierarchy( rockContext, instance );
                 ShowEditDetails( instance, rockContext );
             }
@@ -522,9 +522,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( resourceAreaPanel.Visible )
                 {
-                    var attributeService = new AttributeService( rockContext );
-                    var groupTypeService = new GroupTypeService( rockContext );
-                    var groupType = groupTypeService.Get( resourceAreaPanel.GroupTypeGuid );
+                    var groupType = new GroupTypeService( rockContext ).Get( resourceAreaPanel.GroupTypeGuid );
                     if ( groupType != null )
                     {
                         resourceAreaPanel.GetGroupTypeValues( groupType );
@@ -1406,13 +1404,40 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
 
+                // add addresses if exporting
+                if ( _homeAddresses.Count > 0 )
+                {
+                    var lStreet1 = e.Row.FindControl( "lStreet1" ) as Literal;
+                    var lStreet2 = e.Row.FindControl( "lStreet2" ) as Literal;
+                    var lCity = e.Row.FindControl( "lCity" ) as Literal;
+                    var lState = e.Row.FindControl( "lState" ) as Literal;
+                    var lPostalCode = e.Row.FindControl( "lPostalCode" ) as Literal;
+                    var lCountry = e.Row.FindControl( "lCountry" ) as Literal;
+
+                    var location = _homeAddresses[registrant.PersonId.Value];
+                    if ( location != null && lStreet1 != null && lStreet2 != null && lCity != null && lPostalCode != null && lCountry != null )
+                    {
+                        lStreet1.Text = location.Street1;
+                        lStreet2.Text = location.Street2;
+                        lCity.Text = location.City;
+                        lState.Text = location.State;
+                        lPostalCode.Text = location.PostalCode;
+                        lCountry.Text = location.Country;
+                    }
+                }
+
                 // Build subgroup button grid
                 using ( var rockContext = new RockContext() )
                 {
                     var groupService = new GroupService( rockContext );
                     var memberService = new GroupMemberService( rockContext );
 
-                    var instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
+                    var instance = registrant.Registration.RegistrationInstance;
+                    if ( instance.Attributes == null || !instance.Attributes.Any() )
+                    {
+                        instance.LoadAttributes();
+                    }
+                    //instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
 
                     var columnIndex = _registrantGridColumnCount;
                     foreach ( var groupType in ResourceGroupTypes )
@@ -1516,27 +1541,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
 
-                // add addresses if exporting
-                if ( _homeAddresses.Count > 0 )
-                {
-                    var lStreet1 = e.Row.FindControl( "lStreet1" ) as Literal;
-                    var lStreet2 = e.Row.FindControl( "lStreet2" ) as Literal;
-                    var lCity = e.Row.FindControl( "lCity" ) as Literal;
-                    var lState = e.Row.FindControl( "lState" ) as Literal;
-                    var lPostalCode = e.Row.FindControl( "lPostalCode" ) as Literal;
-                    var lCountry = e.Row.FindControl( "lCountry" ) as Literal;
-
-                    var location = _homeAddresses[registrant.PersonId.Value];
-                    if ( location != null )
-                    {
-                        lStreet1.Text = location.Street1;
-                        lStreet2.Text = location.Street2;
-                        lCity.Text = location.City;
-                        lState.Text = location.State;
-                        lPostalCode.Text = location.PostalCode;
-                        lCountry.Text = location.Country;
-                    }
-                }
+                
             }
         }
 
@@ -2293,6 +2298,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// Shows the readonly details.
         /// </summary>
         /// <param name="instance">The registration template.</param>
+        /// <param name="setTab">if set to <c>true</c> [set tab].</param>
         private void ShowReadonlyDetails( RegistrationInstance instance, bool setTab = true )
         {
             SetEditMode( false );
@@ -2433,7 +2439,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             var instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
             foreach ( var groupType in ResourceGroupTypes )
             {
-                if ( groupType.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) && instance.AttributeValues.ContainsKey( groupType.Name ) )
+                if ( groupType.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) && instance != null && instance.AttributeValues.ContainsKey( groupType.Name ) )
                 {
                     var resourceGroupGuid = instance.AttributeValues[groupType.Name];
                     if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
@@ -2560,19 +2566,22 @@ namespace RockWeb.Plugins.com_kfs.Event
         private void BindRegistrationsGrid()
         {
             var instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
-            if ( instanceId.HasValue )
+            if ( instanceId.HasValue && instanceId > 0 )
             {
                 using ( var rockContext = new RockContext() )
                 {
                     var registrationEntityType = EntityTypeCache.Read( typeof( Rock.Model.Registration ) );
 
                     var instance = new RegistrationInstanceService( rockContext ).Get( instanceId.Value );
-                    var cost = instance.RegistrationTemplate.Cost;
-                    if ( instance.RegistrationTemplate.SetCostOnInstance ?? false )
+                    if ( instance != null )
                     {
-                        cost = instance.Cost ?? 0.0m;
+                        decimal cost = instance.RegistrationTemplate.Cost;
+                        if ( instance.RegistrationTemplate.SetCostOnInstance ?? false )
+                        {
+                            cost = instance.Cost ?? 0.0m;
+                        }
+                        _instanceHasCost = cost > 0.0m;
                     }
-                    _instanceHasCost = cost > 0.0m;
 
                     var qry = new RegistrationService( rockContext )
                         .Queryable( "PersonAlias.Person,Registrants.PersonAlias.Person,Registrants.Fees.RegistrationTemplateFee" )
@@ -3357,8 +3366,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             phRegistrantFormFieldFilters.Controls.Clear();
             phGroupPlacementsFormFieldFilters.Controls.Clear();
             var allGrids = this.ControlsOfTypeRecursive<Grid>().ToList();
-            _registrantGridColumnCount = gRegistrants.Columns.Count;
-
+            
             // Remove the registrant field
             foreach ( var column in gRegistrants.Columns
                 .OfType<TemplateField>()
@@ -3366,7 +3374,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 .ToList() )
             {
                 gRegistrants.Columns.Remove( column );
-                _registrantGridColumnCount--;
             }
 
             // Remove any of the dynamic person fields
@@ -3379,7 +3386,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 .ToList() )
             {
                 gRegistrants.Columns.Remove( column );
-                _registrantGridColumnCount--;
             }
 
             // Remove any of the dynamic attribute fields
@@ -3388,7 +3394,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 .ToList() )
             {
                 gRegistrants.Columns.Remove( column );
-                _registrantGridColumnCount--;
             }
 
             // Remove the fees field
@@ -3398,7 +3403,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 .ToList() )
             {
                 gRegistrants.Columns.Remove( column );
-                _registrantGridColumnCount--;
             }
 
             // Remove the delete field
@@ -3406,8 +3410,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 .OfType<DeleteField>()
                 .ToList() )
             {
-                gRegistrants.Columns.Remove( column );
-                _registrantGridColumnCount--;
+                gRegistrants.Columns.Remove( column ); 
             }
 
             // Remove Sub Group fields
@@ -3416,7 +3419,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 .ToList() )
             {
                 gRegistrants.Columns.Remove( column );
-                _registrantGridColumnCount--;
             }
 
             // Remove any of the dynamic attribute fields on group placements grid
@@ -3444,7 +3446,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 ExcelExportBehavior = ExcelExportBehavior.NeverInclude
             };
             gRegistrants.Columns.Insert( 1, registrantField );
-            _registrantGridColumnCount++;
+            
 
             if ( RegistrantFields != null )
             {
@@ -3592,6 +3594,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         SortExpression = dataFieldExpression
                                     };
                                     gRegistrants.Columns.Add( birthdateField );
+                                    
 
                                     var birthdateField2 = new DateField
                                     {
@@ -3657,6 +3660,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         SortExpression = "PersonAlias.Person.GraduationYear"
                                     };
                                     gRegistrants.Columns.Add( gradeField );
+                                    
 
                                     var gradeField2 = new RockBoundField
                                     {
@@ -3700,6 +3704,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     genderField.HeaderText = "Gender";
                                     genderField.SortExpression = dataFieldExpression;
                                     gRegistrants.Columns.Add( genderField );
+                                    
 
                                     var genderField2 = new EnumField();
                                     genderField2.DataField = dataFieldExpression;
@@ -3742,6 +3747,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     maritalStatusField.HeaderText = "MaritalStatus";
                                     maritalStatusField.SortExpression = dataFieldExpression;
                                     gRegistrants.Columns.Add( maritalStatusField );
+                                    
 
                                     var maritalStatusField2 = new RockBoundField();
                                     maritalStatusField2.DataField = dataFieldExpression;
@@ -3780,6 +3786,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     phoneNumbersField.DataField = "PersonAlias.Person.PhoneNumbers";
                                     phoneNumbersField.HeaderText = "Phone(s)";
                                     gRegistrants.Columns.Add( phoneNumbersField );
+                                    
 
                                     var phoneNumbersField2 = new PhoneNumbersField();
                                     phoneNumbersField2.DataField = "PersonAlias.Person.PhoneNumbers";
@@ -3893,13 +3900,14 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
 
                             gRegistrants.Columns.Add( boundField );
-                            _registrantGridColumnCount++;
+                            
                             gGroupPlacements.Columns.Add( boundField2 );
                         }
                     }
                 }
             }
 
+            _registrantGridColumnCount = gRegistrants.Columns.Count;
             //// Add dynamic columns for sub groups
             if ( ResourceGroupTypes.Any() )
             {
@@ -3972,7 +3980,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             var parentRow = sender as ResourceAreaRow;
             parentRow.Expanded = true;
-
             using ( var rockContext = new RockContext() )
             {
                 var groupTypeService = new GroupTypeService( rockContext );
@@ -4010,7 +4017,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             var parentRow = sender as ResourceGroupRow;
             parentRow.Expanded = true;
-
             using ( var rockContext = new RockContext() )
             {
                 var groupService = new GroupService( rockContext );
@@ -4077,8 +4083,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             using ( var rockContext = new RockContext() )
             {
-                var attributeService = new AttributeService( rockContext );
-
                 if ( resourceAreaPanel.Visible )
                 {
                     var groupTypeService = new GroupTypeService( rockContext );
@@ -4159,7 +4163,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             // rebuilds the group display on change
-            BuildRegistrationResources();
+            BuildResourcesInterface();
         }
 
         /// <summary>
@@ -4228,7 +4232,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             // just deleted this item, remove visibility
             btnResourceSave.Visible = false;
             btnResourceDelete.Visible = false;
-            BuildRegistrationResources();
+            BuildResourcesInterface();
         }
 
         /// <summary>
@@ -4399,10 +4403,10 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Gets the registration resources.
+        /// Loads the registration resources.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        private void SetRegistrationResources( RegistrationInstance instance )
+        private void LoadRegistrationResources( RegistrationInstance instance )
         {
             using ( var rockContext = new RockContext() )
             {
@@ -4574,7 +4578,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
                         }
                     }
-                }
+                }      
 
                 rockContext.SaveChanges();
                 instance.SaveAttributeValues();
@@ -4582,12 +4586,12 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Builds the rows.
+        /// Builds the resource group UI.
         /// </summary>
         /// <param name="setValues">if set to <c>true</c> [set values].</param>
         /// <param name="instance"></param>
         /// <param name="rInstance">The r instance.</param>
-        private void BuildRegistrationResources( bool setValues = true )
+        private void BuildResourcesInterface( bool setValues = true )
         {
             _resourceGroupTypes = new List<Guid>();
             _resourceGroups = new List<Guid>();
@@ -4641,7 +4645,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     ID = "ResourceAreaRow_" + groupType.Guid.ToString( "N" )
                 };
 
-                resourceAreaRow.EnableAddAreas = true;
+                resourceAreaRow.EnableAddAreas = false;
                 resourceAreaRow.EnableAddGroups = true;
                 resourceAreaRow.SetGroupType( groupType );
                 //resourceAreaRow.AddAreaClick += ResourceAreaRow_AddAreaClick;
@@ -6069,7 +6073,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     ddlSubGroup.DataValueField = "Id";
                     ddlSubGroup.DataBind();
                     ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
-                    ddlSubGroup.SelectedIndex = parentGroup.Groups.Any() ? 1 : 0;
+                    // for consistency with delete member functionality, don't autoselect the first group in the list
+                    ddlSubGroup.SelectedIndex = 0; // parentGroup.Groups.Any() ? 1 : 0; 
                     ddlSubGroup.Label = !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupTerm ) ? parentGroup.GroupType.GroupTerm : parentGroup.Name;
                     group = parentGroup.Groups.Any() ? parentGroup.Groups.FirstOrDefault() : null;
                 }
