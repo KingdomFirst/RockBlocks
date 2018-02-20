@@ -32,6 +32,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
     // Settings
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
+    [BooleanField( "Allow Connection Opportunity", "Determines if a url parameter of 'OpportunityId' should be evaluated when complete.  Example: OpportunityId=1 or OpportunityId=1,2,3" )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
     [LinkedPage( "Done Page", "The page to redirect to when done.", false, "", "CustomSetting" )]
@@ -549,6 +550,66 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         {
                                             ExceptionLogService.LogException( ex, this.Context );
                                         }
+                                    }
+                                }
+
+                                if ( GetAttributeValue( "AllowConnectionOpportunity" ).AsBoolean() )
+                                {
+                                    var opportunityService = new ConnectionOpportunityService( rockContext );
+                                    var connectionRequestService = new ConnectionRequestService( rockContext );
+
+                                    var personCampus = person.GetCampus();
+                                    if ( personCampus != null )
+                                    {
+                                        campusId = personCampus.Id;
+                                    }
+
+                                    var opportunities = RockPage.PageParameter( "OpportunityId" ).SplitDelimitedValues().AsIntegerList();
+                                    foreach ( var opportunityId in opportunities )
+                                    {
+                                        var opportunity = opportunityService
+                                            .Queryable()
+                                            .Where( o => o.Id == opportunityId )
+                                            .FirstOrDefault();
+
+                                        int defaultStatusId = opportunity.ConnectionType.ConnectionStatuses
+                                            .Where( s => s.IsDefault )
+                                            .Select( s => s.Id )
+                                            .FirstOrDefault();
+
+                                        // If opportunity is valid and has a default status
+                                        if ( opportunity != null && defaultStatusId > 0 )
+                                        {
+                                            var connectionRequest = new ConnectionRequest();
+                                            connectionRequest.PersonAliasId = person.PrimaryAliasId.Value;
+                                            connectionRequest.Comments = string.Empty;
+                                            connectionRequest.ConnectionOpportunityId = opportunity.Id;
+                                            connectionRequest.ConnectionState = ConnectionState.Active;
+                                            connectionRequest.ConnectionStatusId = defaultStatusId;
+                                            connectionRequest.CampusId = campusId;
+                                            connectionRequest.ConnectorPersonAliasId = opportunity.GetDefaultConnectorPersonAliasId( campusId );
+                                            if ( campusId.HasValue &&
+                                                opportunity != null &&
+                                                opportunity.ConnectionOpportunityCampuses != null )
+                                            {
+                                                var campus = opportunity.ConnectionOpportunityCampuses
+                                                    .Where( c => c.CampusId == campusId.Value )
+                                                    .FirstOrDefault();
+                                                if ( campus != null )
+                                                {
+                                                    connectionRequest.ConnectorPersonAliasId = campus.DefaultConnectorPersonAliasId;
+                                                }
+                                            }
+
+                                            if ( !connectionRequest.IsValid )
+                                            {
+                                                // Controls will show warnings
+                                                return;
+                                            }
+
+                                            connectionRequestService.Add( connectionRequest );
+
+                                            rockContext.SaveChanges();                                    }
                                     }
                                 }
 
