@@ -33,6 +33,11 @@ namespace RockWeb.Plugins.com_kfs.Crm
     // Settings
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
     [BooleanField( "Allow Connection Opportunity", "Determines if a url parameter of 'OpportunityId' should be evaluated when complete.  Example: OpportunityId=1 or OpportunityId=1,2,3" )]
+    [BooleanField( "Allow Group Membership", "Determines if a url parameter of 'GroupGuid' or 'GroupId' should be evaluated when complete." )]
+    [GroupTypesField( "Allowed Group Types", "This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.", true, Rock.SystemGuid.GroupType.GROUPTYPE_SMALL_GROUP, "", 0 )]
+    [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "", 0 )]
+    [BooleanField( "Enable Passing Group Id", "If enabled, allows the ability to pass in a group's Id (GroupId=) instead of the Guid.", true, "", 0 )]
+    [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "", 2 )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
     [LinkedPage( "Done Page", "The page to redirect to when done.", false, "", "CustomSetting" )]
@@ -610,6 +615,68 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                             connectionRequestService.Add( connectionRequest );
 
                                             rockContext.SaveChanges();                                    }
+                                    }
+                                }
+
+                                if ( GetAttributeValue( "AllowGroupMembership" ).AsBoolean() )
+                                {
+                                    Group group = null;
+                                    GroupTypeRole defaultGroupRole = null;
+                                    var groupService = new GroupService( rockContext );
+                                    bool groupIsFromQryString = true;
+
+                                    Guid? groupGuid = GetAttributeValue( "Group" ).AsGuidOrNull();
+                                    if ( groupGuid.HasValue )
+                                    {
+                                        group = groupService.Get( groupGuid.Value );
+                                        groupIsFromQryString = false;
+                                    }
+
+                                    if ( group == null )
+                                    {
+                                        groupGuid = PageParameter( "GroupGuid" ).AsGuidOrNull();
+                                        if ( groupGuid.HasValue )
+                                        {
+                                            group = groupService.Get( groupGuid.Value );
+                                        }
+                                    }
+
+                                    if ( group == null && GetAttributeValue( "EnablePassingGroupId" ).AsBoolean() )
+                                    {
+                                        int? groupId = PageParameter( "GroupId" ).AsIntegerOrNull();
+                                        if ( groupId.HasValue )
+                                        {
+                                            group = groupService.Get( groupId.Value );
+                                        }
+                                    }
+
+                                    var groupTypeGuids = this.GetAttributeValue( "AllowedGroupTypes" ).SplitDelimitedValues().AsGuidList();
+
+                                    if ( groupIsFromQryString && groupTypeGuids.Any() && !groupTypeGuids.Contains( group.GroupType.Guid ) )
+                                    {
+                                        group = null;
+                                    }
+                                    else
+                                    {
+                                        defaultGroupRole = group.GroupType.DefaultGroupRole;
+                                    }
+
+                                    if ( group != null )
+                                    {
+                                        if ( !group.Members
+                                            .Any( m =>
+                                                m.PersonId == person.Id &&
+                                                m.GroupRoleId == defaultGroupRole.Id ) )
+                                        {
+                                            var groupMemberService = new GroupMemberService( rockContext );
+                                            var groupMember = new GroupMember();
+                                            groupMember.PersonId = person.Id;
+                                            groupMember.GroupRoleId = defaultGroupRole.Id;
+                                            groupMember.GroupMemberStatus = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
+                                            groupMember.GroupId = group.Id;
+                                            groupMemberService.Add( groupMember );
+                                            rockContext.SaveChanges();
+                                        }
                                     }
                                 }
 
