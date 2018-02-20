@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupPanel.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.KFSGroupPanel" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupPanel.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.GroupPanel" %>
 
 <asp:UpdatePanel ID="upnlSubGroup" runat="server">
     <ContentTemplate>

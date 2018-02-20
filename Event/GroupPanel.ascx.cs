@@ -24,17 +24,20 @@ namespace RockWeb.Plugins.com_kfs.Event
 
     [DisplayName( "Advanced Registration Group Detail" )]
     [Category( "KFS > Advanced Event Registration" )]
-    [Description( "The KFS Group Panel that displays for resource subgroups." )]
-    public partial class KFSGroupPanel : System.Web.UI.UserControl
+    [Description( "The Group Panel that displays for resource subgroups." )]
+    public partial class GroupPanel : System.Web.UI.UserControl
     {
         /// <summary>
         /// The group, resources, and registration instance
         /// </summary>
         private Group _group;
 
+        private Grid _grid;
+
         private List<GroupTypeCache> _resourceTypes;
 
-        private RegistrationInstance _instance;
+        private Dictionary<string, AttributeValueCache> _resources;
+        
 
         /// <summary>
         /// The expanded
@@ -51,6 +54,12 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             get { return _group; }
             set { _group = value; }
+        }
+
+        public Grid Grid
+        {
+            get { return _grid; }
+            set { _grid = value; }
         }
 
         /// <summary>
@@ -78,16 +87,16 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <summary>
         /// Occurs when [assign group button click].
         /// </summary>
-        public event EventHandler AssignGroupButtonClick;
+        public event EventHandler GroupRowDataBound;
 
         /// <summary>
         /// Builds the control.
         /// </summary>
         public void BuildControl()
         {
-            if ( _group != null && _resourceTypes != null && _instance != null )
+            if ( _group != null && _resourceTypes != null && _resources != null )
             {
-                BuildControl( _group, _resourceTypes, _instance );
+                BuildControl( _group, _resourceTypes, _resources );
             }
         }
 
@@ -95,25 +104,10 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// Builds the control.
         /// </summary>
         /// <param name="group">The group.</param>
-        /// <param name="resourceGroupTypes">The resource group types.</param>
-        /// <param name="instance">The registration instance.</param>
-        public void BuildControl( Group group, List<GroupTypeCache> resourceGroupTypes, RegistrationInstance instance  )
+        /// <param name="resourceTypes">The resource types.</param>
+        /// <param name="resources">The resources.</param>
+        public void BuildControl( Group group, List<GroupTypeCache> resourceTypes, Dictionary<string, AttributeValueCache> resources  )
         {
-            if ( _group == null )
-            {
-                _group = group;
-            }
-
-            if ( _resourceTypes == null )
-            {
-                _resourceTypes = resourceGroupTypes;
-            }
-
-            if ( _instance == null )
-            {
-                _instance = instance;
-            }
-
             // Set up group Panel widget
             BuildSubgroupHeading( group );
             pnlGroupDescription.Visible = !string.IsNullOrWhiteSpace( group.Description );
@@ -142,11 +136,11 @@ namespace RockWeb.Plugins.com_kfs.Event
             // Set up group member attributes
             var rockContext = new RockContext();
             var groupMemberAttributes = new List<AttributeCache>();
-            if ( _group != null )
+            if ( group != null )
             {
                 var entityTypeId = new GroupMember().TypeId;
-                var groupQualifier = _group.Id.ToString();
-                var groupTypeQualifier = _group.GroupTypeId.ToString();
+                var groupQualifier = group.Id.ToString();
+                var groupTypeQualifier = group.GroupTypeId.ToString();
 
                 foreach ( var attributeModel in new AttributeService( rockContext ).Queryable()
                     .Where( a => a.EntityTypeId == entityTypeId && a.IsGridColumn &&
@@ -217,22 +211,17 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             ////// Add dynamic columns for sub groups
-            if ( instance != null && group.GroupType.GroupTypePurposeValue != null && group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
+            if ( resources != null && group.GroupType.GroupTypePurposeValue != null && group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
             {
-                if ( instance.Attributes == null || !instance.Attributes.Any() )
+                foreach ( var resourceType in resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
                 {
-                    instance.LoadAttributes();
-                }
-
-                foreach ( var resourceType in _resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
-                {
-                    if ( instance.AttributeValues.ContainsKey( resourceType.Name ) )
+                    if ( resources.ContainsKey( resourceType.Name ) )
                     {
-                        var resourceGroupGuids = instance.AttributeValues[resourceType.Name];
+                        var resourceGroupGuids = resources[resourceType.Name];
                         if ( resourceGroupGuids != null && !string.IsNullOrWhiteSpace( resourceGroupGuids.Value ) )
                         {
                             var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuids.Value.AsGuid() );
-                            if ( parentGroup != null && parentGroup.GroupTypeId != _group.GroupTypeId )
+                            if ( parentGroup != null && parentGroup.GroupTypeId != group.GroupTypeId )
                             {   
                                 var subGroupColumn = new LinkButtonField();
                                 subGroupColumn.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
@@ -255,137 +244,32 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMembers.Columns.Add( deleteField );
             deleteField.Click += gGroupMembers_DeleteClick;
 
+            // Enforce data bound event
+            gGroupMembers.RowDataBound += gGroupMembers_RowDataBound;
             gGroupMembers.DataSource = group.Members;
             gGroupMembers.DataBind();
-        }
 
-
-        /// <summary>
-        /// Handles the RowDataBound event of the gGroupMembers control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="GridViewRowEventArgs"/> instance containing the event data.</param>
-        private void gGroupMembers_RowDataBound( object sender, GridViewRowEventArgs e )
-        {
-            var groupMember = e.Row.DataItem as GroupMember;
-            if ( groupMember != null )
+            if ( _group == null )
             {
-                var campus = groupMember.Person.GetCampus();
-                var lCampus = e.Row.FindControl( "lFamilyCampus" ) as Literal;
-                if ( lCampus != null && campus != null )
-                {
-                    lCampus.Text = campus.Name;
-                }
+                _group = group;
+            }
 
-                // Build subgroup button grid for Volunteers
-                if ( groupMember.Group.GroupType.GroupTypePurposeValue != null && groupMember.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
-                {
-                    using ( var rockContext = new RockContext() )
-                    {
-                        var groupService = new GroupService( rockContext );
-                        var memberService = new GroupMemberService( rockContext );
+            if ( _resourceTypes == null )
+            {
+                _resourceTypes = resourceTypes;
+            }
 
-                        if ( _instance.Attributes == null || !_instance.Attributes.Any() )
-                        {
-                            _instance.LoadAttributes();
-                        }
+            if ( _resources == null )
+            {
+                _resources = resources;
+            }
 
-                        var firstResourceColumn = gGroupMembers.Columns.OfType<LinkButtonField>().FirstOrDefault();
-                        var columnIndex = gGroupMembers.Columns.IndexOf( firstResourceColumn ).ToString().AsInteger();
-
-                        foreach ( var groupType in _resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
-                        {
-                            var resourceGroupGuid = _instance.AttributeValues[groupType.Name];
-                            if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
-                            {
-                                var parentGroup = groupService.Get( resourceGroupGuid.Value.AsGuid() );
-                                if ( parentGroup != null && columnIndex > 0 && e.Row.Cells.Count >= columnIndex )
-                                {
-                                    var groupAssignments = e.Row.Cells[columnIndex];
-                                    var headerText = gGroupMembers.HeaderRow.Cells[columnIndex].Text;
-                                    var columnsMatch = ( parentGroup.Name == headerText || parentGroup.GroupType.Name == headerText );
-                                    var btnGroupAssignment = groupAssignments.Controls.Count > 0 ? groupAssignments.Controls[0] as LinkButton : null;
-                                    if ( columnsMatch && btnGroupAssignment != null )
-                                    {
-                                        if ( parentGroup.Groups.Any() )
-                                        {
-                                            if ( parentGroup.GroupType.Attributes == null || !parentGroup.GroupType.Attributes.Any() )
-                                            {
-                                                parentGroup.GroupType.LoadAttributes( rockContext );
-                                            }
-
-                                            var subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
-                                            var groupMemberships = memberService.Queryable().AsNoTracking()
-                                                .Where( m => m.PersonId == groupMember.PersonId && subGroupIds.Contains( m.GroupId ) ).ToList();
-                                            if ( !groupMemberships.Any() )
-                                            {
-                                                btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
-
-                                                using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
-                                                {
-                                                    btnGroupAssignment.Controls.Add( literalControl );
-                                                }
-                                                using ( var literalControl = new LiteralControl( "<span class='grid-btn-assign-text'> Assign</span>" ) )
-                                                {
-                                                    btnGroupAssignment.Controls.Add( literalControl );
-                                                }
-                                                btnGroupAssignment.CommandName = "AssignSubGroup";
-                                                btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id.ToString(), groupMember.Id.ToString() );
-                                            }
-                                            else if ( parentGroup.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
-                                            {
-                                                var subGroupControls = e.Row.Cells[columnIndex].Controls;
-
-                                                // add any group memberships
-                                                foreach ( var member in groupMemberships )
-                                                {
-                                                    using ( var subGroupButton = new LinkButton() )
-                                                    {
-                                                        subGroupButton.OnClientClick = "javascript: __doPostBack( 'btnGroupRegistrations', 'select-subgroup:" + member.Id + "' ); return false;";
-                                                        subGroupButton.Text = " " + member.Group.Name + "  ";
-                                                        subGroupControls.AddAt( 0, subGroupButton );
-                                                    }
-                                                }
-
-                                                using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
-                                                {
-                                                    btnGroupAssignment.Controls.Add( literalControl );
-                                                }
-
-                                                btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnGroupRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, groupMember.Id );
-                                                btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
-                                            }
-                                            else
-                                            {
-                                                var currentMember = groupMemberships.FirstOrDefault();
-                                                btnGroupAssignment.Text = currentMember.Group.Name;
-                                                btnGroupAssignment.CommandName = "ChangeSubGroup";
-                                                btnGroupAssignment.CommandArgument = currentMember.Id.ToString();
-                                            }
-                                        }
-                                        else
-                                        {
-                                            using ( var literalControl = new LiteralControl( "<i class='fa fa-minus-circle'></i>" ) )
-                                            {
-                                                btnGroupAssignment.Controls.Add( literalControl );
-                                            }
-                                            using ( var literalControl = new LiteralControl( string.Format( "<span class='grid-btn-assign-text'> No {0}</span>", parentGroup.GroupType.GroupTerm.Pluralize() ) ) )
-                                            {
-                                                btnGroupAssignment.Controls.Add( literalControl );
-                                            }
-                                            btnGroupAssignment.Enabled = false;
-                                        }
-                                    }
-                                }
-                            }
-
-                            columnIndex++;
-                        }
-                    }
-                }
+            if ( _grid == null )
+            {
+                _grid = gGroupMembers;
             }
         }
-
+        
 
         /// <summary>
         /// Builds the subgroup heading.
@@ -446,16 +330,17 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
+
         /// <summary>
-        /// Handles the AssignClick event of the gGroupMembers control.
+        /// Handles the RowDataBound event of the gGroupMembers control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void gGroupMembers_AssignGroupClick( object sender, EventArgs e )
+        private void gGroupMembers_RowDataBound( object sender, EventArgs e )
         {
-            if ( AssignGroupButtonClick != null )
+            if ( GroupRowDataBound != null )
             {
-                AssignGroupButtonClick( this, e );
+                GroupRowDataBound( this, e as GridViewRowEventArgs );
             }
         }
 
