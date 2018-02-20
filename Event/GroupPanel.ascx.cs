@@ -28,16 +28,15 @@ namespace RockWeb.Plugins.com_kfs.Event
     public partial class GroupPanel : System.Web.UI.UserControl
     {
         /// <summary>
-        /// The group, resources, and registration instance
+        /// The group, headers, resources, and registration instance
         /// </summary>
         private Group _group;
 
-        private Grid _grid;
+        private int _columnIndex;
 
         private List<GroupTypeCache> _resourceTypes;
 
         private Dictionary<string, AttributeValueCache> _resources;
-        
 
         /// <summary>
         /// The expanded
@@ -56,10 +55,9 @@ namespace RockWeb.Plugins.com_kfs.Event
             set { _group = value; }
         }
 
-        public Grid Grid
+        public int ColumnIndex
         {
-            get { return _grid; }
-            set { _grid = value; }
+            get { return _columnIndex; }
         }
 
         /// <summary>
@@ -210,6 +208,26 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
+            if ( _group == null )
+            {
+                _group = group;
+            }
+
+            if ( _resourceTypes == null )
+            {
+                _resourceTypes = resourceTypes;
+            }
+
+            if ( _resources == null )
+            {
+                _resources = resources;
+            }
+
+            if ( _columnIndex == 0 )
+            {
+                _columnIndex = gGroupMembers.Columns.Count;
+            }
+
             ////// Add dynamic columns for sub groups
             if ( resources != null && group.GroupType.GroupTypePurposeValue != null && group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
             {
@@ -248,26 +266,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMembers.RowDataBound += gGroupMembers_RowDataBound;
             gGroupMembers.DataSource = group.Members;
             gGroupMembers.DataBind();
-
-            if ( _group == null )
-            {
-                _group = group;
-            }
-
-            if ( _resourceTypes == null )
-            {
-                _resourceTypes = resourceTypes;
-            }
-
-            if ( _resources == null )
-            {
-                _resources = resources;
-            }
-
-            if ( _grid == null )
-            {
-                _grid = gGroupMembers;
-            }
         }
         
 

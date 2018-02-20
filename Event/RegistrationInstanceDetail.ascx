@@ -1,6 +1,6 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationInstanceDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.KFSRegistrationInstanceDetail" %>
 <%@ Register TagPrefix="KFS" Namespace="com.kfs.EventRegistration.Advanced" Assembly="com.kfs.EventRegistration.Advanced" %>
-<%@ Register TagPrefix="KFS" TagName="KFSGroupPanel" Src="~/Plugins/com_kfs/Event/GroupPanel.ascx" %>
+<%@ Register TagPrefix="KFS" TagName="GroupPanel" Src="~/Plugins/com_kfs/Event/GroupPanel.ascx" %>
 
 <script type="text/javascript">
     Sys.Application.add_load(function () {
