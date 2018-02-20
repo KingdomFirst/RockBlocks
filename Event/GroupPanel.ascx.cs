@@ -293,7 +293,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         var firstResourceColumn = gGroupMembers.Columns.OfType<LinkButtonField>().FirstOrDefault();
                         var columnIndex = gGroupMembers.Columns.IndexOf( firstResourceColumn ).ToString().AsInteger();
 
-                        foreach ( var groupType in _resourceTypes )
+                        foreach ( var groupType in _resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
                         {
                             var resourceGroupGuid = _instance.AttributeValues[groupType.Name];
                             if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
