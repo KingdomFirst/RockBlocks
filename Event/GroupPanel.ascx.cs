@@ -296,14 +296,16 @@ namespace RockWeb.Plugins.com_kfs.Event
                         foreach ( var groupType in _resourceTypes )
                         {
                             var resourceGroupGuid = _instance.AttributeValues[groupType.Name];
-                            if ( columnIndex > 0 && resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
+                            if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
                             {
                                 var parentGroup = groupService.Get( resourceGroupGuid.Value.AsGuid() );
-                                if ( e.Row.Cells.Count >= columnIndex )
+                                if ( parentGroup != null && columnIndex > 0 && e.Row.Cells.Count >= columnIndex )
                                 {
                                     var groupAssignments = e.Row.Cells[columnIndex];
+                                    var headerText = gGroupMembers.HeaderRow.Cells[columnIndex].Text;
+                                    var columnsMatch = ( parentGroup.Name == headerText || parentGroup.GroupType.Name == headerText );
                                     var btnGroupAssignment = groupAssignments.Controls.Count > 0 ? groupAssignments.Controls[0] as LinkButton : null;
-                                    if ( btnGroupAssignment != null && parentGroup != null )
+                                    if ( columnsMatch && btnGroupAssignment != null )
                                     {
                                         if ( parentGroup.Groups.Any() )
                                         {

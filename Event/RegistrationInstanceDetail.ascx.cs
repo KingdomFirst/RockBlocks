@@ -1454,10 +1454,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                         if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
                         {
                             var parentGroup = groupService.Get( resourceGroupGuid.Value.AsGuid() );
-                            if ( parentGroup != null && e.Row.Cells.Count >= columnIndex )
+                            if ( parentGroup != null && columnIndex > 0 && e.Row.Cells.Count >= columnIndex )
                             {
-                                var headerText = gRegistrants.HeaderRow.Cells[columnIndex].Text;
                                 var groupAssignments = e.Row.Cells[columnIndex];
+                                var headerText = gRegistrants.HeaderRow.Cells[columnIndex].Text;
                                 var columnsMatch = ( parentGroup.Name == headerText || parentGroup.GroupType.Name == headerText );
                                 var btnGroupAssignment = groupAssignments.Controls.Count > 0 ? groupAssignments.Controls[0] as LinkButton : null;
                                 if ( columnsMatch && btnGroupAssignment != null )
@@ -1514,7 +1514,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                             // TODO: figure out why command args aren't passing
                                             btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, registrant.Id );
-
                                             btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
                                             //btnGroupAssignment.CommandName = "AssignSubGroup";
                                             //btnGroupAssignment.CommandArgument = string.Format( "subgroup_{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
@@ -1541,10 +1540,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     }
                                 }
                             }
-                            
-
-                            columnIndex++;
                         }
+
+                        columnIndex++;
                     }
                 }
             }
