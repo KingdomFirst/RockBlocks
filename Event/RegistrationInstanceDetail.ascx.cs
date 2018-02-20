@@ -1327,7 +1327,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void gRegistrants_GridRebind( object sender, GridRebindEventArgs e )
         {
-            
             BindRegistrantsGrid( e.IsExporting );
         }
 
@@ -2815,7 +2814,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     {
                                         preloadCampusValues = true;
 
-                                        var ddlCampus = phRegistrantFormFieldFilters.FindControl( "ddlCampus" ) as RockDropDownList;
+                                        var ddlCampus = phRegistrantFormFieldFilters.FindControl( "ddlRegistrantsCampus" ) as RockDropDownList;
                                         if ( ddlCampus != null )
                                         {
                                             var campusId = ddlCampus.SelectedValue.AsIntegerOrNull();
@@ -2835,7 +2834,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                 case RegistrationPersonFieldType.Email:
                                     {
-                                        var tbEmailFilter = phRegistrantFormFieldFilters.FindControl( "tbEmailFilter" ) as RockTextBox;
+                                        var tbEmailFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsEmailFilter" ) as RockTextBox;
                                         if ( tbEmailFilter != null && !string.IsNullOrWhiteSpace( tbEmailFilter.Text ) )
                                         {
                                             qry = qry.Where( r =>
@@ -2848,7 +2847,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                 case RegistrationPersonFieldType.Birthdate:
                                     {
-                                        var drpBirthdateFilter = phRegistrantFormFieldFilters.FindControl( "drpBirthdateFilter" ) as DateRangePicker;
+                                        var drpBirthdateFilter = phRegistrantFormFieldFilters.FindControl( "drpRegistrantsBirthdateFilter" ) as DateRangePicker;
                                         if ( drpBirthdateFilter != null )
                                         {
                                             if ( drpBirthdateFilter.LowerValue.HasValue )
@@ -2869,7 +2868,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                 case RegistrationPersonFieldType.Grade:
                                     {
-                                        var gpGradeFilter = phRegistrantFormFieldFilters.FindControl( "gpGradeFilter" ) as GradePicker;
+                                        var gpGradeFilter = phRegistrantFormFieldFilters.FindControl( "gpRegistrantsGradeFilter" ) as GradePicker;
                                         if ( gpGradeFilter != null )
                                         {
                                             var graduationYear = Person.GraduationYearFromGradeOffset( gpGradeFilter.SelectedValueAsInt( false ) );
@@ -2885,7 +2884,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                 case RegistrationPersonFieldType.Gender:
                                     {
-                                        var ddlGenderFilter = phRegistrantFormFieldFilters.FindControl( "ddlGenderFilter" ) as RockDropDownList;
+                                        var ddlGenderFilter = phRegistrantFormFieldFilters.FindControl( "ddlRegistrantsGenderFilter" ) as RockDropDownList;
                                         if ( ddlGenderFilter != null )
                                         {
                                             var gender = ddlGenderFilter.SelectedValue.ConvertToEnumOrNull<Gender>();
@@ -2901,7 +2900,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                 case RegistrationPersonFieldType.MaritalStatus:
                                     {
-                                        var ddlMaritalStatusFilter = phRegistrantFormFieldFilters.FindControl( "ddlMaritalStatusFilter" ) as RockDropDownList;
+                                        var ddlMaritalStatusFilter = phRegistrantFormFieldFilters.FindControl( "ddlRegistrantsMaritalStatusFilter" ) as RockDropDownList;
                                         if ( ddlMaritalStatusFilter != null )
                                         {
                                             var maritalStatusId = ddlMaritalStatusFilter.SelectedValue.AsIntegerOrNull();
@@ -2917,7 +2916,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     }
                                 case RegistrationPersonFieldType.MobilePhone:
                                     {
-                                        var tbPhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbPhoneFilter" ) as RockTextBox;
+                                        var tbPhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsPhoneFilter" ) as RockTextBox;
                                         if ( tbPhoneFilter != null && !string.IsNullOrWhiteSpace( tbPhoneFilter.Text ) )
                                         {
                                             var numericPhone = tbPhoneFilter.Text.AsNumeric();
