@@ -999,17 +999,29 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                 {
                                     case PersonFieldType.FirstName:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.FirstName, CurrentPerson.FirstName );
+                                            var value = CurrentPerson.FirstName;
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.FirstName, value );
+                                            }
                                             break;
                                         }
                                     case PersonFieldType.LastName:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.LastName, CurrentPerson.LastName );
+                                            var value = CurrentPerson.LastName;
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.LastName, value );
+                                            }
                                             break;
                                         }
                                     case PersonFieldType.Campus:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.Campus, CurrentPerson.GetCampus().Id.ToString() );
+                                            var value = CurrentPerson.GetCampus().Id.ToString();
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.Campus, value );
+                                            }
                                             break;
                                         }
 
@@ -1026,49 +1038,93 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                                     case PersonFieldType.Birthdate:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.Birthdate, CurrentPerson.BirthDate.ToString() );
+                                            var value = CurrentPerson.BirthDate.ToString();
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.Birthdate, value );
+                                            }
                                             break;
                                         }
 
                                     case PersonFieldType.Grade:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.Grade, CurrentPerson.GraduationYear.ToString() );
+                                            var value = CurrentPerson.GraduationYear.ToString();
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.Grade, value );
+                                            }
                                             break;
                                         }
 
                                     case PersonFieldType.Gender:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.Gender, CurrentPerson.Gender.ToString() );
+                                            var value = CurrentPerson.Gender.ToString();
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.Gender, value );
+                                            }
                                             break;
                                         }
 
                                     case PersonFieldType.MaritalStatus:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.MaritalStatus, CurrentPerson.MaritalStatusValue.Id.ToString() );
+                                            var value = CurrentPerson.MaritalStatusValue.Id.ToString();
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.MaritalStatus, value );
+                                            }
                                             break;
                                         }
 
                                     case PersonFieldType.MobilePhone:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.MobilePhone, CurrentPerson.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() ) ).Number );
+                                            var phone = CurrentPerson.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() ) );
+                                            if ( phone != null )
+                                            {
+                                                var value = phone.Number;
+                                                if ( !string.IsNullOrWhiteSpace( value ) )
+                                                {
+                                                    PersonValueState.AddOrReplace( PersonFieldType.MobilePhone, value );
+                                                }
+                                            }
                                             break;
                                         }
 
                                     case PersonFieldType.HomePhone:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.HomePhone, CurrentPerson.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid() ) ).Number );
+                                            var phone = CurrentPerson.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid() ) );
+                                            if ( phone != null )
+                                            {
+                                                var value = phone.Number;
+                                                if ( !string.IsNullOrWhiteSpace( value ) )
+                                                {
+                                                    PersonValueState.AddOrReplace( PersonFieldType.HomePhone, value );
+                                                }
+                                            }
                                             break;
                                         }
 
                                     case PersonFieldType.WorkPhone:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.WorkPhone, CurrentPerson.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() ) ).Number );
+                                            var phone = CurrentPerson.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() ) );
+                                            if ( phone != null )
+                                            {
+                                                var value = phone.Number;
+                                                if ( !string.IsNullOrWhiteSpace( value ) )
+                                                {
+                                                    PersonValueState.AddOrReplace( PersonFieldType.WorkPhone, value );
+                                                }
+                                            }
                                             break;
                                         }
 
                                     case PersonFieldType.Email:
                                         {
-                                            PersonValueState.AddOrReplace( PersonFieldType.Email, CurrentPerson.Email );
+                                            var value = CurrentPerson.Email;
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.Email, value );
+                                            }
                                             break;
                                         }
 
