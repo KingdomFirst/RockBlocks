@@ -2799,6 +2799,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         _homeAddresses = Person.GetHomeLocations( personIds );
                     }
 
+                    
+
                     if ( RegistrantFields != null )
                     {
                         // Filter by any selected
@@ -3204,8 +3206,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     gRegistrants.ObjectList.Add( registrant.Id.ToString(), attributeFieldObject );
                                 }
                             }
-
-                            
                         }
                     }
 
@@ -3276,15 +3276,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             phRegistrantFormFieldFilters.Controls.Clear();
             phGroupPlacementsFormFieldFilters.Controls.Clear();
             var allGrids = this.ControlsOfTypeRecursive<Grid>().ToList();
-            
-            // Remove the registrant field
-            foreach ( var column in gRegistrants.Columns
-                .OfType<TemplateField>()
-                .Where( c => c.HeaderText == "Registrant" )
-                .ToList() )
-            {
-                gRegistrants.Columns.Remove( column );
-            }
 
             // Remove any of the dynamic person fields
             var dynamicColumns = new List<string> {
@@ -3320,14 +3311,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 .OfType<DeleteField>()
                 .ToList() )
             {
-                gRegistrants.Columns.Remove( column ); 
-            }
-
-            // Remove Sub Group fields
-            foreach ( var column in gRegistrants.Columns
-                .OfType<LinkButtonField>()
-                .ToList() )
-            {
                 gRegistrants.Columns.Remove( column );
             }
 
@@ -3346,17 +3329,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 gGroupPlacements.Columns.Remove( column );
             }
-
-            // Add registrant column
-            var registrantField = new RockLiteralField
-            {
-                ID = "lRegistrant",
-                HeaderText = "Registrant",
-                SortExpression = "PersonAlias.Person.LastName, PersonAlias.Person.NickName",
-                ExcelExportBehavior = ExcelExportBehavior.NeverInclude
-            };
-            gRegistrants.Columns.Insert( 1, registrantField );
-            
 
             if ( RegistrantFields != null )
             {
