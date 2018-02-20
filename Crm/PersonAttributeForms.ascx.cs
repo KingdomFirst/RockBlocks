@@ -650,32 +650,35 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         }
                                     }
 
-                                    var groupTypeGuids = this.GetAttributeValue( "AllowedGroupTypes" ).SplitDelimitedValues().AsGuidList();
-
-                                    if ( groupIsFromQryString && groupTypeGuids.Any() && !groupTypeGuids.Contains( group.GroupType.Guid ) )
-                                    {
-                                        group = null;
-                                    }
-                                    else
-                                    {
-                                        defaultGroupRole = group.GroupType.DefaultGroupRole;
-                                    }
-
                                     if ( group != null )
                                     {
-                                        if ( !group.Members
-                                            .Any( m =>
-                                                m.PersonId == person.Id &&
-                                                m.GroupRoleId == defaultGroupRole.Id ) )
+                                        var groupTypeGuids = this.GetAttributeValue( "AllowedGroupTypes" ).SplitDelimitedValues().AsGuidList();
+
+                                        if ( groupIsFromQryString && groupTypeGuids.Any() && !groupTypeGuids.Contains( group.GroupType.Guid ) )
                                         {
-                                            var groupMemberService = new GroupMemberService( rockContext );
-                                            var groupMember = new GroupMember();
-                                            groupMember.PersonId = person.Id;
-                                            groupMember.GroupRoleId = defaultGroupRole.Id;
-                                            groupMember.GroupMemberStatus = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
-                                            groupMember.GroupId = group.Id;
-                                            groupMemberService.Add( groupMember );
-                                            rockContext.SaveChanges();
+                                            group = null;
+                                        }
+                                        else
+                                        {
+                                            defaultGroupRole = group.GroupType.DefaultGroupRole;
+                                        }
+
+                                        if ( group != null )
+                                        {
+                                            if ( !group.Members
+                                                .Any( m =>
+                                                    m.PersonId == person.Id &&
+                                                    m.GroupRoleId == defaultGroupRole.Id ) )
+                                            {
+                                                var groupMemberService = new GroupMemberService( rockContext );
+                                                var groupMember = new GroupMember();
+                                                groupMember.PersonId = person.Id;
+                                                groupMember.GroupRoleId = defaultGroupRole.Id;
+                                                groupMember.GroupMemberStatus = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
+                                                groupMember.GroupId = group.Id;
+                                                groupMemberService.Add( groupMember );
+                                                rockContext.SaveChanges();
+                                            }
                                         }
                                     }
                                 }
