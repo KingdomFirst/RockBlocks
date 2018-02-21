@@ -98,13 +98,13 @@ namespace RockWeb.Plugins.com_kfs.Event
         protected List<GroupTypeCache> ResourceGroupTypes { get; set; }
 
         protected Dictionary<string, AttributeValueCache> ResourceGroups { get; set; }
-
-        protected List<string> RegistrantHeaders;
+        protected int? GroupAssignmentsIndex = null;
         protected int? RegistrationInstanceGroupId = null;
         protected int? TemplateGroupTypeId = null;
 
         // TODO: clean up some of these fields
         private List<string> _expandedGroupPanels = new List<string>();
+
         private List<Guid> _resourceGroupTypes = new List<Guid>();
         private List<Guid> _resourceGroups = new List<Guid>();
         private List<Guid> _expandedRows = new List<Guid>();
@@ -1217,6 +1217,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
+            // save fee filters
+            var nreFeeFilter = phRegistrantFormFieldFilters.FindControl( "nreRegistrantsFeeFilter" ) as NumberRangeEditor;
+            if ( nreFeeFilter != null )
+            {
+                fRegistrants.SaveUserPreference( "Fee Amount", nreFeeFilter.DelimitedValues );
+            }
+
             BindRegistrantsGrid();
         }
 
@@ -1310,6 +1317,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "In Group":
                     {
                         e.Value = e.Value;
+                        break;
+                    }
+                case "Fee Amount":
+                    {
+                        e.Value = NumberRangeEditor.FormatDelimitedValues( e.Value, "N2" );
                         break;
                     }
                 default:
@@ -1433,12 +1445,128 @@ namespace RockWeb.Plugins.com_kfs.Event
                         lCountry.Text = location.Country;
                     }
                 }
-
-                var firstResourceColumn = gRegistrants.Columns.OfType<LinkButtonField>().FirstOrDefault();
-                var columnIndex = gRegistrants.Columns.IndexOf( firstResourceColumn ).ToString().AsInteger();
-
+                
                 // Build subgroup button grid
-                BuildGroupAssignmentGrid( e, columnIndex );
+                using ( var rockContext = new RockContext() )
+                {
+                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
+                    {
+                        var resourceGroupGuid = ResourceGroups.ContainsKey( groupType.Name ) ? ResourceGroups[groupType.Name] : null;
+                        if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
+                        {
+                            var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuid.Value.AsGuid() );
+                            if ( parentGroup != null )
+                            {
+                                // Use a name match to find the column since there are multiple dynamic columns 
+                                var columnIndex = 0;
+                                foreach ( DataControlFieldCell cell in e.Row.Cells )
+                                {
+                                    if ( parentGroup.Name == cell.ContainingField.HeaderText || parentGroup.GroupType.Name == cell.ContainingField.HeaderText )
+                                    {
+                                        break;
+                                    }
+                                    columnIndex++;
+                                }
+
+                                var groupAssignments = e.Row.Cells[columnIndex];
+                                var lGroupExport = e.Row.FindControl( string.Format("lAssignments_{0}", groupType.Id ) ) as Literal;
+                                var btnGroupAssignment = groupAssignments.Controls.Count > 0 ? groupAssignments.Controls[0] as LinkButton : null;
+                                if ( btnGroupAssignment != null )
+                                {
+                                    if ( parentGroup.Groups.Any() )
+                                    {
+                                        if ( parentGroup.GroupType.Attributes == null || !parentGroup.GroupType.Attributes.Any() )
+                                        {
+                                            parentGroup.GroupType.LoadAttributes( rockContext );
+                                        }
+
+                                        var subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
+                                        var groupMemberships = new GroupMemberService( rockContext ).Queryable().AsNoTracking()
+                                            .Where( m => m.PersonId == registrant.PersonId && subGroupIds.Contains( m.GroupId ) ).ToList();
+                                        if ( !groupMemberships.Any() )
+                                        {
+                                            btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
+
+                                            using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                            {
+                                                btnGroupAssignment.Controls.Add( literalControl );
+                                            }
+                                            using ( var literalControl = new LiteralControl( "<span class='grid-btn-assign-text'> Assign</span>" ) )
+                                            {
+                                                btnGroupAssignment.Controls.Add( literalControl );
+                                            }
+
+                                            btnGroupAssignment.CommandName = "AssignSubGroup";
+                                            btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
+                                        }
+                                        else if ( parentGroup.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
+                                        {
+                                            var subGroupControls = e.Row.Cells[columnIndex].Controls;
+                                            var groupExportText = new List<string>();
+
+                                            // add any group memberships
+                                            foreach ( var member in groupMemberships )
+                                            {
+                                                using ( var subGroupButton = new LinkButton() )
+                                                {
+                                                    // TODO: Y U NO WORK?
+                                                    //subGroupButton.Command += new CommandEventHandler( MultipleSubGroup_Click );
+                                                    //btnGroupAssignment.CommandName = "ChangeSubGroup";
+                                                    //btnGroupAssignment.CommandArgument = member.Id.ToString();
+
+                                                    subGroupButton.OnClientClick = "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:" + member.Id + "' ); return false;";
+                                                    subGroupButton.Text = " " + member.Group.Name + "  ";
+                                                    subGroupControls.AddAt( 0, subGroupButton );
+                                                }
+                                                groupExportText.Add( member.Group.Name );
+                                            }
+
+                                            if ( lGroupExport != null )
+                                            {
+                                                lGroupExport.Text = string.Join(",", groupExportText);
+                                            }
+
+                                            using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                            {
+                                                btnGroupAssignment.Controls.Add( literalControl );
+                                            }
+
+                                            // TODO: figure out why command args aren't passing
+                                            btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, registrant.Id );
+                                            btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
+                                            //btnGroupAssignment.CommandName = "AssignSubGroup";
+                                            //btnGroupAssignment.CommandArgument = string.Format( "subgroup_{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
+                                        }
+                                        else
+                                        {
+                                            var groupMember = groupMemberships.FirstOrDefault();
+                                            btnGroupAssignment.Text = groupMember.Group.Name;
+                                            btnGroupAssignment.CommandName = "ChangeSubGroup";
+                                            btnGroupAssignment.CommandArgument = groupMember.Id.ToString();
+
+                                            if ( lGroupExport != null )
+                                            {
+                                                lGroupExport.Text = groupMember.Group.Name;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        using ( var literalControl = new LiteralControl( "<i class='fa fa-minus-circle'></i>" ) )
+                                        {
+                                            btnGroupAssignment.Controls.Add( literalControl );
+                                        }
+                                        using ( var literalControl = new LiteralControl( string.Format( "<span class='grid-btn-assign-text'> No {0}</span>", parentGroup.GroupType.GroupTerm.Pluralize() ) ) )
+                                        {
+                                            btnGroupAssignment.Controls.Add( literalControl );
+                                        }
+                                        btnGroupAssignment.Enabled = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -2783,7 +2911,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         qry = qry.Where( r => !r.GroupMemberId.HasValue );
                     }
-
+                    
                     var preloadCampusValues = false;
                     var registrantAttributes = new List<AttributeCache>();
                     var personAttributes = new List<AttributeCache>();
@@ -2798,8 +2926,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                         var personIds = qry.Select( r => r.PersonAlias.PersonId ).ToList();
                         _homeAddresses = Person.GetHomeLocations( personIds );
                     }
-
-                    
 
                     if ( RegistrantFields != null )
                     {
@@ -3037,6 +3163,21 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // Filter by fees
+                    var nreFeeFilter = phRegistrantFormFieldFilters.FindControl( "nreRegistrantsFeeFilter" ) as NumberRangeEditor;
+                    if ( nreFeeFilter != null )
+                    {
+                        if ( nreFeeFilter.LowerValue.HasValue )
+                        {
+                            qry = qry.Where( r => r.Fees.Any( f => f.Cost >= nreFeeFilter.LowerValue.Value ) );
+                        }
+
+                        if ( nreFeeFilter.UpperValue.HasValue )
+                        {
+                            qry = qry.Where( r => r.Fees.Any( f => f.Cost <= nreFeeFilter.UpperValue.Value ) );
                         }
                     }
 
@@ -3794,52 +3935,61 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 using ( var rockContext = new RockContext() )
                 {
-                    instance = instance ?? GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
-                    if ( instance != null )
+                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
                     {
-                        if ( instance.Attributes == null || !instance.Attributes.Any() )
+                        if ( ResourceGroups.ContainsKey( groupType.Name ) )
                         {
-                            instance.LoadAttributes();
-                        }
-
-                        foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
-                        {
-                            var columnHeaderName = groupType.Name;
-                            if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
+                            var resourceGroupGuids = ResourceGroups[groupType.Name];
+                            if ( resourceGroupGuids != null && !string.IsNullOrWhiteSpace( resourceGroupGuids.Value ) )
                             {
-                                var resourceGroupGuids = instance.AttributeValues[groupType.Name];
-                                if ( resourceGroupGuids != null && !string.IsNullOrWhiteSpace( resourceGroupGuids.Value ) )
+                                var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuids.Value.AsGuid() );
+                                if ( parentGroup != null )
                                 {
-                                    var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuids.Value.AsGuid() );
-                                    if ( parentGroup != null )
-                                    {
-                                        columnHeaderName = parentGroup.Name;
+                                    var groupAssignmentColumn = new LinkButtonField();
+                                    groupAssignmentColumn.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                                    groupAssignmentColumn.HeaderStyle.CssClass = "";
+                                    groupAssignmentColumn.HeaderText = parentGroup.Name;
+                                    gRegistrants.Columns.Add( groupAssignmentColumn );
 
-                                        var subGroupColumn = new LinkButtonField();
-                                        subGroupColumn.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                                        subGroupColumn.HeaderStyle.CssClass = "";
-                                        subGroupColumn.HeaderText = columnHeaderName;
-                                        gRegistrants.Columns.Add( subGroupColumn );
-                                    }
+                                    var groupExportColumn = new RockLiteralField();
+                                    groupExportColumn.ID = string.Format( "lAssignments_{0}", groupType.Id ); //"lAssignments_" + groupType.Id;
+                                    groupExportColumn.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                                    groupExportColumn.HeaderStyle.CssClass = "";
+                                    groupExportColumn.HeaderText = parentGroup.Name;
+                                    groupExportColumn.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
+                                    groupExportColumn.Visible = false;
+                                    gRegistrants.Columns.Add( groupExportColumn );
                                 }
                             }
-
-                            
-
-                            // Add dynamic column for volunteer assignments too
-                            //if ( groupType.GroupTypePurposeValue != null && groupType.GroupTypePurposeValue.Value == "Serving Area"  )
-                            //{
-                            //    if ( groupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) )
-                            //    {
-                            //        gVolunteers.Columns.Add( subGroupColumn );
-                            //    }
-                            //}
                         }
-                    }
+                    }       
+
+                    // Add dynamic column for volunteer assignments too
+                    //if ( groupType.GroupTypePurposeValue != null && groupType.GroupTypePurposeValue.Value == "Serving Area"  )
+                    //{
+                    //    if ( groupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) )
+                    //    {
+                    //        gVolunteers.Columns.Add( subGroupColumn );
+                    //    }
+                    //} 
                 }
             }
 
-            // Add fee column
+            // Add fee column and filter
+            
+
+            var nreFeeFilter = new NumberRangeEditor();
+            nreFeeFilter.NumberType = ValidationDataType.Double;
+            nreFeeFilter.ID = "nreRegistrantsFeeFilter";
+            nreFeeFilter.Label = "Fee Amount";
+
+            if ( setValues )
+            {
+                nreFeeFilter.DelimitedValues = fRegistrants.GetUserPreference( "Fee Amount" );
+            }
+
+            phRegistrantFormFieldFilters.Controls.Add( nreFeeFilter );
+            
             var feeField = new RockLiteralField
             {
                 ID = "lFees",
@@ -5860,7 +6010,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // Build subgroup button grid for Volunteers
                     if ( groupMember.Group.GroupType.GroupTypePurposeValue != null && groupMember.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
                     {
-                        BuildGroupAssignmentGrid( rowEvent, panel.ColumnIndex );
+                        BuildGroupAssignmentGrid( rowEvent );
                     }
                 }
             }
@@ -5871,7 +6021,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="e">The <see cref="GridViewRowEventArgs" /> instance containing the event data.</param>
         /// <param name="columnIndex">Index of the column.</param>
-        private void BuildGroupAssignmentGrid( GridViewRowEventArgs e, int columnIndex )
+        private void BuildGroupAssignmentGrid( GridViewRowEventArgs e )
         {
             using ( var rockContext = new RockContext() )
             {
@@ -5891,12 +6041,22 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var resourceGroupGuid = ResourceGroups[groupType.Name];
                     if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
                     {
-                        var columnHeader = ( (DataControlFieldCell)e.Row.Cells[columnIndex] ).ContainingField;
                         var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuid.Value.AsGuid() );
-                        if ( parentGroup != null && ( parentGroup.Name == columnHeader.HeaderText || parentGroup.GroupType.Name == columnHeader.HeaderText ) )
+                        if ( parentGroup != null )
                         {
-                            var groupAssignments = e.Row.Cells[columnIndex];
-                            var btnGroupAssignment = groupAssignments.Controls.Count > 0 ? groupAssignments.Controls[0] as LinkButton : null;
+                            // Use a name match to find the column since there are multiple dynamic columns 
+                            var columnIndex = 0;
+                            LinkButton btnGroupAssignment = null;
+                            foreach ( DataControlFieldCell cell in e.Row.Cells )
+                            {   
+                                if ( parentGroup.Name == cell.ContainingField.HeaderText || parentGroup.GroupType.Name == cell.ContainingField.HeaderText )
+                                {
+                                    btnGroupAssignment = cell.Controls.Count > 0 ? cell.Controls[0] as LinkButton : null;
+                                    break;
+                                }
+                                columnIndex++;
+                            }
+                            
                             if ( btnGroupAssignment != null )
                             {
                                 if ( parentGroup.Groups.Any() )
@@ -5977,8 +6137,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 }
                             }
                         }
-
-                        columnIndex++;
                     }
                 }
             }
@@ -6064,8 +6222,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
         }
-
-
 
         /// <summary>
         /// Renders the member modal.
