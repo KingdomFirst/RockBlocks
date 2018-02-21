@@ -1,5 +1,19 @@
-﻿// KFS Registration Template Detail
-
+﻿// <copyright>
+// Copyright by the Spark Development Network
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,10 +34,10 @@ using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using Attribute = Rock.Model.Attribute;
 
-namespace RockWeb.Plugins.com_kfs.Event
+namespace RockWeb.Blocks.Event
 {
-    [DisplayName( "KFS Registration Template Detail" )]
-    [Category( "KFS > Event" )]
+    [DisplayName( "Registration Template Detail" )]
+    [Category( "Event" )]
     [Description( "Displays the details of the given registration template." )]
     [CodeEditorField( "Default Confirmation Email", "The default Confirmation Email Template value to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"
 {{ 'Global' | Attribute:'EmailHeader' }}
@@ -223,8 +237,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
 {{ 'Global' | Attribute:'EmailFooter' }}
 ", "", 3 )]
-    [GroupTypeField( "Associated Group Type", "Select a Group Type to trigger the creation of a new group of selected type upon creating a new Registration Template. The new Template's 'AssociatedGroup' attribute will be set to the new Group.", false, "", "", 0, "GroupTypeSetting", "" )]
-    public partial class KFSRegistrationTemplateDetail : RockBlock
+    public partial class RegistrationTemplateDetail : RockBlock
     {
         #region Properties
 
@@ -382,7 +395,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             {
                                 case "re-order-form":
                                     {
-                                        SortForms( guid, newIndex + 1 );
+                                        SortForms( guid, newIndex+1 );
                                         break;
                                     }
                             }
@@ -444,7 +457,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( pnlEditDetails.Visible )
             {
                 var sameFamily = rblRegistrantsInSameFamily.SelectedValueAsEnum<RegistrantsSameFamily>();
-                divCurrentFamilyMembers.Attributes["style"] = sameFamily == RegistrantsSameFamily.Yes ? "display:block" : "display:none";
+                divCurrentFamilyMembers.Attributes["style"] = sameFamily == RegistrantsSameFamily.No ? "display:none" : "display:block";
             }
 
             base.OnPreRender( e );
@@ -643,7 +656,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             RegistrationNotify notify = RegistrationNotify.None;
-            foreach ( ListItem li in cblNotify.Items )
+            foreach( ListItem li in cblNotify.Items )
             {
                 if ( li.Selected )
                 {
@@ -713,7 +726,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( FormFieldsState.ContainsKey( form.Guid ) )
                 {
-                    foreach ( var formField in FormFieldsState[form.Guid] )
+                    foreach( var formField in FormFieldsState[ form.Guid ])
                     {
                         if ( !formField.IsValid )
                         {
@@ -732,9 +745,9 @@ namespace RockWeb.Plugins.com_kfs.Event
             var validGroupMemberAttributeIds = groupMember.Attributes.Select( a => a.Value.Id ).ToList();
 
             // Remove any group member attributes that are not valid based on selected group type
-            foreach ( var fieldList in FormFieldsState.Select( s => s.Value ) )
+            foreach( var fieldList in FormFieldsState.Select( s => s.Value ) )
             {
-                foreach ( var formField in fieldList
+                foreach( var formField in fieldList
                     .Where( a =>
                         a.FieldSource == RegistrationFieldSource.GroupMemberAttribute &&
                         a.AttributeId.HasValue &&
@@ -783,7 +796,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         f.RegistrationTemplateId == RegistrationTemplate.Id &&
                         !formUiGuids.Contains( f.Guid ) ) )
                 {
-                    foreach ( var formField in form.Fields.ToList() )
+                    foreach( var formField in form.Fields.ToList() )
                     {
                         form.Fields.Remove( formField );
                         registrationTemplateFormFieldService.Delete( formField );
@@ -792,7 +805,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 // delete fields that aren't assigned in the UI anymore
-                var fieldUiGuids = FormFieldsState.SelectMany( a => a.Value ).Select( f => f.Guid ).ToList();
+                var fieldUiGuids = FormFieldsState.SelectMany( a => a.Value).Select( f => f.Guid ).ToList();
                 foreach ( var formField in registrationTemplateFormFieldService
                     .Queryable()
                     .Where( a =>
@@ -970,70 +983,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var staffUsers = groupService.Get( Rock.SystemGuid.Group.GROUP_STAFF_MEMBERS.AsGuid() );
                     RegistrationTemplate.AllowSecurityRole( Authorization.EDIT, staffUsers, rockContext );
                 }
-                RegistrationTemplate = new RegistrationTemplateService( new RockContext() ).Get( RegistrationTemplate.Id );
-
-                Guid groupTypeGuid;
-                if ( Guid.TryParse( this.GetAttributeValue( "GroupTypeSetting" ), out groupTypeGuid ) )
-                {
-                    string attributeKey = "AssociatedGroup";
-                    VerifyCategoryAttribute( rockContext, attributeKey );
-                    RegistrationTemplate.LoadAttributes();
-                    if ( RegistrationTemplate.GetAttributeValue( attributeKey ) == null )
-                    {
-                        Group parentGroup = null;
-                        GroupTypeService groupTypeService = new GroupTypeService( rockContext );
-                        Category templateCategory = RegistrationTemplate.Category;
-                        if ( templateCategory != null )
-                        {
-                            templateCategory.LoadAttributes();
-                            if ( templateCategory.GetAttributeValue( attributeKey ) != null )
-                            {
-                                parentGroup = groupService.Get( Guid.Parse( templateCategory.GetAttributeValue( attributeKey ) ) );
-                            }
-                        }
-                        if ( parentGroup != null )
-                        {
-                            Group newGroup = new Group();
-                            newGroup.Name = RegistrationTemplate.Name;
-                            newGroup.ParentGroup = parentGroup;
-                            newGroup.GroupType = groupTypeService.Get( groupTypeGuid );
-                            groupService.Add( newGroup );
-                            rockContext.SaveChanges();
-
-                            newGroup = new GroupService( new RockContext() ).Get( newGroup.Guid );
-                            RegistrationTemplate.AttributeValues[attributeKey].Value = newGroup.Guid.ToString();
-                            RegistrationTemplate.SaveAttributeValues();
-                        }
-                    }
-                }
 
                 var qryParams = new Dictionary<string, string>();
                 qryParams["RegistrationTemplateId"] = RegistrationTemplate.Id.ToString();
                 NavigateToPage( RockPage.Guid, qryParams );
-            }
-        }
-
-        private static void VerifyCategoryAttribute( RockContext rockContext, string attributeKey )
-        {
-            int? registrationTemplateEntityTypeId = null;
-            AttributeService attributeService = new AttributeService( rockContext );
-            Rock.Model.Attribute attribute = null;
-            registrationTemplateEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.RegistrationTemplate ) ).Id;
-            IQueryable<Rock.Model.Attribute> attributeQuery = null;
-            if ( registrationTemplateEntityTypeId != null )
-            {
-                attributeQuery = attributeService.Get( registrationTemplateEntityTypeId, string.Empty, string.Empty );
-                attributeQuery = attributeQuery.Where( a => a.Key == attributeKey );
-            }
-            if ( attributeQuery.Count() == 0 )
-            {
-                Rock.Model.Attribute edtAttribute = new Rock.Model.Attribute();
-                edtAttribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id;
-                edtAttribute.Name = "Associated Group";
-                edtAttribute.Key = attributeKey;
-                attribute = Rock.Attribute.Helper.SaveAttributeEdits( edtAttribute, registrationTemplateEntityTypeId, string.Empty, string.Empty );
-
-                AttributeCache.FlushEntityAttributes();
             }
         }
 
@@ -1884,7 +1837,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
                 else
                 {
-                    LoadStateDetails( registrationTemplate, rockContext );
+                    LoadStateDetails(registrationTemplate, rockContext);
                     ShowEditDetails( registrationTemplate, rockContext );
                 }
             }
@@ -1915,7 +1868,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( !defaultForm.Fields
                     .Any( f =>
                         f.FieldSource == RegistrationFieldSource.PersonField &&
-                        f.PersonFieldType == RegistrationPersonFieldType.FirstName ) )
+                        f.PersonFieldType == RegistrationPersonFieldType.FirstName ))
                 {
                     var formField = new RegistrationTemplateFormField();
                     formField.FieldSource = RegistrationFieldSource.PersonField;
@@ -2016,7 +1969,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             cbDisplayInLine.Checked = RegistrationTemplate.SignatureDocumentAction == SignatureDocumentAction.Embed;
             wtpRegistrationWorkflow.SetValue( RegistrationTemplate.RegistrationWorkflowTypeId );
 
-            foreach ( ListItem li in cblNotify.Items )
+            foreach( ListItem li in cblNotify.Items )
             {
                 RegistrationNotify notify = (RegistrationNotify)li.Value.AsInteger();
                 li.Selected = ( RegistrationTemplate.Notify & notify ) == notify;
@@ -2104,6 +2057,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             lWorkflowType.Visible = !string.IsNullOrWhiteSpace( lWorkflowType.Text );
 
             rcwForms.Label = string.Format( "<strong>Forms</strong> ({0}) <i class='fa fa-caret-down'></i>", RegistrationTemplate.Forms.Count() );
+            lFormsReadonly.Text = string.Empty;
             if ( RegistrationTemplate.Forms.Any() )
             {
                 foreach ( var form in RegistrationTemplate.Forms.OrderBy( a => a.Order ) )
@@ -2191,7 +2145,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             ddlSignatureDocumentTemplate.Items.Clear();
             ddlSignatureDocumentTemplate.Items.Add( new ListItem() );
-            foreach ( var documentType in new SignatureDocumentTemplateService( rockContext )
+            foreach( var documentType in new SignatureDocumentTemplateService( rockContext )
                 .Queryable().AsNoTracking()
                 .OrderBy( t => t.Name ) )
             {
@@ -2210,7 +2164,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         private void ParseControls( bool expandInvalid = false )
         {
             ExpandedForms = new List<Guid>();
-            FormState = FormState.Take( 1 ).ToList();
+            FormState = FormState.Take(1).ToList();
 
             int order = 1;
             foreach ( var formEditor in phForms.Controls.OfType<RegistrationTemplateFormEditor>() )
@@ -2277,7 +2231,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( setValues )
             {
                 control.Expanded = ExpandedForms.Contains( form.Guid );
-                if ( !control.Expanded && showInvalid && !form.IsValid )
+                if ( !control.Expanded && showInvalid && !form.IsValid)
                 {
                     control.Expanded = true;
                 }
@@ -2301,7 +2255,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( FormFieldsState != null && FormFieldsState.Any() )
             {
                 gFields.DataSource = FormFieldsState.First().Value
-                    .OrderBy( a => a.Order )
+                    .OrderBy( a => a.Order)
                     .Select( a => new
                     {
                         a.Id,
@@ -2338,9 +2292,17 @@ namespace RockWeb.Plugins.com_kfs.Event
                 RegistrationTemplateFormField formField = fieldList.FirstOrDefault( a => a.Guid.Equals( formFieldGuid ) );
                 if ( formField == null )
                 {
+                    lFieldSource.Visible = false;
+                    ddlFieldSource.Visible = true;
                     formField = new RegistrationTemplateFormField();
                     formField.Guid = formFieldGuid;
                     formField.FieldSource = RegistrationFieldSource.PersonAttribute;
+                }
+                else
+                {
+                    lFieldSource.Text = formField.FieldSource.ConvertToString();
+                    lFieldSource.Visible = true;
+                    ddlFieldSource.Visible = false;
                 }
 
                 ceAttributePreText.Text = formField.PreText;
@@ -2564,7 +2526,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="discountGuid">The discount unique identifier.</param>
         private void ShowDiscountEdit( Guid discountGuid )
         {
-            var discount = DiscountState.FirstOrDefault( d => d.Guid.Equals( discountGuid ) );
+            var discount = DiscountState.FirstOrDefault( d => d.Guid.Equals( discountGuid ));
             if ( discount == null )
             {
                 discount = new RegistrationTemplateDiscount();
@@ -2624,7 +2586,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="feeGuid">The fee unique identifier.</param>
         private void ShowFeeEdit( Guid feeGuid )
         {
-            var fee = FeeState.FirstOrDefault( d => d.Guid.Equals( feeGuid ) );
+            var fee = FeeState.FirstOrDefault( d => d.Guid.Equals( feeGuid ));
             if ( fee == null )
             {
                 fee = new RegistrationTemplateFee();
@@ -2699,11 +2661,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "ATTRIBUTES":
                     dlgField.Show();
                     break;
-
                 case "DISCOUNTS":
                     dlgDiscount.Show();
                     break;
-
                 case "FEES":
                     dlgFee.Show();
                     break;
@@ -2720,11 +2680,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "ATTRIBUTES":
                     dlgField.Hide();
                     break;
-
                 case "DISCOUNTS":
                     dlgDiscount.Hide();
                     break;
-
                 case "FEES":
                     dlgFee.Hide();
                     break;
@@ -2736,5 +2694,5 @@ namespace RockWeb.Plugins.com_kfs.Event
         #endregion
 
         #endregion
-    }
+}
 }

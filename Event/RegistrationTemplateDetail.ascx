@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationTemplateDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.KFSRegistrationTemplateDetail" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationTemplateDetail.ascx.cs" Inherits="RockWeb.Blocks.Event.RegistrationTemplateDetail" %>
 
 <script type="text/javascript">
 
@@ -8,25 +8,26 @@
 
     Sys.Application.add_load(function () {
         $('div.js-same-family').find('input:radio').on('click', function () {
-            if ($(this).val() == '1') {
+            if ($(this).val() > 0) {
                 $('.js-current-family-members').slideDown();
             } else {
-                $('.js-current-family-members').slideUp();
+                var $div = $('.js-current-family-members');
+                $div.find('input:checkbox').prop('checked', false);
+                $div.slideUp();
             }
         });
     });
-
 </script>
 
 <asp:UpdatePanel ID="upDetail" runat="server">
     <ContentTemplate>
-              
+
         <asp:Panel ID="pnlDetails" CssClass="panel panel-block" runat="server">
             <asp:HiddenField ID="hfRegistrationTemplateId" runat="server" />
 
             <div class="panel-heading">
                 <h1 class="panel-title"><i class="fa fa-clipboard"></i> <asp:Literal ID="lReadOnlyTitle" runat="server" /></h1>
-                
+
                 <div class="panel-labels">
                     <Rock:HighlightLabel ID="hlInactive" runat="server" LabelType="Danger" Text="Inactive" />
                     <Rock:HighlightLabel ID="hlType" runat="server" LabelType="Type" />
@@ -55,9 +56,9 @@
                                 <Rock:GroupTypePicker ID="gtpGroupType" runat="server" Label="Group Type" AutoPostBack="true" OnSelectedIndexChanged="gtpGroupType_SelectedIndexChanged" />
                                 <Rock:GroupRolePicker ID="rpGroupTypeRole" runat="server" Label="Group Member Role"
                                     Help="The group member role that new registrants should be added to group with." />
-                                <Rock:RockDropDownList ID="ddlGroupMemberStatus" runat="server" Label="Group Member Status" 
-                                    Help="The group member status that new registrants should be added to group with."/>
-                                
+                                <Rock:RockDropDownList ID="ddlGroupMemberStatus" runat="server" Label="Group Member Status"
+                                    Help="The group member status that new registrants should be added to group with." />
+
                                 <div class="row">
                                     <div class="col-xs-6">
                                         <Rock:RockCheckBoxList ID="cblNotify" runat="server" Label="Notify" RepeatDirection="Vertical"
@@ -78,7 +79,7 @@
                                     </div>
                                     <div class="col-xs-6">
                                         <Rock:RockCheckBox ID="cbAllowGroupPlacement" runat="server" Label="Allow Group Placement" Text="Yes"
-                                            Help="If enabled, the registration instance will include a Group Placement option for 
+                                            Help="If enabled, the registration instance will include a Group Placement option for
                                                 adding registrants to specific child groups of a selected parent group." />
                                     </div>
                                 </div>
@@ -92,15 +93,14 @@
 
                                 <div class="row">
                                     <div class="col-xs-6">
-                                        <Rock:RockDropDownList ID="ddlSignatureDocumentTemplate" runat="server" Label="Required Signature Document" 
-                                            Help="A document that needs to be signed for registrations of this type."/>
+                                        <Rock:RockDropDownList ID="ddlSignatureDocumentTemplate" runat="server" Label="Required Signature Document"
+                                            Help="A document that needs to be signed for registrations of this type." />
                                     </div>
                                     <div class="col-xs-6">
                                         <Rock:RockCheckBox ID="cbDisplayInLine" runat="server" Label="In-Line Signature" Text="Yes"
                                             Help="When registering for this type of event, should the Required Signature Document be displayed during the registration steps? If not, a request will be sent after the registration is completed." />
                                     </div>
                                 </div>
-
                             </div>
                             <div class="col-md-6">
                                 <div class="row">
@@ -116,12 +116,12 @@
                                 </div>
                                 <Rock:RockRadioButtonList ID="rblRegistrantsInSameFamily" runat="server" Label="Registrants in same Family" RepeatDirection="Horizontal" CssClass="js-same-family"
                                     Help="Typical relationship of registrants that user would register." />
-                                <div id="divCurrentFamilyMembers" runat="server" class="js-current-family-members" >
+                                <div id="divCurrentFamilyMembers" runat="server" class="js-current-family-members">
                                     <Rock:RockCheckBox ID="cbShowCurrentFamilyMembers" runat="server" Label="Show Family Members" Text="Yes"
-                                        Help="If Registrans in Same Family option is set to 'Yes', should the person registering be able to select people from their family when registering (vs. having to enter the family member's information manually)?" />
+                                        Help="If Registrants in Same Family option is not 'No', should the person registering be able to select people from their family when registering (vs. having to enter the family member's information manually)?" />
                                 </div>
                                 <div class="well">
-                                    <Rock:Toggle ID="tglSetCostOnTemplate" runat="server" Label="Set Cost On" OnText="Template" OffText="Instance" 
+                                    <Rock:Toggle ID="tglSetCostOnTemplate" runat="server" Label="Set Cost On" OnText="Template" OffText="Instance"
                                         ActiveButtonCssClass="btn-info" OnCheckedChanged="tglSetCost_CheckedChanged" ButtonSizeCssClass="btn-xs" />
                                     <Rock:CurrencyBox ID="cbCost" runat="server" Label="Cost"
                                         Help="The cost per registrant." />
@@ -159,7 +159,6 @@
                         <div class="pull-right">
                             <asp:LinkButton ID="lbAddForm" runat="server" CssClass="btn btn-action btn-xs" OnClick="lbAddForm_Click" CausesValidation="false"><i class="fa fa-plus"></i> Add Form</asp:LinkButton>
                         </div>
-
                     </Rock:PanelWidget>
 
                     <Rock:PanelWidget ID="wpFees" runat="server" Title="Fees">
@@ -262,7 +261,7 @@
                             <div class="col-md-12">
                                 <Rock:RockTextBox ID="tbSuccessTitle" runat="server" Label="Success Title" Placeholder="Congratulations"
                                     Help="The heading to display to user after successfully completing a registration of this type." />
-                                <Rock:CodeEditor ID="ceSuccessText" runat="server" Label="Success Text" EditorMode="Lava" EditorTheme="Rock" EditorHeight="300" 
+                                <Rock:CodeEditor ID="ceSuccessText" runat="server" Label="Success Text" EditorMode="Lava" EditorTheme="Rock" EditorHeight="300"
                                     Help="The text to display to user after successfully completing a registration of this type. If there are costs or fees for this registration, a summary of those will be displayed after this text." />
                             </div>
                         </div>
@@ -272,7 +271,6 @@
                         <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
                         <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
                     </div>
-
                 </div>
 
                 <fieldset id="fieldsetViewDetails" runat="server">
@@ -312,16 +310,12 @@
                         <Rock:HiddenFieldWithClass ID="hfHasRegistrations" runat="server" CssClass="js-has-registrations" />
                         <asp:LinkButton ID="btnDelete" runat="server" Text="Delete" CssClass="btn btn-link js-delete-template" OnClick="btnDelete_Click" CausesValidation="false" />
                         <span class="pull-right">
-                            <asp:LinkButton ID="btnCopy" runat="server" CssClass="btn btn-default btn-sm fa fa-clone" OnClick="btnCopy_Click"/>
+                            <asp:LinkButton ID="btnCopy" runat="server" CssClass="btn btn-default btn-sm fa fa-clone" OnClick="btnCopy_Click" />
                             <Rock:SecurityButton ID="btnSecurity" runat="server" class="btn btn-sm btn-security" />
                         </span>
-
                     </div>
-                
                 </fieldset>
-
             </div>
-
         </asp:Panel>
 
         <asp:HiddenField ID="hfActiveDialog" runat="server" />
@@ -333,6 +327,7 @@
                 <asp:ValidationSummary ID="ValidationSummaryAttribute" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" ValidationGroup="Field" />
                 <div class="row">
                     <div class="col-md-3">
+                        <Rock:RockLiteral ID="lFieldSource" runat="server" Label="Source" Visible="false" />
                         <Rock:RockDropDownList ID="ddlFieldSource" runat="server" Label="Source" AutoPostBack="true" OnSelectedIndexChanged="ddlFieldSource_SelectedIndexChanged" ValidationGroup="Field" />
                         <Rock:RockLiteral ID="lPersonField" runat="server" Label="Person Field" Visible="false" />
                         <Rock:RockDropDownList ID="ddlPersonField" runat="server" Label="Person Field" Visible="false" ValidationGroup="Field" />
@@ -371,7 +366,7 @@
                     <asp:ListItem Text="Percentage" Value="Percentage" />
                     <asp:ListItem Text="Amount" Value="Amount" />
                 </Rock:RockRadioButtonList>
-                <Rock:NumberBox ID="nbDiscountPercentage" runat="server" AppendText="%" CssClass="input-width-md" Label="Discount Percentage" NumberType="Integer" ValidationGroup="Discount"  />
+                <Rock:NumberBox ID="nbDiscountPercentage" runat="server" AppendText="%" CssClass="input-width-md" Label="Discount Percentage" NumberType="Integer" ValidationGroup="Discount" />
                 <Rock:CurrencyBox ID="cbDiscountAmount" runat="server" CssClass="input-width-md" Label="Discount Amount" ValidationGroup="Discount" />
             </Content>
         </Rock:ModalDialog>
@@ -425,7 +420,6 @@
                 });
 
             });
-
         </script>
     </ContentTemplate>
 </asp:UpdatePanel>
