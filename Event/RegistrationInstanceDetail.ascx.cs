@@ -816,6 +816,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
+            var nreFeeFilter = phRegistrantFormFieldFilters.FindControl( "nreRegistrantsFeeFilter" ) as NumberRangeEditor;
+            if ( nreFeeFilter != null )
+            {
+                nreFeeFilter.DelimitedValues = string.Empty;
+            }
+
             BindRegistrantsFilter( null );
         }
 
