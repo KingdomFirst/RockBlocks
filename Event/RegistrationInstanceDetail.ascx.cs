@@ -1076,8 +1076,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             registrationInstanceId = registrationInstanceId ?? PageParameter( "RegistrationInstanceId" ).AsIntegerOrNull();
             if ( registrationInstanceId.HasValue )
             {
-                var instance = GetRegistrationInstance( registrationInstanceId.Value, rockContext );
-                var parentGroup = new GroupService( rockContext ).Get( instance.AttributeValues[groupType.Name].Value.AsGuid() );
+                //var instance = GetRegistrationInstance( registrationInstanceId.Value, rockContext );
+                var parentGroup = new GroupService( rockContext ).Get( ResourceGroups[groupType.Name].Value.AsGuid() );
                 if ( parentGroup != null )
                 {
                     var groupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
@@ -2408,17 +2408,17 @@ namespace RockWeb.Plugins.com_kfs.Event
         private void BuildSubGroupTabs( RegistrationInstance instance = null )
         {
             phGroupTabs.Controls.Clear();
-            instance = instance ?? GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
-            if ( instance != null )
+            //instance = instance ?? GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
+            if ( ResourceGroups != null )
             {
-                if ( instance.Attributes == null )
-                {
-                    instance.LoadAttributes();
-                }
+                //if ( instance.Attributes == null )
+                //{
+                //    instance.LoadAttributes();
+                //}
 
-                foreach ( var groupType in ResourceGroupTypes.Where( gt => instance.AttributeValues.ContainsKey( gt.Name ) ) )
+                foreach ( var groupType in ResourceGroupTypes.Where( gt => ResourceGroups.ContainsKey( gt.Name ) ) )
                 {
-                    var associatedGroupGuid = instance.AttributeValues[groupType.Name].Value.AsGuid();
+                    var associatedGroupGuid = ResourceGroups[groupType.Name].Value.AsGuid();
                     if ( !associatedGroupGuid.Equals( Guid.Empty ) )
                     {
                         var tabName = groupType.Name;
@@ -2470,12 +2470,12 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             // set custom placement groups
             HtmlGenericControl liAssociatedGroup;
-            var instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
+            //var instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
             foreach ( var groupType in ResourceGroupTypes )
             {
-                if ( groupType.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) && instance != null && instance.AttributeValues.ContainsKey( groupType.Name ) )
+                if ( groupType.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) && ResourceGroups != null && ResourceGroups.ContainsKey( groupType.Name ) )
                 {
-                    var resourceGroupGuid = instance.AttributeValues[groupType.Name];
+                    var resourceGroupGuid = ResourceGroups[groupType.Name];
                     if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
                     {
                         var tabName = groupType.Name.RemoveSpecialCharacters();
@@ -2485,7 +2485,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             hfActiveTabParentGroup.Value = parentGroup.Guid.ToString();
                             tabName = parentGroup.Name;
                         }
-
+                        
                         liAssociatedGroup = new HtmlGenericControl();
                         liAssociatedGroup = (HtmlGenericControl)ulTabs.FindControl( "li" + tabName );
                         if ( liAssociatedGroup != null )
@@ -2496,6 +2496,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             liAssociatedGroup.AddCssClass( "active" );
                         }
+
+                        //BindResourcePanel( parentGroup );
                     }
                 }
             }
@@ -3982,8 +3984,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             // Add fee column and filter
-            
-
             var nreFeeFilter = new NumberRangeEditor();
             nreFeeFilter.NumberType = ValidationDataType.Double;
             nreFeeFilter.ID = "nreRegistrantsFeeFilter";
@@ -5807,17 +5807,17 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             lbAddSubGroup.InnerHtml += string.Format( "Add {0}", groupTypeGroupTerm );
 
-            var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-            var instance = GetRegistrationInstance( registrationInstanceId );
+            //var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
+            //var instance = GetRegistrationInstance( registrationInstanceId );
 
             var tabName = groupType.Name;
-            if ( instance != null )
+            if ( ResourceGroups != null )
             {
                 // get the group placeholder for this grouptype
-                if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
+                if ( ResourceGroups.ContainsKey( groupType.Name ) )
                 {
                     Group parentGroup = null;
-                    var resourceGroupGuids = instance.AttributeValues[groupType.Name];
+                    var resourceGroupGuids = ResourceGroups[groupType.Name];
                     if ( resourceGroupGuids != null && !string.IsNullOrWhiteSpace( resourceGroupGuids.Value ) )
                     {
                         parentGroup = new GroupService( new RockContext() ).Get( resourceGroupGuids.Value.AsGuid() );
@@ -5874,8 +5874,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="subGroups">The sub groups.</param>
         private void BuildSubGroupPanels( PlaceHolder phGroupControl, List<Group> subGroups )
         {
-            var registrationInstance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
-
             foreach ( Group group in subGroups )
             {
                 var groupPanel = (GroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx");
@@ -6249,11 +6247,11 @@ namespace RockWeb.Plugins.com_kfs.Event
             // registrant may be empty, so get instance from URL
             var registrationGroupGuids = new List<Guid>();
             var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-            var registrationInstance = GetRegistrationInstance( registrationInstanceId, rockContext );
-            if ( registrationInstance.AttributeValues.Any() )
+            //var registrationInstance = GetRegistrationInstance( registrationInstanceId, rockContext );
+            if ( ResourceGroups != null && ResourceGroups.Any() )
             {
-                registrationGroupGuids = registrationInstance.AttributeValues.Values
-                    .Where( v => !string.IsNullOrWhiteSpace( v.Value ) ).Select( v => v.Value.AsGuid() ).ToList();
+                registrationGroupGuids = ResourceGroups.Values.Where( v => !string.IsNullOrWhiteSpace( v.Value ) )
+                    .Select( v => v.Value.AsGuid() ).ToList();
                 hfRegistrationGroupGuid.Value = string.Join( ",", registrationGroupGuids );
             }
 
@@ -6348,7 +6346,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
 
                         // restrict any volunteer lists to this registration's resources
-                        if ( registrationInstance.AttributeValues.Any() )
+                        if ( ResourceGroups.Any() )
                         {
                             qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroupGuids.Contains( g.Group.Guid ) || registrationGroupGuids.Contains( g.Group.ParentGroup.Guid ) )
                                 .DistinctBy( v => v.PersonId ).AsQueryable();
@@ -6580,6 +6578,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         BindRegistrantsFilter( new RegistrationInstanceService( rockContext ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
                     }
+
+                    //BindResourcePanels( groupMember.Group.GroupType );
                 }
 
                 BindResourcePanels();
