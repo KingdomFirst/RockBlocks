@@ -382,21 +382,30 @@ namespace RockWeb.Plugins.com_kfs.Event
             // Add dynamic assignment columns for volunteer groups
             if ( _resources != null && _group.GroupType.GroupTypePurposeValue != null && _group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
             {
-                foreach ( var resourceType in _resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
+                foreach ( var groupType in _resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
                 {
-                    if ( _resources.ContainsKey( resourceType.Name ) )
+                    if ( _resources.ContainsKey( groupType.Name ) )
                     {
-                        var resourceGroupGuids = _resources[resourceType.Name];
-                        if ( resourceGroupGuids != null && !string.IsNullOrWhiteSpace( resourceGroupGuids.Value ) )
+                        var resourceGroupGuid = _resources[groupType.Name];
+                        if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) )
                         {
-                            var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuids.Value.AsGuid() );
+                            var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuid.Value.AsGuid() );
                             if ( parentGroup != null && parentGroup.GroupTypeId != _group.GroupTypeId )
                             {
-                                var subGroupColumn = new LinkButtonField();
-                                subGroupColumn.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                                subGroupColumn.HeaderStyle.CssClass = "";
-                                subGroupColumn.HeaderText = parentGroup.Name;
-                                gGroupMembers.Columns.Add( subGroupColumn );
+                                var groupAssignment = new LinkButtonField();
+                                groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                                groupAssignment.HeaderText = parentGroup.Name;
+                                groupAssignment.HeaderStyle.CssClass = "";
+                                gGroupMembers.Columns.Add( groupAssignment );
+
+                                var assignmentExport = new RockLiteralField();
+                                assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
+                                assignmentExport.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                                assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
+                                assignmentExport.HeaderStyle.CssClass = "";
+                                assignmentExport.HeaderText = parentGroup.Name;
+                                assignmentExport.Visible = false;
+                                gGroupMembers.Columns.Add( assignmentExport );
                             }
                         }
                     }
