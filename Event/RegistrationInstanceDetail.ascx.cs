@@ -346,7 +346,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 SetFollowingOnPostback();
-                //BuildSubGroupTabs();
                 ShowTab();
             }
         }
@@ -2281,7 +2280,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 AddDynamicControls( true );
 
                 // do the ShowTab now since it may depend on DynamicControls and Filter Bindings
-                ShowTab();
+                //ShowTab();
             }
         }
 
@@ -2447,6 +2446,9 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void ShowTab()
         {
+            // remove custom resource panels from view
+            rpResourcePanels.Visible = false;
+
             // only show active tab
             liRegistrations.RemoveCssClass( "active" );
             pnlRegistrations.Visible = false;
@@ -2462,44 +2464,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             liGroupPlacement.RemoveCssClass( "active" );
             pnlGroupPlacement.Visible = false;
-
-            // set custom placement groups
-            HtmlGenericControl liAssociatedGroup;
-            //var instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
-            if ( ResourceGroups != null )
-            {
-                //foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
-                foreach ( var groupType in ResourceGroupTypes )
-                {
-                    var resourceGroupGuid = ResourceGroups[groupType.Name];
-                    if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
-                    {
-                        var tabName = groupType.Name.RemoveSpecialCharacters();
-                        var parentGroup = new GroupService( new RockContext() ).Get( resourceGroupGuid.Value.AsGuid() );
-                        if ( parentGroup != null )
-                        {
-                            hfActiveTabParentGroup.Value = parentGroup.Guid.ToString();
-                            tabName = parentGroup.Name;
-                        }
-
-                        liAssociatedGroup = new HtmlGenericControl();
-                        liAssociatedGroup = (HtmlGenericControl)ulTabs.FindControl( "li" + tabName );
-                        if ( liAssociatedGroup != null )
-                        {
-                            liAssociatedGroup.RemoveCssClass( "active" );
-                        }
-
-                        if ( ActiveTab == "lb" + tabName )
-                        {
-                            liAssociatedGroup.AddCssClass( "active" );
-                            BindResourcePanels( parentGroup.GroupTypeId );
-                        }
-                    }
-                }
-            }
-
-            //BindResourcePanels();   x
-
+            
             switch ( ActiveTab ?? string.Empty )
             {
                 case "lbRegistrants":
@@ -2545,6 +2510,39 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 case "":
                     goto case "lbRegistrations"; 
+            }
+
+            // Bind tabs for custom resource groups
+            if ( ResourceGroups != null )
+            {
+                foreach ( var groupType in ResourceGroupTypes )
+                {
+                    var resourceGroupGuid = ResourceGroups[groupType.Name];
+                    if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
+                    {
+                        var tabName = groupType.Name.RemoveSpecialCharacters();
+                        var parentGroup = new GroupService( new RockContext() ).Get( resourceGroupGuid.Value.AsGuid() );
+                        if ( parentGroup != null )
+                        {
+                            hfActiveTabParentGroup.Value = parentGroup.Guid.ToString();
+                            tabName = parentGroup.Name;
+                        }
+
+                        using ( var liAssociatedGroup = (HtmlGenericControl)ulTabs.FindControl( "li" + tabName ) )
+                        {
+                            if ( liAssociatedGroup != null )
+                            {
+                                liAssociatedGroup.RemoveCssClass( "active" );
+                            }
+
+                            if ( ActiveTab == "lb" + tabName )
+                            {
+                                liAssociatedGroup.AddCssClass( "active" );
+                                BindResourcePanels( parentGroup.GroupTypeId );
+                            }
+                        }   
+                    }
+                }
             }
         }
 
@@ -5801,9 +5799,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             lbAddSubGroup.InnerHtml += string.Format( "Add {0}", groupTypeGroupTerm );
 
-            //var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
-            //var instance = GetRegistrationInstance( registrationInstanceId );
-
             var tabName = groupType.Name;
             if ( ResourceGroups != null )
             {
@@ -5821,18 +5816,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
                     }
 
+                    // build out the group panel 
                     var modalIconString = string.Empty;
-                    //if ( groupType.GroupTypePurposeValue != null && groupType.GroupTypePurposeValue.Value == "Serving Area" )
-                    //{
-                    //    pnlVolunteers.Visible = true;
-                    //}
-
                     if ( parentGroup != null )
                     {
                         hfParentGroupId.Value = parentGroup.Guid.ToString();
                         phGroupControl.Controls.Clear();
 
-                        // TODO: move this to ShowTab so it fires once per tab
                         BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList() );
 
                         var qryParams = new Dictionary<string, string>();
@@ -5847,7 +5837,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             pnlAssociatedGroup.Visible = ActiveTab == ( "lb" + tabName );
 
-            // build header section
+            // build group panel headers
             var header = new HtmlGenericControl( "h1" );
             header.Attributes.Add( "class", "panel-title" );
             if ( !string.IsNullOrWhiteSpace( groupType.IconCssClass ) )
@@ -5871,8 +5861,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             foreach ( Group group in subGroups )
             {
                 var groupPanel = (GroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx");
-                //var groupPanel = new GroupPanel();  // doesn't work
-
                 groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
 
                 foreach ( string control in _expandedGroupPanels )
@@ -5886,7 +5874,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 groupPanel.AddButtonClick += AddMemberButton_Click;
                 groupPanel.EditMemberButtonClick += EditMemberButton_Click;
                 groupPanel.GroupRowDataBound += GroupRowDataBound;
-                //groupPanel.AssignGroupButtonClick += ;
                 groupPanel.BuildControl( group, ResourceGroupTypes, ResourceGroups );
                 phGroupControl.Controls.Add( groupPanel );
             }
@@ -5983,6 +5970,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="groupTypeId">The group type identifier.</param>
         private void BindResourcePanels( int? groupTypeId = null )
         {
+            rpResourcePanels.Visible = true;
             rpResourcePanels.DataSource = ResourceGroupTypes.Where( gt => groupTypeId == null || gt.Id == groupTypeId.Value ).OrderBy( g => g.Name );
             rpResourcePanels.DataBind();
         }
