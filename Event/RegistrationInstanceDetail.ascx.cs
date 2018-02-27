@@ -233,13 +233,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupPlacements.RowDataBound += gRegistrants_RowDataBound; //intentionally using same row data bound event as the gRegistrants grid
             gGroupPlacements.GridRebind += gGroupPlacements_GridRebind;
 
-            //fLinkages.ApplyFilterClick += fLinkages_ApplyFilterClick;
-            //gVolunteers.DataKeyNames = new string[] { "Id" };
-            //gVolunteers.Actions.ShowAdd = true;
-            //gVolunteers.Actions.AddClick += AddMemberButton_Click;
-            //gVolunteers.RowDataBound += gRegistrants_RowDataBound;
-            //gVolunteers.RowCommand += gRegistrants_RowCommand;
-
             rpResourcePanels.ItemDataBound += rpResourcePanels_ItemDataBound;
             rpResourcePanels.ItemCommand += rpResourcePanels_ItemCommand;
 
@@ -267,8 +260,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     LoadRegistrationResources( instance );
                 }
-
-                //BindResourcePanels();
             }
 
             if ( !Page.IsPostBack )
@@ -346,6 +337,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 SetFollowingOnPostback();
+
+                // TODO: this needs to fire on every postback, except on tab click
                 ShowTab();
             }
         }
@@ -1501,21 +1494,17 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( e.CommandName == "AssignSubGroup" )
             {
                 var argument = e.CommandArgument.ToString().Split( '|' ).ToList();
-                var parentGroupId = 0;
-                var registrantId = 0;
-                int.TryParse( argument[0], out parentGroupId );
-                int.TryParse( argument[1], out registrantId );
-                if ( parentGroupId > 0 && registrantId > 0 )
+                var parentGroupId = argument[0].AsInteger();
+                var personId = argument[1].AsInteger();
+                if ( parentGroupId > 0 && personId > 0 )
                 {
                     using ( var rockContext = new RockContext() )
                     {
-                        var groupService = new GroupService( rockContext );
-                        var registrantService = new RegistrationRegistrantService( rockContext );
-                        var parentGroup = groupService.Get( parentGroupId );
-                        var registrant = registrantService.Get( registrantId );
-                        if ( registrant != null )
+                        var parentGroup = new GroupService( rockContext ).Get( parentGroupId );
+                        var person = new PersonService( rockContext ).Get( personId );
+                        if ( person != null )
                         {
-                            RenderGroupMemberModal( rockContext, parentGroup, null, null );
+                            RenderGroupMemberModal( rockContext, parentGroup, null, null, person );
                         }
                     }
                 }
@@ -2345,7 +2334,9 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             liGroupPlacement.RemoveCssClass( "active" );
             pnlGroupPlacement.Visible = false;
-            
+
+            ShowCustomTabs();
+
             switch ( ActiveTab ?? string.Empty )
             {
                 case "lbRegistrants":
@@ -2390,9 +2381,16 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
 
                 case "":
-                    goto case "lbRegistrations"; 
+                    goto case "lbRegistrations";
+                    
             }
+        }
 
+        /// <summary>
+        /// Shows the custom tabs.
+        /// </summary>
+        private void ShowCustomTabs()
+        {
             // Bind tabs for custom resource groups
             if ( ResourceGroups != null )
             {
@@ -2421,7 +2419,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 liAssociatedGroup.AddCssClass( "active" );
                                 BindResourcePanels( parentGroup.GroupTypeId );
                             }
-                        }   
+                        }
                     }
                 }
             }
@@ -5737,9 +5735,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                         break;
                     }
                 }
-                groupPanel.AddButtonClick += AddMemberButton_Click;
-                groupPanel.EditMemberButtonClick += EditMemberButton_Click;
+                groupPanel.AddButtonClick += AddGroupMember_Click;
+                groupPanel.EditButtonClick += EditGroupMember_Click;
+                
+                groupPanel.GroupRowCommand += GroupRowCommand;
                 groupPanel.GroupRowDataBound += GroupRowDataBound;
+                //groupPanel.GroupRowSelected += GroupRowSelected;
+                //groupPanel.GridRebind += GroupRowRebind;
                 groupPanel.BuildControl( group, ResourceGroupTypes, ResourceGroups );
                 phGroupControl.Controls.Add( groupPanel );
             }
@@ -5756,8 +5758,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 var group = new GroupService( new RockContext() ).Get( int.Parse( e.CommandArgument.ToString() ) );
                 hfEditGroup.Value = group.Guid.ToString();
-
-                //BindResourcePanels();
+                
                 BindResourcePanels( group.GroupTypeId );
 
                 var qryParams = new Dictionary<string, string>();
@@ -5826,7 +5827,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     BindResourcePanels( group.GroupTypeId );
                 }
 
-                //BindResourcePanels();
+                
             }
         }
 
@@ -6014,11 +6015,11 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Handles the Click event of the AddMemberButton control.
+        /// Handles the Click event of the AddGroupMember control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void AddMemberButton_Click( object sender, EventArgs e )
+        private void AddGroupMember_Click( object sender, EventArgs e )
         {
             var rockContext = new RockContext();
             var panel = (GroupPanel)sender;
@@ -6026,17 +6027,82 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Handles the Click event of the EditMemberButton control.
+        /// Handles the Click event of the EditGroupMember control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void EditMemberButton_Click( object sender, EventArgs e )
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        private void EditGroupMember_Click( object sender, EventArgs e )
         {
             var groupMemberId = ( (RowEventArgs)e ).RowKeyId;
             if ( groupMemberId > 0 )
             {
                 RenderEditGroupMemberModal( groupMemberId.ToString() );
             }
+        }
+
+        /// <summary>
+        /// Handles the Click event of the EditGroupMember control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        private void GroupRowSelected( object sender, EventArgs e )
+        {
+            var groupMemberId = ( (RowEventArgs)e ).RowKeyId;
+            if ( groupMemberId > 0 )
+            {
+                RenderEditGroupMemberModal( groupMemberId.ToString() );
+            }
+        }
+
+        /// <summary>
+        /// Handles the Click event of the EditMemberButton control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        private void GroupRowCommand( object sender, GridViewCommandEventArgs e )
+        {
+            if ( e.CommandName == "AssignSubGroup" )
+            {
+                var argument = e.CommandArgument.ToString().Split( '|' ).ToList();
+                var parentGroupId = argument[0].AsInteger();
+                var personId = argument[1].AsInteger();
+                if ( parentGroupId > 0 && personId > 0 )
+                {
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var parentGroup = new GroupService( rockContext ).Get( parentGroupId );
+                        var person = new PersonService( rockContext ).Get( personId );
+                        if ( person != null )
+                        {
+                            RenderGroupMemberModal( rockContext, parentGroup, null, null, person );
+                        }
+                    }
+                }
+            }
+
+            if ( e.CommandName == "ChangeSubGroup" )
+            {
+                var subGroupMemberId = 0;
+                if ( int.TryParse( e.CommandArgument.ToString(), out subGroupMemberId ) && subGroupMemberId > 0 )
+                {
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var groupMemberService = new GroupMemberService( rockContext );
+                        var groupMember = groupMemberService.Get( subGroupMemberId );
+                        RenderGroupMemberModal( rockContext, groupMember.Group.ParentGroup, groupMember.Group, groupMember );
+                    }
+                }
+            }
+
+            //if ( e.CommandName == "RowSelected" )
+            //{
+            //    int rowIndex = int.MinValue;
+            //    if ( int.TryParse( e.CommandArgument.ToString(), out rowIndex ) )
+            //    {
+            //        RowEventArgs a = new RowEventArgs( sender.Rows[rowIndex] );
+            //        GroupRowSelected( a );
+            //    }
+            //}
         }
 
         /// <summary>
@@ -6073,10 +6139,9 @@ namespace RockWeb.Plugins.com_kfs.Event
             else
             {
                 // group id | person id pair
-                var parentGroupId = 0;
-                var personId = 0;
-                int.TryParse( groupKey.Split( '|' )[0], out parentGroupId );
-                int.TryParse( groupKey.Split( '|' )[1], out personId );
+                var argument = groupKey.Split( '|' ).ToList();
+                var parentGroupId = argument[0].AsInteger();
+                var personId = argument[1].AsInteger();
                 if ( parentGroupId > 0 && personId > 0 )
                 {
                     using ( var rockContext = new RockContext() )
@@ -6125,6 +6190,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( group != null )
             {
                 hfSubGroupId.Value = group.Id.ToString();
+                hfSubGroupTypeId.Value = group.GroupTypeId.ToString();
                 if ( !string.IsNullOrWhiteSpace( group.GroupType.GroupMemberTerm ) )
                 {
                     groupMemberTerm = group.GroupType.GroupMemberTerm;
@@ -6134,6 +6200,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             else if ( parentGroup != null )
             {
                 hfSubGroupId.Value = string.Empty;
+                hfSubGroupTypeId.Value = parentGroup.GroupTypeId.ToString();
                 if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupMemberTerm ) )
                 {
                     groupMemberTerm = parentGroup.GroupType.GroupMemberTerm;
@@ -6220,6 +6287,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         ddlRegistrantList.Visible = false;
                         ddlRegistrantList.Required = false;
+                        ppVolunteer.SelectedValue = person.Id;
                         ppVolunteer.Visible = true;
                         ppVolunteer.Required = true;
                     }
@@ -6295,6 +6363,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // add or remove group membership
                     GroupMember groupMember;
                     var originalGroupId = hfSubGroupId.ValueAsInt();
+                    var originalGroupTypeId = hfSubGroupTypeId.ValueAsInt();
                     var newGroupId = ddlSubGroup.SelectedValue.AsInteger();
                     var groupMemberService = new GroupMemberService( rockContext );
                     var groupMemberId = int.Parse( hfSubGroupMemberId.Value );
@@ -6439,10 +6508,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                         BindRegistrantsFilter( new RegistrationInstanceService( rockContext ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
                     }
 
-                    BindResourcePanels( groupMember.Group.GroupTypeId );
+                    //BindResourcePanels( originalGroupTypeId );
                 }
 
-                //BindResourcePanels();
+
+                BindResourcePanels();
+                
                 BindRegistrantsGrid();
                 mdlAddSubGroupMember.Hide();
             }
