@@ -3,13 +3,12 @@
 <asp:UpdatePanel ID="upnlSubGroup" runat="server">
     <ContentTemplate>
 
-        <%--<Rock:HiddenFieldWithClass ID="hfGroupId" runat="server" CssClass="panel-widget-groupid" />--%>
         <Rock:PanelWidget ID="pnlSubGroup" runat="server">
             
             <asp:Panel ID="pnlGroupDescription" runat="server" CssClass="alert alert-info" >
                 <asp:Label ID="lblGroupDescription" runat="server"></asp:Label>
             </asp:Panel>
-            <Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue">
+            <%--<Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue">
                 <Rock:RockTextBox ID="tbFirstName" runat="server" Label="First Name" />
                 <Rock:RockTextBox ID="tbLastName" runat="server" Label="Last Name" />
                 <Rock:RockCheckBoxList ID="cblRole" runat="server" Label="Role" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" />
@@ -21,11 +20,11 @@
                     <asp:ListItem Text="Unknown" Value="Unknown" />
                 </Rock:RockCheckBoxList>
                 <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
-            </Rock:GridFilter>
+            </Rock:GridFilter>--%>
             <Rock:Grid ID="gGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
                 <Columns>
                     <Rock:SelectField></Rock:SelectField>
-                    <Rock:RockBoundField DataField="Name" HeaderText="Name" SortExpression="Person.LastName,Person.NickName" HtmlEncode="false" />
+                    <Rock:RockBoundField DataField="Person.FullName" HeaderText="Name" SortExpression="Person.LastName,Person.NickName" HtmlEncode="false" />
                     <Rock:RockBoundField DataField="GroupRole" HeaderText="Role" SortExpression="GroupRole.Name" />
                     <Rock:RockBoundField DataField="GroupMemberStatus" HeaderText="Status" SortExpression="GroupMemberStatus" />
                 </Columns>
