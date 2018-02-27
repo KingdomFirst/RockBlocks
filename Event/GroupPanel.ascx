@@ -21,7 +21,7 @@
                 </Rock:RockCheckBoxList>
                 <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
             </Rock:GridFilter>--%>
-            <Rock:Grid ID="gGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
+            <Rock:Grid ID="gGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" PersonIdField="PersonId" OnRowSelected="gGroupMembers_RowSelected" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
                 <Columns>
                     <Rock:SelectField></Rock:SelectField>
                     <Rock:RockBoundField DataField="Person.FullName" HeaderText="Name" SortExpression="Person.LastName,Person.NickName" HtmlEncode="false" />

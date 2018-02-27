@@ -90,7 +90,12 @@ namespace RockWeb.Plugins.com_kfs.Event
         public event EventHandler EditButtonClick;
 
         /// <summary>
-        /// Occurs when [assign group button click].
+        /// Occurs when [group row selected].
+        /// </summary>
+        public event EventHandler GroupRowSelected;
+
+        /// <summary>
+        /// Occurs when [assign group click].
         /// </summary>
         public event GridViewCommandEventHandler GroupRowCommand;
 
@@ -125,7 +130,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             ViewState["AvailableAttributes"] = AvailableAttributes;
             return base.SaveViewState();
         }
-
         
         /// <summary>
         /// Builds the control.
@@ -155,12 +159,12 @@ namespace RockWeb.Plugins.com_kfs.Event
             
             //rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
             gGroupMembers.DataKeyNames = new string[] { "Id" };
-            gGroupMembers.PersonIdField = "PersonId";
             gGroupMembers.RowCommand += gGroupMembers_RowCommand;
             gGroupMembers.RowDataBound += gGroupMembers_RowDataBound;
-            gGroupMembers.GetRecipientMergeFields += gGroupMembers_GetRecipientMergeFields;
+            //gGroupMembers.RowSelected += gGroupMembers_RowSelected;
             gGroupMembers.Actions.AddClick += gGroupMembers_AddClick;
             gGroupMembers.GridRebind += gGroupMembers_GridRebind;
+            gGroupMembers.GetRecipientMergeFields += gGroupMembers_GetRecipientMergeFields;
             gGroupMembers.RowItemText = _group.GroupType.GroupTerm + " " + _group.GroupType.GroupMemberTerm;
             gGroupMembers.ExportFilename = _group.Name;
             gGroupMembers.ExportSource = ExcelExportSource.DataSource;
@@ -174,8 +178,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             BindAttributes();
             AddDynamicControls();
             BindGroupMembersGrid();
-        }
-        
+        }  
+
         /// <summary>
         /// Builds the subgroup heading.
         /// </summary>
@@ -421,6 +425,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             // Add edit column
             var editField = new EditField();
+            editField.HeaderText = "Edit";
             gGroupMembers.Columns.Add( editField );
             editField.Click += gGroupMembers_EditClick;
 
@@ -477,12 +482,11 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         protected void BindGroupMembersGrid( bool isExporting = false )
         {
-            if ( !isExporting )
-            {
-                gGroupMembers.DataSource = _group.Members;
-                gGroupMembers.DataBind();
-                return;
-            }
+            
+            gGroupMembers.DataSource = _group.Members;
+            gGroupMembers.DataBind();
+            return;
+            
             
             if ( _group != null && _group.GroupType.Roles.Any() )
             {
@@ -856,7 +860,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        private void gGroupMembers_DeleteClick( object sender, RowEventArgs e )
+        protected void gGroupMembers_DeleteClick( object sender, RowEventArgs e )
         {
             // TODO: enforce counselor delete support
             var rockContext = new RockContext();
@@ -875,11 +879,24 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
+        /// Handles the RowSelected event of the gGroupMembers control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        protected void gGroupMembers_RowSelected( object sender, RowEventArgs e )
+        {
+            if ( GroupRowSelected != null )
+            {
+                GroupRowSelected( this, e );
+            }
+        }
+
+        /// <summary>
         /// Handles the EditClick event of the Actions control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void gGroupMembers_RowCommand( object sender, GridViewCommandEventArgs e )
+        protected void gGroupMembers_RowCommand( object sender, GridViewCommandEventArgs e )
         {
             if ( GroupRowCommand != null )
             {
@@ -887,13 +904,12 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
-
         /// <summary>
         /// Handles the RowDataBound event of the gGroupMembers control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void gGroupMembers_RowDataBound( object sender, EventArgs e )
+        protected void gGroupMembers_RowDataBound( object sender, EventArgs e )
         {
             if ( GroupRowDataBound != null )
             {
@@ -901,8 +917,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
-        
-        
         #endregion
+
+        
     }
 }
