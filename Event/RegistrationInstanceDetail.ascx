@@ -469,10 +469,9 @@
                     <asp:LinkButton ID="btnMultipleRegistrations" runat="server" Text="Postback" />
                 </div>
 
-                <Rock:ModalDialog ID="mdlAddSubGroupMember" runat="server" OnSaveClick="mdlAddSubGroupMember_SaveClick" ValidationGroup="vgAddGroupMember">
+                <Rock:ModalDialog ID="mdlAddSubGroupMember" runat="server" OnSaveClick="mdlAddSubGroupMemberSave_Click" ValidationGroup="vgAddGroupMember">
                     <Content>
                         <asp:HiddenField ID="hfSubGroupId" runat="server" />
-                        <asp:HiddenField ID="hfSubGroupTypeId" runat="server" />
                         <asp:HiddenField ID="hfSubGroupMemberId" runat="server" />
                         <asp:HiddenField ID="hfRegistrationGroupGuid" runat="server" />
                         <Rock:NotificationBox ID="nbErrorMessage" runat="server" NotificationBoxType="Danger" />

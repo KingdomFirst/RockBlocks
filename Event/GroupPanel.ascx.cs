@@ -266,6 +266,14 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void AddDynamicControls()
         {
+            // remove Family Campus and dynamic assignment columns
+            foreach ( var column in gGroupMembers.Columns
+                .OfType<RockLiteralField>()
+                .ToList() )
+            {
+                gGroupMembers.Columns.Remove( column );
+            }
+
             // Add Family Campus 
             var lFamilyCampus = new RockLiteralField
             {
@@ -482,19 +490,17 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         protected void BindGroupMembersGrid( bool isExporting = false )
         {
-            
             gGroupMembers.DataSource = _group.Members;
             gGroupMembers.DataBind();
             return;
-            
-            
+
             if ( _group != null && _group.GroupType.Roles.Any() )
             {
                 //rFilter.Visible = true;
                 gGroupMembers.Visible = true;
 
                 var rockContext = new RockContext();
-                    
+
                 var groupMemberService = new GroupMemberService( rockContext );
                 var qry = groupMemberService.Queryable( "Person,GroupRole", true ).AsNoTracking()
                     .Where( m => m.GroupId == _group.Id );
@@ -566,7 +572,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 //    var qryFamilyMembersForCampus = new GroupMemberService( rockContext ).Queryable().Where( a => a.Group.GroupType.Guid == familyGuid && a.Group.CampusId == campusId );
                 //    qry = qry.Where( a => qryFamilyMembersForCampus.Any( f => f.PersonId == a.PersonId ) );
                 //}
-                    
+
                 //// Filter query by any configured attribute filters
                 //if ( AvailableAttributes != null && AvailableAttributes.Any() )
                 //{
@@ -611,7 +617,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     groupMembersList = qry.OrderBy( a => a.GroupRole.Order ).ThenBy( a => a.Person.LastName ).ThenBy( a => a.Person.FirstName ).ToList();
                 }
-                    
+
                 // Since we're not binding to actual group member list, but are using AttributeField columns,
                 // we need to save the group members into the grid's object list
                 gGroupMembers.ObjectList = new Dictionary<string, object>();
@@ -630,7 +636,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         homeLocations.Add( m.Id, m.Person.GetHomeLocation( rockContext ) );
                     }
                 }
-                    
+
                 var dataSource = groupMembersList.Select( m => new
                 {
                     m.Id,
@@ -674,7 +680,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     m.Person.RecordStatusValueId,
                     m.Person.IsDeceased
                 } ).ToList();
-                    
+
                 gGroupMembers.DataSource = dataSource;
                 gGroupMembers.DataBind();
             }

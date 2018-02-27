@@ -152,9 +152,13 @@ namespace RockWeb.Plugins.com_kfs.Event
             bool setValues = this.Request.Params["__EVENTTARGET"] == null || !this.Request.Params["__EVENTTARGET"].EndsWith( "_lbClearFilter" );
 
             // Rebuilds dynamic group area controls after postbacks
-            BuildResourcesInterface();
-            BuildSubGroupTabs();
-            AddDynamicControls( setValues );
+            BuildCustomTabs();
+
+            ShowCustomTabs();
+
+            BuildResourcesInterface(); /// should only run on Edit Instance click
+            
+            AddDynamicControls( setValues ); /// should only run on Registrants or Group Place click
         }
 
         /// <summary>
@@ -212,8 +216,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             gRegistrants.Actions.AddClick += gRegistrants_AddClick;
             gRegistrants.RowDataBound += gRegistrants_RowDataBound;
             gRegistrants.GridRebind += gRegistrants_GridRebind;
-            gRegistrants.RowCommand += gRegistrants_RowCommand;
-
+            gRegistrants.RowCommand += GroupRowCommand;
+            
             fPayments.ApplyFilterClick += fPayments_ApplyFilterClick;
             gPayments.DataKeyNames = new string[] { "Id" };
             gPayments.Actions.ShowAdd = false;
@@ -252,12 +256,13 @@ namespace RockWeb.Plugins.com_kfs.Event
             base.OnLoad( e );
 
             // Set up associated resources
-            var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsIntegerOrNull();
-            if ( registrationInstanceId.HasValue )
+            if ( ResourceGroupTypes == null )
             {
-                var instance = GetRegistrationInstance( registrationInstanceId.Value );
-                if ( ResourceGroupTypes == null )
+                var instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
+                if ( instance != null )
                 {
+                    // override the default export with the current registration and tab name
+                    gRegistrants.ExportFilename = string.Format( "{0} {1}", instance.Name, ActiveTab.Replace( "lb", string.Empty ) );
                     LoadRegistrationResources( instance );
                 }
             }
@@ -337,9 +342,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 SetFollowingOnPostback();
-
-                // TODO: this needs to fire on every postback, except on tab click
-                ShowTab();
+                
+                //Note: postbacks cause other methods to fire in LoadViewState
             }
         }
 
@@ -610,8 +614,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     btnSendPaymentReminder.Visible = false;
                 }
             }
-
-            BuildSubGroupTabs();
         }
 
         /// <summary>
@@ -2139,7 +2141,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 BuildRegistrationGroupHierarchy( rockContext, instance );
-                BuildSubGroupTabs();
+                BuildCustomTabs();
 
                 // TODO: are all of these still necessary?
                 LoadRegistrantFormFields( instance );
@@ -2272,44 +2274,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             pnlTabs.Visible = !editable;
         }
 
-        /// <summary>
-        /// Builds the sub group tabs.
-        /// </summary>
-        private void BuildSubGroupTabs()
-        {
-            phGroupTabs.Controls.Clear();
-            if ( ResourceGroups != null )
-            {
-                foreach ( var groupType in ResourceGroupTypes.Where( gt => ResourceGroups.ContainsKey( gt.Name ) ) )
-                {
-                    var associatedGroupGuid = ResourceGroups[groupType.Name].Value.AsGuid();
-                    if ( !associatedGroupGuid.Equals( Guid.Empty ) )
-                    {
-                        var tabName = groupType.Name;
-
-                        var group = new GroupService( new RockContext() ).Get( associatedGroupGuid );
-                        if ( group != null )
-                        {
-                            tabName = group.Name;
-                        }
-
-                        var item = new HtmlGenericControl( "li" )
-                        {
-                            ID = "li" + tabName
-                        };
-                        var lb = new LinkButton
-                        {
-                            ID = "lb" + tabName,
-                            Text = tabName
-                        };
-
-                        lb.Click += lbTab_Click;
-                        item.Controls.Add( lb );
-                        phGroupTabs.Controls.Add( item );
-                    }
-                }
-            }
-        }
+        
 
         /// <summary>
         /// Shows the tab.
@@ -2383,6 +2348,46 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "":
                     goto case "lbRegistrations";
                     
+            }
+        }
+
+        /// <summary>
+        /// Builds the custom resource tabs.
+        /// </summary>
+        private void BuildCustomTabs()
+        {
+            phGroupTabs.Controls.Clear();
+            
+            if ( ResourceGroups != null )
+            {
+                foreach ( var groupType in ResourceGroupTypes.Where( gt => ResourceGroups.ContainsKey( gt.Name ) ) )
+                {
+                    var associatedGroupGuid = ResourceGroups[groupType.Name].Value.AsGuid();
+                    if ( !associatedGroupGuid.Equals( Guid.Empty ) )
+                    {
+                        var tabName = groupType.Name;
+
+                        var group = new GroupService( new RockContext() ).Get( associatedGroupGuid );
+                        if ( group != null )
+                        {
+                            tabName = group.Name;
+                        }
+
+                        var item = new HtmlGenericControl( "li" )
+                        {
+                            ID = "li" + tabName
+                        };
+                        var lb = new LinkButton
+                        {
+                            ID = "lb" + tabName,
+                            Text = tabName
+                        };
+
+                        lb.Click += lbTab_Click;
+                        item.Controls.Add( lb );
+                        phGroupTabs.Controls.Add( item );
+                    }
+                }
             }
         }
 
@@ -3280,6 +3285,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <summary>
         /// Adds the filter controls and grid columns for all of the registration template's form fields
         /// that were configured to 'Show on Grid'
+        /// Note: only needs to run on Registrants and Group Placement tab
         /// </summary>
         /// <param name="setValues">if set to <c>true</c> [set values].</param>
         /// <param name="instance"></param>
@@ -6055,10 +6061,10 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Handles the Click event of the EditMemberButton control.
+        /// Handles the Group row command.
         /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The <see cref="GridViewCommandEventArgs"/> instance containing the event data.</param>
         private void GroupRowCommand( object sender, GridViewCommandEventArgs e )
         {
             if ( e.CommandName == "AssignSubGroup" )
@@ -6093,6 +6099,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                 }
             }
+
+            if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
+            {
+                BindRegistrantsFilter( new RegistrationInstanceService( new RockContext() ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
+            }
+
 
             //if ( e.CommandName == "RowSelected" )
             //{
@@ -6190,7 +6202,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( group != null )
             {
                 hfSubGroupId.Value = group.Id.ToString();
-                hfSubGroupTypeId.Value = group.GroupTypeId.ToString();
                 if ( !string.IsNullOrWhiteSpace( group.GroupType.GroupMemberTerm ) )
                 {
                     groupMemberTerm = group.GroupType.GroupMemberTerm;
@@ -6200,7 +6211,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             else if ( parentGroup != null )
             {
                 hfSubGroupId.Value = string.Empty;
-                hfSubGroupTypeId.Value = parentGroup.GroupTypeId.ToString();
                 if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupMemberTerm ) )
                 {
                     groupMemberTerm = parentGroup.GroupType.GroupMemberTerm;
@@ -6346,7 +6356,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             mdlAddSubGroupMember.Show();
 
             // render dynamic group controls beneath modal
-            BindRegistrantsGrid();
+            ShowTab();
         }
 
         /// <summary>
@@ -6354,7 +6364,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void mdlAddSubGroupMember_SaveClick( object sender, EventArgs e )
+        protected void mdlAddSubGroupMemberSave_Click( object sender, EventArgs e )
         {
             if ( Page.IsValid )
             {
@@ -6363,7 +6373,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // add or remove group membership
                     GroupMember groupMember;
                     var originalGroupId = hfSubGroupId.ValueAsInt();
-                    var originalGroupTypeId = hfSubGroupTypeId.ValueAsInt();
                     var newGroupId = ddlSubGroup.SelectedValue.AsInteger();
                     var groupMemberService = new GroupMemberService( rockContext );
                     var groupMemberId = int.Parse( hfSubGroupMemberId.Value );
@@ -6507,14 +6516,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         BindRegistrantsFilter( new RegistrationInstanceService( rockContext ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
                     }
-
-                    //BindResourcePanels( originalGroupTypeId );
                 }
 
-
-                BindResourcePanels();
-                
-                BindRegistrantsGrid();
+                ShowTab();
                 mdlAddSubGroupMember.Hide();
             }
         }
