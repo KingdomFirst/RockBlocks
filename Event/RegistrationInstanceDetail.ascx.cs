@@ -151,14 +151,16 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             bool setValues = this.Request.Params["__EVENTTARGET"] == null || !this.Request.Params["__EVENTTARGET"].EndsWith( "_lbClearFilter" );
 
-            // Rebuilds dynamic group area controls after postbacks
-            BuildCustomTabs();
+            // ********************************************
+            // Rebuild dynamic controls after postbacks
+            // ********************************************
+            BuildCustomTabs();                  /// adds tabs for each resource
 
-            ShowCustomTabs();
+            ShowCustomTabs();                   /// binds data for the active resource tab
 
-            BuildResourcesInterface(); /// should only run on Edit Instance click
+            BuildResourcesInterface();          /// adds dynamic resources to Edit Instance 
             
-            AddDynamicControls( setValues ); /// should only run on Registrants or Group Place click
+            AddDynamicControls( setValues );    /// adds dynamic columns to Registrants or Group Place
         }
 
         /// <summary>
@@ -2141,6 +2143,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     btnSendPaymentReminder.Visible = false;
                 }
 
+                BuildResourcesInterface();
                 BuildRegistrationGroupHierarchy( rockContext, instance );
                 BuildCustomTabs();
 
@@ -2151,9 +2154,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 BindGroupPlacementsFilter( instance );
                 BindLinkagesFilter();
                 AddDynamicControls( true );
-
-                // do the ShowTab now since it may depend on DynamicControls and Filter Bindings
-                //ShowTab();
             }
         }
 
@@ -4043,15 +4043,18 @@ namespace RockWeb.Plugins.com_kfs.Event
                         resourceGroupPanel.GetGroupValues( group );
 
                         // add requirements to child groups
-                        foreach ( var requirement in group.ParentGroup.GroupRequirements )
+                        if ( group.ParentGroup != null )
                         {
-                            group.GroupRequirements.Add( new GroupRequirement
+                            foreach ( var requirement in group.ParentGroup.GroupRequirements )
                             {
-                                GroupId = group.Id,
-                                GroupRoleId = group.GroupType.DefaultGroupRoleId,
-                                GroupRequirementTypeId = requirement.GroupRequirementTypeId
-                            } );
-                        }
+                                group.GroupRequirements.Add( new GroupRequirement
+                                {
+                                    GroupId = group.Id,
+                                    GroupRoleId = group.GroupType.DefaultGroupRoleId,
+                                    GroupRequirementTypeId = requirement.GroupRequirementTypeId
+                                } );
+                            }
+                        }   
 
                         // make sure child groups can be created
                         if ( !group.GroupType.ChildGroupTypes.Contains( group.GroupType ) )
@@ -5872,7 +5875,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         lCampus.Text = campus.Name;
                     }
-
+                    
                     // Build subgroup button grid for Volunteers
                     if ( groupMember.Group.GroupType.GroupTypePurposeValue != null && groupMember.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
                     {

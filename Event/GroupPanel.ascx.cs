@@ -266,9 +266,38 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void AddDynamicControls()
         {
-            // remove Family Campus and dynamic assignment columns
+            // remove Family Campus columns
             foreach ( var column in gGroupMembers.Columns
                 .OfType<RockLiteralField>()
+                .ToList() )
+            {
+                gGroupMembers.Columns.Remove( column );
+            }
+
+            // remove Group member attribute columns
+            foreach ( var column in gGroupMembers.Columns
+                .OfType<AttributeField>().ToList() )
+            {
+                gGroupMembers.Columns.Remove( column );
+            }
+
+            // remove Group member assignment columns
+            foreach ( var column in gGroupMembers.Columns
+                .OfType<LinkButtonField>().ToList() )
+            {
+                gGroupMembers.Columns.Remove( column );
+            }
+
+            // remove the edit field
+            foreach ( var column in gGroupMembers.Columns
+                .OfType<EditField>().ToList() )
+            {
+                gGroupMembers.Columns.Remove( column );
+            }
+
+            // Remove the delete field
+            foreach ( var column in gGroupMembers.Columns
+                .OfType<DeleteField>()
                 .ToList() )
             {
                 gGroupMembers.Columns.Remove( column );
@@ -284,21 +313,15 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             // Clear the filter controls
             //phAttributeFilters.Controls.Clear();
-
-            // Remove current attribute columns
-            foreach ( var column in gGroupMembers.Columns.OfType<AttributeField>().ToList() )
-            {
-                gGroupMembers.Columns.Remove( column );
-            }
-
-            // may not need BindAttributes() if only called here, see TODO
             
-
+            
             // Set up group member attribute columns
             var rockContext = new RockContext();
             var attributeValueService = new AttributeValueService( rockContext );
             foreach ( var attribute in AvailableAttributes )
             {
+                // TODO: may not need BindAttributes() if AvailableAttributes only used here
+                
                 // add filter control for that attribute
                 //var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
                 //if ( control != null )
@@ -324,10 +347,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                 //    var savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Key ) );
                 //    if ( !string.IsNullOrWhiteSpace( savedValue ) )
                 //    {
-                        
+
                 //        var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
                 //        attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
-                        
+
                 //    }
                 //}
 
@@ -396,6 +419,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             {
                                 var groupAssignment = new LinkButtonField();
                                 groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                                groupAssignment.ExcelExportBehavior = ExcelExportBehavior.NeverInclude;
                                 groupAssignment.HeaderText = parentGroup.Name;
                                 groupAssignment.HeaderStyle.CssClass = "";
                                 gGroupMembers.Columns.Add( groupAssignment );
@@ -473,280 +497,227 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         protected void BindGroupMembersGrid( bool isExporting = false )
         {
-            //gGroupMembers.DataSource = _group.Members;
-            //gGroupMembers.DataBind();
-            //return;
-
             if ( _group != null && _group.GroupType.Roles.Any() )
             {
                 //rFilter.Visible = true;
                 gGroupMembers.Visible = true;
-
-                var rockContext = new RockContext();
-
-                var groupMemberService = new GroupMemberService( rockContext );
-                var qry = groupMemberService.Queryable( "Person,GroupRole", true ).AsNoTracking()
-                    .Where( m => m.GroupId == _group.Id );
-
-                //// Filter by First Name
-                //var firstName = tbFirstName.Text;
-                //if ( !string.IsNullOrWhiteSpace( firstName ) )
-                //{
-                //    qry = qry.Where( m =>
-                //        m.Person.FirstName.StartsWith( firstName ) ||
-                //        m.Person.NickName.StartsWith( firstName ) );
-                //}
-
-                //// Filter by Last Name
-                //var lastName = tbLastName.Text;
-                //if ( !string.IsNullOrWhiteSpace( lastName ) )
-                //{
-                //    qry = qry.Where( m => m.Person.LastName.StartsWith( lastName ) );
-                //}
-
-                //// Filter by role
-                //var validGroupTypeRoles = _group.GroupType.Roles.Select( r => r.Id ).ToList();
-                //var roles = new List<int>();
-                //foreach ( var roleId in cblRole.SelectedValues.AsIntegerList() )
-                //{
-                //    if ( validGroupTypeRoles.Contains( roleId ) )
-                //    {
-                //        roles.Add( roleId );
-                //    }
-                //}
-
-                //if ( roles.Any() )
-                //{
-                //    qry = qry.Where( m => roles.Contains( m.GroupRoleId ) );
-                //}
-
-                //// Filter by Group Member Status
-                //var statuses = new List<GroupMemberStatus>();
-                //foreach ( string status in cblGroupMemberStatus.SelectedValues )
-                //{
-                //    if ( !string.IsNullOrWhiteSpace( status ) )
-                //    {
-                //        statuses.Add( status.ConvertToEnum<GroupMemberStatus>() );
-                //    }
-                //}
-
-                //if ( statuses.Any() )
-                //{
-                //    qry = qry.Where( m => statuses.Contains( m.GroupMemberStatus ) );
-                //}
-
-                //var genders = new List<Gender>();
-                //foreach ( var item in cblGenderFilter.SelectedValues )
-                //{
-                //    var gender = item.ConvertToEnum<Gender>();
-                //    genders.Add( gender );
-                //}
-
-                //if ( genders.Any() )
-                //{
-                //    qry = qry.Where( m => genders.Contains( m.Person.Gender ) );
-                //}
-
-                //// Filter by Campus
-                //if ( cpCampusFilter.SelectedCampusId.HasValue )
-                //{
-                //    var familyGuid = new Guid( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY );
-                //    var campusId = cpCampusFilter.SelectedCampusId.Value;
-                //    var qryFamilyMembersForCampus = new GroupMemberService( rockContext ).Queryable().Where( a => a.Group.GroupType.Guid == familyGuid && a.Group.CampusId == campusId );
-                //    qry = qry.Where( a => qryFamilyMembersForCampus.Any( f => f.PersonId == a.PersonId ) );
-                //}
-
-                //// Filter query by any configured attribute filters
-                //if ( AvailableAttributes != null && AvailableAttributes.Any() )
-                //{
-                //    var attributeValueService = new AttributeValueService( rockContext );
-                //    var parameterExpression = attributeValueService.ParameterExpression;
-
-                //    foreach ( var attribute in AvailableAttributes )
-                //    {
-                //        var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                //        if ( filterControl != null )
-                //        {
-                //            var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                //            var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                //            if ( expression != null )
-                //            {
-                //                var attributeValues = attributeValueService
-                //                    .Queryable()
-                //                    .Where( v => v.Attribute.Id == attribute.Id );
-
-                //                attributeValues = attributeValues.Where( parameterExpression, expression, null );
-
-                //                qry = qry.Where( w => attributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
-                //            }
-                //        }
-                //    }
-                //}
-
-                var sortProperty = gGroupMembers.SortProperty;
-
-                var hasGroupRequirements = new GroupRequirementService( rockContext ).Queryable().Any( a => a.GroupId == _group.Id );
-
-                // If there are group requirements that that member doesn't meet, show an icon in the grid
-                var includeWarnings = false;
-                var groupMemberIdsThatLackGroupRequirements = new GroupService( rockContext ).GroupMembersNotMeetingRequirements( _group.Id, includeWarnings ).Select( a => a.Key.Id );
-
-                List<GroupMember> groupMembersList = null;
-                if ( sortProperty != null && sortProperty.Property != "FirstAttended" && sortProperty.Property != "LastAttended" )
+                
+                using ( var rockContext = new RockContext() )
                 {
-                    groupMembersList = qry.Sort( sortProperty ).ToList();
-                }
-                else
-                {
-                    groupMembersList = qry.OrderBy( a => a.GroupRole.Order ).ThenBy( a => a.Person.LastName ).ThenBy( a => a.Person.FirstName ).ToList();
-                }
+                    // Start query for group members
+                    var qry = new GroupMemberService( rockContext )
+                        .Queryable( "Person,GroupRole", true ).AsNoTracking()
+                        .Where( m => 
+                            m.GroupId == _group.Id &&
+                            m.Person != null );
 
-                // Since we're not binding to actual group member list, but are using AttributeField columns,
-                // we need to save the group members into the grid's object list
-                gGroupMembers.ObjectList = new Dictionary<string, object>();
-                groupMembersList.ForEach( m => gGroupMembers.ObjectList.Add( m.Id.ToString(), m ) );
-                gGroupMembers.EntityTypeId = EntityTypeCache.Read( Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid() ).Id;
+                    #region disabled grid filters
 
-                var homePhoneType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
-                var cellPhoneType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
+                    //// Filter by First Name
+                    //var firstName = tbFirstName.Text;
+                    //if ( !string.IsNullOrWhiteSpace( firstName ) )
+                    //{
+                    //    qry = qry.Where( m =>
+                    //        m.Person.FirstName.StartsWith( firstName ) ||
+                    //        m.Person.NickName.StartsWith( firstName ) );
+                    //}
 
-                // If exporting to Excel, the selectAll option will be true, and home location should be calculated
-                var homeLocations = new Dictionary<int, Location>();
-                if ( isExporting )
-                {
-                    foreach ( var m in groupMembersList )
+                    //// Filter by Last Name
+                    //var lastName = tbLastName.Text;
+                    //if ( !string.IsNullOrWhiteSpace( lastName ) )
+                    //{
+                    //    qry = qry.Where( m => m.Person.LastName.StartsWith( lastName ) );
+                    //}
+
+                    //// Filter by role
+                    //var validGroupTypeRoles = _group.GroupType.Roles.Select( r => r.Id ).ToList();
+                    //var roles = new List<int>();
+                    //foreach ( var roleId in cblRole.SelectedValues.AsIntegerList() )
+                    //{
+                    //    if ( validGroupTypeRoles.Contains( roleId ) )
+                    //    {
+                    //        roles.Add( roleId );
+                    //    }
+                    //}
+
+                    //if ( roles.Any() )
+                    //{
+                    //    qry = qry.Where( m => roles.Contains( m.GroupRoleId ) );
+                    //}
+
+                    //// Filter by Group Member Status
+                    //var statuses = new List<GroupMemberStatus>();
+                    //foreach ( string status in cblGroupMemberStatus.SelectedValues )
+                    //{
+                    //    if ( !string.IsNullOrWhiteSpace( status ) )
+                    //    {
+                    //        statuses.Add( status.ConvertToEnum<GroupMemberStatus>() );
+                    //    }
+                    //}
+
+                    //if ( statuses.Any() )
+                    //{
+                    //    qry = qry.Where( m => statuses.Contains( m.GroupMemberStatus ) );
+                    //}
+
+                    //var genders = new List<Gender>();
+                    //foreach ( var item in cblGenderFilter.SelectedValues )
+                    //{
+                    //    var gender = item.ConvertToEnum<Gender>();
+                    //    genders.Add( gender );
+                    //}
+
+                    //if ( genders.Any() )
+                    //{
+                    //    qry = qry.Where( m => genders.Contains( m.Person.Gender ) );
+                    //}
+
+                    //// Filter by Campus
+                    //if ( cpCampusFilter.SelectedCampusId.HasValue )
+                    //{
+                    //    var familyGuid = new Guid( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY );
+                    //    var campusId = cpCampusFilter.SelectedCampusId.Value;
+                    //    var qryFamilyMembersForCampus = new GroupMemberService( rockContext ).Queryable().Where( a => a.Group.GroupType.Guid == familyGuid && a.Group.CampusId == campusId );
+                    //    qry = qry.Where( a => qryFamilyMembersForCampus.Any( f => f.PersonId == a.PersonId ) );
+                    //}
+
+                    //// Filter query by any configured attribute filters
+                    //if ( AvailableAttributes != null && AvailableAttributes.Any() )
+                    //{
+                    //    var attributeValueService = new AttributeValueService( rockContext );
+                    //    var parameterExpression = attributeValueService.ParameterExpression;
+
+                    //    foreach ( var attribute in AvailableAttributes )
+                    //    {
+                    //        var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    //        if ( filterControl != null )
+                    //        {
+                    //            var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                    //            var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
+                    //            if ( expression != null )
+                    //            {
+                    //                var attributeValues = attributeValueService
+                    //                    .Queryable()
+                    //                    .Where( v => v.Attribute.Id == attribute.Id );
+
+                    //                attributeValues = attributeValues.Where( parameterExpression, expression, null );
+
+                    //                qry = qry.Where( w => attributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
+                    //            }
+                    //        }
+                    //    }
+                    //}
+
+                    #endregion
+
+                    // filter by group requirements
+                    var hasGroupRequirements = new GroupRequirementService( rockContext ).Queryable().Any( a => a.GroupId == _group.Id );
+
+                    // If there are group requirements that that member doesn't meet, show an icon in the grid
+                    var includeWarnings = false;
+                    var groupMemberIdsThatLackGroupRequirements = new GroupService( rockContext ).GroupMembersNotMeetingRequirements( _group.Id, includeWarnings ).Select( a => a.Key.Id );
+
+                    // Sort the query
+                    IOrderedQueryable<GroupMember> orderedQry = null;
+                    var sortProperty = gGroupMembers.SortProperty;
+                    if ( sortProperty != null )
                     {
-                        homeLocations.Add( m.Id, m.Person.GetHomeLocation( rockContext ) );
+                        orderedQry = qry.Sort( sortProperty );
                     }
-                }
-
-                if ( AvailableAttributes != null )
-                {
-                    // Get the query results for the current page
-                    var currentGroupMembers = gGroupMembers.DataSource as List<GroupMember>;
-                    if ( currentGroupMembers != null )
+                    else
                     {
-                        // Get all the person ids in current page of query results
-                        var personIds = currentGroupMembers
-                            .Select( r => r.PersonId )
-                            .Distinct()
-                            .ToList();
+                        orderedQry = qry
+                            .OrderBy( r => r.Person.LastName )
+                            .ThenBy( r => r.Person.NickName );
+                    }
+                    
+                    // increase the timeout just in case. A complex filter on the grid might slow things down
+                    rockContext.Database.CommandTimeout = 180;
 
-                        var groupMemberIds = currentGroupMembers
-                            .Select( r => r.Id )
-                            .Distinct()
-                            .ToList();
+                    // Set the grids LinqDataSource which will run query and set results for current page
+                    gGroupMembers.SetLinqDataSource( orderedQry );
+                    
+                    var homePhoneType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
+                    var cellPhoneType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
 
-                        var groupMemberAttributes =  new List<AttributeCache>();
-                        foreach ( var attribute in AvailableAttributes )
+                    List<GroupMember> groupMembersList = null;
+
+                    if ( AvailableAttributes != null )
+                    {
+                        // Get the query results for the current page
+                        var currentGroupMembers = gGroupMembers.DataSource as List<GroupMember>;
+                        if ( currentGroupMembers != null )
                         {
-                            groupMemberAttributes.Add( attribute );
-                        }
-
-                        var groupMemberAttributesIds = groupMemberAttributes.Select( a => a.Id ).Distinct().ToList();
-
-
-                        // If there are any attributes that were selected to be displayed, we're going
-                        // to try and read all attribute values in one query and then put them into a
-                        // custom grid ObjectList property so that the AttributeField columns don't need
-                        // to do the LoadAttributes and querying of values for each row/column
-                        if ( groupMemberAttributesIds.Any() )
-                        {
-                            // Query the attribute values for all rows and attributes
-                            var attributeValues = new AttributeValueService( rockContext )
-                                .Queryable( "Attribute" ).AsNoTracking()
-                                .Where( v =>
-                                    v.EntityId.HasValue &&
-                                    groupMemberAttributesIds.Contains( v.AttributeId ) &&
-                                    groupMemberIds.Contains( v.EntityId.Value )
-                                )
+                            // Get all the person ids in current page of query results
+                            var personIds = currentGroupMembers
+                                .Select( r => r.PersonId )
+                                .Distinct()
                                 .ToList();
 
-                            // Get the attributes to add to each row's object
-                            var attributes = new Dictionary<string, AttributeCache>();
-                            AvailableAttributes
-                                .ForEach( a => attributes
-                                    .Add( a.Id.ToString() + a.Key, a ) );
+                            var groupMemberIds = currentGroupMembers
+                                .Select( r => r.Id )
+                                .Distinct()
+                                .ToList();
 
-                            // Initialize the grid's object list
-                            gGroupMembers.ObjectList = new Dictionary<string, object>();
-
-                            // Loop through each of the current page's registrants and build an attribute
-                            // field object for storing attributes and the values for each of the registrants
-                            foreach ( var groupMember in currentGroupMembers )
+                            var groupMemberAttributesIds = AvailableAttributes.Select( a => a.Id ).Distinct().ToList();
+                            
+                            // If there are any attributes that were selected to be displayed, we're going
+                            // to try and read all attribute values in one query and then put them into a
+                            // custom grid ObjectList property so that the AttributeField columns don't need
+                            // to do the LoadAttributes and querying of values for each row/column
+                            if ( groupMemberAttributesIds.Any() )
                             {
-                                // Create a row attribute object
-                                var attributeFieldObject = new AttributeFieldObject
+                                // Query the attribute values for all rows and attributes
+                                var attributeValues = new AttributeValueService( rockContext )
+                                    .Queryable( "Attribute" ).AsNoTracking()
+                                    .Where( v =>
+                                        v.EntityId.HasValue &&
+                                        groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                                        groupMemberIds.Contains( v.EntityId.Value )
+                                    )
+                                    .ToList();
+
+                                // Get the attributes to add to each row's object
+                                var attributes = new Dictionary<string, AttributeCache>();
+                                AvailableAttributes
+                                    .ForEach( a => attributes
+                                        .Add( a.Id.ToString() + a.Key, a ) );
+
+                                // Initialize the grid's object list
+                                gGroupMembers.ObjectList = new Dictionary<string, object>();
+
+                                // Loop through each of the current group's members and build an attribute
+                                // field object for storing attributes and the values for each of the members
+                                foreach ( var groupMember in currentGroupMembers )
                                 {
-                                    // Add the attributes to the attribute object
-                                    Attributes = attributes
-                                };
-                                
-                                // Add any group member attribute values to object
-                                if ( groupMember.Id > 0 )
-                                {
-                                    attributeValues
-                                        .Where( v =>
-                                            groupMemberAttributesIds.Contains( v.AttributeId ) &&
-                                            v.EntityId.Value == groupMember.Id )
-                                        .ToList()
-                                        .ForEach( v => attributeFieldObject.AttributeValues
-                                            .Add( v.AttributeId.ToString() + v.Attribute.Key, new AttributeValueCache( v ) ) );
+                                    // Create a row attribute object
+                                    var attributeFieldObject = new AttributeFieldObject
+                                    {
+                                        // Add the attributes to the attribute object
+                                        Attributes = attributes
+                                    };
+
+                                    // Add any group member attribute values to object
+                                    if ( groupMember.Id > 0 )
+                                    {
+                                        attributeValues
+                                            .Where( v =>
+                                                groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                                                v.EntityId.Value == groupMember.Id )
+                                            .ToList()
+                                            .ForEach( v => attributeFieldObject.AttributeValues
+                                                .Add( v.AttributeId.ToString() + v.Attribute.Key, new AttributeValueCache( v ) ) );
+                                    }
+
+                                    // Add row attribute object to grid's object list
+                                    gGroupMembers.ObjectList.Add( groupMember.Id.ToString(), attributeFieldObject );
                                 }
-                                
-                                // Add row attribute object to grid's object list
-                                gGroupMembers.ObjectList.Add( groupMember.Id.ToString(), attributeFieldObject );
                             }
                         }
                     }
+                    
+                    gGroupMembers.DataBind();
                 }
-
-                var dataSource = groupMembersList.Select( m => new
-                {
-                    m.Id,
-                    m.Guid,
-                    m.PersonId,
-                    m.Person.NickName,
-                    m.Person.LastName,
-                    m.Person.FullName,
-                    //Name =
-                    //( isExporting ? m.Person.LastName + ", " + m.Person.NickName : 
-                    //    m.Person.NickName + " " + m.Person.LastName
-                    //    + ( ( hasGroupRequirements && groupMemberIdsThatLackGroupRequirements.Contains( m.Id ) )
-                    //        ? " <i class='fa fa-exclamation-triangle text-warning'></i>"
-                    //        : string.Empty )
-                    //    + ( !string.IsNullOrEmpty( m.Note )
-                    //        ? " <i class='fa fa-file-text-o text-info'></i>"
-                    //        : string.Empty ) ),
-                    m.Person.BirthDate,
-                    m.Person.Age,
-                    m.Person.ConnectionStatusValueId,
-                    m.DateTimeAdded,
-                    m.Person.Email,
-                    HomePhone = isExporting && homePhoneType != null ?
-                        m.Person.PhoneNumbers
-                            .Where( p => p.NumberTypeValueId.HasValue && p.NumberTypeValueId.Value == homePhoneType.Id )
-                            .Select( p => p.NumberFormatted )
-                            .FirstOrDefault() : string.Empty,
-                    CellPhone = isExporting && cellPhoneType != null ?
-                        m.Person.PhoneNumbers
-                            .Where( p => p.NumberTypeValueId.HasValue && p.NumberTypeValueId.Value == cellPhoneType.Id )
-                            .Select( p => p.NumberFormatted )
-                            .FirstOrDefault() : string.Empty,
-                    HomeAddress = homeLocations.ContainsKey( m.Id ) && homeLocations[m.Id] != null ?
-                        homeLocations[m.Id].FormattedAddress : string.Empty,
-                    Latitude = homeLocations.ContainsKey( m.Id ) && homeLocations[m.Id] != null ?
-                        homeLocations[m.Id].Latitude : (double?)null,
-                    Longitude = homeLocations.ContainsKey( m.Id ) && homeLocations[m.Id] != null ?
-                        homeLocations[m.Id].Longitude : (double?)null,
-                    GroupRole = m.GroupRole.Name,
-                    m.GroupMemberStatus,
-                    m.Person.RecordStatusValueId,
-                    m.Person.IsDeceased
-                } ).ToList();
-
-                gGroupMembers.DataSource = dataSource;
-                gGroupMembers.DataBind();
             }
         }
 
