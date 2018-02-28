@@ -261,8 +261,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
                 if ( instance != null )
                 {
-                    // override the default export with the current registration and tab name
-                    gRegistrants.ExportFilename = string.Format( "{0} {1}", instance.Name, ActiveTab.Replace( "lb", string.Empty ) );
                     LoadRegistrationResources( instance );
                 }
             }
@@ -2011,12 +2009,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                     .Queryable( "RegistrationTemplate,Account,RegistrationTemplate.Forms.Fields" )
                     .AsNoTracking()
                     .FirstOrDefault( i => i.Id == registrationInstanceId );
-                instance.LoadAttributes( rockContext );
+                
 
                 // refresh local copy of instance attributes
-                ResourceGroups = instance.AttributeValues;
-
-                RockPage.SaveSharedItem( key, instance );
+                if ( instance != null )
+                {
+                    instance.LoadAttributes( rockContext );
+                    ResourceGroups = instance.AttributeValues;
+                    RockPage.SaveSharedItem( key, instance );
+                }
             }
 
             return instance;
@@ -2273,8 +2274,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             fieldsetViewDetails.Visible = !editable;
             pnlTabs.Visible = !editable;
         }
-
-        
 
         /// <summary>
         /// Shows the tab.
@@ -2717,6 +2716,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 using ( var rockContext = new RockContext() )
                 {
                     var instance = GetRegistrationInstance( instanceId.Value );
+
+                    // override the default export with the current registration and tab name
+                    gRegistrants.ExportFilename = string.Format( "{0} {1}", instance.Name, ActiveTab.Replace( "lb", string.Empty ) );
 
                     if ( instance != null &&
                         instance.RegistrationTemplate != null &&

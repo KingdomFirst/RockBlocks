@@ -167,7 +167,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMembers.GetRecipientMergeFields += gGroupMembers_GetRecipientMergeFields;
             gGroupMembers.RowItemText = _group.GroupType.GroupTerm + " " + _group.GroupType.GroupMemberTerm;
             gGroupMembers.ExportFilename = _group.Name;
-            gGroupMembers.ExportSource = ExcelExportSource.DataSource;
+            gGroupMembers.ExportSource = ExcelExportSource.ColumnOutput;
             gGroupMembers.ShowConfirmDeleteDialog = false;
 
             // TODO: make sure they have Auth to edit the block OR edit to the Group
@@ -291,25 +291,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 gGroupMembers.Columns.Remove( column );
             }
 
-            // initial replacement of BindAttributes(), see TODO
-            //var groupMemberAttributes = new List<AttributeCache>();
-            //if ( _group != null )
-            //{
-            //    var entityTypeId = new GroupMember().TypeId;
-            //    var groupQualifier = _group.Id.ToString();
-            //    var groupTypeQualifier = _group.GroupTypeId.ToString();
-
-            //    foreach ( var attributeModel in new AttributeService( rockContext ).Queryable()
-            //        .Where( a => a.EntityTypeId == entityTypeId && a.IsGridColumn &&
-            //            ( ( a.EntityTypeQualifierColumn.Equals( "GroupId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupQualifier ) ) ||
-            //              ( a.EntityTypeQualifierColumn.Equals( "GroupTypeId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupTypeQualifier ) ) ) )
-            //        .OrderByDescending( a => a.EntityTypeQualifierColumn )
-            //        .ThenBy( a => a.Order )
-            //        .ThenBy( a => a.Name ) )
-            //    {
-            //        groupMemberAttributes.Add( AttributeCache.Read( attributeModel ) );
-            //    }
-            //}
+            // may not need BindAttributes() if only called here, see TODO
+            
 
             // Set up group member attribute columns
             var rockContext = new RockContext();
@@ -490,9 +473,9 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         protected void BindGroupMembersGrid( bool isExporting = false )
         {
-            gGroupMembers.DataSource = _group.Members;
-            gGroupMembers.DataBind();
-            return;
+            //gGroupMembers.DataSource = _group.Members;
+            //gGroupMembers.DataBind();
+            //return;
 
             if ( _group != null && _group.GroupType.Roles.Any() )
             {
@@ -634,6 +617,87 @@ namespace RockWeb.Plugins.com_kfs.Event
                     foreach ( var m in groupMembersList )
                     {
                         homeLocations.Add( m.Id, m.Person.GetHomeLocation( rockContext ) );
+                    }
+                }
+
+                if ( AvailableAttributes != null )
+                {
+                    // Get the query results for the current page
+                    var currentGroupMembers = gGroupMembers.DataSource as List<GroupMember>;
+                    if ( currentGroupMembers != null )
+                    {
+                        // Get all the person ids in current page of query results
+                        var personIds = currentGroupMembers
+                            .Select( r => r.PersonId )
+                            .Distinct()
+                            .ToList();
+
+                        var groupMemberIds = currentGroupMembers
+                            .Select( r => r.Id )
+                            .Distinct()
+                            .ToList();
+
+                        var groupMemberAttributes =  new List<AttributeCache>();
+                        foreach ( var attribute in AvailableAttributes )
+                        {
+                            groupMemberAttributes.Add( attribute );
+                        }
+
+                        var groupMemberAttributesIds = groupMemberAttributes.Select( a => a.Id ).Distinct().ToList();
+
+
+                        // If there are any attributes that were selected to be displayed, we're going
+                        // to try and read all attribute values in one query and then put them into a
+                        // custom grid ObjectList property so that the AttributeField columns don't need
+                        // to do the LoadAttributes and querying of values for each row/column
+                        if ( groupMemberAttributesIds.Any() )
+                        {
+                            // Query the attribute values for all rows and attributes
+                            var attributeValues = new AttributeValueService( rockContext )
+                                .Queryable( "Attribute" ).AsNoTracking()
+                                .Where( v =>
+                                    v.EntityId.HasValue &&
+                                    groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                                    groupMemberIds.Contains( v.EntityId.Value )
+                                )
+                                .ToList();
+
+                            // Get the attributes to add to each row's object
+                            var attributes = new Dictionary<string, AttributeCache>();
+                            AvailableAttributes
+                                .ForEach( a => attributes
+                                    .Add( a.Id.ToString() + a.Key, a ) );
+
+                            // Initialize the grid's object list
+                            gGroupMembers.ObjectList = new Dictionary<string, object>();
+
+                            // Loop through each of the current page's registrants and build an attribute
+                            // field object for storing attributes and the values for each of the registrants
+                            foreach ( var groupMember in currentGroupMembers )
+                            {
+                                // Create a row attribute object
+                                var attributeFieldObject = new AttributeFieldObject
+                                {
+                                    // Add the attributes to the attribute object
+                                    Attributes = attributes
+                                };
+                                
+                                // Add any group member attribute values to object
+                                if ( groupMember.Id > 0 )
+                                {
+                                    attributeValues
+                                        .Where( v =>
+                                            groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                                            v.EntityId.Value == groupMember.Id )
+                                        .ToList()
+                                        .ForEach( v => attributeFieldObject.AttributeValues
+                                            .Add( v.AttributeId.ToString() + v.Attribute.Key, new AttributeValueCache( v ) ) );
+                                }
+                                
+                                // Add row attribute object to grid's object list
+                                gGroupMembers.ObjectList.Add( groupMember.Id.ToString(), attributeFieldObject );
+                            }
+                        }
                     }
                 }
 
