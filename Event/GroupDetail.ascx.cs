@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
+using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Humanizer;
@@ -33,13 +34,17 @@ namespace RockWeb.Plugins.com_kfs.Event
     [BooleanField( "Limit to Security Role Groups", "", false, "", 3 )]
     [BooleanField( "Limit to Group Types that are shown in navigation", "", false, "", 4, "LimitToShowInNavigationGroupTypes" )]
     [DefinedValueField( Rock.SystemGuid.DefinedType.MAP_STYLES, "Map Style", "The style of maps to use", false, false, Rock.SystemGuid.DefinedValue.MAP_STYLE_ROCK, "", 5 )]
-    [LinkedPage( "Group Map Page", "The page to display detailed group map.", true, "", "", 6 )]
+    [LinkedPage( "Group Map Page", "The page to display detailed group map.", false, "", "", 6 )]
     [LinkedPage( "Attendance Page", "The page to display attendance list.", false, "", "", 7 )]
     [LinkedPage( "Registration Instance Page", "The page to display registration details.", false, "", "", 7 )]
     [LinkedPage( "Event Item Occurrence Page", "The page to display event item occurrence details.", false, "", "", 8 )]
     [LinkedPage( "Content Item Page", "The page to display registration details.", false, "", "", 9 )]
-    [BooleanField( "Prevent Selecting Inactive Campus", "Should inactive campuses be excluded from the campus field when editing a group?.", false, "", 10 )]
-    [BooleanField( "Enable Dialog Mode", "When enabled, the Save and Cancel buttons will be associated with the buttons of the Modal.", false, "", 13 )]
+    [BooleanField( "Show Copy Button", "Copies the group and all of its associated authorization rules", false, "", 10 )]
+    [LinkedPage( "Group List Page", "The page to display related Group List.", false, "", "", 11 )]
+    [LinkedPage( "Fundraising Progress Page", "The page to display fundraising progress for all its members.", false, "", "", 12 )]
+    [BooleanField( "Show Location Addresses", "Determines if the location address should be shown when viewing the group details.", true, order: 13 )]
+    [BooleanField( "Prevent Selecting Inactive Campus", "Should inactive campuses be excluded from the campus field when editing a group?.", false, "", 14 )]
+    [BooleanField( "Enable Dialog Mode", "When enabled, the Save and Cancel buttons will be associated with the buttons of the Modal.", false, "", 15 )]
     public partial class GroupDetail : RockBlock, IDetailBlock
     {
         #region Constants
@@ -192,6 +197,9 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMemberAttributes.GridRebind += gGroupMemberAttributes_GridRebind;
             gGroupMemberAttributes.GridReorder += gGroupMemberAttributes_GridReorder;
 
+            SecurityField groupMemberAttributeSecurityField = gGroupMemberAttributes.Columns.OfType<SecurityField>().FirstOrDefault();
+            groupMemberAttributeSecurityField.EntityTypeId = EntityTypeCache.GetId<Attribute>() ?? 0;
+
             gGroupRequirements.DataKeyNames = new string[] { "Guid" };
             gGroupRequirements.Actions.ShowAdd = true;
             gGroupRequirements.Actions.AddClick += gGroupRequirements_Add;
@@ -209,7 +217,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             btnSecurity.EntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Group ) ).Id;
 
             rblScheduleSelect.BindToEnum<ScheduleType>();
-
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlGroupDetail );
@@ -240,6 +247,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     pnlDetails.Visible = false;
                 }
+                btnCopy.Visible = GetAttributeValue( "ShowCopyButton" ).AsBoolean();
             }
             else
             {
@@ -381,7 +389,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var schedule = scheduleService.Get( group.ScheduleId.Value );
                     if ( schedule != null && schedule.ScheduleType != ScheduleType.Named )
                     {
-                        scheduleService.Delete( schedule );
+                        
+                        // Make sure this is the only group trying to use this schedule.
+                        if ( !groupService.Queryable().Any( g => g.ScheduleId == schedule.Id && g.Id != group.Id ) )
+                        {
+                            scheduleService.Delete( schedule );
+                        }
                     }
                 }
 
@@ -404,7 +417,15 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             qryParams["ExpandedIds"] = PageParameter( "ExpandedIds" );
 
-            NavigateToPage( RockPage.Guid, qryParams );
+
+            if ( GetAttributeValue( "GroupListPage" ).AsGuid() != Guid.Empty )
+            {
+                NavigateToLinkedPage( "GroupListPage", qryParams );
+            }
+            else
+            {
+                NavigateToPage( RockPage.Guid, qryParams );
+            }
         }
 
         /// <summary>
@@ -461,11 +482,11 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 // remove any group requirements that removed in the UI
                 var selectedGroupRequirements = GroupRequirementsState.Select( a => a.Guid );
-                foreach ( var groupRequirement in group.GroupRequirements.Where( a => !selectedGroupRequirements.Contains( a.Guid ) ).ToList() )
-                {
-                    group.GroupRequirements.Remove( groupRequirement );
-                    groupRequirementService.Delete( groupRequirement );
-                }
+                //// v7: group.GetGroupRequirements
+                //foreach ( var groupRequirement in group.GetGroupRequirements( rockContext ).Where( a => a.GroupId.HasValue ).Where( a => !selectedGroupRequirements.Contains( a.Guid ) ).ToList() )
+                //{
+                //    groupRequirementService.Delete( groupRequirement );
+                //}
 
                 // Remove any triggers that were removed in the UI
                 var selectedTriggerGuids = MemberWorkflowTriggersState.Select( r => r.Guid );
@@ -477,17 +498,20 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
+
+            List<GroupRequirement> groupRequirementsToInsert = new List<GroupRequirement>();
             // add/update any group requirements that were added or changed in the UI (we already removed the ones that were removed above)
             foreach ( var groupRequirementState in GroupRequirementsState )
             {
-                GroupRequirement groupRequirement = group.GroupRequirements.Where( a => a.Guid == groupRequirementState.Guid ).FirstOrDefault();
-                if ( groupRequirement == null )
-                {
-                    groupRequirement = new GroupRequirement();
-                    group.GroupRequirements.Add( groupRequirement );
-                }
+                //// v7: group.GetGroupRequirements
+                //GroupRequirement groupRequirement = group.GetGroupRequirements( rockContext ).Where( a => a.GroupId.HasValue ).Where( a => a.Guid == groupRequirementState.Guid ).FirstOrDefault();
+                //if ( groupRequirement == null )
+                //{
+                //    groupRequirement = new GroupRequirement();
+                //    groupRequirementsToInsert.Add( groupRequirement );
+                //}
 
-                groupRequirement.CopyPropertiesFrom( groupRequirementState );
+                //groupRequirement.CopyPropertiesFrom( groupRequirementState );
             }
 
             // add/update any group locations that were added or changed in the UI (we already removed the ones that were removed above)
@@ -553,7 +577,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             group.IsSecurityRole = cbIsSecurityRole.Checked;
             group.IsActive = cbIsActive.Checked;
             group.IsPublic = cbIsPublic.Checked;
-            group.MustMeetRequirementsToAddMember = cbMembersMustMeetRequirementsOnAdd.Checked;
 
             // save sync settings
             group.SyncDataViewId = dvpSyncDataview.SelectedValue.AsIntegerOrNull();
@@ -612,7 +635,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var schedule = scheduleService.Get( oldScheduleId.Value );
                     if ( schedule != null && string.IsNullOrEmpty( schedule.Name ) )
                     {
-                        scheduleService.Delete( schedule );
+                        // Make sure this is the only group trying to use this schedule.
+                        if ( !groupService.Queryable().Where( g => g.ScheduleId == schedule.Id && g.Id != group.Id ).Any() )
+                        {
+                            scheduleService.Delete( schedule );
+                        }
                     }
                 }
 
@@ -677,7 +704,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 return;
             }
 
-            // use WrapTransaction since SaveAttributeValues does it's own RockContext.SaveChanges()
+            // use WrapTransaction since SaveAttributeValues does its own RockContext.SaveChanges()
             rockContext.WrapTransaction( () =>
             {
                 var adding = group.Id.Equals( 0 );
@@ -694,6 +721,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                     Rock.Security.Authorization.AllowPerson( group, Authorization.ADMINISTRATE, this.CurrentPerson, rockContext );
                 }
 
+                if ( groupRequirementsToInsert.Any() )
+                {
+                    groupRequirementsToInsert.ForEach( a => a.GroupId = group.Id );
+                    groupRequirementService.AddRange( groupRequirementsToInsert );
+                }
+                
                 group.SaveAttributeValues( rockContext );
 
                 /* Take care of Group Member Attributes */
@@ -804,14 +837,126 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
                 else
                 {
-                    // Cancelling on Add.  Return to Grid
-                    NavigateToPage( RockPage.Guid, null );
+                    if ( GetAttributeValue( "GroupListPage" ).AsGuid() != Guid.Empty )
+                    {
+                        NavigateToLinkedPage( "GroupListPage" );
+                    }
+                    else
+                    {
+                        NavigateToPage( RockPage.Guid, null );
+                    }
                 }
             }
             else
             {
                 // Cancelling on Edit.  Return to Details
                 ShowReadonlyDetails( GetGroup( hfGroupId.Value.AsInteger() ) );
+            }
+        }
+
+        /// <summary>
+        /// Handles the Click event of the btnCopy control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void btnCopy_Click( object sender, EventArgs e )
+        {
+            var rockContext = new RockContext();
+            var groupService = new GroupService( rockContext );
+            var authService = new AuthService( rockContext );
+            var attributeService = new AttributeService( rockContext );
+
+            int groupId = hfGroupId.ValueAsInt();
+            var group = groupService.Queryable( "GroupType" )
+                    .Where( g => g.Id == groupId )
+                    .FirstOrDefault();
+
+            if ( group != null )
+            {
+                group.LoadAttributes( rockContext );
+                // clone the group
+                var newGroup = group.Clone( false );
+                newGroup.CreatedByPersonAlias = null;
+                newGroup.CreatedByPersonAliasId = null;
+                newGroup.CreatedDateTime = RockDateTime.Now;
+                newGroup.ModifiedByPersonAlias = null;
+                newGroup.ModifiedByPersonAliasId = null;
+                newGroup.ModifiedDateTime = RockDateTime.Now;
+                newGroup.Id = 0;
+                newGroup.Guid = Guid.NewGuid();
+                newGroup.IsSystem = false;
+                newGroup.Name = group.Name + " - Copy";
+
+                // v7 authService.GetByGroup
+                //var auths = authService.GetByGroup( group.Id );
+                rockContext.WrapTransaction( () =>
+                {
+                    groupService.Add( newGroup );
+                    rockContext.SaveChanges();
+
+                    newGroup.LoadAttributes( rockContext );
+                    if ( group.Attributes != null && group.Attributes.Any() )
+                    {
+                        foreach ( var attributeKey in group.Attributes.Select( a => a.Key ) )
+                        {
+                            string value = group.GetAttributeValue( attributeKey );
+                            newGroup.SetAttributeValue( attributeKey, value );
+                        }
+                    }
+                    newGroup.SaveAttributeValues( rockContext );
+
+                    /* Take care of Group Member Attributes */
+                    var entityTypeId = EntityTypeCache.Read( typeof( GroupMember ) ).Id;
+                    string qualifierColumn = "GroupId";
+                    string qualifierValue = group.Id.ToString();
+                    // Get the existing attributes for this entity type and qualifier value
+                    var attributes = attributeService.Get( entityTypeId, qualifierColumn, qualifierValue );
+
+                    foreach ( var attribute in attributes )
+                    {
+                        var newAttribute = attribute.Clone( false );
+                        newAttribute.Id = 0;
+                        newAttribute.Guid = Guid.NewGuid();
+                        newAttribute.IsSystem = false;
+                        newAttribute.EntityTypeQualifierValue = newGroup.Id.ToString();
+
+                        foreach ( var qualifier in attribute.AttributeQualifiers )
+                        {
+                            var newQualifier = qualifier.Clone( false );
+                            newQualifier.Id = 0;
+                            newQualifier.Guid = Guid.NewGuid();
+                            newQualifier.IsSystem = false;
+
+                            newAttribute.AttributeQualifiers.Add( qualifier );
+                        }
+
+                        attributeService.Add( newAttribute );
+
+                    }
+                    rockContext.SaveChanges();
+
+                    ////v7: authService
+                    //foreach ( var auth in auths )
+                    //{
+                    //    var newAuth = auth.Clone( false );
+                    //    newAuth.Id = 0;
+                    //    newAuth.Guid = Guid.NewGuid();
+                    //    newAuth.GroupId = newGroup.Id;
+                    //    newAuth.CreatedByPersonAlias = null;
+                    //    newAuth.CreatedByPersonAliasId = null;
+                    //    newAuth.CreatedDateTime = RockDateTime.Now;
+                    //    newAuth.ModifiedByPersonAlias = null;
+                    //    newAuth.ModifiedByPersonAliasId = null;
+                    //    newAuth.ModifiedDateTime = RockDateTime.Now;
+                    //    authService.Add( newAuth );
+                    //}
+
+                    rockContext.SaveChanges();
+                    Rock.Security.Authorization.Flush();
+
+                } );
+
+                NavigateToCurrentPage( new Dictionary<string, string> { { "GroupId", newGroup.Id.ToString() } } );
             }
         }
 
@@ -834,6 +979,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var groupType = CurrentGroupTypeCache;
                 SetScheduleControls( groupType, null );
                 ShowGroupTypeEditDetails( groupType, group, true );
+                BindInheritedAttributes( CurrentGroupTypeId, new AttributeService( new RockContext() ) );
+                BindGroupRequirementsGrid();
             }
         }
 
@@ -917,6 +1064,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
+            btnCopy.Visible = GetAttributeValue( "ShowCopyButton" ).AsBoolean();
             var currentGroup = GetGroup( hfGroupId.Value.AsInteger() );
             if ( currentGroup != null )
             {
@@ -1236,7 +1384,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             cpCampus.IncludeInactive = !GetAttributeValue( "PreventSelectingInactiveCampus" ).AsBoolean();
             cpCampus.SelectedCampusId = group.CampusId;
 
-            GroupRequirementsState = group.GroupRequirements.ToList();
+            //// v7: group.GetGroupRequirements
+            //GroupRequirementsState = group.GetGroupRequirements( rockContext ).Where( a => a.GroupId.HasValue ).ToList();
             GroupLocationsState = group.GroupLocations.ToList();
 
             var groupTypeCache = CurrentGroupTypeCache;
@@ -1262,9 +1411,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             BindGroupMemberAttributesGrid();
 
             BindInheritedAttributes( group.GroupTypeId, attributeService );
-
-            cbMembersMustMeetRequirementsOnAdd.Checked = group.MustMeetRequirementsToAddMember ?? false;
-
+            
             BindGroupRequirementsGrid();
 
             MemberWorkflowTriggersState = new List<GroupMemberWorkflowTrigger>();
@@ -1323,7 +1470,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( group.Attributes != null && group.Attributes.Any() )
                 {
                     wpGroupAttributes.Visible = true;
-                    Rock.Attribute.Helper.AddEditControls( group, phGroupAttributes, setValues, BlockValidationGroup );
+                    var excludeForEdit = group.Attributes.Where( a => !a.Value.IsAuthorized( Rock.Security.Authorization.EDIT, this.CurrentPerson ) ).Select( a => a.Key ).ToList();
+                    Rock.Attribute.Helper.AddEditControls( group, phGroupAttributes, setValues, BlockValidationGroup, excludeForEdit );
                 }
                 else
                 {
@@ -1477,7 +1625,9 @@ namespace RockWeb.Plugins.com_kfs.Event
             lblMainDetails.Text = descriptionList.Html;
 
             group.LoadAttributes();
-            var attributes = group.Attributes.Select( a => a.Value ).OrderBy( a => a.Order ).ThenBy( a => a.Name ).ToList();
+            var attributes = group.Attributes.Select( a => a.Value ).OrderBy( a => a.Order ).ThenBy( a => a.Name )
+                .Where( a => a.IsAuthorized( Rock.Security.Authorization.VIEW, this.CurrentPerson ) )
+                .ToList();
 
             var attributeCategories = Helper.GetAttributeCategories( attributes );
 
@@ -1488,8 +1638,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             hlAttendance.Visible = group.GroupType != null && group.GroupType.TakesAttendance;
             hlAttendance.NavigateUrl = LinkedPageUrl( "AttendancePage", pageParams );
-
-            string groupMapUrl = LinkedPageUrl( "GroupMapPage", pageParams );
 
             var registrations = new Dictionary<int, string>();
             var eventItemOccurrences = new Dictionary<int, string>();
@@ -1539,60 +1687,85 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             // Get Map Style
             phMaps.Controls.Clear();
-            var mapStyleValue = DefinedValueCache.Read( GetAttributeValue( "MapStyle" ) );
-            if ( mapStyleValue == null )
-            {
-                mapStyleValue = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.MAP_STYLE_ROCK );
-            }
 
-            if ( mapStyleValue != null )
+            string groupMapUrl = LinkedPageUrl( "GroupMapPage", pageParams );
+            if ( !string.IsNullOrWhiteSpace( groupMapUrl ) )
             {
-                string mapStyle = mapStyleValue.GetAttributeValue( "StaticMapStyle" );
-                if ( !string.IsNullOrWhiteSpace( mapStyle ) )
+                var mapStyleValue = DefinedValueCache.Read( GetAttributeValue( "MapStyle" ) );
+                if ( mapStyleValue == null )
                 {
-                    foreach ( GroupLocation groupLocation in group.GroupLocations.OrderBy( gl => ( gl.GroupLocationTypeValue != null ) ? gl.GroupLocationTypeValue.Order : int.MaxValue ) )
-                    {
-                        if ( groupLocation.Location != null )
-                        {
-                            var googleAPIKey = GlobalAttributesCache.Read().GetValue( "GoogleAPIKey" );
+                    mapStyleValue = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.MAP_STYLE_ROCK );
+                }
 
-                            if ( groupLocation.Location.GeoPoint != null && !string.IsNullOrWhiteSpace( googleAPIKey ) )
+                if ( mapStyleValue != null )
+                {
+                    string mapStyle = mapStyleValue.GetAttributeValue( "StaticMapStyle" );
+                    if ( !string.IsNullOrWhiteSpace( mapStyle ) )
+                    {
+                        foreach ( GroupLocation groupLocation in group.GroupLocations.OrderBy( gl => ( gl.GroupLocationTypeValue != null ) ? gl.GroupLocationTypeValue.Order : int.MaxValue ) )
+                        {
+                            if ( groupLocation.Location != null )
                             {
-                                string markerPoints = string.Format( "{0},{1}", groupLocation.Location.GeoPoint.Latitude, groupLocation.Location.GeoPoint.Longitude );
-                                string mapLink = System.Text.RegularExpressions.Regex.Replace( mapStyle, @"\{\s*MarkerPoints\s*\}", markerPoints );
-                                mapLink = System.Text.RegularExpressions.Regex.Replace( mapLink, @"\{\s*PolygonPoints\s*\}", string.Empty );
-                                mapLink += "&sensor=false&size=450x250&zoom=13&format=png&key=" + googleAPIKey;
-                                var literalcontrol = new Literal()
+                                var googleAPIKey = GlobalAttributesCache.Read().GetValue( "GoogleAPIKey" );
+
+                                if ( groupLocation.Location.GeoPoint != null && !string.IsNullOrWhiteSpace( googleAPIKey ) )
                                 {
-                                    Text = string.Format(
-                                    "<div class='group-location-map'>{0}<a href='{1}'><img class='img-thumbnail' src='{2}'/></a></div>",
-                                    groupLocation.GroupLocationTypeValue != null ? ( "<h4>" + groupLocation.GroupLocationTypeValue.Value + "</h4>" ) : string.Empty,
-                                    groupMapUrl,
-                                    mapLink ),
-                                    Mode = LiteralMode.PassThrough
-                                };
-                                phMaps.Controls.Add( literalcontrol );
-                            }
-                            else if ( groupLocation.Location.GeoFence != null && !string.IsNullOrWhiteSpace( googleAPIKey ) )
-                            {
-                                string polygonPoints = "enc:" + groupLocation.Location.EncodeGooglePolygon();
-                                string mapLink = System.Text.RegularExpressions.Regex.Replace( mapStyle, @"\{\s*MarkerPoints\s*\}", string.Empty );
-                                mapLink = System.Text.RegularExpressions.Regex.Replace( mapLink, @"\{\s*PolygonPoints\s*\}", polygonPoints );
-                                mapLink += "&sensor=false&size=350x200&format=png&key=" + googleAPIKey;
-                                phMaps.Controls.Add(
-                                    new LiteralControl( string.Format(
-                                        "<div class='group-location-map'>{0}<a href='{1}'><img class='img-thumbnail' src='{2}'/></a></div>",
-                                        groupLocation.GroupLocationTypeValue != null ? ( "<h4>" + groupLocation.GroupLocationTypeValue.Value + "</h4>" ) : string.Empty,
-                                        groupMapUrl,
-                                        mapLink ) ) );
+                                    string markerPoints = string.Format( "{0},{1}", groupLocation.Location.GeoPoint.Latitude, groupLocation.Location.GeoPoint.Longitude );
+                                    string mapLink = System.Text.RegularExpressions.Regex.Replace( mapStyle, @"\{\s*MarkerPoints\s*\}", markerPoints );
+                                    mapLink = System.Text.RegularExpressions.Regex.Replace( mapLink, @"\{\s*PolygonPoints\s*\}", string.Empty );
+                                    mapLink += "&sensor=false&size=450x250&zoom=13&format=png&key=" + googleAPIKey;
+                                    var literalcontrol = new Literal()
+                                    {
+                                        Text = string.Format(
+                                        "<div class='group-location-map'>{0}<a href='{1}'><img class='img-thumbnail' src='{2}'/></a>{3}</div>",
+                                        groupLocation.GroupLocationTypeValue != null ? ( "<h4>" + groupLocation.GroupLocationTypeValue.Value + "</h4>" ) : string.Empty, // 0
+                                        groupMapUrl, // 1
+                                        mapLink, //2
+                                        !string.IsNullOrWhiteSpace( groupLocation.Location.GetFullStreetAddress() ) && GetAttributeValue( "ShowLocationAddresses" ).AsBoolean() ? string.Format( "<div class='address'>{0}</div>", groupLocation.Location.GetFullStreetAddress() ) : "" // 3
+                                        ), // 2
+                                        Mode = LiteralMode.PassThrough
+                                    };
+                                    phMaps.Controls.Add( literalcontrol );
+                                }
+                                else if ( groupLocation.Location.GeoFence != null && !string.IsNullOrWhiteSpace( googleAPIKey ) )
+                                {
+                                    string polygonPoints = "enc:" + groupLocation.Location.EncodeGooglePolygon();
+                                    string mapLink = System.Text.RegularExpressions.Regex.Replace( mapStyle, @"\{\s*MarkerPoints\s*\}", string.Empty );
+                                    mapLink = System.Text.RegularExpressions.Regex.Replace( mapLink, @"\{\s*PolygonPoints\s*\}", polygonPoints );
+                                    mapLink += "&sensor=false&size=350x200&format=png&key=" + googleAPIKey;
+                                    phMaps.Controls.Add(
+                                        new LiteralControl( string.Format(
+                                            "<div class='group-location-map'>{0}<a href='{1}'><img class='img-thumbnail' src='{2}'/></a></div>",
+                                            groupLocation.GroupLocationTypeValue != null ? ( "<h4>" + groupLocation.GroupLocationTypeValue.Value + "</h4>" ) : string.Empty,
+                                            groupMapUrl,
+                                            mapLink ) ) );
+                                }
                             }
                         }
                     }
                 }
+
+                hlMap.Visible = true;
+                hlMap.NavigateUrl = groupMapUrl;
+            }
+            else
+            {
+                hlMap.Visible = false;
             }
 
-            hlMap.Visible = !string.IsNullOrWhiteSpace( groupMapUrl );
-            hlMap.NavigateUrl = groupMapUrl;
+            string fundraisingProgressUrl = LinkedPageUrl( "FundraisingProgressPage", pageParams );
+            var groupTypeIdFundraising = GroupTypeCache.Read( Rock.SystemGuid.GroupType.GROUPTYPE_FUNDRAISINGOPPORTUNITY.AsGuid() ).Id;
+            var fundraisingGroupTypeIdList = new GroupTypeService( rockContext ).Queryable().Where( a => a.Id == groupTypeIdFundraising || a.InheritedGroupTypeId == groupTypeIdFundraising ).Select( a => a.Id ).ToList();
+
+            if ( !string.IsNullOrWhiteSpace( fundraisingProgressUrl ) && fundraisingGroupTypeIdList.Contains( group.GroupTypeId ) )
+            {
+                hlFundraisingProgress.NavigateUrl = fundraisingProgressUrl;
+                hlFundraisingProgress.Visible = true;
+            }
+            else
+            {
+                hlFundraisingProgress.Visible = false;
+            }
 
             btnSecurity.Visible = group.IsAuthorized( Authorization.ADMINISTRATE, CurrentPerson );
             btnSecurity.EntityId = group.Id;
@@ -2041,7 +2214,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         if ( displayOtherTab )
                         {
                             locpGroupLocation.AllowedPickerModes = modes;
-                            locpGroupLocation.CurrentPickerMode = locpGroupLocation.GetBestPickerModeForLocation( null );
+                            //// v7: location.SetBestPickerModeForLocation
+                            //locpGroupLocation.SetBestPickerModeForLocation( null );
                         }
 
                         ddlLocationType.DataSource = groupType.LocationTypeValues.ToList();
@@ -2052,7 +2226,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             if ( displayOtherTab )
                             {
-                                locpGroupLocation.CurrentPickerMode = locpGroupLocation.GetBestPickerModeForLocation( groupLocation.Location );
+                                //// v7: location.SetBestPickerModeForLocation
+                                //locpGroupLocation.SetBestPickerModeForLocation( groupLocation.Location );
 
                                 locpGroupLocation.MapStyleValueGuid = GetAttributeValue( "MapStyle" ).AsGuid();
 
@@ -2271,11 +2446,14 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 ddlGroupRequirementType.SelectedValue = selectedGroupRequirement.GroupRequirementTypeId.ToString();
                 grpGroupRequirementGroupRole.GroupRoleId = selectedGroupRequirement.GroupRoleId;
+                //// v7: groupRequirement.MustMeetRequirementToAddMember;
+                //cbMembersMustMeetRequirementOnAdd.Checked = selectedGroupRequirement.MustMeetRequirementToAddMember;
             }
             else
             {
                 ddlGroupRequirementType.SelectedIndex = 0;
                 grpGroupRequirementGroupRole.GroupRoleId = null;
+                cbMembersMustMeetRequirementOnAdd.Checked = false;
             }
 
             nbDuplicateGroupRequirement.Visible = false;
@@ -2306,6 +2484,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             groupRequirement.GroupRequirementTypeId = ddlGroupRequirementType.SelectedValue.AsInteger();
             groupRequirement.GroupRequirementType = new GroupRequirementTypeService( rockContext ).Get( groupRequirement.GroupRequirementTypeId );
             groupRequirement.GroupRoleId = grpGroupRequirementGroupRole.GroupRoleId;
+            //// v7: MustMeetRequirementToAddMember
+            //groupRequirement.MustMeetRequirementToAddMember = cbMembersMustMeetRequirementOnAdd.Checked;
             if ( groupRequirement.GroupRoleId.HasValue )
             {
                 groupRequirement.GroupRole = new GroupTypeRoleService( rockContext ).Get( groupRequirement.GroupRoleId.Value );
@@ -2501,7 +2681,9 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMemberAttributesInherited.AddCssClass( "inherited-attribute-grid" );
             gGroupMemberAttributesInherited.DataSource = GroupMemberAttributesInheritedState;
             gGroupMemberAttributesInherited.DataBind();
-            rcGroupMemberAttributesInherited.Visible = GroupMemberAttributesInheritedState.Any();
+            rcwGroupMemberAttributesInherited.Visible = GroupMemberAttributesInheritedState.Any();
+
+            rcwGroupMemberAttributes.Label = GroupMemberAttributesInheritedState.Any() ? "Group Member Attributes" : string.Empty;
         }
 
         /// <summary>
@@ -2516,15 +2698,33 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Binds the group requirements grid.
+        /// Binds the group requirements grids
         /// </summary>
         private void BindGroupRequirementsGrid()
         {
+            var rockContext = new RockContext();
+            //// v7: groupRequirement.GroupTypeId
+            var groupTypeGroupRequirements = new GroupRequirementService( rockContext ).Queryable();//.Where( a => a.GroupTypeId.HasValue && a.GroupTypeId == CurrentGroupTypeId ).ToList();
+            var groupGroupRequirements = GroupRequirementsState.ToList();
+            rcwGroupTypeGroupRequirements.Visible = groupTypeGroupRequirements.Any();
+            rcwGroupRequirements.Label = groupTypeGroupRequirements.Any() ? "Specific Group Requirements" : string.Empty;
+            if ( CurrentGroupTypeCache != null )
+            {
+                lGroupTypeGroupRequirementsFrom.Text = string.Format( "(From <a href='{0}' target='_blank'>{1}</a>)", this.ResolveUrl( "~/GroupType/" + CurrentGroupTypeCache.Id ), CurrentGroupTypeCache.Name );
+            }
+
+            gGroupTypeGroupRequirements.AddCssClass( "grouptype-group-requirements-grid" );
+            gGroupTypeGroupRequirements.DataSource = groupTypeGroupRequirements.OrderBy( a => a.GroupRequirementType.Name ).ToList();
+            gGroupTypeGroupRequirements.DataBind();
+
             gGroupRequirements.AddCssClass( "group-requirements-grid" );
-            gGroupRequirements.DataSource = GroupRequirementsState.OrderBy( a => a.GroupRequirementType.Name ).ToList();
+            gGroupRequirements.DataSource = groupGroupRequirements.OrderBy( a => a.GroupRequirementType.Name ).ToList();
             gGroupRequirements.DataBind();
         }
 
+        /// <summary>
+        /// Sets the schedule display.
+        /// </summary>
         private void SetScheduleDisplay()
         {
             dowWeekly.Visible = false;
