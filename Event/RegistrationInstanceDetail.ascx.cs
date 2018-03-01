@@ -282,11 +282,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             // Set up instance associated resources
             if ( ResourceGroupTypes == null )
             {
-                var instance = GetRegistrationInstance( PageParameter( "RegistrationInstanceId" ).AsInteger() );
-                if ( instance != null )
-                {
-                    LoadRegistrationResources( instance );
-                }
+                LoadRegistrationResources( null );
             }
 
             nbPlacementNotifiction.Visible = false;
@@ -7348,6 +7344,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             ddlRegistrantList.Items.Clear();
             ddlSubGroup.Items.Clear();
             ddlGroupRole.Items.Clear();
+            ppVolunteer.Visible = false;
             tbNote.Text = string.Empty;
 
             // TODO refactor this
@@ -7461,9 +7458,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         ddlRegistrantList.Visible = false;
                         ddlRegistrantList.Required = false;
-                        ppVolunteer.SelectedValue = person.Id;
                         ppVolunteer.Visible = true;
                         ppVolunteer.Required = true;
+
+                        if ( person != null )
+                        {
+                            ppVolunteer.SelectedValue = person.Id;
+                        }
                     }
 
                     if ( !ppVolunteer.Visible && group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
@@ -7633,15 +7634,18 @@ namespace RockWeb.Plugins.com_kfs.Event
                             if ( membersBeingLed.Any() )
                             {
                                 var groupToAddTo = new GroupService( rockContext ).Get( groupMember.GroupId );
-                                groupMemberService.AddRange( membersBeingLed.Except( groupToAddTo.Members.Select( cm => cm.PersonId ) )
-                                    .Select( memberPerson => new GroupMember
-                                    {
-                                        PersonId = memberPerson,
-                                        GroupId = groupMember.GroupId,
-                                        GroupRoleId = role.GroupType.DefaultGroupRoleId ?? role.Id,
-                                        GroupMemberStatus = groupMember.GroupMemberStatus,
-                                    }
-                                ) );
+                                if ( groupToAddTo != null )
+                                {
+                                    groupMemberService.AddRange( membersBeingLed.Except( groupToAddTo.Members.Select( cm => cm.PersonId ) )
+                                        .Select( memberPerson => new GroupMember
+                                        {
+                                            PersonId = memberPerson,
+                                            GroupId = groupMember.GroupId,
+                                            GroupRoleId = role.GroupType.DefaultGroupRoleId ?? role.Id,
+                                            GroupMemberStatus = groupMember.GroupMemberStatus,
+                                        }
+                                    ) );
+                                }
                             }
                         }
 
@@ -7656,9 +7660,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                             if ( membersBeingLed.Any() )
                             {
                                 var groupToRemoveFrom = new GroupService( rockContext ).Get( originalGroupId );
-                                groupMemberService.DeleteRange( groupToRemoveFrom.Members
-                                    .Where( m => membersBeingLed.Contains( m.PersonId ) )
-                                );
+                                if ( groupToRemoveFrom != null )
+                                {
+                                    groupMemberService.DeleteRange( groupToRemoveFrom.Members
+                                        .Where( m => membersBeingLed.Contains( m.PersonId ) )
+                                    );
+                                }
                             }
                         }
 
