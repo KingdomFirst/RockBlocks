@@ -7023,7 +7023,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             .Where( r => r.MeetsGroupRequirement != MeetsGroupRequirement.Meets );
                         if ( requirements.Any() )
                         {
-                            //add notifications for not meeting 
+                            //add visible icon and tooltip for requirement not met
                             foreach ( DataControlFieldCell cell in rowEvent.Row.Cells )
                             {
                                 if ( cell.ContainingField.HeaderText == "Name" )

@@ -5,6 +5,10 @@
 
         <Rock:PanelWidget ID="pnlSubGroup" runat="server">
             
+            <div class="panel-labels">
+                <asp:HyperLink ID="hlSyncSource" runat="server"><Rock:HighlightLabel ID="hlSyncStatus" runat="server" LabelType="Info" Visible="false" Text="<i class='fa fa-exchange'></i>" /></asp:HyperLink> &nbsp;
+            </div>
+
             <asp:Panel ID="pnlGroupDescription" runat="server" CssClass="alert alert-info" >
                 <asp:Label ID="lblGroupDescription" runat="server"></asp:Label>
             </asp:Panel>
@@ -21,7 +25,7 @@
                 </Rock:RockCheckBoxList>
                 <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
             </Rock:GridFilter>--%>
-            <Rock:Grid ID="gGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" PersonIdField="PersonId" OnRowSelected="gGroupMembers_RowSelected" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
+            <Rock:Grid ID="gGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gGroupMembers_RowSelected" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
                 <Columns>
                     <Rock:SelectField></Rock:SelectField>
                     <Rock:RockBoundField DataField="Person.FullName" HeaderText="Name" SortExpression="Person.LastName,Person.NickName" HtmlEncode="false" />

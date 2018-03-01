@@ -159,25 +159,42 @@ namespace RockWeb.Plugins.com_kfs.Event
             
             //rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
             gGroupMembers.DataKeyNames = new string[] { "Id" };
-            gGroupMembers.RowCommand += gGroupMembers_RowCommand;
+            gGroupMembers.PersonIdField = "PersonId";
             gGroupMembers.RowDataBound += gGroupMembers_RowDataBound;
-            //gGroupMembers.RowSelected += gGroupMembers_RowSelected;
+            gGroupMembers.GetRecipientMergeFields += gGroupMembers_GetRecipientMergeFields;
             gGroupMembers.Actions.AddClick += gGroupMembers_AddClick;
             gGroupMembers.GridRebind += gGroupMembers_GridRebind;
-            gGroupMembers.GetRecipientMergeFields += gGroupMembers_GetRecipientMergeFields;
             gGroupMembers.RowItemText = _group.GroupType.GroupTerm + " " + _group.GroupType.GroupMemberTerm;
             gGroupMembers.ExportFilename = _group.Name;
             gGroupMembers.ExportSource = ExcelExportSource.ColumnOutput;
             gGroupMembers.ShowConfirmDeleteDialog = false;
+            gGroupMembers.Actions.ShowMergePerson = false;
 
-            // TODO: make sure they have Auth to edit the block OR edit to the Group
+            gGroupMembers.RowCommand += gGroupMembers_RowCommand;
+            //gGroupMembers.RowSelected += gGroupMembers_RowSelected;
+
+            // v7: make sure they have Auth to edit the block OR edit to the Group
+            //bool canEditBlock = IsUserAuthorized( Authorization.EDIT ) || _group.IsAuthorized( Authorization.EDIT, this.CurrentPerson ) || _group.IsAuthorized( Authorization.MANAGE_MEMBERS, this.CurrentPerson );
             gGroupMembers.Actions.ShowAdd = true;
             gGroupMembers.IsDeleteEnabled = true;
+
+
+            // if group is being sync'ed remove ability to add/delete members 
+            if ( _group != null && _group.SyncDataViewId.HasValue )
+            {
+                gGroupMembers.IsDeleteEnabled = false;
+                gGroupMembers.Actions.ShowAdd = false;
+                hlSyncStatus.Visible = true;
+                // link to the DataView
+                int pageId = Rock.Web.Cache.PageCache.Read( Rock.SystemGuid.Page.DATA_VIEWS.AsGuid() ).Id;
+                hlSyncSource.NavigateUrl = System.Web.VirtualPathUtility.ToAbsolute( String.Format( "~/page/{0}?DataViewId={1}", pageId, _group.SyncDataViewId.Value ) );
+            }
 
             //SetFilter();
             BindAttributes();
             AddDynamicControls();
             BindGroupMembersGrid();
+            RegisterScript();
         }  
 
         /// <summary>
@@ -440,7 +457,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             // Add edit column
             var editField = new EditField();
-            editField.HeaderText = "Edit";
             gGroupMembers.Columns.Add( editField );
             editField.Click += gGroupMembers_EditClick;
 
@@ -610,13 +626,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     #endregion
 
-                    // filter by group requirements
-                    var hasGroupRequirements = new GroupRequirementService( rockContext ).Queryable().Any( a => a.GroupId == _group.Id );
-
-                    // If there are group requirements that that member doesn't meet, show an icon in the grid
-                    var includeWarnings = false;
-                    var groupMemberIdsThatLackGroupRequirements = new GroupService( rockContext ).GroupMembersNotMeetingRequirements( _group.Id, includeWarnings ).Select( a => a.Key.Id );
-
                     // Sort the query
                     IOrderedQueryable<GroupMember> orderedQry = null;
                     var sortProperty = gGroupMembers.SortProperty;
@@ -773,6 +782,33 @@ namespace RockWeb.Plugins.com_kfs.Event
                     AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
                 }
             }
+        }
+
+        /// <summary>
+        /// Registers the script.
+        /// </summary>
+        private void RegisterScript()
+        {
+            string deleteScript = @"
+    $('table.js-grid-group-members a.grid-delete-button').click(function( e ){
+        var $btn = $(this);
+        e.preventDefault();
+        Rock.dialogs.confirm('Are you sure you want to delete this group member?', function (result) {
+            if (result) {
+                if ( $btn.closest('tr').hasClass('js-has-registration') ) {
+                    Rock.dialogs.confirm('This group member was added through a registration. Are you sure that you want to delete this group member and remove the link from the registration? ', function (result) {
+                        if (result) {
+                            window.location = e.target.href ? e.target.href : e.target.parentElement.href;
+                        }
+                    });
+                } else {
+                    window.location = e.target.href ? e.target.href : e.target.parentElement.href;
+                }
+            }
+        });
+    });
+";
+            ScriptManager.RegisterStartupScript( gGroupMembers, gGroupMembers.GetType(), "deleteInstanceScript", deleteScript, true );
         }
 
         #endregion
