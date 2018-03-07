@@ -6,15 +6,10 @@ using System.Linq;
 
 using Rock;
 using Rock.Attribute;
-using Rock.Constants;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
-using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI;
-using Rock.Web.UI.Controls;
-using Attribute = Rock.Model.Attribute;
 
 namespace RockWeb.Plugins.com_kfs.Groups
 {
@@ -82,11 +77,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             if ( group == null )
             {
                 rockContext = rockContext ?? new RockContext();
-                group = new GroupService( rockContext )
-                    .Queryable()
-                    .Include( g => g.GroupType )
-                    .Include( g => g.GroupLocations.Select( s => s.Schedules ) )
-                    .Include( g => g.GroupSyncs )
+                group = new GroupService( rockContext ).Queryable( "GroupType,GroupLocations.Schedules" )
                     .Where( g => g.Id == groupId )
                     .FirstOrDefault();
                 RockPage.SaveSharedItem( key, group );
