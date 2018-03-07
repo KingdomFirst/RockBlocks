@@ -21,6 +21,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [DisplayName( "Group Copy Button" )]
     [Category( "KFS > Groups" )]
     [Description( "Allows a copy button to be placed on any group aware page to be able to copy the group to a new one, such as group leader toolbox." )]
+    [BooleanField( "Copy Location", "Copies the location of the existing group to the new group as well.", true, "" )]
 
     public partial class GroupCopy : Rock.Web.UI.RockBlock, ISecondaryBlock
     {
@@ -141,6 +142,14 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 newGroup.Guid = Guid.NewGuid();
                 newGroup.IsSystem = false;
                 newGroup.Name = group.Name + " - Copy";
+
+                if ( GetAttributeValue( "CopyLocation" ).AsBoolean( true ) )
+                {
+                    foreach ( GroupLocation location in group.GroupLocations )
+                    {
+                        newGroup.GroupLocations.Add( location );
+                    }
+                }
 
                 var auths = authService.GetByGroup( group.Id );
                 rockContext.WrapTransaction( () =>
