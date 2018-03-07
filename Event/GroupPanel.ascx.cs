@@ -194,7 +194,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             BindAttributes();
             AddDynamicControls();
             BindGroupMembersGrid();
-            RegisterScript();
         }  
 
         /// <summary>
@@ -786,6 +785,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         /// <summary>
         /// Registers the script.
+        /// Not used; this is already triggered in RegistrationInstanceDetail
         /// </summary>
         private void RegisterScript()
         {
