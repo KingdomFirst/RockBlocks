@@ -1174,16 +1174,16 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     }
                 }
 
-                var validLocationids = new List<int>();
+                var validLocationIds = new List<int>();
                 if ( campus.LocationId.HasValue )
                 {
                     // Get all the child locations
-                    validLocationids.Add( campus.LocationId.Value );
+                    validLocationIds.Add( campus.LocationId.Value );
                     new LocationService( rockContext )
                         .GetAllDescendents( campus.LocationId.Value )
                         .Select( l => l.Id )
                         .ToList()
-                        .ForEach( l => validLocationids.Add( l ) );
+                        .ForEach( l => validLocationIds.Add( l ) );
                 }
 
                 // Get location Ids which are currently active
@@ -1191,14 +1191,14 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 if ( GetAttributeValue( "LocationActive" ).AsBoolean() )
                 {
                     validLocationIdsFiltered = new GroupLocationService( rockContext )
-                        .GetActiveByLocations( validLocationids )
+                        .GetActiveByLocations( validLocationIds )
                         .Where( l => l.Schedules.Any( s => activeSchedules.Contains( s.Id ) ) )
                         .Select( l => l.LocationId )
                         .ToList();
                 }
                 else
                 {
-                    validLocationIdsFiltered = validLocationids;
+                    validLocationIdsFiltered = validLocationIds;
                 }
 
                 var groupTypeTemplateGuid = PageParameter( "Area" ).AsGuidOrNull();
