@@ -1,61 +1,68 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupMetricsEntry.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Reporting.GroupMetricsEntry" %>
+<asp:UpdatePanel ID="upMetricValueDetail" runat="server">
+    <ContentTemplate>
+        <asp:Panel ID="pnlDetails" CssClass="panel panel-block" runat="server">
 
+            <asp:HiddenField ID="hfMetricId" runat="server" />
+            <asp:HiddenField ID="hfMetricCategoryId" runat="server" />
+            <asp:HiddenField ID="hfMetricValueId" runat="server" />
 
+            <div class="panel-heading">
+                <h1 class="panel-title"><i class="fa fa-signal"></i>
+                    <asp:Literal ID="lActionTitle" runat="server" /></h1>
+            </div>
+            <div class="panel-body">
 
-<asp:UpdatePanel ID="upnlContent" runat="server">
-<ContentTemplate>
+                <asp:ValidationSummary ID="ValidationSummary1" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+                <Rock:NotificationBox ID="nbWarningMessage" runat="server" NotificationBoxType="Warning" />
 
-    <div class="panel panel-block">
+                <fieldset>
 
-        <div class="panel-heading">
-            <h1 class="panel-title"><i class="fa fa-signal"></i> Metric Entry</h1>
-        </div>
+                    <Rock:NotificationBox ID="nbEditModeMessage" runat="server" NotificationBoxType="Info" />
 
-        <div class="panel-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <Rock:RockDropDownList ID="ddlMetricValueType" runat="server" Label="Type" />
+                            <Rock:DatePicker ID="dpMetricValueDateTime" runat="server" Label="Value Date" />
 
-            <asp:Panel ID="pnlSelection" runat="server">
+                        </div>
+                        <div class="col-md-6">
+                        </div>
+                    </div>
 
-                <h3><asp:Literal ID="lSelection" runat="server"></asp:Literal></h3>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <Rock:NotificationBox ID="nbValueRequired" runat="server" NotificationBoxType="Warning" Visible="false" />
+                        </div>
+                        <asp:PlaceHolder ID="phMetricValuePartitions" runat="server" />
+                    </div>
 
-                <asp:Repeater ID="rptrSelection" runat="server" OnItemCommand="rptrSelection_ItemCommand" >
-                    <ItemTemplate>
-                        <asp:LinkButton ID="lbSelection" runat="server" CommandName='<%# Eval("CommandName") %>'  CommandArgument='<%# Eval("CommandArg") %>' Text='<%# Eval("OptionText") %>' CssClass="btn btn-default btn-block" />
-                    </ItemTemplate>
-                </asp:Repeater>       
+                    <div class="row">
+                        <div class="col-md-6">
+                            <Rock:NumberBox ID="tbYValue" runat="server" Label="Value" NumberType="Double" />
 
-            </asp:Panel>
+                            <%-- Hide X Value for now until we implement XValue (In most cases, the Metric.Xaxis is ignored and MetricValueDateTime is used as the X-Axis --%>
+                            <Rock:DataTextBox ID="tbXValue" runat="server" SourceTypeName="Rock.Model.MetricValue, Rock" PropertyName="XValue" Visible="false" />
+                        </div>
+                        <div class="col-md-6">
+                        </div>
+                    </div>
 
-            <asp:Panel ID="pnlMetrics" runat="server" Visible="false">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <Rock:DataTextBox ID="tbNote" runat="server" SourceTypeName="Rock.Model.MetricValue, Rock" PropertyName="Note" TextMode="MultiLine" Rows="3" />
+                        </div>
+                    </div>
 
-                <div class="btn-group btn-group-justified margin-b-lg panel-settings-group" >
-                    <Rock:ButtonDropDownList ID="bddlCampus" runat="server" OnSelectionChanged="bddl_SelectionChanged" />
-                    <Rock:ButtonDropDownList ID="bddlWeekend" runat="server" OnSelectionChanged="bddl_SelectionChanged" />
-                    <Rock:ButtonDropDownList ID="bddlService" runat="server" OnSelectionChanged="bddl_SelectionChanged" />
-                </div>
-
-                <asp:ValidationSummary ID="vsDetails" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
-                <Rock:NotificationBox ID="nbMetricsSaved" runat="server" Text="Metric Values Have Been Updated" NotificationBoxType="Success" Visible="false" />
-
-                <div class="form-horizontal label-md" >
-                    <asp:Repeater ID="rptrMetric" runat="server" OnItemDataBound="rptrMetric_ItemDataBound">
-                        <ItemTemplate>
-                            <asp:HiddenField ID="hfMetricId" runat="server" Value='<%# Eval("Id") %>' />
-                            <Rock:NumberBox ID="nbMetricValue" runat="server" NumberType="Double" Label='<%# Eval( "Name") %>' Text='<%# Eval( "Value") %>' />
-                        </ItemTemplate>
-                    </asp:Repeater>
-                </div>
-
-                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" />
+                </fieldset>
 
                 <div class="actions">
-                    <asp:LinkButton ID="btnSave" runat="server" Text="Save" AccessKey="s" ToolTip="Alt+s" CssClass="btn btn-primary" OnClick="btnSave_Click" />
+                    <asp:LinkButton ID="btnSave" runat="server" Text="Save" AccessKey="s" CssClass="btn btn-primary" OnClick="btnSave_Click" />
+                    <asp:LinkButton ID="btnCancel" runat="server" Text="Cancel" AccessKey="c" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
                 </div>
 
-            </asp:Panel>
+            </div>
 
-        </div>
-
-    </div>
-
-</ContentTemplate>
+        </asp:Panel>
+    </ContentTemplate>
 </asp:UpdatePanel>
