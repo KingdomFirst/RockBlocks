@@ -20,7 +20,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
     /// Block for easily adding/editing metric values for any metric that has partitions of campus and service time.
     /// </summary>
     [DisplayName( "Advanced Service Metrics Entry" )]
-    [Category( " KFS > Reporting" )]
+    [Category( "KFS > Reporting" )]
     [Description( "Block for easily adding/editing metric values for any metric that has partitions of campus and service time." )]
 
     [CategoryField( "Schedule Category", "The schedule category to use for list of service times.", false, "Rock.Model.Schedule", "", "", true, "", "", 0 )]
