@@ -25,13 +25,14 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
     [MetricCategoriesField( "Metric Categories", "Select the metric categories to display (note: only metrics in those categories with a group partition will displayed).", true, "", "", 3 )]
     [BooleanField( "Show Note Field", "Allow the user to input note along with metric entry.", false )]
+    [BooleanField( "Admin Mode", "Enable the block to be used for any group with a group selector.", false )]
     public partial class GroupMetricsEntry : Rock.Web.UI.RockBlock
     {
         #region Fields
 
         private int _groupId = 0;
         private int? _selectedGroupId { get; set; }
-        private DateTime? _selectedWeekend { get; set; }
+        private DateTime? _selectedDate { get; set; }
         #endregion
 
         #region Base Control Methods
@@ -44,7 +45,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         {
             base.LoadViewState( savedState );
             _selectedGroupId = ViewState["SelectedGroupId"] as int?;
-            _selectedWeekend = ViewState["SelectedWeekend"] as DateTime?;
+            _selectedDate = ViewState["SelectedDate"] as DateTime?;
         }
 
         /// <summary>
@@ -78,14 +79,19 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                     _selectedGroupId = _groupId;
                     gpSelectGroup.Visible = false;
                 }
-                else
+                else if ( GetAttributeValue( "AdminMode" ).AsBoolean() )
                 {
                     _selectedGroupId = GetBlockUserPreference( "GroupId" ).AsIntegerOrNull();
                 }
-                _selectedWeekend = RockDateTime.Today;
+                else 
+                {
+                    pnlMetrics.Visible = false;
+                    pnlError.Visible = true;
+                }
+                _selectedDate = RockDateTime.Today;
 
                 gpSelectGroup.SetValue( _selectedGroupId );
-                dpMetricValueDateTime.SelectedDate = _selectedWeekend;
+                dpMetricValueDateTime.SelectedDate = _selectedDate;
                 tbNote.Visible = GetAttributeValue( "ShowNoteField" ).AsBoolean();
 
                 BindMetrics();
@@ -101,7 +107,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         protected override object SaveViewState()
         {
             ViewState["SelectedGroupId"] = _selectedGroupId;
-            ViewState["SelectedWeekend"] = _selectedWeekend;
+            ViewState["SelectedDate"] = _selectedDate;
             return base.SaveViewState();
         }
 
@@ -180,10 +186,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                                     (
                                                         v.MetricValuePartitions.Any( p => p.MetricPartitionId == groupPartitionId && p.EntityId.HasValue && p.EntityId.Value == groupId.Value )
                                                     )
-                                                ) ||
-                                                (
-                                                    v.MetricValuePartitions.Count == 0
-                                                )
+                                                ) 
                                             )
                                         )
                                     .FirstOrDefault();
@@ -215,7 +218,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                     rockContext.SaveChanges();
                 }
 
-                nbMetricsSaved.Text = string.Format( "Your metrics for your group '{0}' on {1} have been saved.", gpSelectGroup.SelectedValue, dpMetricValueDateTime.SelectedDate.ToString() );
+                nbMetricsSaved.Text = string.Format( "The metrics for '{0}' on {1} have been saved.", gpSelectGroup.ItemName, dpMetricValueDateTime.SelectedDate.ToString() );
                 nbMetricsSaved.Visible = true;
 
                 BindMetrics();
@@ -236,30 +239,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         #endregion
 
         #region Methods
-
-        /// <summary>
-        /// Gets the weekend dates.
-        /// </summary>
-        /// <returns></returns>
-        private List<DateTime> GetWeekendDates( int weeksBack, int weeksAhead )
-        {
-            var dates = new List<DateTime>();
-
-            // Load Weeks
-            var sundayDate = RockDateTime.Today.SundayDate();
-            var daysBack = weeksBack * 7;
-            var daysAhead = weeksAhead * 7;
-            var startDate = sundayDate.AddDays( 0 - daysBack );
-            var date = sundayDate.AddDays( daysAhead );
-            while ( date >= startDate )
-            {
-                dates.Add( date );
-                date = date.AddDays( -7 );
-            }
-
-            return dates;
-        }
-
         /// <summary>
         /// Binds the metrics.
         /// </summary>
@@ -309,9 +288,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                                     (
                                                         v.MetricValuePartitions.Any( p => p.MetricPartitionId == metric.GroupPartitionId && p.EntityId.HasValue && p.EntityId.Value == groupId.Value )
                                                     )
-                                            ) ||
-                                            (
-                                                v.MetricValuePartitions.Count == 0
                                             )
                                         )
                                     )

@@ -10,14 +10,6 @@
 
         <div class="panel-body">
 
-            <asp:Panel ID="pnlSelection" runat="server" Visible="false">
-
-                <h3><asp:Literal ID="lSelection" runat="server"></asp:Literal></h3>
-
-                <Rock:GroupPicker  ID="gpSelectGroupInitial" runat="server" OnSelectionChanged="bddl_SelectionChanged" />
-
-            </asp:Panel>
-
             <asp:Panel ID="pnlMetrics" runat="server">
 
                 <asp:ValidationSummary ID="vsDetails" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
@@ -40,6 +32,10 @@
                     <asp:LinkButton ID="btnSave" runat="server" Text="Save" AccessKey="s" ToolTip="Alt+s" CssClass="btn btn-primary" OnClick="btnSave_Click" />
                 </div>
 
+            </asp:Panel>
+
+            <asp:Panel ID="pnlError" runat="server" Visible="false" CssClass="alert alert-warning">
+                No group was available from the querystring.
             </asp:Panel>
 
         </div>
