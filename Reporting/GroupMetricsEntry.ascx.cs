@@ -17,11 +17,11 @@ using System.Data.Entity;
 namespace RockWeb.Plugins.com_kfs.Reporting
 {
     /// <summary>
-    /// Block for easily adding/editing metric values for any metric that has partitions of group and service time.
+    /// Block for easily adding/editing metric values for any metric that has partitions of group.
     /// </summary>
     [DisplayName( "Group Toolbox Metrics Entry" )]
     [Category( "KFS > Reporting" )]
-    [Description( "Block for easily adding/editing metric values for any metric that has partitions of group and service time." )]
+    [Description( "Block for easily adding/editing metric values for any metric that has partitions of group." )]
 
     [MetricCategoriesField( "Metric Categories", "Select the metric categories to display (note: only metrics in those categories with a group partition will displayed).", true, "", "", 3 )]
     [BooleanField( "Show Note Field", "Allow the user to input note along with metric entry.", false )]
@@ -265,7 +265,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         /// </summary>
         private void BindMetrics()
         {
-            var serviceMetricValues = new List<ServiceMetric>();
+            var groupMetricValues = new List<GroupMetric>();
 
             int groupEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Group ) ).Id;
 
@@ -294,7 +294,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                             GroupPartitionId = m.MetricPartitions.Where( p => p.EntityTypeId.HasValue && p.EntityTypeId.Value == groupEntityTypeId ).Select( p => p.Id ).FirstOrDefault()
                         } ) )
                     {
-                        var serviceMetric = new ServiceMetric( metric.Id, metric.Title );
+                        var groupMetric = new GroupMetric( metric.Id, metric.Title );
 
                         if ( groupId.HasValue && weekend.HasValue )
                         {
@@ -319,7 +319,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
                             if ( metricValue != null )
                             {
-                                serviceMetric.Value = metricValue.YValue;
+                                groupMetric.Value = metricValue.YValue;
 
                                 if ( !string.IsNullOrWhiteSpace( metricValue.Note ) &&
                                     !notes.Contains( metricValue.Note ) )
@@ -330,12 +330,12 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                             }
                         }
 
-                        serviceMetricValues.Add( serviceMetric );
+                        groupMetricValues.Add( groupMetric );
                     }
                 }
             }
 
-            rptrMetric.DataSource = serviceMetricValues;
+            rptrMetric.DataSource = groupMetricValues;
             rptrMetric.DataBind();
 
             tbNote.Text = notes.AsDelimited( Environment.NewLine + Environment.NewLine );
@@ -345,13 +345,13 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
     }
 
-    public class ServiceMetric
+    public class GroupMetric
     {
         public int Id { get; set; }
         public string Name { get; set; }
         public decimal? Value { get; set; }
 
-        public ServiceMetric( int id, string name )
+        public GroupMetric( int id, string name )
         {
             Id = id;
             Name = name;
