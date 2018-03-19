@@ -463,18 +463,18 @@ namespace RockWeb.Blocks.Security
                 mergeObjects.Add( "Results", results.ToArray() );
 
                 // v6
-                var recipients = new List<RecipientData>();
-                recipients.Add( new RecipientData( person.Email, mergeObjects ) );
+                //var recipients = new List<RecipientData>();
+                //recipients.Add( new RecipientData( person.Email, mergeObjects ) );
 
-                Email.Send( GetAttributeValue( "ForgotUsernameTemplate" ).AsGuid(), recipients, ResolveRockUrl( "~/" ), ResolveRockUrl( "~~/" ), false );
+                //Email.Send( GetAttributeValue( "ForgotUsernameTemplate" ).AsGuid(), recipients, ResolveRockUrl( "~/" ), ResolveRockUrl( "~~/" ), false );
 
                 // v7
-                //var emailMessage = new RockEmailMessage( GetAttributeValue( "ForgotUsernameTemplate" ).AsGuid() );
-                //emailMessage.AddRecipient( new RecipientData( person.Email, mergeObjects ) );
-                //emailMessage.AppRoot = ResolveRockUrl( "~/" );
-                //emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
-                //emailMessage.CreateCommunicationRecord = false;
-                //emailMessage.Send();
+                var emailMessage = new RockEmailMessage( GetAttributeValue( "ForgotUsernameTemplate" ).AsGuid() );
+                emailMessage.AddRecipient( new RecipientData( person.Email, mergeObjects ) );
+                emailMessage.AppRoot = ResolveRockUrl( "~/" );
+                emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
+                emailMessage.CreateCommunicationRecord = false;
+                emailMessage.Send();
             }
             else
             {
@@ -509,18 +509,18 @@ namespace RockWeb.Blocks.Security
                 mergeObjects.Add( "User", user );
 
                 // v6
-                var recipients = new List<RecipientData>();
-                recipients.Add( new RecipientData( person.Email, mergeObjects ) );
+                //var recipients = new List<RecipientData>();
+                //recipients.Add( new RecipientData( person.Email, mergeObjects ) );
 
-                Email.Send( GetAttributeValue( "ConfirmAccountTemplate" ).AsGuid(), recipients, ResolveRockUrl( "~/" ), ResolveRockUrl( "~~/" ), false );
+                //Email.Send( GetAttributeValue( "ConfirmAccountTemplate" ).AsGuid(), recipients, ResolveRockUrl( "~/" ), ResolveRockUrl( "~~/" ), false );
 
                 // v7
-                //var emailMessage = new RockEmailMessage( GetAttributeValue( "ConfirmAccountTemplate" ).AsGuid() );
-                //emailMessage.AddRecipient( new RecipientData( person.Email, mergeObjects ) );
-                //emailMessage.AppRoot = ResolveRockUrl( "~/" );
-                //emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
-                //emailMessage.CreateCommunicationRecord = false;
-                //emailMessage.Send();
+                var emailMessage = new RockEmailMessage( GetAttributeValue( "ConfirmAccountTemplate" ).AsGuid() );
+                emailMessage.AddRecipient( new RecipientData( person.Email, mergeObjects ) );
+                emailMessage.AppRoot = ResolveRockUrl( "~/" );
+                emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
+                emailMessage.CreateCommunicationRecord = false;
+                emailMessage.Send();
 
                 ShowPanel( 4 );
             }
@@ -537,12 +537,12 @@ namespace RockWeb.Blocks.Security
         private void DisplaySuccess( Rock.Model.UserLogin user )
         {
             // v6
-            FormsAuthentication.SignOut();
-            Rock.Security.Authorization.SetAuthCookie( tbUserName.Text, false, false );
+            //FormsAuthentication.SignOut();
+            //Rock.Security.Authorization.SetAuthCookie( tbUserName.Text, false, false );
 
             // v7
-            //Authorization.SignOut();
-            //Authorization.SetAuthCookie( tbUserName.Text, false, false );
+            Authorization.SignOut();
+            Authorization.SetAuthCookie( tbUserName.Text, false, false );
 
             if ( user != null && user.PersonId.HasValue )
             {
@@ -565,18 +565,18 @@ namespace RockWeb.Blocks.Security
                         mergeObjects.Add( "User", user );
 
                         // v6
-                        var recipients = new List<RecipientData>();
-                        recipients.Add( new RecipientData( person.Email, mergeObjects ) );
+                        //var recipients = new List<RecipientData>();
+                        //recipients.Add( new RecipientData( person.Email, mergeObjects ) );
 
-                        Email.Send( GetAttributeValue( "AccountCreatedTemplate" ).AsGuid(), recipients, ResolveRockUrl( "~/" ), ResolveRockUrl( "~~/" ), false );
+                        //Email.Send( GetAttributeValue( "AccountCreatedTemplate" ).AsGuid(), recipients, ResolveRockUrl( "~/" ), ResolveRockUrl( "~~/" ), false );
 
                         // v7
-                        //var emailMessage = new RockEmailMessage( GetAttributeValue( "AccountCreatedTemplate" ).AsGuid() );
-                        //emailMessage.AddRecipient( new RecipientData( person.Email, mergeObjects ) );
-                        //emailMessage.AppRoot = ResolveRockUrl( "~/" );
-                        //emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
-                        //emailMessage.CreateCommunicationRecord = false;
-                        //emailMessage.Send();
+                        var emailMessage = new RockEmailMessage( GetAttributeValue( "AccountCreatedTemplate" ).AsGuid() );
+                        emailMessage.AddRecipient( new RecipientData( person.Email, mergeObjects ) );
+                        emailMessage.AppRoot = ResolveRockUrl( "~/" );
+                        emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
+                        emailMessage.CreateCommunicationRecord = false;
+                        emailMessage.Send();
                     }
                     catch ( SystemException ex )
                     {
