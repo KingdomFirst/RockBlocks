@@ -28,14 +28,15 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Blocks.Cms
+namespace RockWeb.Plugins.com_kfs.Cms
 {
     /// <summary>
-    /// The main Person Profile block the main information about a peron
+    /// The main Person Profile block the main information about a peron 
     /// </summary>
-    [DisplayName( "Public Profile Edit" )]
+    [DisplayName( "Public Profile Edit KFS" )]
     [Category( "CMS" )]
     [Description( "Public block for users to manage their accounts" )]
+
     [BooleanField( "Show Family Members", "Whether family members are shown or not.", true, order: 0 )]
     [GroupLocationTypeField( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Address Type",
         "The type of address to be displayed / edited.", false, Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME, "", order: 3 )]
@@ -45,8 +46,12 @@ namespace RockWeb.Blocks.Cms
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "GroupTypeId", Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Family Attributes", "The family attributes that should be displayed / edited.", false, true, order: 7 )]
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (adults)", "The person attributes that should be displayed / edited for adults.", false, true, order: 8 )]
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attributes (children)", "The person attributes that should be displayed / edited for children.", false, true, order: 9 )]
+    [BooleanField( "Impersonation", "Allow (only use on an internal page used by staff)", "Don't Allow", "Should the current user be able to view and edit other people's transactions?  IMPORTANT: This should only be enabled on an internal page that is secured to trusted users", false, "", 10 )]
+
     public partial class PublicProfileEdit : RockBlock
     {
+        Person _person = null;
+
         #region Base Control Methods
 
         /// <summary>
@@ -54,7 +59,7 @@ namespace RockWeb.Blocks.Cms
         /// </summary>
         /// <param name="e">An <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnInit( EventArgs e )
-        {
+        {        
             base.OnInit( e );
             ScriptManager.RegisterStartupScript( ddlGradePicker, ddlGradePicker.GetType(), "grade-selection-" + BlockId.ToString(), ddlGradePicker.GetJavascriptForYearPicker( ypGraduation ), true );
             ddlTitle.BindToDefinedType( DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ), true );
@@ -63,6 +68,21 @@ namespace RockWeb.Blocks.Cms
             RockPage.AddCSSLink( ResolveRockUrl( "~/Styles/fluidbox.css" ) );
             RockPage.AddScriptLink( ResolveRockUrl( "~/Scripts/imagesloaded.min.js" ) );
             RockPage.AddScriptLink( ResolveRockUrl( "~/Scripts/jquery.fluidbox.min.js" ) );
+            // If impersonation is allowed, and a valid person key was used, set the target to that person
+            if ( GetAttributeValue( "Impersonation" ).AsBooleanOrNull() ?? false )
+            {
+                string personKey = PageParameter( "Person" );
+                if ( !string.IsNullOrWhiteSpace( personKey ) )
+                {
+                    var rockContext = new RockContext();
+                    _person = new PersonService( rockContext ).GetByUrlEncodedKey( personKey );
+                }
+            }
+
+            if ( _person == null )
+            {
+                _person = CurrentPerson;
+            }
         }
 
         /// <summary>
@@ -72,7 +92,7 @@ namespace RockWeb.Blocks.Cms
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
-            if ( CurrentPerson != null )
+            if ( _person != null )
             {
                 if ( !Page.IsPostBack )
                 {
@@ -101,7 +121,7 @@ namespace RockWeb.Blocks.Cms
                         }
 
                         // Family Attributes
-                        if ( person.Id == CurrentPerson.Id )
+                        if ( person.Id == _person.Id )
                         {
                             List<Guid> familyAttributeGuidList = GetAttributeValue( "FamilyAttributes" ).SplitDelimitedValues().AsGuidList();
                             if ( familyAttributeGuidList.Any() )
@@ -127,7 +147,7 @@ namespace RockWeb.Blocks.Cms
 
         private void BindFamilies()
         {
-            ddlGroup.DataSource = CurrentPerson.GetFamilies().ToList();
+            ddlGroup.DataSource = _person.GetFamilies().ToList();
             ddlGroup.DataBind();
             ShowDetail();
         }
@@ -145,7 +165,7 @@ namespace RockWeb.Blocks.Cms
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void lbEditPerson_Click( object sender, EventArgs e )
         {
-            ShowEditPersonDetails( CurrentPerson.Id );
+            ShowEditPersonDetails( _person.Id );
         }
 
         /// <summary>
@@ -559,7 +579,7 @@ namespace RockWeb.Blocks.Cms
                             var newEmailPreference = rblEmailPreference.SelectedValue.ConvertToEnum<EmailPreference>();
                             History.EvaluateChange( changes, "Email Preference", person.EmailPreference, newEmailPreference );
                             person.EmailPreference = newEmailPreference;
-
+                            
                             var familyGroupCampus = group.Campus != null ? group.Campus.Name : string.Empty;
                             History.EvaluateChange( changes, "Family Campus", familyGroupCampus, cpFamilyCampus.SelectedItem.Text );
                             group.CampusId = cpFamilyCampus.SelectedCampusId;
@@ -710,7 +730,7 @@ namespace RockWeb.Blocks.Cms
                         }
                     } );
 
-                    NavigateToCurrentPage();
+                    NavigateToCurrentPage( this.PageParameters().Where( a => a.Value is string ).ToDictionary( k => k.Key, v => v.Value.ToString() ) );
                 }
             }
         }
@@ -788,15 +808,15 @@ namespace RockWeb.Blocks.Cms
             var groupMemberService = new GroupMemberService( rockContext );
             var attributeValueService = new AttributeValueService( rockContext );
 
-            if ( CurrentPerson != null )
+            if ( _person != null )
             {
-                var personId = CurrentPerson.Id;
+                var personId = _person.Id;
 
                 // Setup Image
-                string imgTag = Rock.Model.Person.GetPersonPhotoImageTag( CurrentPerson, 200, 200 );
-                if ( CurrentPerson.PhotoId.HasValue )
+                string imgTag = Rock.Model.Person.GetPersonPhotoImageTag( _person, 200, 200 );
+                if ( _person.PhotoId.HasValue )
                 {
-                    lImage.Text = string.Format( "<a href='{0}'>{1}</a>", CurrentPerson.PhotoUrl, imgTag );
+                    lImage.Text = string.Format( "<a href='{0}'>{1}</a>", _person.PhotoUrl, imgTag );
                 }
                 else
                 {
@@ -804,44 +824,44 @@ namespace RockWeb.Blocks.Cms
                 }
 
                 // Person Info
-                lName.Text = CurrentPerson.FullName;
-                if ( CurrentPerson.BirthDate.HasValue )
+                lName.Text = _person.FullName;
+                if ( _person.BirthDate.HasValue )
                 {
-                    lAge.Text = string.Format( "{0}<small>({1})</small><br/>", CurrentPerson.FormatAge(), CurrentPerson.BirthYear != DateTime.MinValue.Year ? CurrentPerson.BirthDate.Value.ToShortDateString() : CurrentPerson.BirthDate.Value.ToMonthDayString() );
+                    lAge.Text = string.Format( "{0}<small>({1})</small><br/>", _person.FormatAge(), _person.BirthYear != DateTime.MinValue.Year ? _person.BirthDate.Value.ToShortDateString() : _person.BirthDate.Value.ToMonthDayString() );
                 }
 
-                lGender.Text = CurrentPerson.Gender != Gender.Unknown ? CurrentPerson.Gender.ToString() : string.Empty;
-                lGrade.Text = CurrentPerson.GradeFormatted;
-                lMaritalStatus.Text = CurrentPerson.MaritalStatusValueId.DefinedValue();
-                if ( CurrentPerson.AnniversaryDate.HasValue )
+                lGender.Text = _person.Gender != Gender.Unknown ? _person.Gender.ToString() : string.Empty;
+                lGrade.Text = _person.GradeFormatted;
+                lMaritalStatus.Text = _person.MaritalStatusValueId.DefinedValue();
+                if ( _person.AnniversaryDate.HasValue )
                 {
-                    lMaritalStatus.Text += string.Format( " {0} yrs <small>({1})</small>", CurrentPerson.AnniversaryDate.Value.Age(), CurrentPerson.AnniversaryDate.Value.ToMonthDayString() );
+                    lMaritalStatus.Text += string.Format( " {0} yrs <small>({1})</small>", _person.AnniversaryDate.Value.Age(), _person.AnniversaryDate.Value.ToMonthDayString() );
                 }
 
-                if ( CurrentPerson.GetFamilies().Count() > 1 )
+                if ( _person.GetFamilies().Count() > 1 )
                 {
                     ddlGroup.Visible = true;
                 }
 
                 // Contact Info
-                if ( CurrentPerson.PhoneNumbers != null )
+                if ( _person.PhoneNumbers != null )
                 {
                     var selectedPhoneTypeGuids = GetAttributeValue( "PhoneNumbers" ).Split( ',' ).AsGuidList();
-                    rptPhones.DataSource = CurrentPerson.PhoneNumbers.Where( pn => selectedPhoneTypeGuids.Contains( pn.NumberTypeValue.Guid ) ).ToList();
+                    rptPhones.DataSource = _person.PhoneNumbers.Where( pn => selectedPhoneTypeGuids.Contains( pn.NumberTypeValue.Guid ) ).ToList();
                     rptPhones.DataBind();
                 }
 
-                lEmail.Text = CurrentPerson.Email;
+                lEmail.Text = _person.Email;
 
                 // Person Attributes
                 List<Guid> attributeGuidList = GetPersonAttributeGuids( personId );
-                CurrentPerson.LoadAttributes();
-                rptPersonAttributes.DataSource = CurrentPerson.Attributes.Where( a =>
+                _person.LoadAttributes();
+                rptPersonAttributes.DataSource = _person.Attributes.Where( a =>
                      attributeGuidList.Contains( a.Value.Guid ) )
                     .Select( a => new
                     {
                         Name = a.Value.Name,
-                        Value = a.Value.FieldType.Field.FormatValue( null, CurrentPerson.GetAttributeValue( a.Key ), a.Value.QualifierValues, a.Value.FieldType.Class == typeof( Rock.Field.Types.ImageFieldType ).FullName )
+                        Value = a.Value.FieldType.Field.FormatValue( null, _person.GetAttributeValue( a.Key ), a.Value.QualifierValues, a.Value.FieldType.Class == typeof( Rock.Field.Types.ImageFieldType ).FullName )
                     } )
                     .OrderBy( av => av.Name )
                     .ToList()
@@ -874,7 +894,7 @@ namespace RockWeb.Blocks.Cms
                                     var address = new GroupLocationService( rockContext ).Queryable()
                                                         .Where( l => l.Group.GroupTypeId == familyGroupType.Id
                                                              && l.GroupLocationTypeValueId == addressTypeDv.Id
-                                                             && l.Group.Members.Any( m => m.PersonId == CurrentPerson.Id )
+                                                             && l.Group.Members.Any( m => m.PersonId == _person.Id )
                                                              && l.Group.Id == group.Id )
                                                         .Select( l => l.Location )
                                                         .FirstOrDefault();
@@ -906,7 +926,7 @@ namespace RockWeb.Blocks.Cms
                             }
 
                             rptGroupMembers.DataSource = group.Members.Where( gm =>
-                                gm.PersonId != CurrentPerson.Id &&
+                                gm.PersonId != _person.Id &&
                                 gm.Person.IsDeceased == false )
                                 .OrderBy( m => m.GroupRole.Order )
                                 .ToList();
@@ -1016,7 +1036,7 @@ namespace RockWeb.Blocks.Cms
                             }
 
                             // Family Attributes
-                            if ( person.Id == CurrentPerson.Id )
+                            if ( person.Id == _person.Id )
                             {
                                 List<Guid> familyAttributeGuidList = GetAttributeValue( "FamilyAttributes" ).SplitDelimitedValues().AsGuidList();
                                 if ( familyAttributeGuidList.Any() )
@@ -1182,7 +1202,7 @@ namespace RockWeb.Blocks.Cms
             string n = number as string ?? string.Empty;
             return PhoneNumber.FormattedNumber( cc, n );
         }
-
+        
         #endregion
     }
 }

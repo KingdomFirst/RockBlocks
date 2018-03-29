@@ -1,8 +1,8 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupDetail.ascx.cs" Inherits="RockWeb.Blocks.Groups.GroupDetail" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.GroupDetail" %>
 
 <script type="text/javascript">
     function clearActiveDialog() {
-        $('#<%=hfActiveDialog.ClientID %>').val('');
+        $('#<%= hfActiveDialog.ClientID %>').val('');
     }
 
     Sys.Application.add_load( function () {
@@ -217,7 +217,7 @@
                             </div>
                         </Rock:PanelWidget>
 
-                        <asp:Panel runat="server" ID="pnlActions" CssClass="actions">
+                        <asp:Panel ID="pnlActions" runat="server" class="actions">
                             <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
                             <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
                         </asp:Panel>
