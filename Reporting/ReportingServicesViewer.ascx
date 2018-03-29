@@ -3,14 +3,17 @@
 <style>
     .fill {
         height: 800px;
-        min-height: 800px;
+        min-height: 600px;
         background-color: #ffffff;
         display: inline-block;
         border: 1px solid #000;
         padding: 2px;
     }
+    .WaitControlBackground {
+        display: none !important;
+    }
 </style>
-<asp:UpdatePanel ID="upReportViewer" runat="server" UpdateMode="Conditional">
+<asp:UpdatePanel ID="upReportViewer" runat="server" UpdateMode="Conditional" >
     <ContentTemplate>
         <div class="panel panel-block">
             <div class="panel-heading">

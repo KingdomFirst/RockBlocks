@@ -2,12 +2,14 @@
 
 <asp:UpdatePanel ID="upnlSubGroup" runat="server">
     <ContentTemplate>
+
         <Rock:HiddenFieldWithClass ID="hfGroupId" runat="server" CssClass="panel-widget-groupid" />
         <Rock:PanelWidget ID="pnlSubGroup" runat="server">
+            
             <asp:Panel ID="pnlGroupDescription" runat="server" CssClass="alert alert-info" >
                 <asp:Label ID="lblGroupDescription" runat="server"></asp:Label>
             </asp:Panel>
-            <Rock:Grid ID="gGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" CssClass="js-grid-group-members" >
+            <Rock:Grid ID="gGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
                 <Columns>
                     <Rock:SelectField></Rock:SelectField>
                     <Rock:RockBoundField DataField="Person.FullName" HeaderText="Name" SortExpression="Person.LastName,Person.NickName" HtmlEncode="false" />
@@ -19,6 +21,7 @@
                 <asp:LinkButton ID="lbGroupEdit" runat="server" AccessKey="m" Text="Edit" CommandName="EditSubGroup" CssClass="btn btn-primary" />
                 <asp:LinkButton ID="lbGroupDelete" runat="server" Text="Delete" CommandName="DeleteSubGroup" CssClass="btn btn-link js-delete-subGroup" CausesValidation="false" />
             </div>
+            
         </Rock:PanelWidget>
     </ContentTemplate>
 </asp:UpdatePanel>

@@ -1,5 +1,7 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="RegistrationInstanceDetail.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Event.KFSRegistrationInstanceDetail" %>
-<%@ Reference Control="~/Plugins/com_kfs/Event/GroupPanel.ascx" %>
+<%@ Register TagPrefix="KFS" Namespace="com.kfs.EventRegistration.Advanced" Assembly="com.kfs.EventRegistration.Advanced" %>
+<%@ Register TagPrefix="KFS" TagName="KFSGroupPanel" Src="~/Plugins/com_kfs/Event/GroupPanel.ascx" %>
+
 <script type="text/javascript">
     Sys.Application.add_load(function () {
         $('.js-follow-status').tooltip();
@@ -7,7 +9,7 @@
 </script>
 
 <style>
-    .checkin-item {
+    .resource-item {
         padding: 12px;
         border: 1px solid #d8d1c8;
         cursor: pointer;
@@ -15,41 +17,30 @@
         border-top-width: 3px;
     }
 
-    .checkin-item-selected {
+    .resource-item-selected {
         background-color: #d8d1c8;
     }
 
-    .checkin-list {
+    .resource-list {
         list-style-type: none;
         padding-left: 40px;
     }
 
-    .checkin-list-first {
+    .resource-list-first {
         padding-left: 0;
     }
 
-    .checkin-item .fa-bars {
+    .resource-item .fa-bars {
         opacity: .5;
         margin-right: 6px;
     }
 
-    .checkin-group {
+    .resource-group {
         border-top-color: #afd074;
     }
 
-    .checkin-area {
+    .resource-area {
         border-top-color: #5593a4;
-    }
-
-    .checkin-area .checkin-area-add-area,
-    .checkin-area .btn-danger,
-    .js-area-group-details h3,
-    label[for$='ddlPrintTo'],
-    select[id$='ddlPrintTo'],
-    label[for$='ddlAttendanceRule'],
-    select[id$='ddlAttendanceRule']
-    {
-        display: none;
     }
 </style>
 
@@ -124,24 +115,23 @@
 
                         <div id="pnlSubGroups" runat="server" class="form-group">
                             <label class="control-label" for="pnlAssociatedGroupTypes">Registration Resources</label>
-                            <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well">
+                            <asp:Panel ID="pnlAssociatedGroupTypes" runat="server" CssClass="well js-panel-details">
                                 <div class="row">
                                     <asp:HiddenField runat="server" ID="hfAreaGroupClicked" />
                                     <Rock:NotificationBox ID="nbDeleteWarning" runat="server" NotificationBoxType="Warning" />
 
                                     <div class="col-md-6">
-                                        <ul class="checkin-list checkin-list-first js-checkin-area-list">
+                                        <ul class="resource-list resource-list-first js-resource-area-list">
                                             <asp:PlaceHolder ID="phRows" runat="server" />
                                         </ul>
                                     </div>
                                     <div class="col-md-6 js-area-group-details">
-
-                                        <asp:HiddenField ID="hfIsDirty" runat="server" Value="false" />
-                                        <Rock:CheckinArea ID="resourceAreaPanel" runat="server" Visible="false" />
-                                        <Rock:CheckinGroup ID="resourceGroupPanel" runat="server" Visible="false" />
+                                        <KFS:ResourceArea ID="resourceAreaPanel" runat="server" Visible="false" EnableCheckinOptions="false" />
+                                        <KFS:ResourceGroup ID="resourceGroupPanel" runat="server" Visible="false" EnableAddLocations="false" />
 
                                         <div class="actions">
                                             <asp:LinkButton ID="btnResourceSave" runat="server" AccessKey="s" Text="Save" CssClass="btn btn-primary" OnClick="btnResourceSave_Click" Visible="false" />
+                                            <asp:LinkButton ID="btnResourceDelete" runat="server" Text="Delete" CssClass="btn btn-link" OnClick="btnResourceDelete_Click" Visible="false" />
                                         </div>
 
                                         <div class="margin-t-md">
@@ -455,7 +445,7 @@
                         </asp:Panel>
                     </ItemTemplate>
                 </asp:Repeater>
-                
+
                 <div hidden>
                     <asp:LinkButton ID="btnMultipleRegistrations" runat="server" Text="Postback" />
                 </div>
@@ -464,18 +454,24 @@
                     <Content>
                         <asp:HiddenField ID="hfSubGroupId" runat="server" />
                         <asp:HiddenField ID="hfSubGroupMemberId" runat="server" />
+                        <asp:HiddenField ID="hfRegistrationGroupGuid" runat="server" />
                         <Rock:NotificationBox ID="nbErrorMessage" runat="server" NotificationBoxType="Danger" />
                         <asp:ValidationSummary ID="vsSubGroupMember" runat="server" ValidationGroup="vgAddGroupMember" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
                         <fieldset>
                             <div class="col-md-6">
                                 <Rock:RockDropDownList ID="ddlRegistrantList" runat="server" Label="Registrant" Required="true" ValidationGroup="vgAddGroupMember" />
-                                <%--<Rock:PersonPicker ID="ppSubGroupMember" runat="server" Label="Registrant" Visible="false" ValidationGroup="vgAddGroupMember" />--%>
+                                <Rock:PersonPicker ID="ppSubGroupMember" runat="server" Label="Volunteer" Visible="false" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMember" />
                             </div>
                             <div class="col-md-6">
                                 <Rock:RockDropDownList ID="ddlSubGroup" runat="server" ValidationGroup="vgAddGroupMember" Visible="false" />
                                 <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMember" />
+                                <Rock:RockRadioButtonList ID="rblMoveRegistrants" runat="server" Label="Move Other Registrants" Help="Should registrants led by this person be moved as well?"
+                                    RepeatDirection="Horizontal" ValidationGroup="vgAddGroupMember" Required="true">
+                                    <asp:ListItem Value="Y" Text="Yes"></asp:ListItem>
+                                    <asp:ListItem Value="N" Text="No" Selected="True"></asp:ListItem>
+                                </Rock:RockRadioButtonList>
                             </div>
                             <div class="col-md-12">
                                 <asp:PlaceHolder ID="phAttributes" runat="server" EnableViewState="false"></asp:PlaceHolder>
@@ -507,7 +503,7 @@
 
             $('html, body').animate({
                 scrollTop: $(scrollToPanel).offset().top + 'px'
-                }, 400
+            }, 400
             );
         }
     }
@@ -523,11 +519,13 @@
             return ui;
         };
 
-        $('section.checkin-item').click(function () {
+        $('section.resource-item').click(function () {
             var $li = $(this).closest('li');
-            if ($(this).hasClass('checkin-area')) {
+            if ($(this).hasClass('resource-area')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-area:' + $li.attr('data-key'));
-            } 
+            } else if ($(this).hasClass('resource-item')) {
+                __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
+            }
         });
     });
 </script>

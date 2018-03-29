@@ -8,9 +8,9 @@
 </head>
 <body>
     <form id="form1" runat="server">
-    <div>
-    <asp:Literal ID="litPlaceholder" runat="server"></asp:Literal>
-    </div>
+        <div>
+            <asp:Literal ID="litPlaceholder" runat="server"></asp:Literal>
+        </div>
     </form>
 </body>
 </html>
