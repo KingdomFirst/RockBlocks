@@ -95,7 +95,7 @@
                             <asp:ListItem Text="Female" Value="F"></asp:ListItem>
                         </Rock:RockDropDownList>
                         <Rock:BirthdayPicker ID="bdaypBirthDay" runat="server" Label="Birthday" />
-                        <Rock:CampusPicker ID="cpFamilyCampus" runat="server" Label="Family Campus" />
+                        <Rock:CampusPicker ID="cpFamilyCampus" runat="server" Label="Family Campus" IncludeInactive="false" />
                     </fieldset>
 
                     <asp:Panel ID="pnlPhoneNumbers" runat="server">
