@@ -83,7 +83,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 {
                     _selectedGroupId = GetBlockUserPreference( "GroupId" ).AsIntegerOrNull();
                 }
-                else 
+                else
                 {
                     pnlMetrics.Visible = false;
                     pnlError.Visible = true;
@@ -150,6 +150,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         protected void btnSave_Click( object sender, EventArgs e )
         {
             int groupEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Group ) ).Id;
+            int campusEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Campus ) ).Id;
 
             int? groupId = gpSelectGroup.SelectedValueAsInt();
             DateTime? dateVal = dpMetricValueDateTime.SelectedDate;
@@ -160,6 +161,9 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 {
                     var metricService = new MetricService( rockContext );
                     var metricValueService = new MetricValueService( rockContext );
+
+                    var group = new GroupService( rockContext ).Queryable().FirstOrDefault( g => g.Id == groupId );
+                    int? campusId = group.CampusId;
 
                     foreach ( RepeaterItem item in rptrMetric.Items )
                     {
@@ -174,6 +178,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                             if ( metric != null )
                             {
                                 int groupPartitionId = metric.MetricPartitions.Where( p => p.EntityTypeId.HasValue && p.EntityTypeId.Value == groupEntityTypeId ).Select( p => p.Id ).FirstOrDefault();
+                                int campusPartitionId = metric.MetricPartitions.Where( p => p.EntityTypeId.HasValue && p.EntityTypeId.Value == campusEntityTypeId ).Select( p => p.Id ).FirstOrDefault();
 
                                 var metricValue = metricValueService
                                     .Queryable()
@@ -181,12 +186,17 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                         v.MetricId == metric.Id &&
                                         v.MetricValueDateTime.HasValue && v.MetricValueDateTime.Value == dateVal.Value &&
                                             (
+                                                (
+                                                    v.MetricValuePartitions.Count == 2 &&
+                                                    v.MetricValuePartitions.Any( p => p.MetricPartitionId == campusPartitionId && p.EntityId.HasValue && p.EntityId.Value == campusId.Value ) &&
+                                                    v.MetricValuePartitions.Any( p => p.MetricPartitionId == groupPartitionId && p.EntityId.HasValue && p.EntityId.Value == groupId.Value )
+                                                ) ||
                                                (
                                                     v.MetricValuePartitions.Count == 1 &&
                                                     (
                                                         v.MetricValuePartitions.Any( p => p.MetricPartitionId == groupPartitionId && p.EntityId.HasValue && p.EntityId.Value == groupId.Value )
                                                     )
-                                                ) 
+                                                )
                                             )
                                         )
                                     .FirstOrDefault();
@@ -205,6 +215,13 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                         groupValuePartition.MetricPartitionId = groupPartitionId;
                                         groupValuePartition.EntityId = groupId.Value;
                                         metricValue.MetricValuePartitions.Add( groupValuePartition );
+                                    }
+                                    if ( campusPartitionId > 0 && campusId.HasValue )
+                                    {
+                                        var campusValuePartition = new MetricValuePartition();
+                                        campusValuePartition.MetricPartitionId = campusPartitionId;
+                                        campusValuePartition.EntityId = campusId.Value;
+                                        metricValue.MetricValuePartitions.Add( campusValuePartition );
                                     }
 
                                 }
@@ -247,6 +264,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             var groupMetricValues = new List<GroupMetric>();
 
             int groupEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Group ) ).Id;
+            int campusEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Campus ) ).Id;
 
             int? groupId = gpSelectGroup.SelectedValueAsInt();
             DateTime? weekend = dpMetricValueDateTime.SelectedDate;
@@ -262,6 +280,8 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 var metricGuids = metricCategories.Select( a => a.MetricGuid ).ToList();
                 using ( var rockContext = new RockContext() )
                 {
+                    var group = new GroupService( rockContext ).Queryable().FirstOrDefault( g => g.Id == groupId );
+                    int? campusId = group.CampusId;
                     var metricValueService = new MetricValueService( rockContext );
                     foreach ( var metric in new MetricService( rockContext )
                         .GetByGuids( metricGuids )
@@ -270,9 +290,11 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                         {
                             m.Id,
                             m.Title,
-                            GroupPartitionId = m.MetricPartitions.Where( p => p.EntityTypeId.HasValue && p.EntityTypeId.Value == groupEntityTypeId ).Select( p => p.Id ).FirstOrDefault()
+                            GroupPartitionId = m.MetricPartitions.Where( p => p.EntityTypeId.HasValue && p.EntityTypeId.Value == groupEntityTypeId ).Select( p => p.Id ).FirstOrDefault(),
+                            CampusPartitionId = m.MetricPartitions.Where( p => p.EntityTypeId.HasValue && p.EntityTypeId.Value == campusEntityTypeId ).Select( p => p.Id ).FirstOrDefault()
                         } ) )
                     {
+
                         var groupMetric = new GroupMetric( metric.Id, metric.Title );
 
                         if ( groupId.HasValue && weekend.HasValue )
@@ -283,6 +305,11 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                     v.MetricId == metric.Id &&
                                     v.MetricValueDateTime.HasValue && v.MetricValueDateTime.Value == weekend.Value &&
                                         (
+                                            (
+                                                v.MetricValuePartitions.Count == 2 &&
+                                                v.MetricValuePartitions.Any( p => p.MetricPartitionId == metric.CampusPartitionId && p.EntityId.HasValue && p.EntityId.Value == campusId.Value ) &&
+                                                v.MetricValuePartitions.Any( p => p.MetricPartitionId == metric.GroupPartitionId && p.EntityId.HasValue && p.EntityId.Value == groupId.Value )
+                                            ) ||
                                             (
                                                 v.MetricValuePartitions.Count == 1 &&
                                                     (
