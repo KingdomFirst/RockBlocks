@@ -487,7 +487,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
             // only show Contribution stuff if the current person is the participant and contribution requests haven't been disabled
             btnContributionsTab.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
-            
+            pnlContributions.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
+
             // Progress
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
 
@@ -591,7 +592,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             if ( !btnUpdatesTab.Visible )
             {
                 btnContributionsTab.Visible = false;
-                pnlContributions.Visible = true;
+                pnlContributions.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
             }
         }
 
