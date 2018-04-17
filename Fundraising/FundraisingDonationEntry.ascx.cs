@@ -109,7 +109,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         {
             var rockContext = new RockContext();
             Guid groupTypeFundraisingOpportunity = "4BE7FC44-332D-40A8-978E-47B7035D7A0C".AsGuid();
-            var fundraisingOpportunityList = new GroupService( rockContext ).Queryable().Where( a => a.GroupType.Guid == groupTypeFundraisingOpportunity && a.IsActive && a.Members.Any() ).OrderBy( a => a.Order ).ThenBy( a => a.Name ).ToList();
+            var fundraisingOpportunityList = new GroupService( rockContext ).Queryable().Where( a => ( a.GroupType.Guid == groupTypeFundraisingOpportunity || a.GroupType.InheritedGroupType.Guid == groupTypeFundraisingOpportunity ) && a.IsActive && a.Members.Any() ).OrderBy( a => a.Order ).ThenBy( a => a.Name ).ToList();
             ddlFundraisingOpportunity.Items.Clear();
             ddlFundraisingOpportunity.Items.Add( new ListItem() );
 
