@@ -482,11 +482,10 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 // remove any group requirements that removed in the UI
                 var selectedGroupRequirements = GroupRequirementsState.Select( a => a.Guid );
-                //// v7: group.GetGroupRequirements
-                //foreach ( var groupRequirement in group.GetGroupRequirements( rockContext ).Where( a => a.GroupId.HasValue ).Where( a => !selectedGroupRequirements.Contains( a.Guid ) ).ToList() )
-                //{
-                //    groupRequirementService.Delete( groupRequirement );
-                //}
+                foreach ( var groupRequirement in group.GetGroupRequirements( rockContext ).Where( a => a.GroupId.HasValue ).Where( a => !selectedGroupRequirements.Contains( a.Guid ) ).ToList() )
+                {
+                    groupRequirementService.Delete( groupRequirement );
+                }
 
                 // Remove any triggers that were removed in the UI
                 var selectedTriggerGuids = MemberWorkflowTriggersState.Select( r => r.Guid );
@@ -503,15 +502,14 @@ namespace RockWeb.Plugins.com_kfs.Event
             // add/update any group requirements that were added or changed in the UI (we already removed the ones that were removed above)
             foreach ( var groupRequirementState in GroupRequirementsState )
             {
-                //// v7: group.GetGroupRequirements
-                //GroupRequirement groupRequirement = group.GetGroupRequirements( rockContext ).Where( a => a.GroupId.HasValue ).Where( a => a.Guid == groupRequirementState.Guid ).FirstOrDefault();
-                //if ( groupRequirement == null )
-                //{
-                //    groupRequirement = new GroupRequirement();
-                //    groupRequirementsToInsert.Add( groupRequirement );
-                //}
+                GroupRequirement groupRequirement = group.GetGroupRequirements( rockContext ).Where( a => a.GroupId.HasValue ).Where( a => a.Guid == groupRequirementState.Guid ).FirstOrDefault();
+                if ( groupRequirement == null )
+                {
+                    groupRequirement = new GroupRequirement();
+                    groupRequirementsToInsert.Add( groupRequirement );
+                }
 
-                //groupRequirement.CopyPropertiesFrom( groupRequirementState );
+                groupRequirement.CopyPropertiesFrom( groupRequirementState );
             }
 
             // add/update any group locations that were added or changed in the UI (we already removed the ones that were removed above)
@@ -887,8 +885,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 newGroup.IsSystem = false;
                 newGroup.Name = group.Name + " - Copy";
 
-                // v7 authService.GetByGroup
-                //var auths = authService.GetByGroup( group.Id );
+                var auths = authService.GetByGroup( group.Id );
                 rockContext.WrapTransaction( () =>
                 {
                     groupService.Add( newGroup );
@@ -935,21 +932,21 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                     rockContext.SaveChanges();
 
-                    ////v7: authService
-                    //foreach ( var auth in auths )
-                    //{
-                    //    var newAuth = auth.Clone( false );
-                    //    newAuth.Id = 0;
-                    //    newAuth.Guid = Guid.NewGuid();
-                    //    newAuth.GroupId = newGroup.Id;
-                    //    newAuth.CreatedByPersonAlias = null;
-                    //    newAuth.CreatedByPersonAliasId = null;
-                    //    newAuth.CreatedDateTime = RockDateTime.Now;
-                    //    newAuth.ModifiedByPersonAlias = null;
-                    //    newAuth.ModifiedByPersonAliasId = null;
-                    //    newAuth.ModifiedDateTime = RockDateTime.Now;
-                    //    authService.Add( newAuth );
-                    //}
+
+                    foreach ( var auth in auths )
+                    {
+                        var newAuth = auth.Clone( false );
+                        newAuth.Id = 0;
+                        newAuth.Guid = Guid.NewGuid();
+                        newAuth.GroupId = newGroup.Id;
+                        newAuth.CreatedByPersonAlias = null;
+                        newAuth.CreatedByPersonAliasId = null;
+                        newAuth.CreatedDateTime = RockDateTime.Now;
+                        newAuth.ModifiedByPersonAlias = null;
+                        newAuth.ModifiedByPersonAliasId = null;
+                        newAuth.ModifiedDateTime = RockDateTime.Now;
+                        authService.Add( newAuth );
+                    }
 
                     rockContext.SaveChanges();
                     Rock.Security.Authorization.Flush();
@@ -1384,8 +1381,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             cpCampus.IncludeInactive = !GetAttributeValue( "PreventSelectingInactiveCampus" ).AsBoolean();
             cpCampus.SelectedCampusId = group.CampusId;
 
-            //// v7: group.GetGroupRequirements
-            //GroupRequirementsState = group.GetGroupRequirements( rockContext ).Where( a => a.GroupId.HasValue ).ToList();
+            GroupRequirementsState = group.GetGroupRequirements( rockContext ).Where( a => a.GroupId.HasValue ).ToList();
             GroupLocationsState = group.GroupLocations.ToList();
 
             var groupTypeCache = CurrentGroupTypeCache;
@@ -2214,8 +2210,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         if ( displayOtherTab )
                         {
                             locpGroupLocation.AllowedPickerModes = modes;
-                            //// v7: location.SetBestPickerModeForLocation
-                            //locpGroupLocation.SetBestPickerModeForLocation( null );
+                            locpGroupLocation.SetBestPickerModeForLocation( null );
                         }
 
                         ddlLocationType.DataSource = groupType.LocationTypeValues.ToList();
@@ -2226,9 +2221,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             if ( displayOtherTab )
                             {
-                                //// v7: location.SetBestPickerModeForLocation
-                                //locpGroupLocation.SetBestPickerModeForLocation( groupLocation.Location );
-
+                                locpGroupLocation.SetBestPickerModeForLocation( groupLocation.Location );
                                 locpGroupLocation.MapStyleValueGuid = GetAttributeValue( "MapStyle" ).AsGuid();
 
                                 if ( groupLocation.Location != null )
@@ -2446,8 +2439,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 ddlGroupRequirementType.SelectedValue = selectedGroupRequirement.GroupRequirementTypeId.ToString();
                 grpGroupRequirementGroupRole.GroupRoleId = selectedGroupRequirement.GroupRoleId;
-                //// v7: groupRequirement.MustMeetRequirementToAddMember;
-                //cbMembersMustMeetRequirementOnAdd.Checked = selectedGroupRequirement.MustMeetRequirementToAddMember;
+                cbMembersMustMeetRequirementOnAdd.Checked = selectedGroupRequirement.MustMeetRequirementToAddMember;
             }
             else
             {
@@ -2484,8 +2476,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             groupRequirement.GroupRequirementTypeId = ddlGroupRequirementType.SelectedValue.AsInteger();
             groupRequirement.GroupRequirementType = new GroupRequirementTypeService( rockContext ).Get( groupRequirement.GroupRequirementTypeId );
             groupRequirement.GroupRoleId = grpGroupRequirementGroupRole.GroupRoleId;
-            //// v7: MustMeetRequirementToAddMember
-            //groupRequirement.MustMeetRequirementToAddMember = cbMembersMustMeetRequirementOnAdd.Checked;
+            groupRequirement.MustMeetRequirementToAddMember = cbMembersMustMeetRequirementOnAdd.Checked;
             if ( groupRequirement.GroupRoleId.HasValue )
             {
                 groupRequirement.GroupRole = new GroupTypeRoleService( rockContext ).Get( groupRequirement.GroupRoleId.Value );
@@ -2703,8 +2694,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         private void BindGroupRequirementsGrid()
         {
             var rockContext = new RockContext();
-            //// v7: groupRequirement.GroupTypeId
-            var groupTypeGroupRequirements = new GroupRequirementService( rockContext ).Queryable();//.Where( a => a.GroupTypeId.HasValue && a.GroupTypeId == CurrentGroupTypeId ).ToList();
+            var groupTypeGroupRequirements = new GroupRequirementService( rockContext ).Queryable().Where( a => a.GroupTypeId.HasValue && a.GroupTypeId == CurrentGroupTypeId ).ToList();
             var groupGroupRequirements = GroupRequirementsState.ToList();
             rcwGroupTypeGroupRequirements.Visible = groupTypeGroupRequirements.Any();
             rcwGroupRequirements.Label = groupTypeGroupRequirements.Any() ? "Specific Group Requirements" : string.Empty;
