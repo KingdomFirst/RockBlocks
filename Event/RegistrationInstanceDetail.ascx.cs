@@ -2691,7 +2691,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 BuildResourcesInterface();
-                BuildRegistrationGroupHierarchy( rockContext, instance ); // not needed?
                 BuildCustomTabs();
 
                 // TODO: are all of these still necessary?
@@ -2702,6 +2701,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                 BindGroupPlacementsFilter( instance );
                 BindLinkagesFilter();
                 AddDynamicControls( true );
+
+                if ( instance != null && instance.Id > 0 )
+                {
+                    BuildRegistrationGroupHierarchy( rockContext, instance );
+                }
 
                 // do the ShowTab now since it may depend on DynamicControls and Filter Bindings
                 ShowTab();

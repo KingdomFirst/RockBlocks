@@ -7,15 +7,10 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using Newtonsoft.Json;
-using RestSharp.Extensions;
 using Rock;
-using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
 using Rock.Web.Cache;
-using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Event
@@ -30,14 +25,13 @@ namespace RockWeb.Plugins.com_kfs.Event
     [Description( "The Group Panel that displays for resource subgroups." )]
     public partial class GroupPanel : System.Web.UI.UserControl
     {
-
-        #region Private Variables 
+        #region Private Variables
 
         private bool _expanded = false;
         private Group _group;
         private List<GroupTypeCache> _resourceTypes;
         private Dictionary<string, AttributeValueCache> _resources;
-        
+
         #endregion
 
         #region Properties
@@ -78,7 +72,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         #region Events
 
-
         /// <summary>
         /// Occurs when [add button click].
         /// </summary>
@@ -107,7 +100,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         #endregion
 
         #region Internal Methods
-        
+
         /// <summary>
         /// Restores the view-state information from a previous user control request that was saved by the <see cref="M:System.Web.UI.UserControl.SaveViewState" /> method.
         /// </summary>
@@ -130,7 +123,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             ViewState["AvailableAttributes"] = AvailableAttributes;
             return base.SaveViewState();
         }
-        
+
         /// <summary>
         /// Builds the control.
         /// </summary>
@@ -154,9 +147,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 _resources = resources;
             }
 
-            // Set up group panel 
+            // Set up group panel
             SetGroupHeader( group );
-            
+
             //rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
             gGroupMembers.DataKeyNames = new string[] { "Id" };
             gGroupMembers.PersonIdField = "PersonId";
@@ -178,8 +171,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMembers.Actions.ShowAdd = true;
             gGroupMembers.IsDeleteEnabled = true;
 
-
-            // if group is being sync'ed remove ability to add/delete members 
+            // if group is being sync'ed remove ability to add/delete members
             if ( _group != null && _group.SyncDataViewId.HasValue )
             {
                 gGroupMembers.IsDeleteEnabled = false;
@@ -194,7 +186,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             BindAttributes();
             AddDynamicControls();
             BindGroupMembersGrid();
-        }  
+        }
 
         /// <summary>
         /// Builds the subgroup heading.
@@ -319,7 +311,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 gGroupMembers.Columns.Remove( column );
             }
 
-            // Add Family Campus 
+            // Add Family Campus
             var lFamilyCampus = new RockLiteralField
             {
                 ID = "lFamilyCampus",
@@ -329,15 +321,14 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             // Clear the filter controls
             //phAttributeFilters.Controls.Clear();
-            
-            
+
             // Set up group member attribute columns
             var rockContext = new RockContext();
             var attributeValueService = new AttributeValueService( rockContext );
             foreach ( var attribute in AvailableAttributes )
             {
                 // TODO: may not need BindAttributes() if AvailableAttributes only used here
-                
+
                 // add filter control for that attribute
                 //var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
                 //if ( control != null )
@@ -363,7 +354,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 //    var savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Key ) );
                 //    if ( !string.IsNullOrWhiteSpace( savedValue ) )
                 //    {
-
                 //        var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
                 //        attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
 
@@ -419,7 +409,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     gGroupMembers.Columns[1].FooterStyle.HorizontalAlign = HorizontalAlign.Left;
                 }
             }
-            
+
             // Add dynamic assignment columns for volunteer groups
             if ( _resources != null && _group.GroupType.GroupTypePurposeValue != null && _group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
             {
@@ -516,13 +506,13 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 //rFilter.Visible = true;
                 gGroupMembers.Visible = true;
-                
+
                 using ( var rockContext = new RockContext() )
                 {
                     // Start query for group members
                     var qry = new GroupMemberService( rockContext )
                         .Queryable( "Person,GroupRole", true ).AsNoTracking()
-                        .Where( m => 
+                        .Where( m =>
                             m.GroupId == _group.Id &&
                             m.Person != null );
 
@@ -638,13 +628,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                             .OrderBy( r => r.Person.LastName )
                             .ThenBy( r => r.Person.NickName );
                     }
-                    
+
                     // increase the timeout just in case. A complex filter on the grid might slow things down
                     rockContext.Database.CommandTimeout = 180;
 
                     // Set the grids LinqDataSource which will run query and set results for current page
                     gGroupMembers.SetLinqDataSource( orderedQry );
-                    
+
                     var homePhoneType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
                     var cellPhoneType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
 
@@ -668,7 +658,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 .ToList();
 
                             var groupMemberAttributesIds = AvailableAttributes.Select( a => a.Id ).Distinct().ToList();
-                            
+
                             // If there are any attributes that were selected to be displayed, we're going
                             // to try and read all attribute values in one query and then put them into a
                             // custom grid ObjectList property so that the AttributeField columns don't need
@@ -723,7 +713,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
                         }
                     }
-                    
+
                     gGroupMembers.DataBind();
                 }
             }
@@ -745,7 +735,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="GetRecipientMergeFieldsEventArgs"/> instance containing the event data.</param>
-        void gGroupMembers_GetRecipientMergeFields( object sender, GetRecipientMergeFieldsEventArgs e )
+        private void gGroupMembers_GetRecipientMergeFields( object sender, GetRecipientMergeFieldsEventArgs e )
         {
             dynamic groupMember = e.DataItem;
             if ( groupMember != null )
@@ -761,24 +751,30 @@ namespace RockWeb.Plugins.com_kfs.Event
         private void BindAttributes()
         {
             // TODO: make sure this doesn't fire unnecessarily
-            // Parse the attribute filters 
+            // Parse the attribute filters
             AvailableAttributes = new List<AttributeCache>();
             if ( _group != null )
             {
-                var entityTypeId = new GroupMember().TypeId;
-                var groupQualifier = _group.Id.ToString();
-                var groupTypeQualifier = _group.GroupTypeId.ToString();
-                foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
+                var rockContext = new RockContext();
+                int entityTypeId = new GroupMember().TypeId;
+                string groupQualifier = _group.Id.ToString();
+                string groupTypeQualifier = _group.GroupTypeId.ToString();
+                foreach ( var attributeModel in new AttributeService( rockContext ).Queryable()
                     .Where( a =>
                         a.EntityTypeId == entityTypeId &&
                         a.IsGridColumn &&
-                        ( ( a.EntityTypeQualifierColumn.Equals( "GroupId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupQualifier ) ) ||
-                         ( a.EntityTypeQualifierColumn.Equals( "GroupTypeId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupTypeQualifier ) ) ) )
+                        ( ( a.EntityTypeQualifierColumn.Equals( "GroupId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupQualifier ) ) ) )
                     .OrderByDescending( a => a.EntityTypeQualifierColumn )
                     .ThenBy( a => a.Order )
                     .ThenBy( a => a.Name ) )
                 {
                     AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                }
+
+                var inheritedAttributes = ( new GroupMember { GroupId = _group.Id } ).GetInheritedAttributes( rockContext );
+                if ( inheritedAttributes.Count > 0 )
+                {
+                    AvailableAttributes.AddRange( inheritedAttributes );
                 }
             }
         }
@@ -995,7 +991,5 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         #endregion
-
-        
     }
 }
