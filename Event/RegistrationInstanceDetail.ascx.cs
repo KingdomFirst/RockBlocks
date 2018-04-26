@@ -2701,12 +2701,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 BindGroupPlacementsFilter( instance );
                 BindLinkagesFilter();
                 AddDynamicControls( true );
-
-                if ( instance != null && instance.Id > 0 )
-                {
-                    BuildRegistrationGroupHierarchy( rockContext, instance );
-                }
-
+                
                 // do the ShowTab now since it may depend on DynamicControls and Filter Bindings
                 ShowTab();
             }
@@ -6548,14 +6543,14 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 // save the current category as an attribute on the registration
                 var currentCategory = instance.RegistrationTemplate.Category;
+                var parentName = currentCategory.ParentCategory != null ? currentCategory.ParentCategory.Name : string.Empty;
                 var attributeKey = instance.RegistrationTemplate.Category.GetType().GetFriendlyTypeName();
-                var childCategoryGroup = BuildRegistrationGroup( rockContext, instance, attributeKey, templateGroupType.Id, parentGroupId, currentCategory.Name );
+                var childCategoryGroup = BuildRegistrationGroup( rockContext, instance, attributeKey, templateGroupType.Id, null, currentCategory.Name, parentName );
                 parentGroupId = childCategoryGroup.Id;
 
                 // walk up the category tree to create group placeholders
                 while ( currentCategory != null )
                 {
-                    currentCategory = categoryService.Get( currentCategory.Guid );
                     var parentCategoryGroup = groupService.GetByGroupTypeId( templateGroupType.Id ).FirstOrDefault( g => g.Name.Equals( currentCategory.Name ) );
                     if ( parentCategoryGroup == null )
                     {
@@ -6606,8 +6601,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                             {
                                 resourceGroupUI.ParentGroupId = parentGroupId;
                                 instance.AttributeValues[groupType.Name].Value = resourceGroupUI.Guid.ToString();
-
-                                //var resourceGroup = BuildRegistrationGroup( rockContext, instance, groupType.Name, groupType.Id, parentGroupId, resourceGroupUI.Name );
                             }
                             else
                             {
@@ -7708,8 +7701,9 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="groupTypeId">The group type identifier.</param>
         /// <param name="parentGroupId">The parent group identifier.</param>
         /// <param name="groupName">Name of the group.</param>
+        /// <param name="parentGroupName">Name of the parent group.</param>
         /// <returns></returns>
-        private Group BuildRegistrationGroup( RockContext rockContext, RegistrationInstance instance, string attributeKey, int groupTypeId, int? parentGroupId, string groupName = "" )
+        private Group BuildRegistrationGroup( RockContext rockContext, RegistrationInstance instance, string attributeKey, int groupTypeId, int? parentGroupId, string groupName, string parentGroupName = "" )
         {
             Group registrationGroup = null;
             if ( !string.IsNullOrWhiteSpace( attributeKey ) )
@@ -7741,7 +7735,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( registrationGroup == null )
                 {
                     // look for the group by name and parent instead
-                    registrationGroup = groupService.GetByGroupTypeId( groupTypeId ).FirstOrDefault( g => g.ParentGroupId == parentGroupId && g.Name.Equals( groupName ) );
+                    registrationGroup = groupService.GetByGroupTypeId( groupTypeId ).FirstOrDefault( g => g.Name.Equals( groupName ) && ( g.ParentGroupId == null || g.ParentGroupId == parentGroupId || g.ParentGroup.Name.Equals( parentGroupName )  ) );
                     if ( registrationGroup == null )
                     {
                         registrationGroup = CreateGroup( rockContext, groupTypeId, parentGroupId, groupName );
@@ -7753,7 +7747,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     // verify the group structure
                     registrationGroup.Name = groupName;
-                    registrationGroup.ParentGroupId = parentGroupId;
+                    registrationGroup.ParentGroupId = parentGroupId ?? registrationGroup.ParentGroupId;
                     instance.AttributeValues[attributeKey].Value = registrationGroup.Guid.ToString();
                     instance.SaveAttributeValues();
                 }
