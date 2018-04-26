@@ -6977,10 +6977,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         lCampus.Text = campus.Name;
                     }
-
+                     
                     if ( groupMember.Group.GroupRequirements.Any() )
                     {
-                        var requirements = groupMember.Group.PersonMeetsGroupRequirements( groupMember.PersonId, groupMember.GroupRoleId )
+                        var requirements = groupMember.Group.PersonMeetsGroupRequirements( new RockContext(), groupMember.PersonId, groupMember.GroupRoleId )
                             .Where( r => r.MeetsGroupRequirement != MeetsGroupRequirement.Meets );
                         if ( requirements.Any() )
                         {

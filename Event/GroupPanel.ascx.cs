@@ -365,7 +365,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( attributeColumn == null )
                 {
                     var boundField = new AttributeField();
-                    boundField.DataField = attribute.Key;
+                    boundField.DataField = attribute.Id.ToString() + attribute.Key;
                     boundField.AttributeId = attribute.Id;
                     boundField.HeaderText = attribute.Name;
                     boundField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
@@ -683,6 +683,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                 // Initialize the grid's object list
                                 gGroupMembers.ObjectList = new Dictionary<string, object>();
+                                gGroupMembers.EntityTypeId = EntityTypeCache.Read( Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid() ).Id;
 
                                 // Loop through each of the current group's members and build an attribute
                                 // field object for storing attributes and the values for each of the members
