@@ -7713,7 +7713,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 newAttribute = Helper.SaveAttributeEdits( newAttribute, instance.TypeId, string.Empty, string.Empty, rockContext );
                 AttributeCache.FlushEntityAttributes();
                 instance.LoadAttributes();
-                ResourceGroups = instance.AttributeValues;
+                ResourceGroups = instance.AttributeValues;  // TODO this should refresh on delete too not just save
             }
 
             instance.AttributeValues[attributeKey].Value = groupGuid.ToString();
