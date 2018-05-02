@@ -438,9 +438,9 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             using ( var rockContext = new RockContext() )
             {
-                var instance = new RegistrationInstanceService( rockContext ).Get( hfRegistrationInstanceId.Value.AsInteger() );
+                var instance = GetRegistrationInstance( hfRegistrationInstanceId.Value.AsInteger(), rockContext );
+                BuildRegistrationGroupHierarchy( instance, rockContext );
                 BuildResourcesInterface( true );
-                BuildRegistrationGroupHierarchy( rockContext, instance );
                 ShowEditDetails( instance, rockContext );
             }
         }
@@ -454,8 +454,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             using ( var rockContext = new RockContext() )
             {
-                var service = new RegistrationInstanceService( rockContext );
-                var instance = service.Get( hfRegistrationInstanceId.Value.AsInteger() );
+                var instanceService = new RegistrationInstanceService( rockContext );
+                var instance = instanceService.Get( hfRegistrationInstanceId.Value.AsInteger() );
                 if ( instance != null )
                 {
                     if ( UserCanEdit || instance.IsAuthorized( Authorization.EDIT, CurrentPerson ) || instance.IsAuthorized( Authorization.ADMINISTRATE, this.CurrentPerson ) )
@@ -463,18 +463,31 @@ namespace RockWeb.Plugins.com_kfs.Event
                         rockContext.WrapTransaction( () =>
                         {
                             new RegistrationService( rockContext ).DeleteRange( instance.Registrations );
-                            service.Delete( instance );
+                            instanceService.Delete( instance );
 
-                            // delete all instance groups
-                            var groupService = new GroupService( rockContext );
-                            var instanceGroups = groupService.GetAllDescendents( (int)RegistrationInstanceGroupId );
-                            groupService.DeleteRange( instanceGroups );
-                            rockContext.SaveChanges();
+                            // delete all instance groups 
+                            if ( !RegistrationInstanceGroupId.HasValue )
+                            {
+                                // refresh the instance viewstate
+                                instance.LoadAttributes( rockContext );
+                                var attributeKey = instance.GetType().GetFriendlyTypeName();
+                                var registrationGroupGuid = instance.GetAttributeValue( attributeKey ).AsGuidOrNull();
+                                RegistrationInstanceGroupId = new GroupService( rockContext ).Queryable()
+                                    .Where( g => registrationGroupGuid != null && g.Guid.Equals( (Guid)registrationGroupGuid ) )
+                                    .Select( g => (int?)g.Id ).FirstOrDefault();
+                            }
 
-                            var instanceGroup = groupService.Get( (int)RegistrationInstanceGroupId );
-                            groupService.Delete( instanceGroup );
+                            if ( RegistrationInstanceGroupId.HasValue )
+                            {
+                                var groupService = new GroupService( rockContext );
+                                var instanceGroups = groupService.GetAllDescendents( (int)RegistrationInstanceGroupId );
+                                groupService.DeleteRange( instanceGroups );
+                                rockContext.SaveChanges();
 
-                            rockContext.SaveChanges();
+                                var instanceGroup = groupService.Get( (int)RegistrationInstanceGroupId );
+                                groupService.Delete( instanceGroup );
+                                rockContext.SaveChanges();
+                            }   
                         } );
 
                         var qryParams = new Dictionary<string, string> { { "RegistrationTemplateId", instance.RegistrationTemplateId.ToString() } };
@@ -605,7 +618,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 rockContext.SaveChanges();
-                BuildRegistrationGroupHierarchy( rockContext, instance );
+                BuildRegistrationGroupHierarchy( instance, rockContext );
             }
 
             if ( newInstance )
@@ -620,7 +633,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 // Reload instance and show readonly view
                 using ( var rockContext = new RockContext() )
                 {
-                    instance = new RegistrationInstanceService( rockContext ).Get( instance.Id );
+                    instance = GetRegistrationInstance( instance.Id );
                     ShowReadonlyDetails( instance );
                 }
 
@@ -635,7 +648,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            ShowDetail();
+            ShowDetail();  // TODO not needed
         }
 
         /// <summary>
@@ -977,7 +990,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             registrationInstanceId = registrationInstanceId ?? PageParameter( "RegistrationInstanceId" ).AsIntegerOrNull();
             if ( registrationInstanceId.HasValue )
             {
-                //var instance = GetRegistrationInstance( registrationInstanceId.Value, rockContext );
                 var parentGroup = new GroupService( rockContext ).Get( ResourceGroups[groupType.Name].Value.AsGuid() );
                 if ( parentGroup != null )
                 {
@@ -2567,7 +2579,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 RockPage.SaveSharedItem( key, instance );
             }
-
+            
             return instance;
         }
 
@@ -2672,7 +2684,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     if ( instance.Id > 0 )
                     {
-                        ShowReadonlyDetails( instance );
+                        ShowReadonlyDetails( instance, false );
                     }
                     else
                     {
@@ -2701,7 +2713,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 BindGroupPlacementsFilter( instance );
                 BindLinkagesFilter();
                 AddDynamicControls( true );
-                
+
                 // do the ShowTab now since it may depend on DynamicControls and Filter Bindings
                 ShowTab();
             }
@@ -2968,7 +2980,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 foreach ( var groupType in ResourceGroupTypes )
                 {
-                    var resourceGroupGuid = ResourceGroups[groupType.Name];
+                    var resourceGroupGuid = ResourceGroups.ContainsKey( groupType.Name ) ? ResourceGroups[groupType.Name] : null;
                     if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
                     {
                         var tabName = groupType.Name.RemoveSpecialCharacters();
@@ -6516,7 +6528,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="rockContext">The rock context.</param>
         /// <param name="instance">The instance.</param>
         /// <param name="oldInstanceValues">The old instance values.</param>
-        private void BuildRegistrationGroupHierarchy( RockContext rockContext, RegistrationInstance instance )
+        private void BuildRegistrationGroupHierarchy( RegistrationInstance instance, RockContext rockContext = null )
         {
             if ( TemplateGroupTypeId.HasValue )
             {
@@ -6541,41 +6553,49 @@ namespace RockWeb.Plugins.com_kfs.Event
                     templateGroupType.ChildGroupTypes.Add( templateGroupType );
                 }
 
-                // save the current category as an attribute on the registration
                 var currentCategory = instance.RegistrationTemplate.Category;
                 var parentName = currentCategory.ParentCategory != null ? currentCategory.ParentCategory.Name : string.Empty;
                 var attributeKey = instance.RegistrationTemplate.Category.GetType().GetFriendlyTypeName();
-                var childCategoryGroup = BuildRegistrationGroup( rockContext, instance, attributeKey, templateGroupType.Id, null, currentCategory.Name, parentName );
-                parentGroupId = childCategoryGroup.Id;
+
+                var categoryGroup = CreateGroup( rockContext, instance.GetAttributeValue( attributeKey ), templateGroupType.Id, null, currentCategory.Name, parentName );
+                if ( categoryGroup != null )
+                {
+                    // save the related groups as attributes on the registration
+                    CreateAttribute( rockContext, instance, attributeKey, categoryGroup.Guid );
+                    parentGroupId = categoryGroup.Id;
+                }
 
                 // walk up the category tree to create group placeholders
                 while ( currentCategory != null )
                 {
-                    var parentCategoryGroup = groupService.GetByGroupTypeId( templateGroupType.Id ).FirstOrDefault( g => g.Name.Equals( currentCategory.Name ) );
-                    if ( parentCategoryGroup == null )
+                    var parentCategoryGroup = CreateGroup( rockContext, instance.GetAttributeValue( attributeKey ), templateGroupType.Id, null, currentCategory.Name );
+                    if ( categoryGroup.ParentGroup == null && categoryGroup != parentCategoryGroup )
                     {
-                        parentCategoryGroup = CreateGroup( rockContext, templateGroupType.Id, null, currentCategory.Name );
-                    }
-
-                    if ( childCategoryGroup.ParentGroup == null && childCategoryGroup != parentCategoryGroup )
-                    {
-                        childCategoryGroup.ParentGroup = parentCategoryGroup;
+                        categoryGroup.ParentGroup = parentCategoryGroup;
                     }
 
                     // move up a level
-                    childCategoryGroup = parentCategoryGroup;
+                    categoryGroup = parentCategoryGroup;
                     currentCategory = currentCategory.ParentCategory;
                 }
 
                 // template
                 attributeKey = instance.RegistrationTemplate.GetType().GetFriendlyTypeName();
-                var templateGroup = BuildRegistrationGroup( rockContext, instance, attributeKey, templateGroupType.Id, parentGroupId, instance.RegistrationTemplate.Name );
+                var templateGroup = CreateGroup( rockContext, instance.GetAttributeValue( attributeKey ), templateGroupType.Id, parentGroupId, instance.RegistrationTemplate.Name );
+                if ( templateGroup != null )
+                {
+                    CreateAttribute( rockContext, instance, attributeKey, templateGroup.Guid );
+                }
                 parentGroupId = templateGroup.Id;
 
                 // instance
                 attributeKey = instance.GetType().GetFriendlyTypeName();
-                var instanceGroup = BuildRegistrationGroup( rockContext, instance, attributeKey, templateGroupType.Id, parentGroupId, instance.Name );
-                
+                var instanceGroup = CreateGroup( rockContext, instance.GetAttributeValue( attributeKey ), templateGroupType.Id, parentGroupId, instance.Name );
+                if ( instanceGroup != null )
+                {
+                    CreateAttribute( rockContext, instance, attributeKey, instanceGroup.Guid );
+                }
+
                 // resource groups
                 if ( instanceGroup != null )
                 {
@@ -6594,18 +6614,17 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // assign resource groups for this registration
                         foreach ( var groupType in ResourceGroupTypes )
                         {
-                            // assume resource group is unused
-                            var resourceGroupGuid = Guid.Empty;
-                            var resourceGroupUI = resourceGroups.FirstOrDefault( g => g.GroupTypeId == groupType.Id );
-                            if ( resourceGroupUI != null )
+                            var groupTypeGroupUI = resourceGroups.FirstOrDefault( g => g.GroupTypeId == groupType.Id );
+                            if ( groupTypeGroupUI != null )
                             {
-                                resourceGroupUI.ParentGroupId = parentGroupId;
-                                instance.AttributeValues[groupType.Name].Value = resourceGroupUI.Guid.ToString();
+                                // verify group structure
+                                groupTypeGroupUI.ParentGroupId = parentGroupId ?? groupTypeGroupUI.ParentGroupId;
+                                CreateAttribute( rockContext, instance, groupType.Name, groupTypeGroupUI.Guid );
                             }
                             else
                             {
-                                instance.AttributeValues[groupType.Name].Value = resourceGroupGuid.ToString();
-                            }   
+                                instance.AttributeValues[groupType.Name].Value = Guid.Empty.ToString();
+                            }
                         }
                     }
                 }
@@ -6696,13 +6715,13 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 // Hydrate the groups of this registration instance and type, or new ones just created
                 var allGroupIds = groupType.Groups.Where( g => g.ParentGroupId.Equals( RegistrationInstanceGroupId ) ).Select( g => g.Id ).ToList();
-                foreach ( var childGroup in groupType.Groups
+                var registrationGroups = groupType.Groups
                     .Where( g => g.Guid != Guid.Empty && (
                         !g.ParentGroupId.HasValue ||
                         allGroupIds.Contains( g.Id ) )
-                    )
-                    .OrderBy( a => a.Order )
-                    .ThenBy( a => a.Name ) )
+                    ).OrderBy( a => a.Order )
+                    .ThenBy( a => a.Name ).ToList();
+                foreach ( var childGroup in registrationGroups )
                 {
                     BuildGroupRow( childGroup, resourceAreaRow, setValues );
                 }
@@ -6970,7 +6989,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         lCampus.Text = campus.Name;
                     }
-                     
+
                     if ( groupMember.Group.GroupRequirements.Any() )
                     {
                         var requirements = groupMember.Group.PersonMeetsGroupRequirements( new RockContext(), groupMember.PersonId, groupMember.GroupRoleId )
@@ -7667,90 +7686,81 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Creates a group for this registration instance
-        /// </summary>
-        /// <param name="rockContext">The rock context.</param>
-        /// <param name="groupTypeId">The group type identifier.</param>
-        /// <param name="parentGroupId">The parent group identifier.</param>
-        /// <param name="groupName">Name of the group.</param>
-        /// <returns></returns>
-        private Group CreateGroup( RockContext rockContext, int groupTypeId, int? parentGroupId, string groupName )
-        {
-            Group newGroup = null;
-            if ( !string.IsNullOrWhiteSpace( groupName ) )
-            {
-                var groupService = new GroupService( rockContext );
-
-                newGroup = new Group();
-                newGroup.Name = groupName;
-                newGroup.ParentGroupId = parentGroupId;
-                newGroup.GroupTypeId = groupTypeId;
-                groupService.Add( newGroup );
-                rockContext.SaveChanges();                                                     
-            }
-
-            return newGroup;
-        }
-
-        /// <summary>
-        /// Gets or saves the registration group as an instance attribute.
+        /// Creates the attribute for this registration instance.
         /// </summary>
         /// <param name="rockContext">The rock context.</param>
         /// <param name="instance">The instance.</param>
-        /// <param name="attributeKey">The instance attribute key.</param>
+        /// <param name="attributeKey">The attribute key.</param>
+        /// <param name="groupGuid">The group unique identifier.</param>
+        private void CreateAttribute( RockContext rockContext, RegistrationInstance instance, string attributeKey, Guid groupGuid )
+        {
+            if ( instance.Attributes == null || !instance.Attributes.Any() )
+            {
+                instance.LoadAttributes();
+            }
+
+            if ( !instance.Attributes.ContainsKey( attributeKey ) )
+            {
+                // attribute doesn't exist, create a new one
+                var newAttribute = new Attribute
+                {
+                    FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.KEY_VALUE_LIST ).Id,
+                    Name = attributeKey,
+                    Key = attributeKey,
+                    DefaultValue = string.Empty
+                };
+
+                newAttribute = Helper.SaveAttributeEdits( newAttribute, instance.TypeId, string.Empty, string.Empty, rockContext );
+                AttributeCache.FlushEntityAttributes();
+                instance.LoadAttributes();
+                ResourceGroups = instance.AttributeValues;
+            }
+
+            instance.AttributeValues[attributeKey].Value = groupGuid.ToString();
+            instance.SaveAttributeValues();
+        }
+
+        /// <summary>
+        /// Creates a group for this registration instance
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="existingGroupGuid">The existing group unique identifier.</param>
         /// <param name="groupTypeId">The group type identifier.</param>
         /// <param name="parentGroupId">The parent group identifier.</param>
         /// <param name="groupName">Name of the group.</param>
         /// <param name="parentGroupName">Name of the parent group.</param>
         /// <returns></returns>
-        private Group BuildRegistrationGroup( RockContext rockContext, RegistrationInstance instance, string attributeKey, int groupTypeId, int? parentGroupId, string groupName, string parentGroupName = "" )
+        private Group CreateGroup( RockContext rockContext, string existingGroupGuid, int groupTypeId, int? parentGroupId, string groupName, string parentGroupName = "" )
         {
-            Group registrationGroup = null;
-            if ( !string.IsNullOrWhiteSpace( attributeKey ) )
+            if ( string.IsNullOrWhiteSpace( groupName ) )
             {
-                if ( instance.Attributes == null || !instance.Attributes.Any() )
-                {
-                    instance.LoadAttributes();
-                }
+                return null;
+            }
 
-                if ( !instance.Attributes.ContainsKey( attributeKey ) )
-                {
-                    // attribute doesn't exist, create a new one
-                    var newAttribute = new Attribute
-                    {
-                        FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.KEY_VALUE_LIST ).Id,
-                        Name = attributeKey,
-                        Key = attributeKey,
-                        DefaultValue = string.Empty
-                    };
 
-                    newAttribute = Helper.SaveAttributeEdits( newAttribute, instance.TypeId, string.Empty, string.Empty, rockContext );
-                    AttributeCache.FlushEntityAttributes();
-                    instance.LoadAttributes();
-                }
-
-                var groupService = new GroupService( rockContext );
-                var existingGroupGuid = instance.GetAttributeValue( attributeKey );
-                registrationGroup = groupService.Get( existingGroupGuid.AsGuid() );
-                if ( registrationGroup == null )
+            // try first by attribute link
+            var groupService = new GroupService( rockContext );
+            var registrationGroup = groupService.Get( existingGroupGuid.AsGuid() );
+            // next look for the group by name and parent
+            registrationGroup = registrationGroup ?? groupService.GetByGroupTypeId( groupTypeId ).FirstOrDefault( g => g.Name.Equals( groupName ) && 
+                ( g.ParentGroupId == null || g.ParentGroupId == parentGroupId || g.ParentGroup.Name.Equals( parentGroupName ) ) 
+            );
+            if ( registrationGroup == null )
+            {         
+                registrationGroup = new Group
                 {
-                    // look for the group by name and parent instead
-                    registrationGroup = groupService.GetByGroupTypeId( groupTypeId ).FirstOrDefault( g => g.Name.Equals( groupName ) && ( g.ParentGroupId == null || g.ParentGroupId == parentGroupId || g.ParentGroup.Name.Equals( parentGroupName )  ) );
-                    if ( registrationGroup == null )
-                    {
-                        registrationGroup = CreateGroup( rockContext, groupTypeId, parentGroupId, groupName );
-                    }
-                }
-
-                // registration group could still be null if the instance name isn't set yet
-                if ( registrationGroup != null )
-                {
-                    // verify the group structure
-                    registrationGroup.Name = groupName;
-                    registrationGroup.ParentGroupId = parentGroupId ?? registrationGroup.ParentGroupId;
-                    instance.AttributeValues[attributeKey].Value = registrationGroup.Guid.ToString();
-                    instance.SaveAttributeValues();
-                }
+                    Name = groupName,
+                    ParentGroupId = parentGroupId,
+                    GroupTypeId = groupTypeId
+                };
+                groupService.Add( registrationGroup );
+                rockContext.SaveChanges(); 
+            }
+            else 
+            {
+                // verify group structure
+                registrationGroup.Name = groupName;
+                registrationGroup.ParentGroupId = parentGroupId ?? registrationGroup.ParentGroupId;
             }
 
             return registrationGroup;
