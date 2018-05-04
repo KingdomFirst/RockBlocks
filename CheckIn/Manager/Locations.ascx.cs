@@ -894,7 +894,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                                     foreach ( var attribute in groupType.Attributes.OrderBy( a => a.Value.Order ) )
                                     {
-                                        if ( attribute.Value.FieldType.Guid == Rock.SystemGuid.FieldType.BINARY_FILE.AsGuid() &&
+                                        if ( attribute.Value.FieldType.Guid == Rock.SystemGuid.FieldType.LABEL.AsGuid() &&
                                             attribute.Value.QualifierValues.ContainsKey( "binaryFileType" ) &&
                                             attribute.Value.QualifierValues["binaryFileType"].Value.Equals( Rock.SystemGuid.BinaryFiletype.CHECKIN_LABEL, StringComparison.OrdinalIgnoreCase ) )
                                         {
