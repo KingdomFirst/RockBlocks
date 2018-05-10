@@ -29,7 +29,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
     [BooleanField( "Checkbox Mode", "Should the attribute be displayed as a simple checkbox?", false, "Mode", 0 )]
     [TextField( "Checkbox Text", "The text that should be placed beside the checkbox.  If left blank, the Attribute Name will be used.", false, "", "Mode", 1 )]
     [CustomDropdownListField( "Checkbox Attribute Value Mode", "The type of value that should be used when saving in Checkbox Mode.", "Date,Boolean", false, "Date", "Mode", 2 )]
-    [BooleanField( "Instant Save", "Should the save happen as soon as the box is checked?", false, "mode", 3 )]
+    [BooleanField( "Instant Save", "Should the save happen as soon as the box is checked?", false, "Mode", 3 )]
 
     [TextField( "Panel Heading", "The heading that should be displayed above the attribute.", false, "", "Text Settings", 0 )]
     [TextField( "Save Button Text", "The text that the save button should present.", false, "Save", "Text Settings", 1 )]
