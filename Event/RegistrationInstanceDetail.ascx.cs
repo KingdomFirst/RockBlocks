@@ -6563,12 +6563,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // save the related groups as attributes on the registration
                     CreateAttribute( rockContext, instance, attributeKey, categoryGroup.Guid );
                     parentGroupId = categoryGroup.Id;
+                    currentCategory = currentCategory.ParentCategory;
                 }
-
+                
                 // walk up the category tree to create group placeholders
                 while ( currentCategory != null )
                 {
-                    var parentCategoryGroup = CreateGroup( rockContext, instance.GetAttributeValue( attributeKey ), templateGroupType.Id, null, currentCategory.Name );
+                    var parentCategoryGroup = CreateGroup( rockContext, string.Empty, templateGroupType.Id, null, currentCategory.Name );
                     if ( categoryGroup.ParentGroup == null && categoryGroup != parentCategoryGroup )
                     {
                         categoryGroup.ParentGroup = parentCategoryGroup;
