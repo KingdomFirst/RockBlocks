@@ -211,6 +211,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                     // generate the table creation
                     tableToUpload.TableName = fileInfo.Name.Replace( fileInfo.Extension, "" );
                     tableToUpload.TableName = tableToUpload.TableName.RemoveSpecialCharacters();
+                    tableToUpload.TableName = "_com_kfs_" + tableToUpload.TableName;
                     var sb = new System.Text.StringBuilder( string.Format("DROP TABLE IF EXISTS [{0}]; CREATE TABLE [{0}] (", tableToUpload.TableName ) );
                     foreach ( DataColumn column in tableToUpload.Columns )
                     {
@@ -219,6 +220,9 @@ namespace RockWeb.Plugins.com_kfs.Import
                     
                     var createTableScript = sb.ToString().TrimEnd( new char[] { ',' } ) + ")";
                     RunSQL( createTableScript, new List<SqlParameter>(), false, out errors );
+
+                    // wait for the table to be created
+                    Thread.Sleep( 1000 );
 
                     string conn = ConfigurationManager.ConnectionStrings["RockContext"].ConnectionString;
                     using ( var bulkCopy = new SqlBulkCopy( conn ) )
