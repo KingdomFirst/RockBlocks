@@ -44,7 +44,7 @@
                             </div>
                         </div>
                         <div class="row">
-                            <asp:Timer ID="tmrSyncSQL" runat="server" Interval="500" OnTick="tmrSyncSQL_Tick" Enabled="false" />
+                            <asp:Timer ID="tmrSyncSQL" runat="server" Interval="50" OnTick="tmrSyncSQL_Tick" Enabled="false" />
                             <asp:UpdatePanel ID="pnlSqlStatus" runat="server">
                                 <ContentTemplate>
                                     <asp:Literal ID="lblSqlStatus" runat="server" />

@@ -138,7 +138,7 @@ namespace RockWeb.Plugins.com_kfs.Import
         protected void btnImport_Click( object sender, EventArgs e )
         {
             // wait a little so the browser can render and start listening to events
-            System.Threading.Thread.Sleep( 1000 );
+            Thread.Sleep( 1000 );
 
             var statusText = string.Empty;
             btnImport.Enabled = false;
@@ -163,7 +163,7 @@ namespace RockWeb.Plugins.com_kfs.Import
             var cleanupTable = GetAttributeValue( "CleanupTableParameter" ).AsBoolean();
             if ( cleanupTable  )
             {
-                paramsList.Add( new SqlParameter { ParameterName = "@TransactionTable", SqlDbType = SqlDbType.NVarChar, Value = 1 } );
+                paramsList.Add( new SqlParameter { ParameterName = "@CleanupTable", SqlDbType = SqlDbType.NVarChar, Value = 1 } );
             }
 
             RunSQL( storedProcedure, paramsList, true, out statusText );
@@ -173,6 +173,7 @@ namespace RockWeb.Plugins.com_kfs.Import
         /// Transforms the file.
         /// </summary>
         /// <param name="filePath">The file path.</param>
+        /// <param name="errors">The errors.</param>
         /// <returns></returns>
         public bool TransformFile( string filePath, out string errors )
         {
@@ -204,64 +205,37 @@ namespace RockWeb.Plugins.com_kfs.Import
 
                 if ( tableToUpload != null )
                 {
-                    var tableName = fileInfo.Name.Replace( fileInfo.Extension, "" );
-                    
-                    tableToUpload.TableName = tableName.RemoveSpecialCharacters();
-                    //string sql = "CREATE TABLE [" + fileInfo.Name + "] (\n";
-
-                    //// columns
-                    //foreach ( DataRow column in tableToUpload.Rows )
-                    //{
-                    //    sql += "\t[" + tableToUpload["ColumnName"].ToString().RemoveSpecialCharacters() + "] " + SQLGetType( column );
-                    //    sql += ",\n";
-                    //}
-                    //sql = sql.TrimEnd( new char[] { ',', '\n' } ) + "\n";
-
-                    //sql += ")";
-
-                    string sql = "CREATE TABLE [" + tableToUpload.TableName + "] (\n";
-
-                    // columns
-
+                    // generate the table creation
+                    tableToUpload.TableName = fileInfo.Name.Replace( fileInfo.Extension, "" );
+                    var sb = new System.Text.StringBuilder( "CREATE TABLE [" + tableToUpload.TableName.RemoveSpecialCharacters() + "] (" );
                     foreach ( DataColumn column in tableToUpload.Columns )
                     {
-                        sql += "[" + column.ColumnName + "] " + SQLGetType( column ) + ",\n";
+                        sb.Append( " [" + column.ColumnName.RemoveSpecialCharacters() + "] " + SpreadsheetExtensions.GetSQLType( column ) + "," );
                     }
-
-                    sql = sql.TrimEnd( new char[] { ',', '\n' } ) + "\n";
                     
-
-                    RunSQL( sql, null, false, out errors );
+                    var createTableScript = sb.ToString().TrimEnd( new char[] { ',' } ) + ")";
+                    RunSQL( createTableScript, new List<SqlParameter>(), false, out errors );
 
                     string conn = ConfigurationManager.ConnectionStrings["RockContext"].ConnectionString;
-                    SqlBulkCopy bulkCopy = new SqlBulkCopy( conn );
-                    bulkCopy.DestinationTableName = tableToUpload.TableName;
-
-                    try
-
+                    using ( var bulkCopy = new SqlBulkCopy( conn ) )
                     {
-
-                        bulkCopy.WriteToServer( tableToUpload );
-
-                    }
-
-                    catch ( Exception ex )
-
-                    {
-
-                        Console.WriteLine( ex.Message );
-
-                    }
-
-                    finally
-
-                    {
-
-                        bulkCopy.Close();
-
-                    }
-
-                    if (string.IsNullOrWhiteSpace( errors ) )
+                        bulkCopy.DestinationTableName = string.Format( "{0}.[{1}]", "dbo", tableToUpload.TableName.RemoveSpecialCharacters() );
+                        try
+                        {
+                            foreach ( var column in tableToUpload.Columns )
+                            {
+                                // use the original column to map headers, but trim in SQL
+                                bulkCopy.ColumnMappings.Add( column.ToString(), column.ToString().RemoveSpecialCharacters() );
+                            }
+                            bulkCopy.WriteToServer( tableToUpload );
+                        }
+                        catch ( Exception ex )
+                        {
+                            errors = ex.Message;
+                        }
+                    }   
+                    
+                    if ( string.IsNullOrWhiteSpace( errors ) )
                     {
                         transformResult = true;
                     }
@@ -270,7 +244,7 @@ namespace RockWeb.Plugins.com_kfs.Import
 
             return transformResult;
         }
-
+        
         /// <summary>
         /// Runs the SQL.
         /// </summary>
@@ -296,8 +270,8 @@ namespace RockWeb.Plugins.com_kfs.Import
                 _trigger = new AsyncTrigger();
                 _trigger.LogEvent += new AsyncTrigger.InfoMessage( LogEvent );
                 ////////////////////////////////////////////////////////////
-                // enter manual login when using a custom context
-                //_trigger.connection = new SqlConnection( GetConnectionString( tbUsername.Text, tbPassword.Text ) );
+                // GetConnectionString can take a username and password when using Arena context
+                _trigger.connection = new SqlConnection( GetConnectionString() );
                 ////////////////////////////////////////////////////////////
                 _trigger.command = new SqlCommand( sqlCommand );
 
@@ -334,71 +308,20 @@ namespace RockWeb.Plugins.com_kfs.Import
             var builder = new SqlConnectionStringBuilder( ConfigurationManager.ConnectionStrings["RockContext"].ConnectionString );
             builder.AsynchronousProcessing = true;
             builder.ConnectTimeout = 5;
-            //builder.UserID = username;
-            //builder.Password = password;
+
+            // leave connection string as-is unless provided with a UN/PW
+            if ( !string.IsNullOrWhiteSpace( username) && !string.IsNullOrWhiteSpace( password ))
+            {
+                builder.UserID = username;
+                builder.Password = password;
+            }   
+
             return builder.ConnectionString;
         }
 
 
 
-        /// <summary>
-        /// Gets the column type for SQL
-        /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="columnSize">Size of the column.</param>
-        /// <param name="numericPrecision">The numeric precision.</param>
-        /// <param name="numericScale">The numeric scale.</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public static string SQLGetType( object type, int columnSize, int numericPrecision, int numericScale )
-        {
-            switch ( type.ToString() )
-            {
-                case "System.String":
-                    return "VARCHAR(" + ( ( columnSize == -1 ) ? 255 : columnSize ) + ")";
-
-                case "System.Decimal":
-                    if ( numericScale > 0 )
-                        return "REAL";
-                    else if ( numericPrecision > 10 )
-                        return "BIGINT";
-                    else
-                        return "INT";
-
-                case "System.Double":
-                case "System.Single":
-                    return "REAL";
-
-                case "System.Int64":
-                    return "BIGINT";
-
-                case "System.Int16":
-                case "System.Int32":
-                    return "INT";
-
-                case "System.DateTime":
-                    return "DATETIME";
-
-                default:
-                    throw new Exception( type.ToString() + " not implemented." );
-            }
-        }
-
-        // Overload based on row from schema table
-
-        public static string SQLGetType( DataRow schemaRow )
-        {
-            return SQLGetType( schemaRow["DataType"],
-                int.Parse( schemaRow["ColumnSize"].ToString() ),
-                int.Parse( schemaRow["NumericPrecision"].ToString() ),
-                int.Parse( schemaRow["NumericScale"].ToString() ) );
-        }
-
-        // Overload based on DataColumn from DataTable type
-        public static string SQLGetType( DataColumn column )
-        {
-            return SQLGetType( column.DataType, column.MaxLength, 10, 2 );
-        }
+        
     }
 
     #region Async Triggers
@@ -498,33 +421,13 @@ namespace RockWeb.Plugins.com_kfs.Import
 
     #region Spreadsheet extensions
 
-    public static class ExcelPackageExt
+    public static class SpreadsheetExtensions
     {
-        public static DataTable TransformTable( this ExcelPackage package )
-        {
-            var sheet = package.Workbook.Worksheets.First();
-            var table = new DataTable();
-            foreach ( var headers in sheet.Cells[1, 1, 1, sheet.Dimension.End.Column] )
-            {
-                table.Columns.Add( headers.Text );
-            }
-
-            for ( var currentRow = 2; currentRow <= sheet.Dimension.End.Row; currentRow++ )
-            {
-                var row = sheet.Cells[currentRow, 1, currentRow, sheet.Dimension.End.Column];
-                var newRow = table.NewRow();
-                foreach ( var cell in row )
-                {
-                    newRow[cell.Start.Column - 1] = cell.Text;
-                }
-                table.Rows.Add( newRow );
-            }
-            return table;
-        }
-    }
-
-    public static class CsvReaderExt
-    {
+        /// <summary>
+        /// Transforms the CSV into a table.
+        /// </summary>
+        /// <param name="csv">The CSV.</param>
+        /// <returns></returns>
         public static DataTable TransformTable( this CsvReader csv )
         {
             var table = new DataTable();
@@ -547,6 +450,100 @@ namespace RockWeb.Plugins.com_kfs.Import
             while ( csv.Read() );
 
             return table;
+        }
+
+        /// <summary>
+        /// Transforms the Excel file into a table.
+        /// </summary>
+        /// <param name="package">The package.</param>
+        /// <returns></returns>
+        public static DataTable TransformTable( this ExcelPackage package )
+        {
+            var sheet = package.Workbook.Worksheets.First();
+            var table = new DataTable();
+            foreach ( var headers in sheet.Cells[1, 1, 1, sheet.Dimension.End.Column] )
+            {
+                table.Columns.Add( headers.Text );
+            }
+
+            for ( var currentRow = 2; currentRow <= sheet.Dimension.End.Row; currentRow++ )
+            {
+                var row = sheet.Cells[currentRow, 1, currentRow, sheet.Dimension.End.Column];
+                var newRow = table.NewRow();
+                foreach ( var cell in row )
+                {
+                    newRow[cell.Start.Column - 1] = cell.Text;
+                }
+                table.Rows.Add( newRow );
+            }
+            return table;
+        }
+
+        /// <summary>
+        /// Gets the column type for SQL
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <param name="columnSize">Size of the column.</param>
+        /// <param name="numericPrecision">The numeric precision.</param>
+        /// <param name="numericScale">The numeric scale.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static string GetSQLType( object type, int columnSize, int numericPrecision, int numericScale )
+        {
+            switch ( type.ToString() )
+            {
+                case "System.String":
+                    return "VARCHAR(" + ( ( columnSize == -1 ) ? 255 : columnSize ) + ")";
+
+                case "System.Decimal":
+                    if ( numericScale > 0 )
+                        return "REAL";
+                    else if ( numericPrecision > 10 )
+                        return "BIGINT";
+                    else
+                        return "INT";
+
+                case "System.Double":
+                case "System.Single":
+                    return "REAL";
+
+                case "System.Int64":
+                    return "BIGINT";
+
+                case "System.Int16":
+                case "System.Int32":
+                    return "INT";
+
+                case "System.DateTime":
+                    return "DATETIME";
+
+                default:
+                    throw new Exception( type.ToString() + " not implemented." );
+            }
+        }
+        
+        /// <summary>
+        /// SQLs the type of the get.
+        /// </summary>
+        /// <param name="schemaRow">The schema row.</param>
+        /// <returns></returns>
+        public static string GetSQLType( DataRow schemaRow )
+        {
+            return GetSQLType( schemaRow["DataType"],
+                int.Parse( schemaRow["ColumnSize"].ToString() ),
+                int.Parse( schemaRow["NumericPrecision"].ToString() ),
+                int.Parse( schemaRow["NumericScale"].ToString() ) );
+        }
+
+        // Overload based on DataColumn from DataTable type
+        /// <summary>
+        /// SQLs the type of the get.
+        /// </summary>
+        /// <param name="column">The column.</param>
+        /// <returns></returns>
+        public static string GetSQLType( DataColumn column )
+        {
+            return GetSQLType( column.DataType, column.MaxLength, 10, 2 );
         }
     }
 
