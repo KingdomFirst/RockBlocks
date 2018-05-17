@@ -141,12 +141,13 @@ namespace RockWeb.Plugins.com_kfs.Import
             Thread.Sleep( 1000 );
 
             var statusText = string.Empty;
+            var tableName = string.Empty;
             btnImport.Enabled = false;
 
-            var uploadSuccessful = TransformFile( fupSpreadsheet.UploadedContentFilePath, out statusText );
+            var uploadSuccessful = TransformFile( fupSpreadsheet.UploadedContentFilePath, out tableName, out statusText );
             if ( !uploadSuccessful )
             {
-                nbWarning.Text = string.Format( "Could not upload this spreadsheet to SQL Server: {0}", statusText );
+                nbWarning.Text = string.Format( "Could not upload this spreadsheet: {0}", statusText );
                 return;
             }
 
@@ -157,7 +158,7 @@ namespace RockWeb.Plugins.com_kfs.Import
             var paramsList = new List<SqlParameter>
             {
                 // TODO clean this up to read parameters from SP
-                new SqlParameter { ParameterName = "@TransactionTable", SqlDbType = SqlDbType.NVarChar, Value = hfSpreadsheetFileName.Value }
+                new SqlParameter { ParameterName = "@TransactionTable", SqlDbType = SqlDbType.NVarChar, Value = tableName }
             };
 
             var cleanupTable = GetAttributeValue( "CleanupTableParameter" ).AsBoolean();
@@ -173,12 +174,14 @@ namespace RockWeb.Plugins.com_kfs.Import
         /// Transforms the file.
         /// </summary>
         /// <param name="filePath">The file path.</param>
+        /// <param name="tableName">Name of the table.</param>
         /// <param name="errors">The errors.</param>
         /// <returns></returns>
-        public bool TransformFile( string filePath, out string errors )
+        public bool TransformFile( string filePath, out string tableName, out string errors )
         {
             var transformResult = false;
             DataTable tableToUpload = null;
+            tableName = string.Empty;
             errors = string.Empty;
 
             if ( !File.Exists( filePath ) )
@@ -207,7 +210,8 @@ namespace RockWeb.Plugins.com_kfs.Import
                 {
                     // generate the table creation
                     tableToUpload.TableName = fileInfo.Name.Replace( fileInfo.Extension, "" );
-                    var sb = new System.Text.StringBuilder( "CREATE TABLE [" + tableToUpload.TableName.RemoveSpecialCharacters() + "] (" );
+                    tableToUpload.TableName = tableToUpload.TableName.RemoveSpecialCharacters();
+                    var sb = new System.Text.StringBuilder( string.Format("DROP TABLE IF EXISTS [{0}]; CREATE TABLE [{0}] (", tableToUpload.TableName ) );
                     foreach ( DataColumn column in tableToUpload.Columns )
                     {
                         sb.Append( " [" + column.ColumnName.RemoveSpecialCharacters() + "] " + SpreadsheetExtensions.GetSQLType( column ) + "," );
@@ -219,7 +223,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                     string conn = ConfigurationManager.ConnectionStrings["RockContext"].ConnectionString;
                     using ( var bulkCopy = new SqlBulkCopy( conn ) )
                     {
-                        bulkCopy.DestinationTableName = string.Format( "{0}.[{1}]", "dbo", tableToUpload.TableName.RemoveSpecialCharacters() );
+                        bulkCopy.DestinationTableName = string.Format( "[{0}]", tableToUpload.TableName );
                         try
                         {
                             foreach ( var column in tableToUpload.Columns )
@@ -238,6 +242,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                     if ( string.IsNullOrWhiteSpace( errors ) )
                     {
                         transformResult = true;
+                        tableName = tableToUpload.TableName;
                     }
                 }
             }
@@ -264,8 +269,6 @@ namespace RockWeb.Plugins.com_kfs.Import
                     _trigger.Dispose();
                 }
 
-                var sources = new List<string>();
-
                 // create command and assign delegate handlers
                 _trigger = new AsyncTrigger();
                 _trigger.LogEvent += new AsyncTrigger.InfoMessage( LogEvent );
@@ -283,7 +286,6 @@ namespace RockWeb.Plugins.com_kfs.Import
                 foreach ( var param in sqlParams )
                 {
                     _trigger.command.Parameters.Add( param );
-                    sources.Add( param.ParameterName );
                 }
 
                 // start the command and the timer
