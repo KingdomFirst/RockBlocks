@@ -142,7 +142,6 @@ namespace RockWeb.Plugins.com_kfs.Import
 
             var statusText = string.Empty;
             var tableName = string.Empty;
-            btnImport.Enabled = false;
 
             var uploadSuccessful = TransformFile( fupSpreadsheet.UploadedContentFilePath, out tableName, out statusText );
             if ( !uploadSuccessful )
@@ -159,6 +158,7 @@ namespace RockWeb.Plugins.com_kfs.Import
             {
                 // TODO clean this up to read parameters from SP
                 new SqlParameter { ParameterName = "@TransactionTable", SqlDbType = SqlDbType.NVarChar, Value = tableName }
+                //new SqlParameter { ParameterName = "@BatchPrefix", SqlDbType = SqlDbType.NVarChar, Value = GetAttributeValue( "BatchPrefix" ) }
             };
 
             var cleanupTable = GetAttributeValue( "CleanupTableParameter" ).AsBoolean();
@@ -323,11 +323,7 @@ namespace RockWeb.Plugins.com_kfs.Import
             }   
 
             return builder.ConnectionString;
-        }
-
-
-
-        
+        }              
     }
 
     #region Async Triggers

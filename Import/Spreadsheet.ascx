@@ -39,8 +39,10 @@
                         <Rock:NotificationBox ID="nbWarning" runat="server" />
 
                         <div class="row">
-                            <div class="form-group">
-                                <Rock:BootstrapButton ID="btnImport" runat="server" Text="Import Spreadsheet" OnClick="btnImport_Click" CausesValidation="false" class="btn btn-success" />
+                            <div class="panel-group">
+                                <div class="actions">
+                                    <asp:Button ID="btnImport" runat="server" Text="Import Spreadsheet" OnClick="btnImport_Click" CausesValidation="false" class="btn btn-primary" />
+                                </div>
                             </div>
                         </div>
                         <div class="row">

@@ -1,6 +1,7 @@
 ALTER PROCEDURE [dbo].[com_kfs_spTransactionImport]
-    @TransactionDatabase nvarchar(250) = 'dbo',
-    @TransactionTable nvarchar(250),
+    @TransactionDatabase NVARCHAR(250) = 'dbo',
+    @TransactionTable NVARCHAR(250),
+    @BatchName NVARCHAR(250) = 'FellowshipOne',
     @CleanupTable bit = 1
 
 AS
@@ -25,8 +26,9 @@ SET XACT_ABORT ON
 BEGIN TRANSACTION
 
 DECLARE @cmd NVARCHAR(MAX)
-    --, @TransactionDatabase nvarchar(250) = 'dbo'
-    --, @TransactionTable nvarchar(250)
+    --, @TransactionDatabase NVARCHAR(250) = 'dbo'
+    --, @TransactionTable NVARCHAR(250)
+    --, @BatchPrefix NVARCHAR(250)
     --, @@CleanupTable bit = 1
 
 
@@ -149,9 +151,9 @@ DECLARE @Status NVARCHAR(1000)
     SELECT STRING_AGG([Memo], '', '') AS transactionCodes
     FROM financialData fd
     JOIN FinancialTransaction ft
-        ON fd.[Memo] = ft.TransactionCode    
+        ON fd.[Memo] = ft.Summary    
 )
-SELECT @Status = ISNULL(NULLIF(transactionCodes, ''''), ''No transactions matched existing data...'')
+SELECT @Status = ISNULL(''Existing transactions will be skipped: '' + NULLIF(transactionCodes, ''''), ''No transactions matched existing data...'')
 FROM RockMatch;
 
 RAISERROR(@Status, 0, 10) WITH NOWAIT;
@@ -172,7 +174,7 @@ DECLARE @Status NVARCHAR(1000)
         ON fd.[ContributorId] = pa.ForeignId
     WHERE pa.[PersonId] IS NULL
 )
-SELECT @Status = ISNULL(NULLIF(missingPeople, ''''), ''No unmatched person records...'')
+SELECT @Status = ISNULL(''Could not find Person ID: '' + NULLIF(missingPeople, ''''), ''No unmatched person records...'')
 FROM RockMatch;
 
 RAISERROR(@Status, 0, 10) WITH NOWAIT;
@@ -190,7 +192,7 @@ WAITFOR DELAY '00:00:01';
 -- Use lookup table to enforce unique ids
 CREATE TABLE _com_kfs_transactionLookup (
 	ParentAccountId INT,
-     AccountId INT,
+    AccountId INT,
 	CampusId INT,
 	TransactionDate DATETIME,
 	CurrencyType INT,
@@ -203,6 +205,40 @@ CREATE TABLE _com_kfs_transactionLookup (
 	Summary NVARCHAR(1000),
      ForeignKey NVARCHAR(50)
 );
+
+
+IF (@BatchName IS NOT NULL AND @BatchName <> '')
+BEGIN
+	DECLARE @BatchId INT, @BatchDate DATE = GETDATE()
+	SELECT @BatchName = CONVERT(VARCHAR(10), @BatchDate, 10) + ' ' + @BatchName
+
+	SELECT @BatchId = Id
+	FROM FinancialBatch
+	WHERE [Status] <> 2
+		AND [BatchStartDateTime] >= @BatchDate 
+		AND [Name] = @BatchName
+
+	IF @BatchId IS NULL
+	BEGIN 
+		-- Insert a batch for today
+		SELECT @cmd = '
+		;WITH financialData AS (
+			SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+		')
+		INSERT FinancialBatch (Name, BatchStartDateTime, BatchEndDateTime, Status, ControlAmount, Guid, CreatedDateTime, ForeignKey, IsAutomated)
+		SELECT ''' + @BatchName + ''', MIN(CONVERT(DATE, ReceivedDate)), ''' + CONVERT(VARCHAR(20), @BatchDate) + ''', 0, SUM(CONVERT(MONEY, Amount)), NEWID(), ''' + CONVERT(VARCHAR(20), @BatchDate) + ''', ''FellowshipOne'', 0
+		FROM financialData
+		';
+
+		EXEC(@cmd)
+	END
+
+	SELECT @BatchId = Id
+	FROM FinancialBatch
+	WHERE [Status] <> 2
+		AND [CreatedDateTime] >= @BatchDate 
+		AND [Name] = @BatchName
+END
 
 
 -- Generate lookup values
@@ -240,6 +276,7 @@ LEFT JOIN DefinedValue cdv
 LEFT JOIN Campus c
     ON LTRIM(RTRIM(REPLACE(fd.Fund, ''Campus'', ''''))) LIKE CONCAT(''%'', c.[Name])
     OR LTRIM(RTRIM(REPLACE(fd.Fund, ''Campus'', ''''))) LIKE CONCAT(c.[ShortCode],''%'')
+WHERE REPLACE(fd.[Memo], ''Reference Number: '', '''') NOT IN (SELECT TransactionCode FROM FinancialTransaction)
 ';
 
 EXEC(@cmd)
@@ -259,7 +296,7 @@ EXEC(@cmd)
 SELECT @cmd = '
 INSERT FinancialTransaction (BatchId, TransactionDateTime, TransactionCode, Summary, TransactionTypeValueId, SourceTypeValueId, [Guid], CreatedDateTime, AuthorizedPersonAliasId, FinancialPaymentDetailId, ForeignKey)
 SELECT 
-    NULL BatchId, 
+    ' + CONVERT(VARCHAR(50), @BatchId) + ' BatchId, 
     tl.TransactionDate, 
     tl.TransactionCode,
     tl.Summary,
@@ -316,4 +353,4 @@ SELECT @message = 'Transaction import completed at ' + CONVERT(VARCHAR(25), CURR
 RAISERROR(@message, 0, 10) WITH NOWAIT;
 WAITFOR DELAY '00:00:01';
 
-ROLLBACK TRANSACTION
+COMMIT TRANSACTION
