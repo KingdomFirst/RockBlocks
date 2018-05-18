@@ -87,6 +87,8 @@ END
 
 EXEC(@cmd)
 
+RAISERROR('Combining ReceivedDate and ReceivedTime...', 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
 
 -- Update received date column
 SELECT @cmd = '
@@ -148,7 +150,7 @@ DECLARE @Status NVARCHAR(1000)
 ;WITH financialData AS (
     SELECT * FROM ' + QUOTENAME(@TransactionTable) +
 '), RockMatch AS (
-    SELECT STRING_AGG([Memo], '', '') AS transactionCodes
+    SELECT STRING_AGG( REPLACE([Memo], ''Reference Number: '', ''''), '', '') AS transactionCodes
     FROM financialData fd
     JOIN FinancialTransaction ft
         ON fd.[Memo] = ft.Summary    
@@ -276,7 +278,10 @@ LEFT JOIN DefinedValue cdv
 LEFT JOIN Campus c
     ON LTRIM(RTRIM(REPLACE(fd.Fund, ''Campus'', ''''))) LIKE CONCAT(''%'', c.[Name])
     OR LTRIM(RTRIM(REPLACE(fd.Fund, ''Campus'', ''''))) LIKE CONCAT(c.[ShortCode],''%'')
-WHERE REPLACE(fd.[Memo], ''Reference Number: '', '''') NOT IN (SELECT TransactionCode FROM FinancialTransaction)
+LEFT JOIN FinancialTransaction ft
+	ON REPLACE(fd.[Memo], ''Reference Number: '', '''') = ft.TransactionCode
+WHERE ft.Id IS NULL
+;
 ';
 
 EXEC(@cmd)

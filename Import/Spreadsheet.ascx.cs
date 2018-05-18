@@ -368,15 +368,15 @@ namespace RockWeb.Plugins.com_kfs.Import
         {
             if ( connection == null || command == null )
             {
-                throw new Exception( "Both Connection and Command values must be set!" );
-            }
-
+                return;
+            }         
+            
             if ( LogEvent != null )
             {
                 connection.FireInfoMessageEventOnUserErrors = true;
                 connection.InfoMessage += new SqlInfoMessageEventHandler( SqlEventTrigger );
             }
-
+            
             connection.Open();
             command.Connection = connection;
             command.CommandTimeout = 0;
@@ -461,6 +461,11 @@ namespace RockWeb.Plugins.com_kfs.Import
         /// <returns></returns>
         public static DataTable TransformTable( this ExcelPackage package )
         {
+            if ( !package.Workbook.Worksheets.Any() )
+            {
+                return null;
+            }
+
             var sheet = package.Workbook.Worksheets.First();
             var table = new DataTable();
             foreach ( var headers in sheet.Cells[1, 1, 1, sheet.Dimension.End.Column] )
