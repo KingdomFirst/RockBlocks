@@ -427,6 +427,13 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                                 person.Email = newEmail;
                                                 break;
                                             }
+                                        case PersonFieldType.ConnectionStatus:
+                                            {
+                                                var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT ).Id;
+                                                History.EvaluateChange( personChanges, "Connection Status", DefinedValueCache.GetName( person.ConnectionStatusValueId ), DefinedValueCache.GetName( newConnectionStatusId ) );
+                                                person.ConnectionStatusValueId = newConnectionStatusId;
+                                                break;
+                                            }
                                     }
                                 }
                             }
@@ -1128,6 +1135,16 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                             break;
                                         }
 
+                                    case PersonFieldType.ConnectionStatus:
+                                        {
+                                            var value = CurrentPerson.ConnectionStatusValueId.ToString();
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.ConnectionStatus, value );
+                                            }
+                                            break;
+                                        }
+
                                 }
                             }
                             else if ( field.FieldSource == FormFieldSource.PersonAttribute )
@@ -1373,6 +1390,16 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         phoneNumber.CountryCode = PhoneNumber.CleanNumber( ppWork.CountryCode );
                                         phoneNumber.Number = PhoneNumber.CleanNumber( ppWork.Number );
                                         value = phoneNumber.Number;
+                                    }
+                                    break;
+                                }
+
+                            case PersonFieldType.ConnectionStatus:
+                                {
+                                    Control control = phContent.FindControl( "ddlConnectionStatus" );
+                                    if ( control != null )
+                                    {
+                                        value = ( ( RockDropDownList ) control ).SelectedValue;
                                     }
                                     break;
                                 }
@@ -1654,6 +1681,26 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                         break;
                     }
+                case PersonFieldType.ConnectionStatus:
+                    {
+                        var ddlConnectionStatus = new RockDropDownList();
+                        ddlConnectionStatus.ID = "ddlConnectionStatus";
+                        ddlConnectionStatus.Label = "Connection Status";
+                        ddlConnectionStatus.Required = field.IsRequired;
+                        ddlConnectionStatus.ValidationGroup = BlockValidationGroup;
+                        ddlConnectionStatus.BindToDefinedType( DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.PERSON_CONNECTION_STATUS ) ), true );
+
+                        phContent.Controls.Add( ddlConnectionStatus );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            var value = fieldValue.ToString().AsInteger();
+                            ddlConnectionStatus.SetValue( value );
+                        }
+
+                        break;
+                    }
+
             }
         }
 
@@ -2785,6 +2832,11 @@ $('.template-form > .panel-body').on('validation-error', function() {
         /// The grade
         /// </summary>
         Grade = 11,
+
+        /// <summary>
+        /// The connection status
+        /// </summary>
+        ConnectionStatus = 12,
     }
 
     #endregion
