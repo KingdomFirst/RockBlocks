@@ -42,6 +42,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
     [LinkedPage( "Done Page", "The page to redirect to when done.", false, "", "CustomSetting" )]
     [TextField( "Forms", "The forms to show.", false, "", "CustomSetting" )]
+    [CodeEditorField( "Confirmation Text", "", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "CustomSetting" )]
 
     public partial class PersonAttributeForms : RockBlockCustomSettings
     {
@@ -697,6 +698,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                 else
                                 {
                                     pnlView.Visible = false;
+                                    litConfirmationText.Visible = true;
+                                    litConfirmationText.Text = GetAttributeValue( "ConfirmationText" );
                                 }
                                 upnlContent.Update();
                             }
@@ -763,6 +766,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
             string json = JsonConvert.SerializeObject( FormState, Formatting.None, jsonSetting );
             SetAttributeValue( "Forms", json );
+
+            SetAttributeValue( "ConfirmationText", ceConfirmationText.Text );
 
             SaveAttributeValues();
 
@@ -1745,6 +1750,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
             {
                 FormState = JsonConvert.DeserializeObject<List<AttributeForm>>( json );
             }
+
+            ceConfirmationText.Text = GetAttributeValue( "ConfirmationText" ); ;
 
             BuildEditControls( true );
 

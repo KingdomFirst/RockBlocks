@@ -13,6 +13,7 @@
 
         <asp:ValidationSummary ID="vsSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
         <Rock:NotificationBox ID="nbMain" runat="server" Visible="false"></Rock:NotificationBox>
+        <asp:Literal ID="litConfirmationText" runat="server" Visible="false"></asp:Literal>
 
         <%-- View Panel --%>
         <asp:Panel ID="pnlView" runat="server" Visible="false">
