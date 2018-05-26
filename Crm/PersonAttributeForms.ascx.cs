@@ -766,6 +766,9 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
             SaveAttributeValues();
 
+            mdEdit.Hide();
+            pnlEditModal.Visible = false;
+
             ShowDetail();
 
             upnlContent.Update();
@@ -969,7 +972,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
         {
             _mode = "VIEW";
 
-            pnlEdit.Visible = false;
+            pnlEditModal.Visible = false;
 
             string json = GetAttributeValue( "Forms" );
             if ( string.IsNullOrWhiteSpace( json ) )
@@ -1745,8 +1748,9 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
             BuildEditControls( true );
 
-            pnlEdit.Visible = true;
+            pnlEditModal.Visible = true;
             pnlView.Visible = false;
+            mdEdit.Show();
 
             _mode = "EDIT";
 
@@ -1791,7 +1795,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
             control.ID = form.Guid.ToString( "N" );
             parentControl.Controls.Add( control );
 
-            control.ValidationGroup = btnSave.ValidationGroup;
+            control.ValidationGroup = mdEdit.ValidationGroup;
 
             control.DeleteFieldClick += tfeForm_DeleteFieldClick;
             control.ReorderFieldClick += tfeForm_ReorderFieldClick;
