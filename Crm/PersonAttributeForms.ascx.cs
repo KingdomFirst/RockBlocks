@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -1260,7 +1260,10 @@ namespace RockWeb.Plugins.com_kfs.Crm
                             }
 
                             var attribute = AttributeCache.Read( field.AttributeId.Value );
-                            attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
+                            if ( attribute != null )
+                            {
+                                attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
+                            }
                         }
 
                         if ( !string.IsNullOrWhiteSpace( field.PostText ) )
@@ -1438,13 +1441,16 @@ namespace RockWeb.Plugins.com_kfs.Crm
                     else if ( field.FieldSource == FormFieldSource.PersonAttribute )
                     {
                         var attribute = AttributeCache.Read( field.AttributeId.Value );
-                        string fieldId = "attribute_field_" + attribute.Id.ToString();
-
-                        Control control = phContent.FindControl( fieldId );
-                        if ( control != null )
+                        if ( attribute != null )
                         {
-                            string value = attribute.FieldType.Field.GetEditValue( control, attribute.QualifierValues );
-                            AttributeValueState.AddOrReplace( attribute.Id, value );
+                            string fieldId = "attribute_field_" + attribute.Id.ToString();
+
+                            Control control = phContent.FindControl( fieldId );
+                            if ( control != null )
+                            {
+                                string value = attribute.FieldType.Field.GetEditValue( control, attribute.QualifierValues );
+                                AttributeValueState.AddOrReplace( attribute.Id, value );
+                            }
                         }
                     }
                 }
