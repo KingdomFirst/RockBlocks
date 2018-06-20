@@ -1833,6 +1833,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
                     registrant.PersonAliasId = ppPerson.PersonAliasId.Value;
 
+                    // set cost and discounts
+                    History.EvaluateChange( registrantChanges, "Cost", registrant.Cost, cbCost.Text.AsDecimal() );
+                    registrant.Cost = cbCost.Text.AsDecimal();
+
+                    History.EvaluateChange( registrantChanges, "Discount Applies", registrant.DiscountApplies, cbDiscountApplies.Checked );
+                    registrant.DiscountApplies = cbDiscountApplies.Checked;
+
                     // Get the name of registrant for history
                     string registrantName = "Unknown";
                     var person = new Person();
