@@ -5,25 +5,19 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
-using Rock.Constants;
 using Rock.Data;
 using Rock.Field.Types;
-using Rock.Financial;
 using Rock.Model;
 using Rock.Security;
-using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
-using Attribute = Rock.Model.Attribute;
 
 namespace RockWeb.Plugins.com_kfs.Event
 {
@@ -33,13 +27,10 @@ namespace RockWeb.Plugins.com_kfs.Event
     [DisplayName( "Advanced Registrant Detail" )]
     [Category( "KFS > Advanced Event Registration" )]
     [Description( "Displays interface for editing the registration attribute values and fees for a given registrant." )]
-
     [LinkedPage( "Add Family Link", "Select the page where a new family can be added. If specified, a link will be shown which will open in a new window when clicked", false, "6a11a13d-05ab-4982-a4c2-67a8b1950c74,af36e4c2-78c6-4737-a983-e7a78137ddc7", "", 2 )]
     [SecurityAction( "AddFamilies", "The roles and/or users that can add new families to the system." )]
-
     public partial class RegistrantDetail : RockBlock
     {
-
         #region Properties
 
         private RegistrationTemplate TemplateState { get; set; }
@@ -124,7 +115,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </returns>
         protected override object SaveViewState()
         {
-            var jsonSetting = new JsonSerializerSettings
+           var jsonSetting = new JsonSerializerSettings
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 ContractResolver = new Rock.Utility.IgnoreUrlEncodedKeyContractResolver()
@@ -207,15 +198,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                 History.EvaluateChange( registrantChanges, "Cost", registrant.Cost, cbCost.Text.AsDecimal() );
                 registrant.Cost = cbCost.Text.AsDecimal();
 
-                // v7 //History.EvaluateChange( registrantChanges, "Discount Applies", registrant.DiscountApplies, cbDiscountApplies.Checked );
-                // v7 //registrant.DiscountApplies = cbDiscountApplies.Checked;
+                History.EvaluateChange( registrantChanges, "Discount Applies", registrant.DiscountApplies, cbDiscountApplies.Checked );
+                registrant.DiscountApplies = cbDiscountApplies.Checked;
 
                 if ( !Page.IsValid )
                 {
                     return;
                 }
 
-                // Remove/delete any registrant fees that are no longer in UI with quantity 
+                // Remove/delete any registrant fees that are no longer in UI with quantity
                 foreach ( var dbFee in registrant.Fees.ToList() )
                 {
                     if ( !RegistrantState.FeeValues.Keys.Contains( dbFee.RegistrationTemplateFeeId ) ||
@@ -335,7 +326,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( !registrant.IsValid )
                 {
-                    // Controls will render the error messages                    
+                    // Controls will render the error messages
                     return;
                 }
 
@@ -350,8 +341,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     .FirstOrDefault();
                 var multipleFamilyGroupIds = new Dictionary<Guid, int>();
 
-                try
-                {
                     // use WrapTransaction since SaveAttributeValues does it's own RockContext.SaveChanges()
                     rockContext.WrapTransaction( () =>
                     {
@@ -381,7 +370,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 .Where( f => f.Key == field.Id )
                                 .Select( f => f.Value.FieldValue )
                                 .FirstOrDefault();
-
 
                             if ( fieldValue != null )
                             {
@@ -533,7 +521,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                         Helper.SaveAttributeValue( person, attribute, newValue, rockContext );
                                         History.EvaluateChange( personChanges, attribute.Name, formattedOriginalValue, formattedNewValue );
-
                                     }
                                 }
                             }
@@ -602,7 +589,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
                         }
 
-                        // Set any of the template's group member attributes 
+                        // Set any of the template's group member attributes
                         registrant.GroupMember.LoadAttributes();
 
                         if ( registrant.GroupMember != null )
@@ -649,12 +636,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
                         }
                     } );
-                }
-
-                catch ( Exception ex )
-                {
-                    throw ex;
-                }
 
                 if ( newRegistrant && TemplateState.GroupTypeId.HasValue && ppPerson.PersonId.HasValue )
                 {
@@ -698,7 +679,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 }
 
                                 // Record this to the Person's and Registrants Notes and History...
-                                // v7 //reloadedRegistrant.Registration.SavePersonNotesAndHistory( reloadedRegistrant.Registration.PersonAlias.Person, this.CurrentPersonAliasId, previousRegistrantPersonIds );
+                                reloadedRegistrant.Registration.SavePersonNotesAndHistory( reloadedRegistrant.Registration.PersonAlias.Person, this.CurrentPersonAliasId, previousRegistrantPersonIds );
 
                                 reloadedRegistrant.GroupMemberId = groupMember.Id;
                                 newRockContext.SaveChanges();
@@ -818,7 +799,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         tglWaitList.Checked = !registrant.OnWaitList;
                     }
                 }
-                
+
                 if ( TemplateState == null && registrationId.HasValue && registrationId.Value != 0 )
                 {
                     var registration = new RegistrationService( rockContext )
@@ -908,7 +889,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( RegistrantState != null )
                 {
                     cbCost.Text = RegistrantState.Cost.ToString( "N2" );
-                    // v7 //cbDiscountApplies.Checked = RegistrantState.DiscountApplies;
+                    cbDiscountApplies.Checked = RegistrantState.DiscountApplies;
                 }
             }
         }
@@ -1448,7 +1429,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 //        ( RegistrationTemplate.RegistrantsSameFamily == RegistrantsSameFamily.Yes && singleFamilyId.HasValue )
                 //    )
                 //{
-
                 //    // Add person to existing family
                 //    var age = person.Age;
                 //    int familyRoleId = age.HasValue && age < 18 ? childRoleId : adultRoleId;
@@ -1469,7 +1449,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         familyId = familyGroup.Id;
 
-                        // Store the family id for next person 
+                        // Store the family id for next person
                         multipleFamilyGroupIds.AddOrIgnore( familyGuid, familyGroup.Id );
                         if ( !singleFamilyId.HasValue )
                         {
@@ -1549,7 +1529,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="fieldValue">The field value.</param>
         private void CreatePersonField( RegistrationTemplateFormField field, bool setValue, object fieldValue )
         {
-
             switch ( field.PersonFieldType )
             {
                 case RegistrationPersonFieldType.FirstName:
@@ -1811,11 +1790,9 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
-
         #endregion
 
         #endregion
-
 
         protected void ppPerson_SelectPerson( object sender, EventArgs e )
         {
@@ -1834,7 +1811,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 var registration = new RegistrationService( rockContext ).Get( RegistrantState.RegistrationId );
                 var alreadyRegistered = registrantService.Queryable().Any( r => r.PersonAliasId == ppPerson.PersonAliasId && r.Registration.RegistrationInstanceId == registration.RegistrationInstanceId );
-
                 if ( !alreadyRegistered )
                 {
                     var registrantChanges = new List<string>();
@@ -1871,7 +1847,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     if ( !registrant.IsValid )
                     {
-                        // Controls will render the error messages                    
+                        // Controls will render the error messages
                         return;
                     }
 
@@ -1879,7 +1855,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         rockContext.SaveChanges();
                     }
-
                     catch ( Exception ex )
                     {
                         throw ex;
