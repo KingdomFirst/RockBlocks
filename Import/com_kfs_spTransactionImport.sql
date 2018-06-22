@@ -1,5 +1,5 @@
 ALTER PROCEDURE [dbo].[com_kfs_spTransactionImport]
-    @TransactionDatabase NVARCHAR(250) = 'dbo',
+    @Database NVARCHAR(250) = 'dbo',
     @TransactionTable NVARCHAR(250),
     @BatchName NVARCHAR(250) = 'FellowshipOne',
     @CleanupTable bit = 1
@@ -26,10 +26,10 @@ SET XACT_ABORT ON
 BEGIN TRANSACTION
 
 DECLARE @cmd NVARCHAR(MAX)
-    --, @TransactionDatabase NVARCHAR(250) = 'dbo'
+    --, @Database NVARCHAR(250) = 'dbo'
     --, @TransactionTable NVARCHAR(250)
-    --, @BatchPrefix NVARCHAR(250)
-    --, @@CleanupTable bit = 1
+    --, @BatchName NVARCHAR(250)
+    --, @CleanupTable bit = 1
 
 
 /* =================================
