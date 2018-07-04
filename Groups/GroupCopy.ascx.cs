@@ -28,7 +28,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
         {
             base.OnInit( e );
 
-            this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlGroupCopy );
 
         }
