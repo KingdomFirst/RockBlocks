@@ -217,7 +217,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                     {
                         sb.Append( " [" + column.ColumnName.RemoveSpecialCharacters() + "] " + SpreadsheetExtensions.GetSQLType( column ) + "," );
                     }
-                    
+
                     var createTableScript = sb.ToString().TrimEnd( new char[] { ',' } ) + ")";
                     RunSQL( createTableScript, new List<SqlParameter>(), false, out errors );
 
@@ -241,8 +241,8 @@ namespace RockWeb.Plugins.com_kfs.Import
                         {
                             errors = ex.Message;
                         }
-                    }   
-                    
+                    }
+
                     if ( string.IsNullOrWhiteSpace( errors ) )
                     {
                         transformResult = true;
@@ -253,7 +253,7 @@ namespace RockWeb.Plugins.com_kfs.Import
 
             return transformResult;
         }
-        
+
         /// <summary>
         /// Runs the SQL.
         /// </summary>
@@ -276,10 +276,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                 // create command and assign delegate handlers
                 _trigger = new AsyncTrigger();
                 _trigger.LogEvent += new AsyncTrigger.InfoMessage( LogEvent );
-                ////////////////////////////////////////////////////////////
-                // GetConnectionString can take a username and password when using Arena context
                 _trigger.connection = new SqlConnection( GetConnectionString() );
-                ////////////////////////////////////////////////////////////
                 _trigger.command = new SqlCommand( sqlCommand );
 
                 if ( storedProcedure )
@@ -306,24 +303,18 @@ namespace RockWeb.Plugins.com_kfs.Import
         /// <summary>
         /// Gets the connection string.
         /// </summary>
-        /// <param name="username">The username.</param>
-        /// <param name="password">The password.</param>
         /// <returns></returns>
-        private static string GetConnectionString( string username = "", string password = "" )
+        private static string GetConnectionString()
         {
-            var builder = new SqlConnectionStringBuilder( ConfigurationManager.ConnectionStrings["RockContext"].ConnectionString );
-            builder.AsynchronousProcessing = true;
-            builder.ConnectTimeout = 5;
-
-            // leave connection string as-is unless provided with a UN/PW
-            if ( !string.IsNullOrWhiteSpace( username) && !string.IsNullOrWhiteSpace( password ))
+            var builder = new SqlConnectionStringBuilder( ConfigurationManager.ConnectionStrings["RockContext"].ConnectionString )
             {
-                builder.UserID = username;
-                builder.Password = password;
-            }   
+                AsynchronousProcessing = true,
+                MultipleActiveResultSets = true,
+                ConnectTimeout = 5
+            };
 
             return builder.ConnectionString;
-        }              
+        }
     }
 
     #region Async Triggers
@@ -369,14 +360,14 @@ namespace RockWeb.Plugins.com_kfs.Import
             if ( connection == null || command == null )
             {
                 return;
-            }         
-            
+            }
+
             if ( LogEvent != null )
             {
                 connection.FireInfoMessageEventOnUserErrors = true;
                 connection.InfoMessage += new SqlInfoMessageEventHandler( SqlEventTrigger );
             }
-            
+
             connection.Open();
             command.Connection = connection;
             command.CommandTimeout = 0;
@@ -435,7 +426,7 @@ namespace RockWeb.Plugins.com_kfs.Import
             var table = new DataTable();
 
             csv.Read();
-            foreach ( var header in csv.FieldHeaders )
+            foreach ( var header in csv.FieldHeaders.Where( h => !string.IsNullOrWhiteSpace( h ) ) )
             {
                 table.Columns.Add( header );
             }
@@ -446,7 +437,12 @@ namespace RockWeb.Plugins.com_kfs.Import
                 foreach ( DataColumn column in table.Columns )
                 {
                     row[column.ColumnName] = csv.GetField( column.DataType, column.ColumnName );
+                    if ( column.DataType == typeof( string ) )
+                    {
+                        column.MaxLength = Math.Max( column.MaxLength, row[column.ColumnName].ToString().Length );
+                    }
                 }
+
                 table.Rows.Add( row );
             }
             while ( csv.Read() );
@@ -466,23 +462,47 @@ namespace RockWeb.Plugins.com_kfs.Import
                 return null;
             }
 
-            var sheet = package.Workbook.Worksheets.First();
+            int i = 0;
             var table = new DataTable();
+            var skippedColumns = new List<int>();
+            var sheet = package.Workbook.Worksheets.First();
             foreach ( var headers in sheet.Cells[1, 1, 1, sheet.Dimension.End.Column] )
             {
-                table.Columns.Add( headers.Text );
+                if ( !string.IsNullOrWhiteSpace( headers.Text ))
+                {
+                    table.Columns.Add( headers.Text );
+                }
+                else
+                {
+                    skippedColumns.Add( i );
+                }
+
+                i++;
             }
 
             for ( var currentRow = 2; currentRow <= sheet.Dimension.End.Row; currentRow++ )
             {
+                var numSkippedColumns = 0;
                 var row = sheet.Cells[currentRow, 1, currentRow, sheet.Dimension.End.Column];
                 var newRow = table.NewRow();
                 foreach ( var cell in row )
                 {
-                    newRow[cell.Start.Column - 1] = cell.Text;
+                    var spreadsheetIndex = cell.Start.Column - 1;
+                    if ( !skippedColumns.Contains( spreadsheetIndex ) )
+                    {
+                        var importIndex = spreadsheetIndex - numSkippedColumns;
+                        newRow[importIndex] = cell.Text;
+                        table.Columns[importIndex].MaxLength = Math.Max( cell.Text.Length, table.Columns[importIndex].MaxLength );
+                    }
+                    else
+                    {
+                        numSkippedColumns++;
+                    }
                 }
+
                 table.Rows.Add( newRow );
             }
+
             return table;
         }
 
@@ -500,7 +520,7 @@ namespace RockWeb.Plugins.com_kfs.Import
             switch ( type.ToString() )
             {
                 case "System.String":
-                    return "VARCHAR(" + ( ( columnSize == -1 ) ? 255 : columnSize ) + ")";
+                    return "NVARCHAR(" + ( ( columnSize <= 0 ) ? 255 : columnSize ) + ")";
 
                 case "System.Decimal":
                     if ( numericScale > 0 )
@@ -528,7 +548,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                     throw new Exception( type.ToString() + " not implemented." );
             }
         }
-        
+
         /// <summary>
         /// SQLs the type of the get.
         /// </summary>
