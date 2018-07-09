@@ -944,6 +944,10 @@ namespace RockWeb.Plugins.com_kfs.Cms
                                     ddlGradePicker.SelectedIndex = 0;
                                 }
                             }
+                            else
+                            {
+                                ddlGradePicker.Visible = false;
+                            }
 
                             tbEmail.Text = person.Email;
                             rblEmailPreference.SelectedValue = person.EmailPreference.ConvertToString( false );
