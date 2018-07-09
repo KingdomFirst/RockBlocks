@@ -1363,6 +1363,17 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     {
                         bool current = chartTime.Equals( chartTimes.Max() );
 
+                        activeSchedules.Clear();
+
+                        // Get the active schedules
+                        foreach ( var schedule in schedules )
+                        {
+                            if ( schedule.WasScheduleOrCheckInActive( chartTime ) )
+                            {
+                                activeSchedules.Add( schedule.Id );
+                            }
+                        }
+
                         foreach ( var groupLocSched in attendanceList
                             .Where( a =>
                                 a.StartDateTime < chartTime &&
