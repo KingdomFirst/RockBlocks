@@ -520,7 +520,7 @@ namespace RockWeb.Plugins.com_kfs.Import
             switch ( type.ToString() )
             {
                 case "System.String":
-                    return "NVARCHAR(" + ( ( columnSize <= 0 ) ? 255 : columnSize ) + ")";
+                    return "NVARCHAR(" + ( columnSize > 50 ? columnSize : 50 ) + ")";
 
                 case "System.Decimal":
                     if ( numericScale > 0 )
