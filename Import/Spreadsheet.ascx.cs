@@ -5,8 +5,8 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.IO;
-using System.Linq;
 using System.Threading;
+using com.kfs.Import;
 using CsvHelper;
 using OfficeOpenXml;
 using Rock;
@@ -19,13 +19,11 @@ namespace RockWeb.Plugins.com_kfs.Import
     [DisplayName( "Spreadsheet Import" )]
     [Category( "Spreadsheet Import" )]
     [Description( "Block to import spreadsheet data and optionally run a stored procedure." )]
-    [CustomDropdownListField( "Default Stored Procedure", "Select the default stored procedure to run when importing a spreadsheet.", "com_kfs_spTransactionImport", false, "", "", 0 )]
+    [CustomDropdownListField( "Default Stored Procedure", "Select the default stored procedure to run when importing a spreadsheet.", "SELECT ROUTINE_NAME AS Text, ROUTINE_NAME AS Value FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'", false, "", "", 0 )]
     [BooleanField( "Cleanup Table Parameter", "Select this if the SP has a @CleanupTable parameter.", true )]
     public partial class Spreadsheet : RockBlock
     {
-        //SELECT ROUTINE_NAME, ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'
-
-        public AsyncTrigger _trigger;
+        public LogTrigger _trigger;
 
         /// <summary>
         /// Triggers the log event handler.
@@ -78,7 +76,7 @@ namespace RockWeb.Plugins.com_kfs.Import
         {
             if ( Session["trigger"] != null )
             {
-                _trigger = (AsyncTrigger)Session["trigger"];
+                _trigger = (LogTrigger)Session["trigger"];
             }
         }
 
@@ -92,13 +90,16 @@ namespace RockWeb.Plugins.com_kfs.Import
             // output log events to pnlSqlStatus
             if ( Session["log"] != null )
             {
+                var builder = new System.Text.StringBuilder();
+                builder.Append( lblSqlStatus.Text );
                 foreach ( string s in Session["log"].ToString().Split( new char[] { '|' } ) )
                 {
                     if ( !string.IsNullOrWhiteSpace( s ) )
                     {
-                        lblSqlStatus.Text += s + "<br>";
+                        builder.Append( s + "<br>" );
                     }
                 }
+                lblSqlStatus.Text = builder.ToString();
 
                 Session["log"] = string.Empty;
             }
@@ -115,7 +116,7 @@ namespace RockWeb.Plugins.com_kfs.Import
             var physicalFile = this.Request.MapPath( fupSpreadsheet.UploadedContentFilePath );
             if ( File.Exists( physicalFile ) )
             {
-                FileInfo fileInfo = new FileInfo( physicalFile );
+                var fileInfo = new FileInfo( physicalFile );
                 if ( allowedExtensions.Contains( fileInfo.Extension ) )
                 {
                     nbWarning.Text = string.Empty;
@@ -215,7 +216,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                     var sb = new System.Text.StringBuilder( string.Format("DROP TABLE IF EXISTS [{0}]; CREATE TABLE [{0}] (", tableToUpload.TableName ) );
                     foreach ( DataColumn column in tableToUpload.Columns )
                     {
-                        sb.Append( " [" + column.ColumnName.RemoveSpecialCharacters() + "] " + SpreadsheetExtensions.GetSQLType( column ) + "," );
+                        sb.Append( " [" + column.ColumnName.RemoveSpecialCharacters() + "] " + TableExtensions.GetSQLType( column ) + "," );
                     }
 
                     var createTableScript = sb.ToString().TrimEnd( new char[] { ',' } ) + ")";
@@ -224,7 +225,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                     // wait for the table to be created
                     Thread.Sleep( 1000 );
 
-                    string conn = ConfigurationManager.ConnectionStrings["RockContext"].ConnectionString;
+                    var conn = ConfigurationManager.ConnectionStrings["RockContext"].ConnectionString;
                     using ( var bulkCopy = new SqlBulkCopy( conn ) )
                     {
                         bulkCopy.DestinationTableName = string.Format( "[{0}]", tableToUpload.TableName );
@@ -274,9 +275,9 @@ namespace RockWeb.Plugins.com_kfs.Import
                 }
 
                 // create command and assign delegate handlers
-                _trigger = new AsyncTrigger();
-                _trigger.LogEvent += new AsyncTrigger.InfoMessage( LogEvent );
-                _trigger.connection = new SqlConnection( GetConnectionString() );
+                _trigger = new LogTrigger();
+                _trigger.LogEvent += new LogTrigger.InfoMessage( LogEvent );
+                _trigger.connection = new SqlConnection( TableExtensions.GetConnectionString() );
                 _trigger.command = new SqlCommand( sqlCommand );
 
                 if ( storedProcedure )
@@ -299,280 +300,5 @@ namespace RockWeb.Plugins.com_kfs.Import
                 statusText += string.Format( "Could not connect to the database. {0}<br>", ex.Message );
             }
         }
-
-        /// <summary>
-        /// Gets the connection string.
-        /// </summary>
-        /// <returns></returns>
-        private static string GetConnectionString()
-        {
-            var builder = new SqlConnectionStringBuilder( ConfigurationManager.ConnectionStrings["RockContext"].ConnectionString )
-            {
-                AsynchronousProcessing = true,
-                MultipleActiveResultSets = true,
-                ConnectTimeout = 5
-            };
-
-            return builder.ConnectionString;
-        }
     }
-
-    #region Async Triggers
-
-    /// <summary>
-    /// Async Trigger to track SQL progress
-    /// </summary>
-    /// <seealso cref="System.IDisposable" />
-    public class AsyncTrigger : System.Object, IDisposable
-    {
-        public SqlCommand command;
-        public SqlConnection connection;
-        public bool isExecuting = true;
-
-        protected Thread bgThread;
-
-        public AsyncTrigger()
-        {
-        }
-
-        public AsyncTrigger( SqlConnection conn, SqlCommand comm )
-        {
-            connection = conn;
-            command = comm;
-        }
-
-        public delegate void InfoMessage( object sender, string Message );
-
-        public event InfoMessage LogEvent;
-
-        public void Dispose()
-        {
-            try
-            {
-                if ( connection != null ) connection.Dispose();
-                if ( command != null ) command.Dispose();
-            }
-            catch { }
-        }
-
-        public void ExecSql()
-        {
-            if ( connection == null || command == null )
-            {
-                return;
-            }
-
-            if ( LogEvent != null )
-            {
-                connection.FireInfoMessageEventOnUserErrors = true;
-                connection.InfoMessage += new SqlInfoMessageEventHandler( SqlEventTrigger );
-            }
-
-            connection.Open();
-            command.Connection = connection;
-            command.CommandTimeout = 0;
-            command.ExecuteNonQuery();
-            connection.Close();
-
-            isExecuting = false;
-        }
-
-        public void SqlEventTrigger( object sender, SqlInfoMessageEventArgs e )
-        {
-            if ( LogEvent != null )
-            {
-                LogEvent( sender, e.Message );
-            }
-        }
-
-        public void Join()
-        {
-            if ( bgThread != null && bgThread.IsAlive )
-            {
-                bgThread.Join();
-            }
-        }
-
-        public void Start()
-        {
-            bgThread = new Thread( new ThreadStart( ExecSql ) );
-            bgThread.Start();
-        }
-
-        public void Stop()
-        {
-            if ( bgThread != null && bgThread.IsAlive )
-            {
-                bgThread.Abort();
-            }
-
-            Join();
-        }
-    }
-
-    #endregion
-
-    #region Spreadsheet extensions
-
-    public static class SpreadsheetExtensions
-    {
-        /// <summary>
-        /// Transforms the CSV into a table.
-        /// </summary>
-        /// <param name="csv">The CSV.</param>
-        /// <returns></returns>
-        public static DataTable TransformTable( this CsvReader csv )
-        {
-            var table = new DataTable();
-
-            csv.Read();
-            foreach ( var header in csv.FieldHeaders.Where( h => !string.IsNullOrWhiteSpace( h ) ) )
-            {
-                table.Columns.Add( header );
-            }
-
-            do
-            {
-                var row = table.NewRow();
-                foreach ( DataColumn column in table.Columns )
-                {
-                    row[column.ColumnName] = csv.GetField( column.DataType, column.ColumnName );
-                    if ( column.DataType == typeof( string ) )
-                    {
-                        column.MaxLength = Math.Max( column.MaxLength, row[column.ColumnName].ToString().Length );
-                    }
-                }
-
-                table.Rows.Add( row );
-            }
-            while ( csv.Read() );
-
-            return table;
-        }
-
-        /// <summary>
-        /// Transforms the Excel file into a table.
-        /// </summary>
-        /// <param name="package">The package.</param>
-        /// <returns></returns>
-        public static DataTable TransformTable( this ExcelPackage package )
-        {
-            if ( !package.Workbook.Worksheets.Any() )
-            {
-                return null;
-            }
-
-            int i = 0;
-            var table = new DataTable();
-            var skippedColumns = new List<int>();
-            var sheet = package.Workbook.Worksheets.First();
-            foreach ( var headers in sheet.Cells[1, 1, 1, sheet.Dimension.End.Column] )
-            {
-                if ( !string.IsNullOrWhiteSpace( headers.Text ))
-                {
-                    table.Columns.Add( headers.Text );
-                }
-                else
-                {
-                    skippedColumns.Add( i );
-                }
-
-                i++;
-            }
-
-            for ( var currentRow = 2; currentRow <= sheet.Dimension.End.Row; currentRow++ )
-            {
-                var numSkippedColumns = 0;
-                var row = sheet.Cells[currentRow, 1, currentRow, sheet.Dimension.End.Column];
-                var newRow = table.NewRow();
-                foreach ( var cell in row )
-                {
-                    var spreadsheetIndex = cell.Start.Column - 1;
-                    if ( !skippedColumns.Contains( spreadsheetIndex ) )
-                    {
-                        var importIndex = spreadsheetIndex - numSkippedColumns;
-                        newRow[importIndex] = cell.Text;
-                        table.Columns[importIndex].MaxLength = Math.Max( cell.Text.Length, table.Columns[importIndex].MaxLength );
-                    }
-                    else
-                    {
-                        numSkippedColumns++;
-                    }
-                }
-
-                table.Rows.Add( newRow );
-            }
-
-            return table;
-        }
-
-        /// <summary>
-        /// Gets the column type for SQL
-        /// </summary>
-        /// <param name="type">The type.</param>
-        /// <param name="columnSize">Size of the column.</param>
-        /// <param name="numericPrecision">The numeric precision.</param>
-        /// <param name="numericScale">The numeric scale.</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public static string GetSQLType( object type, int columnSize, int numericPrecision, int numericScale )
-        {
-            switch ( type.ToString() )
-            {
-                case "System.String":
-                    return "NVARCHAR(" + ( columnSize > 50 ? columnSize : 50 ) + ")";
-
-                case "System.Decimal":
-                    if ( numericScale > 0 )
-                        return "REAL";
-                    else if ( numericPrecision > 10 )
-                        return "BIGINT";
-                    else
-                        return "INT";
-
-                case "System.Double":
-                case "System.Single":
-                    return "REAL";
-
-                case "System.Int64":
-                    return "BIGINT";
-
-                case "System.Int16":
-                case "System.Int32":
-                    return "INT";
-
-                case "System.DateTime":
-                    return "DATETIME";
-
-                default:
-                    throw new Exception( type.ToString() + " not implemented." );
-            }
-        }
-
-        /// <summary>
-        /// SQLs the type of the get.
-        /// </summary>
-        /// <param name="schemaRow">The schema row.</param>
-        /// <returns></returns>
-        public static string GetSQLType( DataRow schemaRow )
-        {
-            return GetSQLType( schemaRow["DataType"],
-                int.Parse( schemaRow["ColumnSize"].ToString() ),
-                int.Parse( schemaRow["NumericPrecision"].ToString() ),
-                int.Parse( schemaRow["NumericScale"].ToString() ) );
-        }
-
-        // Overload based on DataColumn from DataTable type
-        /// <summary>
-        /// SQLs the type of the get.
-        /// </summary>
-        /// <param name="column">The column.</param>
-        /// <returns></returns>
-        public static string GetSQLType( DataColumn column )
-        {
-            return GetSQLType( column.DataType, column.MaxLength, 10, 2 );
-        }
-    }
-
-    #endregion
 }
