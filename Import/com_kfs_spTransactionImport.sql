@@ -1,5 +1,5 @@
 ALTER PROCEDURE [dbo].[com_kfs_spTransactionImport]
-    @Database NVARCHAR(250) = 'dbo',
+    @TransactionDatabase NVARCHAR(250) = 'dbo',
     @TransactionTable NVARCHAR(250),
     @BatchName NVARCHAR(250) = 'FellowshipOne',
     @CleanupTable bit = 1
@@ -26,9 +26,9 @@ SET XACT_ABORT ON
 BEGIN TRANSACTION
 
 DECLARE @cmd NVARCHAR(MAX)
-    --, @Database NVARCHAR(250) = 'dbo'
+    --, @TransactionDatabase NVARCHAR(250) = 'dbo'
     --, @TransactionTable NVARCHAR(250)
-    --, @BatchName NVARCHAR(250)
+    --, @BatchName NVARCHAR(250) = 'FellowshipOne'
     --, @CleanupTable bit = 1
 
 
@@ -46,6 +46,9 @@ DECLARE @CurrencyTypeId AS INT = (SELECT [Id] FROM DefinedType WHERE [Name] = 'C
 DECLARE @CreditCardTypeId AS INT = (SELECT [Id] FROM DefinedType WHERE [Name] = 'Credit Card Type');
 DECLARE @ContributionValueId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Contribution' AND DefinedTypeId = 25);
 DECLARE @WebsiteValueId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Website' AND DefinedTypeId = 12);
+DECLARE @PersonRecordTypeId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Person' AND DefinedTypeId = 1);
+DECLARE @PendingRecordStatusId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Pending' AND DefinedTypeId = 2);
+DECLARE @NewWebsiteConnectionStatusId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'New From Website' AND DefinedTypeId = 4);
 
 
 /* =================================
@@ -64,9 +67,20 @@ WHERE [TABLE_NAME] = ''' + @TransactionTable + '''
 IF @Status < 1 
 BEGIN 
     RAISERROR(''Table does not contain the correct column definitions:'', 0, 10) WITH NOWAIT;
-    RAISERROR(''ContributorId, Fund, SubFund, ReceivedDate, ReceivedTime, Type, Amount, Memo'', 0, 10) WITH NOWAIT;
+    RAISERROR(''ContributorId, ContributorName, PreferredEmail, Fund, SubFund, ReceivedDate, ReceivedTime, Type, Amount, Memo'', 0, 10) WITH NOWAIT;
     WAITFOR DELAY ''00:00:01'';
 END
+';
+
+EXEC(@cmd)
+
+-- Remove empty rows so they don't throw off date calculations
+SELECT @cmd = '
+;WITH financialData AS (
+    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+')
+DELETE FROM financialData
+WHERE ContributorId = ''''
 ';
 
 EXEC(@cmd)
@@ -146,14 +160,15 @@ WAITFOR DELAY '00:00:01';
 
 -- Output existing transaction codes
 SELECT @cmd = '
-DECLARE @Status NVARCHAR(1000)
+DECLARE @Status NVARCHAR(MAX)
 ;WITH financialData AS (
     SELECT * FROM ' + QUOTENAME(@TransactionTable) +
 '), RockMatch AS (
-    SELECT STRING_AGG( REPLACE([Memo], ''Reference Number: '', ''''), '', '') AS transactionCodes
+    SELECT STRING_AGG( CONVERT(VARCHAR(MAX), REPLACE([Memo], ''Reference Number: '', '''')), '', '') AS transactionCodes
     FROM financialData fd
     JOIN FinancialTransaction ft
         ON fd.[Memo] = ft.Summary    
+		AND fd.[Memo] <> ''''
 )
 SELECT @Status = ISNULL(''Existing transactions will be skipped: '' + NULLIF(transactionCodes, ''''), ''No transactions matched existing data...'')
 FROM RockMatch;
@@ -176,10 +191,57 @@ DECLARE @Status NVARCHAR(1000)
         ON fd.[ContributorId] = pa.ForeignId
     WHERE pa.[PersonId] IS NULL
 )
-SELECT @Status = ISNULL(''Could not find Person ID: '' + NULLIF(missingPeople, ''''), ''No unmatched person records...'')
+SELECT @Status = ISNULL(''Missing Person records will be created: '' + NULLIF(missingPeople, ''''), ''No unmatched person records...'')
 FROM RockMatch;
 
 RAISERROR(@Status, 0, 10) WITH NOWAIT;
+';
+
+EXEC(@cmd)
+
+
+-- Create unmatched people
+SELECT @cmd = '
+;WITH financialData AS (
+    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+'), NewPeopleRecords AS (
+    SELECT 
+		ContributorID ForeignId, 
+		RIGHT(ContributorName, CHARINDEX('','', REVERSE(ContributorName)) - 1) FirstName,
+		LEFT(ContributorName, CHARINDEX('','', ContributorName) - 1) LastName,
+		PreferredEmail Email, 
+		ReceivedDate CreatedDateTime
+    FROM financialData fd
+    LEFT JOIN PersonAlias pa
+        ON fd.[ContributorId] = pa.ForeignId
+    WHERE pa.[PersonId] IS NULL
+)
+INSERT Person (FirstName, LastName, Email, ForeignKey, ForeignId, CreatedDateTime, ModifiedDateTime, IsSystem, RecordTypeValueId, RecordStatusValueId, ConnectionStatusValueId, IsDeceased, Gender, IsEmailActive, Guid, EmailPreference, CommunicationPreference)
+SELECT FirstName, LastName, Email, ForeignId, ForeignId, CreatedDateTime, GETDATE(), 0, ' + CONVERT(VARCHAR(20), @PersonRecordTypeId) + ', ' + CONVERT(VARCHAR(20), @PendingRecordStatusId) + ', ' + CONVERT(VARCHAR(20), @NewWebsiteConnectionStatusId) + ', 0, 0, 1, NEWID(), 0, 1
+FROM NewPeopleRecords
+';
+
+EXEC(@cmd)
+
+-- Assign PersonAliasId
+SELECT @cmd = '
+;WITH financialData AS (
+    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+'), PersonRecords AS (
+    SELECT 
+		ContributorID ForeignId, 
+		p.Id PersonId,
+		p.Guid PersonGuid
+    FROM financialData fd
+	JOIN Person p
+		ON p.ForeignId = fd.ContributorId
+    LEFT JOIN PersonAlias pa
+        ON fd.[ContributorId] = pa.ForeignId
+    WHERE pa.[PersonId] IS NULL
+)
+INSERT PersonAlias( PersonId, AliasPersonId, AliasPersonGuid, Guid, ForeignKey, ForeignId)
+SELECT PersonId, PersonId, PersonGuid, PersonGuid, ForeignId, ForeignId
+FROM PersonRecords
 ';
 
 EXEC(@cmd)
@@ -203,21 +265,20 @@ CREATE TABLE _com_kfs_transactionLookup (
 	Amount decimal(18, 2),
 	TransactionGuid UNIQUEIDENTIFIER,
 	PaymentDetailGuid UNIQUEIDENTIFIER,
-     TransactionCode NVARCHAR(50),
+    TransactionCode NVARCHAR(50),
 	Summary NVARCHAR(1000),
-     ForeignKey NVARCHAR(50)
+    ForeignKey NVARCHAR(50)
 );
 
-
+DECLARE @BatchId INT, @BatchDate DATE = GETDATE()
 IF (@BatchName IS NOT NULL AND @BatchName <> '')
 BEGIN
-	DECLARE @BatchId INT, @BatchDate DATE = GETDATE()
 	SELECT @BatchName = CONVERT(VARCHAR(10), @BatchDate, 10) + ' ' + @BatchName
 
 	SELECT @BatchId = Id
 	FROM FinancialBatch
 	WHERE [Status] <> 2
-		AND [BatchStartDateTime] >= @BatchDate 
+		AND [BatchEndDateTime] <= @BatchDate
 		AND [Name] = @BatchName
 
 	IF @BatchId IS NULL
@@ -270,8 +331,9 @@ JOIN FinancialAccount pfa
     ON fd.[Fund] = pfa.[Name]
     OR fd.[Fund] = pfa.[Description]
 LEFT JOIN FinancialAccount fa
-    ON fd.[SubFund] = fa.[Name]
-    OR fd.[SubFund] = fa.[Description]
+    ON fd.[SubFund] <> '''' 
+	AND (fa.[Name] = fd.[SubFund] + '' '' + fd.[Fund]
+		OR fd.[SubFund] = fa.[Description])
 LEFT JOIN DefinedValue cdv
     ON cdv.[DefinedTypeId] = ' + CONVERT(VARCHAR(50), @CurrencyTypeId) + '
     AND fd.[Type] = cdv.[Value]
@@ -281,7 +343,6 @@ LEFT JOIN Campus c
 LEFT JOIN FinancialTransaction ft
 	ON REPLACE(fd.[Memo], ''Reference Number: '', '''') = ft.TransactionCode
 WHERE ft.Id IS NULL
-;
 ';
 
 EXEC(@cmd)
