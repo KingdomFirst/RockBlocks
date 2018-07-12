@@ -86,6 +86,37 @@ namespace RockWeb.Plugins.com_kfs.Groups
             return group;
         }
 
+        /// <summary>
+        /// Determines if the current user is a leader in the group.
+        /// </summary>
+        /// <param name="groupId">The group identifier.</param>
+        /// <returns></returns>
+        private bool EnableCopy( int groupId, RockContext rockContext = null )
+        {
+            var isLeader = false;
+
+            string key = string.Format( "Group:{0}", groupId );
+            Group group = RockPage.GetSharedItem( key ) as Group;
+            if ( group == null )
+            {
+                rockContext = rockContext ?? new RockContext();
+                group = new GroupService( rockContext ).Queryable( "GroupType,GroupLocations.Schedules" )
+                    .Where( g => g.Id == groupId )
+                    .FirstOrDefault();
+                RockPage.SaveSharedItem( key, group );
+            }
+            
+            foreach ( var member in group.Members )
+            {
+                if ( member.PersonId.Equals( CurrentPersonId ) && member.GroupRole.IsLeader )
+                {
+                    isLeader = true;
+                }
+            }
+
+            return isLeader;
+        }
+
         private void ShowPanels( int groupId )
         {
             Group group = null;
@@ -95,9 +126,11 @@ namespace RockWeb.Plugins.com_kfs.Groups
             if ( !groupId.Equals( 0 ) )
             {
                 group = GetGroup( groupId, rockContext );
-            }
-            hfGroupId.Value = group.Id.ToString();
 
+                pnlGroupCopy.Visible = EnableCopy( groupId, rockContext );
+
+                hfGroupId.Value = group.Id.ToString();
+            }
         }
 
         /// <summary>
