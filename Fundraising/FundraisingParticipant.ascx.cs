@@ -53,16 +53,29 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             if ( this.GetAttributeValue( "ShowClipboardIcon" ).AsBoolean() )
             {
                 // Setup for being able to copy text to clipboard
-                RockPage.AddScriptLink( this.Page, "~/Scripts/ZeroClipboard/ZeroClipboard.js" );
+                // Rock v6 code
+                //                RockPage.AddScriptLink( this.Page, "~/Scripts/ZeroClipboard/ZeroClipboard.js" );
+                //                string script = string.Format( @"
+                //    var client = new ZeroClipboard( $('#{0}'));
+                //    $('#{0}').tooltip();
+                //", btnCopyToClipboard.ClientID );
+                //ScriptManager.RegisterStartupScript( btnCopyToClipboard, btnCopyToClipboard.GetType(), "share-copy", script, true );
+                //btnCopyToClipboard.Attributes["data-clipboard-target"] = hfShareUrl.ClientID;
+                // END v6 -- BEGIN v7 code
+                RockPage.AddScriptLink( this.Page, "~/Scripts/clipboard.js/clipboard.min.js" );
                 string script = string.Format( @"
-    var client = new ZeroClipboard( $('#{0}'));
-    $('#{0}').tooltip();
-", btnCopyToClipboard.ClientID );
+                    new Clipboard('#{0}');
+                    $('#{0}').tooltip();
+                ", btnCopyToClipboard.ClientID );
                 ScriptManager.RegisterStartupScript( btnCopyToClipboard, btnCopyToClipboard.GetType(), "share-copy", script, true );
-                btnCopyToClipboard.Attributes["data-clipboard-target"] = hfShareUrl.ClientID;
+                // END v7
 
                 Uri uri = new Uri( Request.Url.ToString() );
+                // v6 
                 hfShareUrl.Value = uri.Scheme + "://" + uri.GetComponents( UriComponents.HostAndPort, UriFormat.UriEscaped ) + CurrentPageReference.BuildUrl();
+                // v7 
+                btnCopyToClipboard.Attributes["data-clipboard-text"] = uri.Scheme + "://" + uri.GetComponents( UriComponents.HostAndPort, UriFormat.UriEscaped ) + CurrentPageReference.BuildUrl();
+
                 btnCopyToClipboard.Visible = true;
             }
             else
@@ -474,7 +487,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
             // only show Contribution stuff if the current person is the participant and contribution requests haven't been disabled
             btnContributionsTab.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
-            
+            pnlContributions.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
+
             // Progress
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
 
@@ -578,7 +592,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             if ( !btnUpdatesTab.Visible )
             {
                 btnContributionsTab.Visible = false;
-                pnlContributions.Visible = true;
+                pnlContributions.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
             }
         }
 
