@@ -1,4 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ReportingServicesViewer.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Reporting.ReportingServicesViewer" %>
+<%@ Register TagPrefix="rsweb" TagName="ReportViewer" Namespace="Microsoft.Reporting.WebForms" Assembly="Microsoft.ReportViewer.WebForms"  %>
 <%@ Register Assembly="Microsoft.ReportViewer.WebForms, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91" Namespace="Microsoft.Reporting.WebForms" TagPrefix="rsweb" %>
 <style>
     .fill {
@@ -13,7 +14,7 @@
         display: none !important;
     }
 </style>
-<asp:UpdatePanel ID="upReportViewer" runat="server" UpdateMode="Conditional" >
+<asp:UpdatePanel ID="upReportViewer" runat="server" UpdateMode="Conditional">
     <ContentTemplate>
         <div class="panel panel-block">
             <div class="panel-heading">

@@ -36,6 +36,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [LinkedPage( "Area Select Page", "The page to redirect user to if area has not be configured or selected.", order: 3 )]
     [DefinedValueField( Rock.SystemGuid.DefinedType.CHART_STYLES, "Chart Style", order: 4, defaultValue: Rock.SystemGuid.DefinedValue.CHART_STYLE_ROCK )]
     [BooleanField("Search By Code", "A flag indicating if security codes should also be evaluated in the search box results.", order:5 )]
+    [IntegerField( "Lookback Minutes", "The number of minutes the chart will lookback.", true, 120, order:6 )]
+    [BooleanField( "Location Active", "A flag indicating if location should currently have a schedule assigned to it to be displayed.", order: 7 )]
     [BooleanField("Show Delete", "A flag indicating if the Delete button should be displayed.", true, "Attendee Actions", 0 )]
     [BooleanField("Show Checkout", "A flag indicating if the Checkout button should be displayed.", true, "Attendee Actions", 1 )]
     [BooleanField("Show Move", "A flag indicating if the Move Attendee buttons should be displayed.", true, "Attendee Actions", 2 )]
@@ -892,7 +894,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                                     foreach ( var attribute in groupType.Attributes.OrderBy( a => a.Value.Order ) )
                                     {
-                                        if ( attribute.Value.FieldType.Guid == Rock.SystemGuid.FieldType.BINARY_FILE.AsGuid() &&
+                                        if ( attribute.Value.FieldType.Guid == Rock.SystemGuid.FieldType.LABEL.AsGuid() &&
                                             attribute.Value.QualifierValues.ContainsKey( "binaryFileType" ) &&
                                             attribute.Value.QualifierValues["binaryFileType"].Value.Equals( Rock.SystemGuid.BinaryFiletype.CHECKIN_LABEL, StringComparison.OrdinalIgnoreCase ) )
                                         {
@@ -1141,16 +1143,62 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         {
             using ( var rockContext = new RockContext() )
             {
-                var validLocationids = new List<int>();
+                var schedules = new List<Schedule>();
+                var chartTimes = GetChartTimes();
+                var activeSchedules = new List<int>();
+
+                if ( scheduleId.HasValue )
+                {
+                    var schedule = new ScheduleService( rockContext ).Get( scheduleId.Value );
+                    if ( schedule != null )
+                    {
+                        schedules.Add( schedule );
+                    }
+                }
+                else
+                {
+                    schedules = new ScheduleService( rockContext ).Queryable().AsNoTracking()
+                        .Where( s => s.CheckInStartOffsetMinutes.HasValue )
+                        .ToList();
+                }
+
+                foreach ( DateTime chartTime in chartTimes )
+                {
+                    // Get the active schedules
+                    foreach ( var schedule in schedules )
+                    {
+                        if ( schedule.WasScheduleOrCheckInActive( chartTime ) )
+                        {
+                            activeSchedules.Add( schedule.Id );
+                        }
+                    }
+                }
+
+                var validLocationIds = new List<int>();
                 if ( campus.LocationId.HasValue )
                 {
                     // Get all the child locations
-                    validLocationids.Add( campus.LocationId.Value );
+                    validLocationIds.Add( campus.LocationId.Value );
                     new LocationService( rockContext )
                         .GetAllDescendents( campus.LocationId.Value )
                         .Select( l => l.Id )
                         .ToList()
-                        .ForEach( l => validLocationids.Add( l ) );
+                        .ForEach( l => validLocationIds.Add( l ) );
+                }
+
+                // Get location Ids which are currently active
+                var validLocationIdsFiltered = new List<int>();
+                if ( GetAttributeValue( "LocationActive" ).AsBoolean() )
+                {
+                    validLocationIdsFiltered = new GroupLocationService( rockContext )
+                        .GetActiveByLocations( validLocationIds )
+                        .Where( l => l.Schedules.Any( s => activeSchedules.Contains( s.Id ) ) )
+                        .Select( l => l.LocationId )
+                        .ToList();
+                }
+                else
+                {
+                    validLocationIdsFiltered = validLocationIds;
                 }
 
                 var groupTypeTemplateGuid = PageParameter( "Area" ).AsGuidOrNull();
@@ -1184,8 +1232,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                     NavData = new NavigationData();
 
-                    var chartTimes = GetChartTimes();
-
                     // Get the group types
                     var parentGroupType = GroupTypeCache.Read( groupTypeTemplateGuid.Value );
                     if ( parentGroupType != null )
@@ -1217,7 +1263,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             .ToList();
 
                         var childLocationIds = group.GroupLocations
-                            .Where( l => validLocationids.Contains( l.LocationId ) )
+                            .Where( l => validLocationIdsFiltered.Contains( l.LocationId ) )
                             .Select( l => l.LocationId )
                             .ToList();
 
@@ -1293,8 +1339,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     var now = RockDateTime.Now;
                     groupIds = NavData.Groups.Select( g => g.Id ).ToList();
 
-                    var schedules = new List<Schedule>();
-
                     var attendanceQry = new AttendanceService( rockContext ).Queryable()
                         .Where( a =>
                             a.ScheduleId.HasValue &&
@@ -1311,34 +1355,12 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     if ( scheduleId.HasValue )
                     {
                         attendanceQry = attendanceQry.Where( a => a.ScheduleId == scheduleId.Value );
-
-                        var schedule = new ScheduleService( rockContext ).Get( scheduleId.Value );
-                        if ( schedule != null )
-                        {
-                            schedules.Add( schedule );
-                        }
-                    }
-                    else
-                    {
-                        schedules = new ScheduleService( rockContext ).Queryable().AsNoTracking()
-                            .Where( s => s.CheckInStartOffsetMinutes.HasValue )
-                            .ToList();
                     }
 
                     var attendanceList = attendanceQry.ToList();
 
                     foreach ( DateTime chartTime in chartTimes )
                     {
-                        // Get the active schedules
-                        var activeSchedules = new List<int>();
-                        foreach ( var schedule in schedules )
-                        {
-                            if ( schedule.WasScheduleOrCheckInActive( chartTime ) )
-                            {
-                                activeSchedules.Add( schedule.Id );
-                            }
-                        }
-
                         bool current = chartTime.Equals( chartTimes.Max() );
 
                         foreach ( var groupLocSched in attendanceList
@@ -1418,7 +1440,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             }
 
             // Get the start time
-            var time = endTime.AddHours( -2 );
+            var min = GetAttributeValue( "LookbackMinutes" ).AsInteger();
+            var time = endTime.AddMinutes( -min );
 
             // Get 5 min increments
             var times = new List<DateTime>();

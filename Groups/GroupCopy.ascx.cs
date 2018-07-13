@@ -55,6 +55,16 @@ namespace RockWeb.Plugins.com_kfs.Groups
         }
 
         /// <summary>
+        /// Handles the BlockUpdated event of the control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void Block_BlockUpdated( object sender, EventArgs e )
+        {
+
+        }
+
+        /// <summary>
         /// Gets the group.
         /// </summary>
         /// <param name="groupId">The group identifier.</param>
