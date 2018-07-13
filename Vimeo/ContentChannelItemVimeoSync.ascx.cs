@@ -38,7 +38,6 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
         #region Fields
 
         private int _vimeoId = 0;
-        //ContentChannelItem _contentItem = null;
         private int _contentItemId = 0;
         private string _accessToken = string.Empty;
         private string _imageAttributeKey = string.Empty;
