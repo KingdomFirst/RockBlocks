@@ -62,7 +62,15 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
-
+            string groupId = PageParameter( "GroupId" );
+            if ( !string.IsNullOrWhiteSpace( groupId ) )
+            {
+                ShowPanels( groupId.AsInteger() );
+            }
+            else
+            {
+                pnlGroupCopy.Visible = false;
+            }
         }
 
         /// <summary>
