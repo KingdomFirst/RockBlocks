@@ -2,7 +2,7 @@
 
 <asp:UpdatePanel runat="server" ID="upnlGroupCopy">
     <ContentTemplate>
-        <asp:Panel runat="server" ID="pnlGroupCopy" CssClass="row">
+        <asp:Panel runat="server" ID="pnlGroupCopy" CssClass="row" Visible="false" >
             <asp:HiddenField ID="hfGroupId" runat="server" />
             <asp:Panel runat="server" ID="pnlCopyButton" Visible="true" CssClass="col-md-12 pull-right">
                 <p>
