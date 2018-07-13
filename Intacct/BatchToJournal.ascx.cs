@@ -127,7 +127,7 @@ namespace RockWeb.Plugins.com_kfs.Intacct
 
                 var postXml = journal.CreateJournalEntryXML( intacctAuth, _financialBatch.Id, GetAttributeValue( "JournalId" ) );
                 var resultXml = endpoint.PostToIntacct( postXml );
-                var success = endpoint.ParseEndpointResonse( resultXml, _financialBatch.Id, GetAttributeValue( "LogResponse" ).AsBoolean() );
+                var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, GetAttributeValue( "LogResponse" ).AsBoolean() );
 
                 if ( success )
                 {
