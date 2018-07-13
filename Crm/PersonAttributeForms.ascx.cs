@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -31,17 +31,21 @@ namespace RockWeb.Plugins.com_kfs.Crm
     // Block Properties
 
     // Settings
+    [BooleanField( "Allow Connection Opportunity", "Determines if a url parameter of 'OpportunityId' should be evaluated when complete.  Example: OpportunityId=1 or OpportunityId=1,2,3", false, "Connections", 0 )]
+    [BooleanField( "Use Connection Request As Workflow Entity", "If a url parameter of 'ConnectionRequestId' is a valid Connection Request this will be the initiating Workflow Entity instead of the Person.", false, "Connections", 1 )]
+
+    [BooleanField( "Allow Group Membership", "Determines if a url parameter of 'GroupGuid' or 'GroupId' should be evaluated when complete.", false, "Groups", 0 )]
+    [BooleanField( "Enable Passing Group Id", "If enabled, allows the ability to pass in a group's Id (GroupId=) instead of the Guid.", true, "Groups", 1 )]
+    [GroupTypesField( "Allowed Group Types", "This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.", true, Rock.SystemGuid.GroupType.GROUPTYPE_SMALL_GROUP, "Groups", 2 )]
+    [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "Groups", 3 )]
+    [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "Groups", 4 )]
+
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
-    [BooleanField( "Allow Connection Opportunity", "Determines if a url parameter of 'OpportunityId' should be evaluated when complete.  Example: OpportunityId=1 or OpportunityId=1,2,3" )]
-    [BooleanField( "Allow Group Membership", "Determines if a url parameter of 'GroupGuid' or 'GroupId' should be evaluated when complete." )]
-    [GroupTypesField( "Allowed Group Types", "This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.", true, Rock.SystemGuid.GroupType.GROUPTYPE_SMALL_GROUP, "", 0 )]
-    [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "", 0 )]
-    [BooleanField( "Enable Passing Group Id", "If enabled, allows the ability to pass in a group's Id (GroupId=) instead of the Guid.", true, "", 0 )]
-    [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "", 2 )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
     [LinkedPage( "Done Page", "The page to redirect to when done.", false, "", "CustomSetting" )]
     [TextField( "Forms", "The forms to show.", false, "", "CustomSetting" )]
+    [CodeEditorField( "Confirmation Text", "", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "CustomSetting" )]
 
     public partial class PersonAttributeForms : RockBlockCustomSettings
     {
@@ -427,6 +431,13 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                                 person.Email = newEmail;
                                                 break;
                                             }
+                                        case PersonFieldType.ConnectionStatus:
+                                            {
+                                                var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT ).Id;
+                                                History.EvaluateChange( personChanges, "Connection Status", DefinedValueCache.GetName( person.ConnectionStatusValueId ), DefinedValueCache.GetName( newConnectionStatusId ) );
+                                                person.ConnectionStatusValueId = newConnectionStatusId;
+                                                break;
+                                            }
                                     }
                                 }
                             }
@@ -537,19 +548,33 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                             if ( CurrentPageIndex >= FormState.Count )
                             {
-                                WorkflowType workflowType = null;
                                 Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
                                 if ( workflowTypeGuid.HasValue )
                                 {
-                                    var workflowTypeService = new WorkflowTypeService( rockContext );
-                                    workflowType = workflowTypeService.Get( workflowTypeGuid.Value );
-                                    if ( workflowType != null )
+                                    var workflowType = WorkflowTypeCache.Read( workflowTypeGuid.Value );
+                                    if ( workflowType != null && ( workflowType.IsActive ?? true ) )
                                     {
                                         try
                                         {
-                                            var workflow = Workflow.Activate( workflowType, person.FullName );
-                                            List<string> workflowErrors;
-                                            new WorkflowService( rockContext ).Process( workflow, person, out workflowErrors );
+                                            var useConnectionRequest = GetAttributeValue( "UseConnectionRequestAsWorkflowEntity" ).AsBoolean( false );
+                                            var connectionRequestId = PageParameter( "ConnectionRequestId" ).AsInteger();
+                                            if ( useConnectionRequest && connectionRequestId > 0 )
+                                            {
+                                                ConnectionRequest connectionRequest = null;
+                                                connectionRequest = new ConnectionRequestService( rockContext ).Get( connectionRequestId );
+                                                if ( connectionRequest != null )
+                                                {
+                                                    var workflow = Workflow.Activate( workflowType, person.FullName );
+                                                    List<string> workflowErrors;
+                                                    new WorkflowService( rockContext ).Process( workflow, connectionRequest, out workflowErrors );
+                                                }
+                                            }
+                                            else
+                                            {
+                                                var workflow = Workflow.Activate( workflowType, person.FullName );
+                                                List<string> workflowErrors;
+                                                new WorkflowService( rockContext ).Process( workflow, person, out workflowErrors );
+                                            }
                                         }
                                         catch ( Exception ex )
                                         {
@@ -690,6 +715,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                 else
                                 {
                                     pnlView.Visible = false;
+                                    litConfirmationText.Visible = true;
+                                    litConfirmationText.Text = GetAttributeValue( "ConfirmationText" );
                                 }
                                 upnlContent.Update();
                             }
@@ -757,7 +784,12 @@ namespace RockWeb.Plugins.com_kfs.Crm
             string json = JsonConvert.SerializeObject( FormState, Formatting.None, jsonSetting );
             SetAttributeValue( "Forms", json );
 
+            SetAttributeValue( "ConfirmationText", ceConfirmationText.Text );
+
             SaveAttributeValues();
+
+            mdEdit.Hide();
+            pnlEditModal.Visible = false;
 
             ShowDetail();
 
@@ -962,7 +994,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
         {
             _mode = "VIEW";
 
-            pnlEdit.Visible = false;
+            pnlEditModal.Visible = false;
 
             string json = GetAttributeValue( "Forms" );
             if ( string.IsNullOrWhiteSpace( json ) )
@@ -1128,6 +1160,16 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                             break;
                                         }
 
+                                    case PersonFieldType.ConnectionStatus:
+                                        {
+                                            var value = CurrentPerson.ConnectionStatusValueId.ToString();
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.ConnectionStatus, value );
+                                            }
+                                            break;
+                                        }
+
                                 }
                             }
                             else if ( field.FieldSource == FormFieldSource.PersonAttribute )
@@ -1218,7 +1260,10 @@ namespace RockWeb.Plugins.com_kfs.Crm
                             }
 
                             var attribute = AttributeCache.Read( field.AttributeId.Value );
-                            attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
+                            if ( attribute != null )
+                            {
+                                attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
+                            }
                         }
 
                         if ( !string.IsNullOrWhiteSpace( field.PostText ) )
@@ -1376,6 +1421,16 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                     }
                                     break;
                                 }
+
+                            case PersonFieldType.ConnectionStatus:
+                                {
+                                    Control control = phContent.FindControl( "ddlConnectionStatus" );
+                                    if ( control != null )
+                                    {
+                                        value = ( ( RockDropDownList ) control ).SelectedValue;
+                                    }
+                                    break;
+                                }
                         }
 
                         if ( !string.IsNullOrWhiteSpace( value ) )
@@ -1386,13 +1441,16 @@ namespace RockWeb.Plugins.com_kfs.Crm
                     else if ( field.FieldSource == FormFieldSource.PersonAttribute )
                     {
                         var attribute = AttributeCache.Read( field.AttributeId.Value );
-                        string fieldId = "attribute_field_" + attribute.Id.ToString();
-
-                        Control control = phContent.FindControl( fieldId );
-                        if ( control != null )
+                        if ( attribute != null )
                         {
-                            string value = attribute.FieldType.Field.GetEditValue( control, attribute.QualifierValues );
-                            AttributeValueState.AddOrReplace( attribute.Id, value );
+                            string fieldId = "attribute_field_" + attribute.Id.ToString();
+
+                            Control control = phContent.FindControl( fieldId );
+                            if ( control != null )
+                            {
+                                string value = attribute.FieldType.Field.GetEditValue( control, attribute.QualifierValues );
+                                AttributeValueState.AddOrReplace( attribute.Id, value );
+                            }
                         }
                     }
                 }
@@ -1654,6 +1712,26 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                         break;
                     }
+                case PersonFieldType.ConnectionStatus:
+                    {
+                        var ddlConnectionStatus = new RockDropDownList();
+                        ddlConnectionStatus.ID = "ddlConnectionStatus";
+                        ddlConnectionStatus.Label = "Connection Status";
+                        ddlConnectionStatus.Required = field.IsRequired;
+                        ddlConnectionStatus.ValidationGroup = BlockValidationGroup;
+                        ddlConnectionStatus.BindToDefinedType( DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.PERSON_CONNECTION_STATUS ) ), true );
+
+                        phContent.Controls.Add( ddlConnectionStatus );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            var value = fieldValue.ToString().AsInteger();
+                            ddlConnectionStatus.SetValue( value );
+                        }
+
+                        break;
+                    }
+
             }
         }
 
@@ -1696,10 +1774,13 @@ namespace RockWeb.Plugins.com_kfs.Crm
                 FormState = JsonConvert.DeserializeObject<List<AttributeForm>>( json );
             }
 
+            ceConfirmationText.Text = GetAttributeValue( "ConfirmationText" ); ;
+
             BuildEditControls( true );
 
-            pnlEdit.Visible = true;
+            pnlEditModal.Visible = true;
             pnlView.Visible = false;
+            mdEdit.Show();
 
             _mode = "EDIT";
 
@@ -1744,7 +1825,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
             control.ID = form.Guid.ToString( "N" );
             parentControl.Controls.Add( control );
 
-            control.ValidationGroup = btnSave.ValidationGroup;
+            control.ValidationGroup = mdEdit.ValidationGroup;
 
             control.DeleteFieldClick += tfeForm_DeleteFieldClick;
             control.ReorderFieldClick += tfeForm_ReorderFieldClick;
@@ -2785,6 +2866,11 @@ $('.template-form > .panel-body').on('validation-error', function() {
         /// The grade
         /// </summary>
         Grade = 11,
+
+        /// <summary>
+        /// The connection status
+        /// </summary>
+        ConnectionStatus = 12,
     }
 
     #endregion
