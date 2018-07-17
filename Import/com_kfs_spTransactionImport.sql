@@ -1,3 +1,10 @@
+USE [tvc-rock-db]
+GO
+/****** Object:  StoredProcedure [dbo].[com_kfs_spTransactionImport]    Script Date: 7/10/2018 4:34:15 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[com_kfs_spTransactionImport]
     @TransactionDatabase NVARCHAR(250) = 'dbo',
     @TransactionTable NVARCHAR(250),
@@ -205,10 +212,10 @@ SELECT @cmd = '
 ;WITH financialData AS (
     SELECT * FROM ' + QUOTENAME(@TransactionTable) +
 '), NewPeopleRecords AS (
-    SELECT 
+    SELECT DISTINCT
 		ContributorID ForeignId, 
-		RIGHT(ContributorName, CHARINDEX('','', REVERSE(ContributorName)) - 1) FirstName,
-		LEFT(ContributorName, CHARINDEX('','', ContributorName) - 1) LastName,
+		LTRIM(RTRIM(REPLACE(RIGHT(ContributorName, CHARINDEX('','', REVERSE(ContributorName))), '','', ''''))) FirstName,
+		REPLACE(LEFT(ContributorName, ISNULL(NULLIF(CHARINDEX('','', ContributorName), 0), LEN(ContributorName))), '','', '''') LastName,
 		PreferredEmail Email, 
 		ReceivedDate CreatedDateTime
     FROM financialData fd
@@ -228,7 +235,7 @@ SELECT @cmd = '
 ;WITH financialData AS (
     SELECT * FROM ' + QUOTENAME(@TransactionTable) +
 '), PersonRecords AS (
-    SELECT 
+    SELECT DISTINCT
 		ContributorID ForeignId, 
 		p.Id PersonId,
 		p.Guid PersonGuid
@@ -240,7 +247,7 @@ SELECT @cmd = '
     WHERE pa.[PersonId] IS NULL
 )
 INSERT PersonAlias( PersonId, AliasPersonId, AliasPersonGuid, Guid, ForeignKey, ForeignId)
-SELECT PersonId, PersonId, PersonGuid, PersonGuid, ForeignId, ForeignId
+SELECT DISTINCT PersonId, PersonId, PersonGuid, PersonGuid, ForeignId, ForeignId
 FROM PersonRecords
 ';
 
@@ -275,6 +282,7 @@ IF (@BatchName IS NOT NULL AND @BatchName <> '')
 BEGIN
 	SELECT @BatchName = CONVERT(VARCHAR(10), @BatchDate, 10) + ' ' + @BatchName
 
+
 	SELECT @BatchId = Id
 	FROM FinancialBatch
 	WHERE [Status] <> 2
@@ -304,6 +312,7 @@ BEGIN
 END
 
 
+
 -- Generate lookup values
 SELECT @cmd = '
 ;WITH financialData AS (
@@ -321,7 +330,7 @@ SELECT
     CONVERT(MONEY, fd.[Amount]) Amount,
     NEWID() TransactionGuid, 
     NEWID() PaymentDetailGuid, 
-    REPLACE(fd.[Memo], ''Reference Number: '', '''') TransactionCode,
+    ISNULL(NULLIF(REPLACE(fd.[Memo], ''Reference Number: '', ''''), ''''), [Reference]) TransactionCode,
     fd.[Memo] Summary,
     ''FellowshipOne'' ForeignKey
 FROM financialData fd
@@ -341,8 +350,16 @@ LEFT JOIN Campus c
     ON LTRIM(RTRIM(REPLACE(fd.Fund, ''Campus'', ''''))) LIKE CONCAT(''%'', c.[Name])
     OR LTRIM(RTRIM(REPLACE(fd.Fund, ''Campus'', ''''))) LIKE CONCAT(c.[ShortCode],''%'')
 LEFT JOIN FinancialTransaction ft
-	ON REPLACE(fd.[Memo], ''Reference Number: '', '''') = ft.TransactionCode
+	ON fd.Memo <> ''''
+	AND ft.TransactionDateTime = fd.ReceivedDate
+	AND REPLACE(fd.[Memo], ''Reference Number: '', '''') = ft.TransactionCode
+LEFT JOIN FinancialTransaction ftc
+	ON ISNUMERIC(fd.Reference) = 1
+	AND ftc.TransactionDateTime = fd.ReceivedDate
+	AND ftc.AuthorizedPersonAliasId = pa.Id
+	AND fd.Reference = ftc.TransactionCode
 WHERE ft.Id IS NULL
+	AND ftc.Id IS NULL
 ';
 
 EXEC(@cmd)
