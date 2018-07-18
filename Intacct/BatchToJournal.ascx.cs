@@ -149,13 +149,11 @@ namespace RockWeb.Plugins.com_kfs.Intacct
                 {
                     var rockContext = new RockContext();
                     var financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
-
-                    //
-                    // Close Batch
-                    //
-
                     var changes = new List<string>();
 
+                    //
+                    // Close Batch if we're supposed to
+                    //
                     if ( GetAttributeValue( "CloseBatch" ).AsBoolean() )
                     {
                         History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Closed );
@@ -165,14 +163,14 @@ namespace RockWeb.Plugins.com_kfs.Intacct
                     //
                     // Set Date Exported
                     //
-
                     financialBatch.LoadAttributes();
-
                     var oldDate = financialBatch.GetAttributeValue( "com.kfs.Intacct.DateExported" );
                     var newDate = RockDateTime.Now;
-
                     History.EvaluateChange( changes, "Date Exported", oldDate, newDate.ToString() );
 
+                    //
+                    // Save the changes
+                    //
                     rockContext.WrapTransaction( () =>
                     {
                         if ( changes.Any() )
@@ -198,15 +196,30 @@ namespace RockWeb.Plugins.com_kfs.Intacct
         {
             if ( _financialBatch != null )
             {
-                _financialBatch.LoadAttributes();
-
-                var changes = new List<string>();
-                var oldDate = _financialBatch.GetAttributeValue( "com.kfs.Intacct.DateExported" ).AsDateTime().ToString();
-                var newDate = string.Empty;
-
-                History.EvaluateChange( changes, "Date Exported", oldDate, newDate );
-
                 var rockContext = new RockContext();
+                var financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
+                var changes = new List<string>();
+
+                //
+                // Open Batch is we Closed it
+                //
+                if ( GetAttributeValue( "CloseBatch" ).AsBoolean() )
+                {
+                    History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Open );
+                    financialBatch.Status = BatchStatus.Open;
+                }
+
+                //
+                // Remove Date Exported
+                //
+                financialBatch.LoadAttributes();
+                var oldDate = financialBatch.GetAttributeValue( "com.kfs.Intacct.DateExported" ).AsDateTime().ToString();
+                var newDate = string.Empty;
+                History.EvaluateChange( changes, "Date Exported", oldDate, newDate );
+                
+                //
+                // Save the changes
+                //
                 rockContext.WrapTransaction( () =>
                 {
                     if ( changes.Any() )
@@ -215,13 +228,13 @@ namespace RockWeb.Plugins.com_kfs.Intacct
                             rockContext,
                             typeof( FinancialBatch ),
                             Rock.SystemGuid.Category.HISTORY_FINANCIAL_BATCH.AsGuid(),
-                            _financialBatch.Id,
+                            financialBatch.Id,
                             changes );
                     }
                 } );
 
-                _financialBatch.SetAttributeValue( "com.kfs.Intacct.DateExported", newDate );
-                _financialBatch.SaveAttributeValue( "com.kfs.Intacct.DateExported", rockContext );
+                financialBatch.SetAttributeValue( "com.kfs.Intacct.DateExported", newDate );
+                financialBatch.SaveAttributeValue( "com.kfs.Intacct.DateExported", rockContext );
             }
 
             Response.Redirect( Request.RawUrl );
