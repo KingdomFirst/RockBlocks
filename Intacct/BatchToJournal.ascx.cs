@@ -66,13 +66,21 @@ namespace RockWeb.Plugins.com_kfs.Intacct
 
         protected void ShowDetail()
         {
+            var rockContext = new RockContext();
             var isExported = false;
 
-            _financialBatch = new FinancialBatchService( new RockContext() ).Get( _batchId );
+            _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
             DateTime? dateExported = null;
+
+            decimal variance = 0;
 
             if ( _financialBatch != null )
             {
+                var financialTransactionDetailService = new FinancialTransactionDetailService( rockContext );
+                var qryTransactionDetails = financialTransactionDetailService.Queryable().Where( a => a.Transaction.BatchId == _financialBatch.Id );
+                decimal txnTotal = qryTransactionDetails.Select( a => ( decimal? ) a.Amount ).Sum() ?? 0;
+                variance = txnTotal - _financialBatch.ControlAmount;
+
                 _financialBatch.LoadAttributes();
 
                 dateExported = ( DateTime? ) _financialBatch.AttributeValues["com.kfs.Intacct.DateExported"].ValueAsType;
@@ -87,6 +95,14 @@ namespace RockWeb.Plugins.com_kfs.Intacct
             {
                 btnExportToIntacct.Text = GetAttributeValue( "ButtonText" );
                 btnExportToIntacct.Visible = true;
+                if ( variance == 0 )
+                {
+                    btnExportToIntacct.Enabled = true;
+                }
+                else
+                {
+                    btnExportToIntacct.Enabled = false;
+                }
             }
             else if ( isExported )
             {
