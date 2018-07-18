@@ -18,7 +18,7 @@ namespace RockWeb.Plugins.com_kfs.Intacct
     [TextField( "Journal Id", "The Intacct Symbol of the Journal that the Entry should be posted to. For example: GJ", true, "", "", 0 )]
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Export to Intacct", "", 1 )]
     [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.", true, "", 2 )]
-    [BooleanField( "Log Response", "Flag indicating if the Intacct Response should be logged to the Batch Audit Log", false, "", 3 )]
+    [BooleanField( "Log Response", "Flag indicating if the Intacct Response should be logged to the Batch Audit Log", true, "", 3 )]
     [EncryptedTextField( "Sender Id", "The Intacct Sender Id", true, "", "Configuration", 0 )]
     [EncryptedTextField( "Sender Password", "The Intacct Sender Password", true, "", "Configuration", 1 )]
     [EncryptedTextField( "Company Id", "The Intacct Sender Id", true, "", "Configuration", 2 )]
