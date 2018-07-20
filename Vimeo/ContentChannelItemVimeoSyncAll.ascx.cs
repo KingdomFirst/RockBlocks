@@ -30,6 +30,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
     [TextField( "HD Video Attribute Key", "The HD Video Attribute Key that the HD Video should be stored in. Leave blank to never sync.", false, "", "", 8 )]
     [TextField( "SD Video Attribute Key", "The SD Video Attribute Key that the SD Video should be stored in. Leave blank to never sync.", false, "", "", 9 )]
     [TextField( "HLS Video Attribute Key", "The HLS Video Attribute Key that the HLS Video should be stored in. Leave blank to never sync.", false, "", "", 10 )]
+    [IntegerField( "Batch Size", "The number of Content Channel Items to process per context save.", true, 25, "Advanced", 11 )]
 
     #endregion
 
@@ -37,6 +38,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
     {
         #region Fields
 
+        private int _batchSize = 25;
         private int _contentChannelId = 0;
         private string _accessToken = string.Empty;
         private string _imageAttributeKey = string.Empty;
@@ -57,6 +59,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
         {
             _accessToken = Encryption.DecryptString( GetAttributeValue( "AccessToken" ) );
             _contentChannelId = PageParameter( "contentChannelId" ).AsInteger();
+            _batchSize = GetAttributeValue( "BatchSize" ).AsInteger();
         }
 
         /// <summary>
@@ -84,12 +87,11 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
 
         protected void ShowDetail( int contentChannelId )
         {
-            var rockContext = new RockContext();
             var contentChannel = new ContentChannel();
 
             if (contentChannelId != 0 )
             {
-                contentChannel = new ContentChannelService( rockContext )
+                contentChannel = new ContentChannelService( new RockContext() )
                     .Queryable()
                     .FirstOrDefault( c => c.Id == contentChannelId );
             }
@@ -173,16 +175,15 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
 
         protected void btnVimeoSync_Click( object sender, EventArgs e )
         {
-            using ( var rockContext = new RockContext() )
-            {
-                SyncVimeo( rockContext );
-            }
+            SyncVimeo();
             Response.Redirect( Request.RawUrl );
         }
 
-        private void SyncVimeo( RockContext rockContext )
+        private void SyncVimeo()
         {
-            var contentItems = new List<ContentChannelItem>();
+            var lookupContext = new RockContext();
+            var contentChannelItems = new List<ContentChannelItem>();
+            var completed = 0;
             
             var client = new VimeoClient( _accessToken );
             var vimeo = new Video();
@@ -194,72 +195,89 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
 
             foreach ( var video in videos )
             {
-                var contentItem = new ContentChannelItemService( rockContext )
+                var contentChannelItem = new ContentChannelItemService( lookupContext )
                     .Queryable( "ContentChannel,ContentChannelType" )
-                    .WhereAttributeValue( rockContext, vimeoIdKey, video.vimeoId.ToString() )
+                    .WhereAttributeValue( lookupContext, vimeoIdKey, video.vimeoId.ToString() )
                     .FirstOrDefault( i => i.ContentChannelId == _contentChannelId );
 
-                if ( contentItem != null && contentItem.Id != 0 )
+                if ( contentChannelItem != null && contentChannelItem.Id != 0 )
                 {
-
-                    if ( contentItem.Attributes == null )
+                    if ( contentChannelItem.Attributes == null )
                     {
-                        contentItem.LoadAttributes();
+                        contentChannelItem.LoadAttributes();
                     }
 
                     var cbName = cblSyncOptions.Items.FindByValue( "Name" );
                     if ( cbName != null && cbName.Selected == true )
                     {
-                        contentItem.Title = video.name;
+                        contentChannelItem.Title = video.name;
                     }
 
                     var cbDescription = cblSyncOptions.Items.FindByValue( "Description" );
                     if ( cbDescription != null && cbDescription.Selected == true )
                     {
-                        contentItem.Content = video.description;
+                        contentChannelItem.Content = video.description;
                     }
 
                     var cbImage = cblSyncOptions.Items.FindByValue( "Image" );
                     if ( cbImage != null && cbImage.Selected == true )
                     {
-                        contentItem.AttributeValues[_imageAttributeKey].Value = video.imageUrl;
+                        contentChannelItem.AttributeValues[_imageAttributeKey].Value = video.imageUrl;
                     }
 
                     var cbDuration = cblSyncOptions.Items.FindByValue( "Duration" );
                     if ( cbDuration != null && cbDuration.Selected == true )
                     {
-                        contentItem.AttributeValues[_durationAttributeKey].Value = video.duration.ToString();
+                        contentChannelItem.AttributeValues[_durationAttributeKey].Value = video.duration.ToString();
                     }
 
                     var cbHDVideo = cblSyncOptions.Items.FindByValue( "HD Video" );
                     if ( cbHDVideo != null && cbHDVideo.Selected == true && !string.IsNullOrWhiteSpace( video.hdLink ) )
                     {
-                        contentItem.AttributeValues[_hdVideoAttributeKey].Value = video.hdLink;
+                        contentChannelItem.AttributeValues[_hdVideoAttributeKey].Value = video.hdLink;
                     }
 
                     var cbSDVideo = cblSyncOptions.Items.FindByValue( "SD Video" );
                     if ( cbSDVideo != null && cbSDVideo.Selected == true && !string.IsNullOrWhiteSpace( video.sdLink ) )
                     {
-                        contentItem.AttributeValues[_sdVideoAttributeKey].Value = video.sdLink;
+                        contentChannelItem.AttributeValues[_sdVideoAttributeKey].Value = video.sdLink;
                     }
 
                     var cbHLSVideo = cblSyncOptions.Items.FindByValue( "HLS Video" );
                     if ( cbHLSVideo != null && cbHLSVideo.Selected == true && !string.IsNullOrWhiteSpace( video.hlsLink ) )
                     {
-                        contentItem.AttributeValues[_hlsVideoAttributeKey].Value = video.hlsLink;
+                        contentChannelItem.AttributeValues[_hlsVideoAttributeKey].Value = video.hlsLink;
                     }
 
-                    contentItems.Add( contentItem );
+                    contentChannelItems.Add( contentChannelItem );
+                    completed++;
+
+                    if ( completed % _batchSize < 1 )
+                    {
+                        SaveContentChannelItems( contentChannelItems );
+                        contentChannelItems.Clear();
+                    }
                 }
             }
 
-            // Save Everything
+            // Save leftovers
+            if ( contentChannelItems.Any() )
+            {
+                SaveContentChannelItems( contentChannelItems );
+                contentChannelItems.Clear();
+            }
+            
+        }
+
+        private void SaveContentChannelItems( List<ContentChannelItem> contentChannelItems  )
+        {
+            var rockContext = new RockContext();
             rockContext.WrapTransaction( () =>
             {
                 rockContext.SaveChanges();
-                foreach ( var contentItem in contentItems )
+                foreach ( var contentChannelItem in contentChannelItems )
                 {
-                    contentItem.SaveAttributeValues( rockContext );
+                    contentChannelItem.SaveAttributeValues( rockContext );
                 }
             } );
         }
