@@ -676,7 +676,15 @@ namespace RockWeb.Plugins.com_kfs.Cms
                         }
                     } );
 
-                    NavigateToCurrentPage();
+                    var queryString = new Dictionary<string, string>();
+
+                    var personParam = PageParameter( "Person" );
+                    if ( !string.IsNullOrWhiteSpace( personParam ) )
+                    {
+                        queryString.Add( "Person", personParam );
+                    }
+
+                    NavigateToPage( RockPage.Guid, queryString );
                 }
             }
         }
