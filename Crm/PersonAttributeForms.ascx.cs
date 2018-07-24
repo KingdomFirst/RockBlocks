@@ -55,7 +55,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
         private bool _saveNavigationHistory = false;
         public decimal PercentComplete = 0;
 
-        #endregion
+        #endregion Fields
 
         #region Properties
 
@@ -87,7 +87,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
             set { ViewState["ProgressBarSteps"] = value; }
         }
 
-        #endregion
+        #endregion Properties
 
         #region Base Control Methods
 
@@ -141,7 +141,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
             {
                 BuildEditControls( false );
             }
-
         }
 
         /// <summary>
@@ -199,10 +198,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                     switch ( nameValue[0] )
                                     {
                                         case "re-order-form":
-                                            {
-                                                SortForms( guid, newIndex + 1 );
-                                                break;
-                                            }
+                                            SortForms( guid, newIndex );
+                                            break;
                                     }
                                 }
                             }
@@ -217,7 +214,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
                 nbMain.NotificationBoxType = NotificationBoxType.Warning;
                 nbMain.Visible = true;
             }
-
         }
 
         protected override object SaveViewState()
@@ -247,7 +243,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
             }
         }
 
-        #endregion
+        #endregion Base Control Methods
 
         #region Events
 
@@ -265,7 +261,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
             }
 
             ShowPage();
-
         }
 
         protected void lbPrev_Click( object sender, EventArgs e )
@@ -521,12 +516,12 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         }
                                     }
                                 }
-
                             }
 
                             person.LoadAttributes( rockContext );
 
                             var pageAttributeIds = new List<int>();
+
                             if ( saveEachPage && CurrentPageIndex > 0 && CurrentPageIndex <= FormState.Count )
                             {
                                 pageAttributeIds = FormState[CurrentPageIndex - 1].Fields
@@ -639,7 +634,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                                             connectionRequestService.Add( connectionRequest );
 
-                                            rockContext.SaveChanges();                                    }
+                                            rockContext.SaveChanges();
+                                        }
                                     }
                                 }
 
@@ -828,7 +824,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        void tfeForm_DeleteFormClick( object sender, EventArgs e )
+        private void tfeForm_DeleteFormClick( object sender, EventArgs e )
         {
             ParseEditControls();
 
@@ -850,7 +846,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_AddFieldClick( object sender, AttributeFormFieldEventArg e )
+        private void tfeForm_AddFieldClick( object sender, AttributeFormFieldEventArg e )
         {
             ParseEditControls();
 
@@ -864,7 +860,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_EditFieldClick( object sender, AttributeFormFieldEventArg e )
+        private void tfeForm_EditFieldClick( object sender, AttributeFormFieldEventArg e )
         {
             ParseEditControls();
 
@@ -878,7 +874,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_ReorderFieldClick( object sender, AttributeFormFieldEventArg e )
+        private void tfeForm_ReorderFieldClick( object sender, AttributeFormFieldEventArg e )
         {
             ParseEditControls();
 
@@ -897,7 +893,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_DeleteFieldClick( object sender, AttributeFormFieldEventArg e )
+        private void tfeForm_DeleteFieldClick( object sender, AttributeFormFieldEventArg e )
         {
             ParseEditControls();
 
@@ -919,14 +915,14 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The e.</param>
-        void tfeForm_RebindFieldClick( object sender, AttributeFormFieldEventArg e )
+        private void tfeForm_RebindFieldClick( object sender, AttributeFormFieldEventArg e )
         {
             ParseEditControls();
 
             BuildEditControls( true, e.FormGuid );
         }
 
-        #endregion
+        #endregion Form Control Events
 
         #region Field Dialog Events
 
@@ -955,7 +951,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                 field.PreText = ceAttributePreText.Text;
                 field.PostText = ceAttributePostText.Text;
                 field.FieldSource = ddlFieldSource.SelectedValueAsEnum<FormFieldSource>();
-                
+
                 switch ( field.FieldSource )
                 {
                     case FormFieldSource.PersonField:
@@ -972,7 +968,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                             break;
                         }
                 }
-                
+
                 field.ShowCurrentValue = cbUsePersonCurrentValue.Checked;
                 field.IsRequired = cbRequireInInitialEntry.Checked;
             }
@@ -982,9 +978,9 @@ namespace RockWeb.Plugins.com_kfs.Crm
             BuildEditControls( true );
         }
 
-        #endregion
+        #endregion Field Dialog Events
 
-        #endregion
+        #endregion Events
 
         #region Methods
 
@@ -1049,10 +1045,10 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         }
                                     case PersonFieldType.Campus:
                                         {
-                                            var value = CurrentPerson.GetCampus().Id.ToString();
-                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            var campus = CurrentPerson.GetCampus();
+                                            if ( campus != null )
                                             {
-                                                PersonValueState.AddOrReplace( PersonFieldType.Campus, value );
+                                                PersonValueState.AddOrReplace( PersonFieldType.Campus, campus.Id.ToString() );
                                             }
                                             break;
                                         }
@@ -1169,10 +1165,9 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                             }
                                             break;
                                         }
-
                                 }
                             }
-                            else if ( field.FieldSource == FormFieldSource.PersonAttribute )
+                            else if ( field.AttributeId.HasValue && field.FieldSource == FormFieldSource.PersonAttribute )
                             {
                                 var attributeCache = AttributeCache.Read( field.AttributeId.Value );
                                 if ( attributeCache != null )
@@ -1252,7 +1247,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                             CreatePersonField( field, setValues, personFieldValue );
                         }
-                        else if ( field.FieldSource == FormFieldSource.PersonAttribute )
+                        else if ( field.AttributeId.HasValue && field.FieldSource == FormFieldSource.PersonAttribute )
                         {
                             if ( AttributeValueState.ContainsKey( field.AttributeId.Value ) )
                             {
@@ -1277,7 +1272,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
         private void ParseViewControls()
         {
-            if ( FormState.Count > CurrentPageIndex )
+            if ( FormState != null && FormState.Count > CurrentPageIndex )
             {
                 var form = FormState[CurrentPageIndex];
                 foreach ( var field in form.Fields
@@ -1381,7 +1376,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         value = ( ( RockDropDownList ) control ).SelectedValue;
                                     }
                                     break;
-
                                 }
 
                             case PersonFieldType.MobilePhone:
@@ -1438,7 +1432,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                             PersonValueState.AddOrReplace( field.PersonFieldType, value );
                         }
                     }
-                    else if ( field.FieldSource == FormFieldSource.PersonAttribute )
+                    else if ( field.AttributeId.HasValue && field.FieldSource == FormFieldSource.PersonAttribute )
                     {
                         var attribute = AttributeCache.Read( field.AttributeId.Value );
                         if ( attribute != null )
@@ -1465,7 +1459,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// <param name="fieldValue">The field value.</param>
         private void CreatePersonField( AttributeFormField field, bool setValue, string fieldValue )
         {
-
             switch ( field.PersonFieldType )
             {
                 case PersonFieldType.FirstName:
@@ -1731,11 +1724,10 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                         break;
                     }
-
             }
         }
 
-        #endregion
+        #endregion View Mode
 
         #region Edit Mode
 
@@ -1744,6 +1736,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// </summary>
         protected override void ShowSettings()
         {
+            //NOTE: This isn't shown in a modal :(
+
             cbDisplayProgressBar.Checked = GetAttributeValue( "DisplayProgressBar" ).AsBoolean();
             ddlSaveValues.SetValue( GetAttributeValue( "SaveValues" ) );
 
@@ -1774,7 +1768,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                 FormState = JsonConvert.DeserializeObject<List<AttributeForm>>( json );
             }
 
-            ceConfirmationText.Text = GetAttributeValue( "ConfirmationText" ); ;
+            ceConfirmationText.Text = GetAttributeValue( "ConfirmationText" );
 
             BuildEditControls( true );
 
@@ -1898,12 +1892,12 @@ namespace RockWeb.Plugins.com_kfs.Crm
                     lFieldSource.Visible = true;
                     ddlFieldSource.Visible = false;
                 }
-                
+
                 ceAttributePreText.Text = field.PreText;
                 ceAttributePostText.Text = field.PostText;
 
                 ddlFieldSource.SetValue( field.FieldSource.ConvertToInt() );
-                
+
                 ddlPersonAttributes.Items.Clear();
                 var person = new Person();
                 person.LoadAttributes();
@@ -1933,7 +1927,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
                     ddlPersonAttributes.Visible = false;
                 }
 
-
                 cbRequireInInitialEntry.Checked = field.IsRequired;
                 cbUsePersonCurrentValue.Checked = field.ShowCurrentValue;
 
@@ -1942,6 +1935,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                 ShowDialog( "Attributes" );
             }
+
+            BuildEditControls( true );
         }
 
         /// <summary>
@@ -2045,7 +2040,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                 fieldSource == FormFieldSource.PersonAttribute ||
                 fieldSource == FormFieldSource.PersonField;
         }
-        
+
         /// <summary>
         /// Saves the phone.
         /// </summary>
@@ -2083,8 +2078,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
             }
         }
 
-
-        #endregion
+        #endregion Edit Mode
 
         #region Dialog Methods
 
@@ -2128,7 +2122,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
             hfActiveDialog.Value = string.Empty;
         }
 
-        #endregion
+        #endregion Dialog Methods
 
         /// <summary>
         /// Registers the client script.
@@ -2149,11 +2143,9 @@ namespace RockWeb.Plugins.com_kfs.Crm
             );
 
             ScriptManager.RegisterStartupScript( Page, Page.GetType(), "PersonAttributeForms", script, true );
-
         }
 
-        #endregion
-
+        #endregion Methods
     }
 
     #region Helper Classes
@@ -2203,6 +2195,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
             {
                 return ViewState["ValidationGroup"] as string;
             }
+
             set
             {
                 ViewState["ValidationGroup"] = value;
@@ -2289,12 +2282,12 @@ $('.template-form > header').click(function () {
     $('i.template-form-state', this).toggleClass('fa-chevron-up');
 });
 
-// fix so that the Remove button will fire its event, but not the parent event 
+// fix so that the Remove button will fire its event, but not the parent event
 $('.template-form a.js-activity-delete').click(function (event) {
     event.stopImmediatePropagation();
 });
 
-// fix so that the Reorder button will fire its event, but not the parent event 
+// fix so that the Reorder button will fire its event, but not the parent event
 $('.template-form a.template-form-reorder').click(function (event) {
     event.stopImmediatePropagation();
 });
@@ -2311,6 +2304,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
 
     return false;
 });
+
 ";
 
             ScriptManager.RegisterStartupScript( this, this.GetType(), "PersonAttributeFormEditorScript", script, true );
@@ -2379,7 +2373,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
             Controls.Add( _lbDeleteForm );
             _lbDeleteForm.CausesValidation = false;
             _lbDeleteForm.ID = this.ID + "_lbDeleteForm";
-            _lbDeleteForm.CssClass = "btn btn-xs btn-danger js-activity-delete";
+            _lbDeleteForm.CssClass = "btn btn-xs btn-square btn-danger js-activity-delete";
             _lbDeleteForm.Click += lbDeleteForm_Click;
             _lbDeleteForm.Controls.Add( new LiteralControl { Text = "<i class='fa fa-times'></i>" } );
 
@@ -2494,8 +2488,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
             writer.RenderBeginTag( HtmlTextWriterTag.Div );
 
             writer.WriteLine( "<a class='btn btn-xs btn-link form-reorder'><i class='fa fa-bars'></i></a>" );
-            writer.WriteLine( string.Format( "<a class='btn btn-xs btn-link'><i class='form-state fa {0}'></i></a>",
-                Expanded ? "fa fa-chevron-up" : "fa fa-chevron-down" ) );
+            writer.WriteLine( string.Format( "<a class='btn btn-xs btn-link'><i class='form-state fa {0}'></i></a>", Expanded ? "fa fa-chevron-up" : "fa fa-chevron-down" ) );
 
             _lbDeleteForm.RenderControl( writer );
 
@@ -2510,6 +2503,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
                 // hide details if the activity and actions are valid
                 writer.AddStyleAttribute( "display", "none" );
             }
+
             writer.AddAttribute( HtmlTextWriterAttribute.Class, "panel-body" );
             writer.RenderBeginTag( HtmlTextWriterTag.Div );
 
@@ -2655,11 +2649,10 @@ $('.template-form > .panel-body').on('validation-error', function() {
         /// Occurs when [delete field click].
         /// </summary>
         public event EventHandler<AttributeFormFieldEventArg> DeleteFieldClick;
-
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public class AttributeFormFieldEventArg : EventArgs
     {
@@ -2749,20 +2742,27 @@ $('.template-form > .panel-body').on('validation-error', function() {
         {
             return Name;
         }
-
     }
 
     [Serializable]
     public partial class AttributeFormField : IOrdered
     {
         public Guid Guid { get; set; }
+
         public int? AttributeId { get; set; }
+
         public bool ShowCurrentValue { get; set; }
+
         public bool IsRequired { get; set; }
+
         public int Order { get; set; }
+
         public string PreText { get; set; }
+
         public string PostText { get; set; }
+
         public FormFieldSource FieldSource { get; set; }
+
         public PersonFieldType PersonFieldType { get; set; }
 
         [Newtonsoft.Json.JsonIgnore]
@@ -2803,7 +2803,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public enum PersonFieldType
     {
@@ -2873,5 +2873,5 @@ $('.template-form > .panel-body').on('validation-error', function() {
         ConnectionStatus = 12,
     }
 
-    #endregion
+    #endregion Helper Classes
 }
