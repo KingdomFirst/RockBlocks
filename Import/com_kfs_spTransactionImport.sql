@@ -1,10 +1,3 @@
-USE [tvc-rock-db]
-GO
-/****** Object:  StoredProcedure [dbo].[com_kfs_spTransactionImport]    Script Date: 7/10/2018 4:34:15 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 ALTER PROCEDURE [dbo].[com_kfs_spTransactionImport]
     @TransactionDatabase NVARCHAR(250) = 'dbo',
     @TransactionTable NVARCHAR(250),
