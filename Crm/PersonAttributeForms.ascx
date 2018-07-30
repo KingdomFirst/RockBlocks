@@ -6,12 +6,42 @@
     }
 </script>
 
+<script type="text/javascript">
+    Sys.Application.add_load(function () {
+        var fixHelper = function (e, ui) {
+            ui.children().each(function () {
+                $(this).width($(this).width());
+            });
+            return ui;
+        };
+
+        $('.form-list').sortable({
+            helper: fixHelper,
+            handle: '.form-reorder',
+            containment: 'parent',
+            tolerance: 'pointer',
+            start: function (event, ui) {
+                {
+                    var start_pos = ui.item.index();
+                    ui.item.data('start_pos', start_pos);
+                }
+            },
+            update: function (event, ui) {
+                {
+                    var postbackArg = 're-order-form:' + ui.item.attr('data-key') + ';' + ui.item.index();
+                    window.location = "javascript:__doPostBack('<%=upnlContent.ClientID %>', '" + postbackArg + "')";
+                }
+            }
+        });
+    });
+</script>
+
 <asp:UpdatePanel ID="upnlContent" runat="server" ChildrenAsTriggers="false" UpdateMode="Conditional">
     <ContentTemplate>
 
         <asp:HiddenField ID="hfTriggerScroll" runat="server" Value="" />
 
-        <asp:ValidationSummary ID="vsSummary" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" />
+        <asp:ValidationSummary ID="vsSummary" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
         <Rock:NotificationBox ID="nbMain" runat="server" Visible="false"></Rock:NotificationBox>
         <asp:Literal ID="litConfirmationText" runat="server" Visible="false"></asp:Literal>
 
@@ -79,15 +109,15 @@
                                         <h3 class="panel-title">Forms</h3>
                                     </div>
                                     <div class="panel-body">
-
-                                        <asp:PlaceHolder ID="phForms" runat="server" />
-
+                                        <div class="form-list ui-sortable">
+                                            <asp:PlaceHolder ID="phForms" runat="server" />
+                                        </div>
                                         <div class="pull-right">
                                             <asp:LinkButton ID="lbAddForm" runat="server" CssClass="btn btn-action btn-xs" OnClick="lbAddForm_Click" CausesValidation="false"><i class="fa fa-plus"></i> Add Form</asp:LinkButton>
                                         </div>
-
                                     </div>
                                 </div>
+
                             </div>
                         </ContentTemplate>
                     </asp:UpdatePanel>
@@ -101,7 +131,7 @@
             <Content>
                 <asp:HiddenField ID="hfFormGuid" runat="server" />
                 <asp:HiddenField ID="hfAttributeGuid" runat="server" />
-                <asp:ValidationSummary ID="ValidationSummaryAttribute" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" ValidationGroup="Field" />
+                <asp:ValidationSummary ID="ValidationSummaryAttribute" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="Field" />
                 <div class="row">
                     <div class="col-md-4">
                         <Rock:RockLiteral ID="lFieldSource" runat="server" Label="Source" Visible="false" />
@@ -118,9 +148,9 @@
                             Help="Should a value for this attribute be required?" />
                     </div>
                 </div>
-                <Rock:CodeEditor ID="ceAttributePreText" runat="server" Label="Pre-Text" EditorMode="Html" EditorTheme="Rock" EditorHeight="100" ValidationGroup="Field"
+                <Rock:CodeEditor ID="ceAttributePreText" runat="server" Label="Pre-Text" EditorMode="Lava" EditorTheme="Rock" EditorHeight="100" ValidationGroup="Field"
                     Help="Any HTML to display directly above this field <span class='tip tip-lava'></span>." />
-                <Rock:CodeEditor ID="ceAttributePostText" runat="server" Label="Post-Text" EditorMode="Html" EditorTheme="Rock" EditorHeight="100" ValidationGroup="Field"
+                <Rock:CodeEditor ID="ceAttributePostText" runat="server" Label="Post-Text" EditorMode="Lava" EditorTheme="Rock" EditorHeight="100" ValidationGroup="Field"
                     Help="Any HTML to display directly below this field <span class='tip tip-lava'></span>." />
             </Content>
         </Rock:ModalDialog>
