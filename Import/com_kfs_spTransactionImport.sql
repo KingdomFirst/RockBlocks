@@ -1,9 +1,6 @@
 ALTER PROCEDURE [dbo].[com_kfs_spTransactionImport]
-    @TransactionDatabase NVARCHAR(250) = 'dbo',
-    @TransactionTable NVARCHAR(250),
-    @BatchName NVARCHAR(250) = 'FellowshipOne',
+    @ImportTable NVARCHAR(250),
     @CleanupTable bit = 1
-
 AS
 
 /**************************************************************
@@ -16,6 +13,11 @@ Assumptions:
 - People are imported on the destination server
 - Rock block is used to upload transaction file
 
+Note:
+- STRING_AGG is only available in SQL 2017 or Azure SQL
+- Otherwise use the following:
+  STUFF((SELECT '','' + [DonorID] FROM financialData FOR XML PATH ('''')), 1, 1, '''')
+
 Installation:
 - CREATE PROCEDURE [dbo].[com_kfs_spTransactionImport] AS ;
 
@@ -26,9 +28,7 @@ SET XACT_ABORT ON
 BEGIN TRANSACTION
 
 DECLARE @cmd NVARCHAR(MAX)
-    --, @TransactionDatabase NVARCHAR(250) = 'dbo'
-    --, @TransactionTable NVARCHAR(250)
-    --, @BatchName NVARCHAR(250) = 'FellowshipOne'
+    --, @ImportTable NVARCHAR(250)
     --, @CleanupTable bit = 1
 
 
@@ -61,7 +61,7 @@ WAITFOR DELAY '00:00:01';
 SELECT @cmd = '
 DECLARE @Status INT
 SELECT @Status = COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
-WHERE [TABLE_NAME] = ''' + @TransactionTable + '''
+WHERE [TABLE_NAME] = ''' + @ImportTable + '''
    AND COLUMN_NAME = ''ContributorId''
 
 IF @Status < 1 
@@ -77,7 +77,7 @@ EXEC(@cmd)
 -- Remove empty rows so they don't throw off date calculations
 SELECT @cmd = '
 ;WITH financialData AS (
-    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 ')
 DELETE FROM financialData
 WHERE ContributorId = ''''
@@ -89,7 +89,7 @@ EXEC(@cmd)
 -- Update frequency column
 SELECT @cmd = '
 ;WITH financialData AS (
-    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 ')
 UPDATE financialData
 SET [Frequency] = CASE 
@@ -107,7 +107,7 @@ WAITFOR DELAY '00:00:01';
 -- Update received date column
 SELECT @cmd = '
 ;WITH financialData AS (
-    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 ')
 UPDATE fd
 SET [ReceivedDate] = CONVERT(DATETIME, CONVERT(DATE, [ReceivedDate])) + CONVERT(DATETIME, CONVERT(TIME, [ReceivedTime]))
@@ -121,7 +121,7 @@ EXEC(@cmd)
 -- Update type column
 --SELECT @cmd = '
 --;WITH financialData AS (
---    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+--    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 --')
 --UPDATE financialData
 --SET [Type] = CASE 
@@ -143,7 +143,7 @@ EXEC(@cmd)
 -- Update reference column
 --SELECT @cmd = '
 --;WITH financialData AS (
---    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+--    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 --')
 --UPDATE financialData
 --SET [Memo] = REPLACE([Memo], ''Reference Number: '', '''')
@@ -162,7 +162,7 @@ WAITFOR DELAY '00:00:01';
 SELECT @cmd = '
 DECLARE @Status NVARCHAR(MAX)
 ;WITH financialData AS (
-    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 '), RockMatch AS (
     SELECT STRING_AGG( CONVERT(VARCHAR(MAX), REPLACE([Memo], ''Reference Number: '', '''')), '', '') AS transactionCodes
     FROM financialData fd
@@ -183,7 +183,7 @@ EXEC(@cmd)
 SELECT @cmd = '
 DECLARE @Status NVARCHAR(1000)
 ;WITH financialData AS (
-    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 '), RockMatch AS (
     SELECT STRING_AGG([ContributorId], '', '') AS missingPeople
     FROM financialData fd
@@ -203,18 +203,22 @@ EXEC(@cmd)
 -- Create unmatched people
 SELECT @cmd = '
 ;WITH financialData AS (
-    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 '), NewPeopleRecords AS (
     SELECT DISTINCT
 		ContributorID ForeignId, 
 		LTRIM(RTRIM(REPLACE(RIGHT(ContributorName, CHARINDEX('','', REVERSE(ContributorName))), '','', ''''))) FirstName,
 		REPLACE(LEFT(ContributorName, ISNULL(NULLIF(CHARINDEX('','', ContributorName), 0), LEN(ContributorName))), '','', '''') LastName,
 		PreferredEmail Email, 
-		ReceivedDate CreatedDateTime
+		MIN(ReceivedDate) CreatedDateTime
     FROM financialData fd
     LEFT JOIN PersonAlias pa
         ON fd.[ContributorId] = pa.ForeignId
     WHERE pa.[PersonId] IS NULL
+    GROUP BY ContributorID, 
+        LTRIM(RTRIM(REPLACE(RIGHT(ContributorName, CHARINDEX('','', REVERSE(ContributorName))), '','', ''''))),
+        REPLACE(LEFT(ContributorName, ISNULL(NULLIF(CHARINDEX('','', ContributorName), 0), LEN(ContributorName))), '','', ''''),
+        PreferredEmail
 )
 INSERT Person (FirstName, LastName, Email, ForeignKey, ForeignId, CreatedDateTime, ModifiedDateTime, IsSystem, RecordTypeValueId, RecordStatusValueId, ConnectionStatusValueId, IsDeceased, Gender, IsEmailActive, Guid, EmailPreference, CommunicationPreference)
 SELECT FirstName, LastName, Email, ForeignId, ForeignId, CreatedDateTime, GETDATE(), 0, ' + CONVERT(VARCHAR(20), @PersonRecordTypeId) + ', ' + CONVERT(VARCHAR(20), @PendingRecordStatusId) + ', ' + CONVERT(VARCHAR(20), @NewWebsiteConnectionStatusId) + ', 0, 0, 1, NEWID(), 0, 1
@@ -226,7 +230,7 @@ EXEC(@cmd)
 -- Assign PersonAliasId
 SELECT @cmd = '
 ;WITH financialData AS (
-    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 '), PersonRecords AS (
     SELECT DISTINCT
 		ContributorID ForeignId, 
@@ -270,11 +274,10 @@ CREATE TABLE _com_kfs_transactionLookup (
     ForeignKey NVARCHAR(50)
 );
 
-DECLARE @BatchId INT, @BatchDate DATE = GETDATE()
+DECLARE @BatchId INT, @BatchDate DATE = GETDATE(), @BatchName VARCHAR(100) = 'FellowshipOne'
 IF (@BatchName IS NOT NULL AND @BatchName <> '')
 BEGIN
 	SELECT @BatchName = CONVERT(VARCHAR(10), @BatchDate, 10) + ' ' + @BatchName
-
 
 	SELECT @BatchId = Id
 	FROM FinancialBatch
@@ -287,7 +290,7 @@ BEGIN
 		-- Insert a batch for today
 		SELECT @cmd = '
 		;WITH financialData AS (
-			SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+			SELECT * FROM ' + QUOTENAME(@ImportTable) +
 		')
 		INSERT FinancialBatch (Name, BatchStartDateTime, BatchEndDateTime, Status, ControlAmount, Guid, CreatedDateTime, ForeignKey, IsAutomated)
 		SELECT ''' + @BatchName + ''', MIN(CONVERT(DATE, ReceivedDate)), ''' + CONVERT(VARCHAR(20), @BatchDate) + ''', 0, SUM(CONVERT(MONEY, Amount)), NEWID(), ''' + CONVERT(VARCHAR(20), @BatchDate) + ''', ''FellowshipOne'', 0
@@ -309,7 +312,7 @@ END
 -- Generate lookup values
 SELECT @cmd = '
 ;WITH financialData AS (
-    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 ')
 INSERT _com_kfs_transactionLookup (ParentAccountId, AccountId, CampusId, TransactionDate, CurrencyType, CreditType, PersonAliasId, Amount, TransactionGuid, PaymentDetailGuid, TransactionCode, Summary, ForeignKey)
 SELECT 
@@ -394,7 +397,7 @@ EXEC(@cmd)
 -- Financial Transaction Detail
 SELECT @cmd = '
 ;WITH financialData AS (
-    SELECT * FROM ' + QUOTENAME(@TransactionTable) +
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
 ')
 INSERT FinancialTransactionDetail (TransactionId, AccountId, Amount, Guid, CreatedDateTime, ForeignKey)
 SELECT ft.Id, ISNULL(tl.AccountId, tl.ParentAccountId), tl.Amount, NEWID(), tl.TransactionDate, tl.ForeignKey
@@ -417,7 +420,7 @@ BEGIN
     RAISERROR('Removing imported table...', 0, 10) WITH NOWAIT;
     WAITFOR DELAY '00:00:01';
 
-    SELECT @cmd = 'DROP TABLE ' + QUOTENAME(@TransactionTable);
+    SELECT @cmd = 'DROP TABLE ' + QUOTENAME(@ImportTable);
     EXEC(@cmd)
 END
 
