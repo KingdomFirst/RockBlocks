@@ -158,7 +158,7 @@ namespace RockWeb.Plugins.com_kfs.Import
             var paramsList = new List<SqlParameter>
             {
                 // TODO clean this up to read parameters from SP
-                new SqlParameter { ParameterName = "@TransactionTable", SqlDbType = SqlDbType.NVarChar, Value = tableName }
+                new SqlParameter { ParameterName = "@ImportTable", SqlDbType = SqlDbType.NVarChar, Value = tableName }
                 //new SqlParameter { ParameterName = "@BatchPrefix", SqlDbType = SqlDbType.NVarChar, Value = GetAttributeValue( "BatchPrefix" ) }
             };
 
