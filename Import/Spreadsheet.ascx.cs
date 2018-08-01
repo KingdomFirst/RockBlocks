@@ -250,10 +250,9 @@ namespace RockWeb.Plugins.com_kfs.Import
                         tableName = tableToUpload.TableName;
                     }
                 }
-                else
-                {
-                    File.Delete( filePath );
-                }
+                
+                // cleanup whether we could read the file or not
+                File.Delete( filePath );
             }
 
             return transformResult;
