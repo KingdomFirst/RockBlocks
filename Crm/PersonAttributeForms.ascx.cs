@@ -1096,7 +1096,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                                     case PersonFieldType.MaritalStatus:
                                         {
-                                            var value = CurrentPerson.MaritalStatusValue.Id.ToString();
+                                            var value = CurrentPerson.MaritalStatusValueId.ToString();
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.MaritalStatus, value );
