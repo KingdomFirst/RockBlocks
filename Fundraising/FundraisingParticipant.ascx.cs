@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
@@ -53,29 +53,15 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             if ( this.GetAttributeValue( "ShowClipboardIcon" ).AsBoolean() )
             {
                 // Setup for being able to copy text to clipboard
-                // Rock v6 code
-                //                RockPage.AddScriptLink( this.Page, "~/Scripts/ZeroClipboard/ZeroClipboard.js" );
-                //                string script = string.Format( @"
-                //    var client = new ZeroClipboard( $('#{0}'));
-                //    $('#{0}').tooltip();
-                //", btnCopyToClipboard.ClientID );
-                //ScriptManager.RegisterStartupScript( btnCopyToClipboard, btnCopyToClipboard.GetType(), "share-copy", script, true );
-                //btnCopyToClipboard.Attributes["data-clipboard-target"] = hfShareUrl.ClientID;
-                // END v6 -- BEGIN v7 code
                 RockPage.AddScriptLink( this.Page, "~/Scripts/clipboard.js/clipboard.min.js" );
                 string script = string.Format( @"
-                    new Clipboard('#{0}');
-                    $('#{0}').tooltip();
-                ", btnCopyToClipboard.ClientID );
+    new Clipboard('#{0}');
+    $('#{0}').tooltip();
+", btnCopyToClipboard.ClientID );
                 ScriptManager.RegisterStartupScript( btnCopyToClipboard, btnCopyToClipboard.GetType(), "share-copy", script, true );
-                // END v7
 
                 Uri uri = new Uri( Request.Url.ToString() );
-                // v6 
-                hfShareUrl.Value = uri.Scheme + "://" + uri.GetComponents( UriComponents.HostAndPort, UriFormat.UriEscaped ) + CurrentPageReference.BuildUrl();
-                // v7 
                 btnCopyToClipboard.Attributes["data-clipboard-text"] = uri.Scheme + "://" + uri.GetComponents( UriComponents.HostAndPort, UriFormat.UriEscaped ) + CurrentPageReference.BuildUrl();
-
                 btnCopyToClipboard.Visible = true;
             }
             else
@@ -189,7 +175,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             {
                 var person = groupMember.Person;
                 imgProfilePhoto.BinaryFileId = person.PhotoId;
-                imgProfilePhoto.NoPictureUrl = Person.GetPersonPhotoUrl( person, 200, 200 );
+                imgProfilePhoto.NoPictureUrl = Person.GetPersonNoPictureUrl( person, 200, 200 );
 
                 groupMember.LoadAttributes( rockContext );
                 groupMember.Group.LoadAttributes( rockContext );
@@ -257,29 +243,11 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             var personService = new PersonService( rockContext );
             var person = personService.Get( groupMember.PersonId );
 
-            var changes = new List<string>();
-
             int? orphanedPhotoId = null;
             if ( person.PhotoId != imgProfilePhoto.BinaryFileId )
             {
                 orphanedPhotoId = person.PhotoId;
                 person.PhotoId = imgProfilePhoto.BinaryFileId;
-
-                if ( orphanedPhotoId.HasValue )
-                {
-                    if ( person.PhotoId.HasValue )
-                    {
-                        changes.Add( "Modified the photo." );
-                    }
-                    else
-                    {
-                        changes.Add( "Deleted the photo." );
-                    }
-                }
-                else if ( person.PhotoId.HasValue )
-                {
-                    changes.Add( "Added a photo." );
-                }
 
                 // add or update the Photo Verify group to have this person as Pending since the photo was changed or deleted
                 using ( var photoRequestRockContext = new RockContext() )
@@ -317,29 +285,9 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                     Control attributeControl = phPersonAttributes.FindControl( string.Format( "attribute_field_{0}", personAttribute.Id ) );
                     if ( attributeControl != null )
                     {
-                        string originalValue = person.GetAttributeValue( personAttribute.Key );
-                        string newValue = personAttribute.FieldType.Field.GetEditValue( attributeControl, personAttribute.QualifierValues );
-
                         // Save Attribute value to the database
+                        string newValue = personAttribute.FieldType.Field.GetEditValue( attributeControl, personAttribute.QualifierValues );
                         Rock.Attribute.Helper.SaveAttributeValue( person, personAttribute, newValue, rockContext );
-
-                        // Check for changes to write to history
-                        if ( ( originalValue ?? string.Empty ).Trim() != ( newValue ?? string.Empty ).Trim() )
-                        {
-                            string formattedOriginalValue = string.Empty;
-                            if ( !string.IsNullOrWhiteSpace( originalValue ) )
-                            {
-                                formattedOriginalValue = personAttribute.FieldType.Field.FormatValue( null, originalValue, personAttribute.QualifierValues, false );
-                            }
-
-                            string formattedNewValue = string.Empty;
-                            if ( !string.IsNullOrWhiteSpace( newValue ) )
-                            {
-                                formattedNewValue = personAttribute.FieldType.Field.FormatValue( null, newValue, personAttribute.QualifierValues, false );
-                            }
-
-                            History.EvaluateChange( changes, personAttribute.Name, formattedOriginalValue, formattedNewValue, personAttribute.FieldType.Field.IsSensitive() );
-                        }
                     }
                 }
             }
@@ -349,16 +297,6 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             {
                 rockContext.SaveChanges();
                 groupMember.SaveAttributeValues( rockContext );
-
-                if ( changes.Any() )
-                {
-                    HistoryService.SaveChanges(
-                        rockContext,
-                        typeof( Person ),
-                        Rock.SystemGuid.Category.HISTORY_PERSON_DEMOGRAPHIC_CHANGES.AsGuid(),
-                        person.Id,
-                        changes );
-                }
 
                 if ( orphanedPhotoId.HasValue )
                 {
@@ -454,8 +392,6 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             var photoGuid = group.GetAttributeValue( "OpportunityPhoto" );
             imgOpportunityPhoto.ImageUrl = string.Format( "~/GetImage.ashx?Guid={0}", photoGuid );
 
-            SetActiveTab( "Updates" );
-
             // Top Main
             string profileLavaTemplate = this.GetAttributeValue( "ProfileLavaTemplate" );
             if ( groupMember.PersonId == this.CurrentPersonId )
@@ -466,7 +402,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 {
                     warningItems.Add( "photo" );
                 }
-                if ( string.IsNullOrWhiteSpace(groupMember.GetAttributeValue( "PersonalOpportunityIntroduction" ) ) )
+                if ( groupMember.GetAttributeValue( "PersonalOpportunityIntroduction" ).IsNullOrWhiteSpace())
                 {
                     warningItems.Add( "personal opportunity introduction" );
                 }
@@ -486,8 +422,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             bool disablePublicContributionRequests = groupMember.GetAttributeValue( "DisablePublicContributionRequests" ).AsBoolean();
 
             // only show Contribution stuff if the current person is the participant and contribution requests haven't been disabled
-            btnContributionsTab.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
-            pnlContributions.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
+            bool showContributions = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
+            btnContributionsTab.Visible = showContributions;
 
             // Progress
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
@@ -536,12 +472,15 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
             // Tab:Updates
             btnUpdatesTab.Visible = false;
+            bool showContentChannelUpdates = false;
             var updatesContentChannelGuid = group.GetAttributeValue( "UpdateContentChannel" ).AsGuidOrNull();
             if ( updatesContentChannelGuid.HasValue )
             {
                 var contentChannel = new ContentChannelService( rockContext ).Get( updatesContentChannelGuid.Value );
                 if ( contentChannel != null )
                 {
+                    showContentChannelUpdates = true;
+
                     // only show the UpdatesTab if there is another Tab option
                     btnUpdatesTab.Visible = btnContributionsTab.Visible;
 
@@ -552,6 +491,19 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                     lUpdatesContentItemsHtml.Text = updatesLavaTemplate.ResolveMergeFields( mergeFields );
                     btnUpdatesTab.Text = string.Format( "{0} Updates ({1})", opportunityType, contentChannelItems.Count() );
                 }
+            }
+
+            if ( showContentChannelUpdates )
+            {
+                SetActiveTab( "Updates" );
+            }
+            else if (showContributions)
+            {
+                SetActiveTab( "Contributions" );
+            }
+            else
+            {
+                SetActiveTab( "" );
             }
 
             // Tab: Contributions
@@ -589,10 +541,10 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             }
 
             // if btnContributionsTab is the only visible tab, hide the tab since there is nothing else to tab to
-            if ( !btnUpdatesTab.Visible )
+            if ( !btnUpdatesTab.Visible && btnContributionsTab.Visible )
             {
+                SetActiveTab( "Contributions" );
                 btnContributionsTab.Visible = false;
-                pnlContributions.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
             }
         }
 
@@ -602,8 +554,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         protected void BindContributionsGrid()
         {
             var showAmount = GetAttributeValue( "ShowAmount" ).AsBoolean();
-            gContributions.Columns[3].Visible = showAmount;
-
+            gContributions.Columns[3].Visible = showAmount;            
+            
             var rockContext = new RockContext();
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
             int groupMemberId = hfGroupMemberId.Value.AsInteger();
@@ -627,12 +579,23 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         protected void gContributions_RowDataBound( object sender, GridViewRowEventArgs e )
         {
             FinancialTransaction financialTransaction = e.Row.DataItem as FinancialTransaction;
-            Literal lAddress = e.Row.FindControl( "lAddress" ) as Literal;
-            if ( financialTransaction != null && lAddress != null && financialTransaction.AuthorizedPersonAliasId.HasValue )
+            if ( financialTransaction != null && 
+                financialTransaction.AuthorizedPersonAlias != null && 
+                financialTransaction.AuthorizedPersonAlias.Person != null )
             {
-                var personAddress = financialTransaction.AuthorizedPersonAlias.Person.GetHomeLocation();
-                lAddress.Text = personAddress.GetFullStreetAddress();
-            }
+	            Literal lAddress = e.Row.FindControl( "lAddress" ) as Literal;
+	            if ( lAddress != null )
+	            {
+	                var location = financialTransaction.AuthorizedPersonAlias.Person.GetMailingLocation();
+	                lAddress.Text = location != null ? location.GetFullStreetAddress() : string.Empty;
+	            }
+
+	            Literal lPersonName = e.Row.FindControl( "lPersonName" ) as Literal;
+	            if ( lPersonName != null )
+	            {
+	                lPersonName.Text = financialTransaction.ShowAsAnonymous ? "Anonymous" : financialTransaction.AuthorizedPersonAlias.Person.FullName;
+	            }
+	        }
         }
 
         /// <summary>
