@@ -119,7 +119,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                 var rockContext = new RockContext();
                 var feJournal = new FEJournal();
 
-                List<JournalEntryLine> items = feJournal.GetGlEntries( rockContext, _financialBatch, GetAttributeValue( "JournalType" ), ( ReferenceStyle ) GetAttributeValue( "JournalReferenceStyle" ).AsInteger() );
+                var items = feJournal.GetGlEntries( rockContext, _financialBatch, GetAttributeValue( "JournalType" ), ( ReferenceStyle ) GetAttributeValue( "JournalReferenceStyle" ).AsInteger() );
 
                 if ( items.Count > 0 )
                 {
