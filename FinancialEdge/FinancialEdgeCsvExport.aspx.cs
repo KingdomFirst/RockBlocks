@@ -14,12 +14,12 @@
                 return;
             }
 
-            if ( Session["FinancialEdgeCsvExport"] != null && !string.IsNullOrEmpty( Session["FinancialEdgeCsvExport"].ToString() ) && Session["FinancialEdgeBatchId"] != null && !string.IsNullOrEmpty( Session["FinancialEdgeBatchId"].ToString() ) )
+            if ( Session["FinancialEdgeCsvExport"] != null && !string.IsNullOrEmpty( Session["FinancialEdgeCsvExport"].ToString() ) && Session["FinancialEdgeFileId"] != null && !string.IsNullOrEmpty( Session["FinancialEdgeFileId"].ToString() ) )
             {
-                var filename = string.Format( "FinancialEdge_{0}.csv", Session["FinancialEdgeBatchId"] );
+                var filename = string.Format( "FinancialEdge_{0}.csv", Session["FinancialEdgeFileId"] );
                 var output = Session["FinancialEdgeCsvExport"].ToString();
                 Session["FinancialEdgeCsvExport"] = null;
-                Session["FinancialEdgeBatchId"] = null;
+                Session["FinancialEdgeFileId"] = null;
                 var ms = new MemoryStream( Encoding.ASCII.GetBytes( output ) );
                 Response.ClearContent();
                 Response.ClearHeaders();

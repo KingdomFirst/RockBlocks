@@ -126,27 +126,8 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                     //
                     // Set session for export file
                     //
-                    if ( Session["FinancialEdgeCsvExport"] != null )
-                    {
-                        Session["FinancialEdgeCsvExport"] = string.Empty;
-                    }
-                    if ( Session["FinancialEdgeBatchId"] != null )
-                    {
-                        Session["FinancialEdgeBatchId"] = string.Empty;
-                    }
-
-                    var output = new StringBuilder();
-                    output.Append( "Account number, Post Date, Encumbrance Status, Type, Journal, Journal Reference, Amount, Project ID" );
-                    var num = 0;
-                    foreach ( var item in items )
-                    {
-                        output.Append( Environment.NewLine );
-                        output.Append( string.Format( "{0},{1},{2},{3},{4},\"{5}\",{6},{7}", item.AccountNumber, item.PostDate.ToString( "MM/dd/yyyy" ), item.EncumbranceStatus, item.Type, item.Journal, item.JournalReference, item.Amount, item.ProjectId ) );
-                        num++;
-                    }
-                    Session["FinancialEdgeCsvExport"] = output.ToString();
-                    Session["FinancialEdgeBatchId"] = _batchId.ToString();
-
+                    feJournal.SetFinancialEdgeSessions( items, _financialBatch.Id.ToString() );
+                    
                     //
                     // vars we need now
                     //
