@@ -38,6 +38,7 @@ namespace RockWeb.Plugins.com_kfs.rvc.Finance
     [AccountsField( "Accounts", "The accounts to display.  By default all active accounts with a Public Name will be displayed", false, "", "", 7 )]
     [BooleanField( "Additional Accounts", "Display option for selecting additional accounts", "Don't display option",
         "Should users be allowed to select additional accounts?  If so, any active account with a Public Name value will be available", true, "", 8 )]
+    [AccountsField( "Selected Additional Accounts", "The additional accounts to display or search. Leaving this blank will allow any public account to be displayed or searched.", false, "", "", 8 )]
     [BooleanField( "Scheduled Transactions", "Allow", "Don't Allow",
         "If the selected gateway(s) allow scheduled transactions, should that option be provided to user", true, "", 9, "AllowScheduled" )]
     [BooleanField( "Prompt for Phone", "Should the user be prompted for their phone number?", false, "", 10, "DisplayPhone" )]
@@ -1394,6 +1395,7 @@ TransactionAccountDetails: [
         {
             var rockContext = new RockContext();
             var selectedGuids = GetAttributeValues( "Accounts" ).Select( Guid.Parse ).ToList();
+            var selectedAdditionalGuids = GetAttributeValues( "SelectedAdditionalAccounts" ).Select( Guid.Parse ).ToList();
             bool showAll = !selectedGuids.Any();
 
             bool additionalAccounts = GetAttributeValue( "AdditionalAccounts" ).AsBoolean( true );
@@ -1437,7 +1439,7 @@ TransactionAccountDetails: [
                         }
                         else
                         {
-                            if ( additionalAccounts )
+                            if ( additionalAccounts && ( !selectedAdditionalGuids.Any() || selectedAdditionalGuids.Contains( account.Guid ) ) )
                             {
                                 if ( appendParentAccountName && account.ParentAccount != null )
                                 {
