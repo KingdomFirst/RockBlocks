@@ -39,6 +39,7 @@ namespace RockWeb.Plugins.com_kfs.rvc.Finance
     [BooleanField( "Additional Accounts", "Display option for selecting additional accounts", "Don't display option",
         "Should users be allowed to select additional accounts?  If so, any active account with a Public Name value will be available", true, "", 8 )]
     [AccountsField( "Selected Additional Accounts", "The additional accounts to display or search. Leaving this blank will allow any public account to be displayed or searched.", false, "", "", 8 )]
+    [AccountField( "Selected Additional Accounts Parent", "The parent account to select for all descendants to be evaluated for display or search. Leaving this blank will allow any public account to be displayed or searched.", false, "", "", 8 )]
     [BooleanField( "Scheduled Transactions", "Allow", "Don't Allow",
         "If the selected gateway(s) allow scheduled transactions, should that option be provided to user", true, "", 9, "AllowScheduled" )]
     [BooleanField( "Prompt for Phone", "Should the user be prompted for their phone number?", false, "", 10, "DisplayPhone" )]
@@ -1396,6 +1397,7 @@ TransactionAccountDetails: [
             var rockContext = new RockContext();
             var selectedGuids = GetAttributeValues( "Accounts" ).Select( Guid.Parse ).ToList();
             var selectedAdditionalGuids = GetAttributeValues( "SelectedAdditionalAccounts" ).Select( Guid.Parse ).ToList();
+            var selectedAdditionalParentGuid = GetAttributeValue( "SelectedAdditionalAccountsParent" ).AsGuidOrNull();
             bool showAll = !selectedGuids.Any();
 
             bool additionalAccounts = GetAttributeValue( "AdditionalAccounts" ).AsBoolean( true );
@@ -1403,6 +1405,25 @@ TransactionAccountDetails: [
 
             SelectedAccounts = new List<AccountItem>();
             AvailableAccounts = new List<AccountItem>();
+
+            if ( selectedAdditionalParentGuid != null )
+            {
+                var service = new FinancialAccountService( rockContext );
+                var parentAccount = service.Get( ( Guid ) selectedAdditionalParentGuid );
+                selectedAdditionalGuids.AddRange( service.ExecuteQuery(
+                @"
+                    with CTE as (
+                    select * from [FinancialAccount] where [ParentAccountId]={0}
+                    union all
+                    select [a].* from [FinancialAccount] [a]
+                    inner join CTE pcte on pcte.Id = [a].[ParentAccountId]
+                    )
+                    select * from CTE
+                    where IsActive = 1
+                    and IsPublic = 1
+                ", parentAccount.Id )
+                .Select( a => a.Guid ) );
+            }
 
             // Limit selections to accounts passed through URL
             if ( _allowAccountsInUrl && _parameterAccounts.Count > 0 )
@@ -1439,7 +1460,7 @@ TransactionAccountDetails: [
                         }
                         else
                         {
-                            if ( additionalAccounts && ( !selectedAdditionalGuids.Any() || selectedAdditionalGuids.Contains( account.Guid ) ) )
+                            if ( additionalAccounts && ( ( !selectedAdditionalGuids.Any() && selectedAdditionalParentGuid == null ) || selectedAdditionalGuids.Contains( account.Guid ) ) )
                             {
                                 if ( appendParentAccountName && account.ParentAccount != null )
                                 {
@@ -3480,4 +3501,4 @@ TransactionAccountDetails: [
 
         #endregion
     }
-}
+ }
