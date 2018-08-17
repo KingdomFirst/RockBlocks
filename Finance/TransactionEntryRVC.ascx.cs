@@ -1,20 +1,4 @@
-﻿// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
@@ -380,24 +364,6 @@ TransactionAccountDetails: [
                     if ( !string.IsNullOrWhiteSpace( PageParameter( "AccountIds" ) ) )
                     {
                         var accountIds = Server.UrlDecode( PageParameter( "AccountIds" ) );
-
-                        //// v6.10 code
-                        //List<int> accountParameter = new List<int>();
-                        //accountParameterType = "invalid";
-
-                        //foreach ( int accountId in accountIds.Split( ',' ).AsIntegerList() )
-                        //{
-                        //    accountParameter.Add( accountId );
-                        //}
-
-                        //_parameterAccounts = new FinancialAccountService( rockContext ).Queryable()
-                        //    .Where( a =>
-                        //    accountParameter.Contains( a.Id ) &&
-                        //    a.IsActive &&
-                        //    ( _onlyPublicAccountsInUrl ? ( a.IsPublic ?? false ) : true ) &&
-                        //    ( a.StartDate == null || a.StartDate <= RockDateTime.Today ) &&
-                        //    ( a.EndDate == null || a.EndDate >= RockDateTime.Today ) ).ToList();
-
                         var financialAccountService = new FinancialAccountService( rockContext );
 
                         accountParameterType = "invalid";
@@ -434,16 +400,6 @@ TransactionAccountDetails: [
 
                     if ( !string.IsNullOrWhiteSpace( PageParameter( "AccountGlCodes" ) ) )
                     {
-                        //// v6.10 code
-                        //List<string> glAccountParameter = PageParameter( "AccountGlCodes" ).Split( ',' ).ToList();
-                        //_parameterAccounts.AddRange( new FinancialAccountService( rockContext ).Queryable()
-                        //    .Where( a =>
-                        //    glAccountParameter.Contains( a.GlCode ) &&
-                        //    a.IsActive &&
-                        //    ( _onlyPublicAccountsInUrl ? ( a.IsPublic ?? false ) : true ) &&
-                        //    ( a.StartDate == null || a.StartDate <= RockDateTime.Today ) &&
-                        //    ( a.EndDate == null || a.EndDate >= RockDateTime.Today ) ).ToList() );
-
                         var accountCodes = Server.UrlDecode( PageParameter( "AccountGlCodes" ) );
                         var financialAccountService = new FinancialAccountService( rockContext );
 
@@ -574,7 +530,7 @@ TransactionAccountDetails: [
             }
 
             // Update the total amount
-            lblTotalAmount.Text = GlobalAttributesCache.Value( "CurrencySymbol" ) + SelectedAccounts.Sum( f => f.Amount ).ToString( "F2" );
+            lblTotalAmount.Text = GlobalAttributesCache.Value("CurrencySymbol") + SelectedAccounts.Sum( f => f.Amount ).ToString( "F2" );
 
             // Set the frequency date label based on if 'One Time' is selected or not
             if ( btnFrequency.Items.Count > 0 )
@@ -922,7 +878,7 @@ TransactionAccountDetails: [
 
                         if ( !ScheduleId.HasValue )
                         {
-                            var transaction = new FinancialTransactionService( rockContext ).GetByTransactionCode( ( financialGateway != null ? financialGateway.Id : (int?)null ), TransactionCode );
+                            var transaction = new FinancialTransactionService( rockContext ).GetByTransactionCode( (financialGateway != null ? financialGateway.Id : (int?)null), TransactionCode );
                             if ( transaction != null && transaction.AuthorizedPersonAlias != null )
                             {
                                 if ( transaction.FinancialGateway != null )
@@ -1318,7 +1274,7 @@ TransactionAccountDetails: [
                         .Where( a => a.TransactionDetails.Any( d => d.EntityTypeId.HasValue && d.EntityTypeId == transactionEntityTypeId && d.EntityId == transactionEntity.Id ) )
                         .ToList();
 
-                    var transactionEntityTransactionsTotal = transactionEntityTransactions.SelectMany( d => d.TransactionDetails ).Sum( d => (decimal?)d.Amount );
+                    var transactionEntityTransactionsTotal = transactionEntityTransactions.SelectMany( d => d.TransactionDetails ).Sum( d => ( decimal? ) d.Amount );
                     mergeFields.Add( "TransactionEntityTransactions", transactionEntityTransactions );
                     mergeFields.Add( "TransactionEntityTransactionsTotal", transactionEntityTransactionsTotal );
                 }
@@ -1508,7 +1464,7 @@ TransactionAccountDetails: [
                     }
                 }
             }
-            
+
             // Set account item *amounts* using the existing transaction
             if ( _scheduledTransactionToBeTransferred != null )
             {
@@ -2144,7 +2100,7 @@ TransactionAccountDetails: [
         /// <summary>
         /// Fetches the old (to be transferred) scheduled transaction and verifies
         /// that the target person is the same on the scheduled transaction.  Then
-        /// it puts it into the _scheduledTransactionToBeTransferred private field 
+        /// it puts it into the _scheduledTransactionToBeTransferred private field
         /// for use throughout the entry process so that its values can be used on
         /// the form for the new transaction.
         /// </summary>
@@ -2828,7 +2784,7 @@ TransactionAccountDetails: [
                 CreditCardTypeValueId = paymentInfo.CreditCardTypeValue.Id;
             }
 
-            // get the payment comment 
+            // get the payment comment
             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
             mergeFields.Add( "TransactionDateTime", RockDateTime.Now );
 
@@ -2964,23 +2920,15 @@ TransactionAccountDetails: [
 
         private void SaveTransaction( FinancialGateway financialGateway, GatewayComponent gateway, Person person, PaymentInfo paymentInfo, FinancialTransaction transaction, RockContext rockContext )
         {
-            var txnChanges = new List<string>();
-            txnChanges.Add( "Created Transaction" );
-            History.EvaluateChange( txnChanges, "Transaction Code", string.Empty, transaction.TransactionCode );
             transaction.AuthorizedPersonAliasId = person.PrimaryAliasId;
-            History.EvaluateChange( txnChanges, "Person", string.Empty, person.FullName );
             transaction.ShowAsAnonymous = cbGiveAnonymously.Checked;
             transaction.TransactionDateTime = RockDateTime.Now;
-            History.EvaluateChange( txnChanges, "Date/Time", null, transaction.TransactionDateTime );
             transaction.FinancialGatewayId = financialGateway.Id;
-            History.EvaluateChange( txnChanges, "Gateway", string.Empty, financialGateway.Name );
 
             var txnType = DefinedValueCache.Read( this.GetAttributeValue( "TransactionType" ).AsGuidOrNull() ?? Rock.SystemGuid.DefinedValue.TRANSACTION_TYPE_CONTRIBUTION.AsGuid() );
             transaction.TransactionTypeValueId = txnType.Id;
-            History.EvaluateChange( txnChanges, "Type", string.Empty, txnType.Value );
 
             transaction.Summary = paymentInfo.Comment1;
-            History.EvaluateChange( txnChanges, "Summary", string.Empty, transaction.Summary );
 
             if ( transaction.FinancialPaymentDetail == null )
             {
@@ -2995,7 +2943,6 @@ TransactionAccountDetails: [
                 if ( source != null )
                 {
                     transaction.SourceTypeValueId = source.Id;
-                    History.EvaluateChange( txnChanges, "Source", string.Empty, source.Value );
                 }
             }
 
@@ -3013,7 +2960,6 @@ TransactionAccountDetails: [
                 }
 
                 transaction.TransactionDetails.Add( transactionDetail );
-                History.EvaluateChange( txnChanges, account.Name, 0.0M.FormatAsCurrency(), transactionDetail.Amount.FormatAsCurrency() );
             }
 
             var batchService = new FinancialBatchService( rockContext );
@@ -3065,17 +3011,6 @@ TransactionAccountDetails: [
                 Rock.SystemGuid.Category.HISTORY_FINANCIAL_BATCH.AsGuid(),
                 batch.Id,
                 batchChanges
-            );
-
-            HistoryService.SaveChanges(
-                rockContext,
-                typeof( FinancialBatch ),
-                Rock.SystemGuid.Category.HISTORY_FINANCIAL_TRANSACTION.AsGuid(),
-                batch.Id,
-                txnChanges,
-                person.FullName,
-                typeof( FinancialTransaction ),
-                transaction.Id
             );
 
             SendReceipt( transaction.Id );
@@ -3329,11 +3264,11 @@ TransactionAccountDetails: [
                         $form.find('.js-billing-state').val( $('#{17}_ddlState').val() );
                     }} else {{
                         $form.find('.js-billing-state').val( $('#{17}_tbState').val() );
-                    }}     
+                    }}
                     $form.find('.js-billing-postal').val( $('#{17}_tbPostalCode').val() );
                     $form.find('.js-billing-country').val( $('#{17}_ddlCountry').val() );
                 }}
-        
+
                 if ( $('#{1}').val() == 'CreditCard' ) {{
                     $form.find('.js-cc-first-name').val( $('#{18}').val() );
                     $form.find('.js-cc-last-name').val( $('#{19}').val() );
@@ -3364,9 +3299,9 @@ TransactionAccountDetails: [
     $('#iframeStep2').on('load', function(e) {{
         var location = this.contentWindow.location;
         var qryString = this.contentWindow.location.search;
-        if ( qryString && qryString != '' && qryString.startsWith('?token-id') ) {{ 
+        if ( qryString && qryString != '' && qryString.startsWith('?token-id') ) {{
             $('#{5}').val(qryString);
-            {6};
+            window.location = ""javascript:{6}"";
         }} else {{
             if ( $('#{15}').val() == 'true' ) {{
                 $('#updateProgress').show();
@@ -3381,7 +3316,7 @@ TransactionAccountDetails: [
 ";
             string script = string.Format(
                 scriptFormat,
-                divCCPaymentInfo.ClientID,      // {0} 
+                divCCPaymentInfo.ClientID,      // {0}
                 hfPaymentTab.ClientID,          // {1}
                 oneTimeFrequencyId,             // {2}
                 GlobalAttributesCache.Value( "CurrencySymbol" ), // {3)
@@ -3528,7 +3463,7 @@ TransactionAccountDetails: [
                 Enabled = enabled;
             }
         }
-            
+
         /// <summary>
         /// Helper object for data passed via the request string.
         /// </summary>
