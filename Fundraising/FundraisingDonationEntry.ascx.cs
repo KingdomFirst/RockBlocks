@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -22,6 +23,9 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
     [LinkedPage( "Transaction Entry Page", "The Transaction Entry page to navigate to after prompting for the Fundraising Specific inputs", required: true, order: 1 )]
     [BooleanField( "Show First Name Only", "Only show the First Name of each participant instead of Full Name", defaultValue: false, order: 2 )]
+    [BooleanField( "Allow Automatic Selection", "If enabled and there is only one participant and registrations are not enabled then that participant will automatically be selected and this page will get bypassed.", defaultValue: false, order: 3 )]
+    [GroupField( "Root Group", "Select the group that will be used as the base of the list.", required: false, order: 4 )]
+   
     public partial class FundraisingDonationEntry : RockBlock
     {
         #region Base Control Methods
@@ -92,6 +96,25 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
                 ddlFundraisingOpportunity.SetValue( group.Id );
                 ddlFundraisingOpportunity_SelectedIndexChanged( null, null );
+
+                //
+                // If they did not specify a group member in the query string AND there is only one
+                // participant AND that participant is Active AND a registration instance has not
+                // been configured. This allows for single-member projects that do not need the user
+                // to select a specific person before donating.
+                //
+                if ( GetAttributeValue( "AllowAutomaticSelection" ).AsBoolean( false ) && groupMember == null )
+                {
+                    var members = group.Members.Where( m => m.GroupRole.Guid == "F82DF077-9664-4DA8-A3D9-7379B690124D".AsGuid() ).ToList();
+                    if ( members.Count == 1 && members[0].GroupMemberStatus == GroupMemberStatus.Active )
+                    {
+                        group.LoadAttributes( rockContext );
+                        if ( string.IsNullOrWhiteSpace( group.GetAttributeValue( "RegistrationInstance" ) ) )
+                        {
+                            groupMember = group.Members.First();
+                        }
+                    }
+                }
             }
 
             if ( groupMember != null )
@@ -102,6 +125,24 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             }
         }
 
+        private IEnumerable<int> GetChildGroupIds( Guid? rootGroupGuid, RockContext context )
+        {
+
+            var service = new GroupService( context );
+            var groupIds = new List<int>();
+
+            var baseGroup = service.Get( rootGroupGuid ?? Guid.Empty );
+
+            if ( baseGroup != null )
+            {
+                groupIds.Add( baseGroup.Id );
+                groupIds.AddRange( service.GetAllDescendents( baseGroup.Id ).Select( g => g.Id ) );
+            }
+
+            return groupIds;
+
+        }
+
         /// <summary>
         /// Populates the group drop down.
         /// </summary>
@@ -109,7 +150,18 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         {
             var rockContext = new RockContext();
             Guid groupTypeFundraisingOpportunity = "4BE7FC44-332D-40A8-978E-47B7035D7A0C".AsGuid();
-            var fundraisingOpportunityList = new GroupService( rockContext ).Queryable().Where( a => ( a.GroupType.Guid == groupTypeFundraisingOpportunity || a.GroupType.InheritedGroupType.Guid == groupTypeFundraisingOpportunity ) && a.IsActive && a.Members.Any() ).OrderBy( a => a.Order ).ThenBy( a => a.Name ).ToList();
+            Guid? rootGroup = GetAttributeValue( "RootGroup" ).AsGuidOrNull();
+
+            var groupQuery = new GroupService( rockContext ).Queryable().Where( a => ( a.GroupType.Guid == groupTypeFundraisingOpportunity || a.GroupType.InheritedGroupType.Guid == groupTypeFundraisingOpportunity ) && a.IsActive && a.Members.Any() );
+
+            if ( rootGroup.HasValue )
+            {
+                var groupIds = GetChildGroupIds( rootGroup, rockContext );
+
+                groupQuery = groupQuery.Where( g => groupIds.Contains( g.Id ) );
+            }
+
+            var fundraisingOpportunityList = groupQuery.OrderBy( a => a.Order ).ThenBy( a => a.Name ).ToList();
             ddlFundraisingOpportunity.Items.Clear();
             ddlFundraisingOpportunity.Items.Add( new ListItem() );
 
@@ -120,7 +172,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 if ( RockDateTime.Now <= ( dateRange.End ?? DateTime.MaxValue ) )
                 {
                     var listItem = new ListItem( fundraisingOpportunity.GetAttributeValue( "OpportunityTitle" ), fundraisingOpportunity.Id.ToString() );
-                    if ( string.IsNullOrWhiteSpace( listItem.Text ) )
+                    if ( listItem.Text.IsNullOrWhiteSpace() )
                     {
                         // just in case the OpportunityTitle wasn't set
                         listItem.Text = fundraisingOpportunity.Name;
