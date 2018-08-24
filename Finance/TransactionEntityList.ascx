@@ -4,7 +4,7 @@
     <ContentTemplate>
         <asp:Panel ID="pnlTransactionEntities" CssClass="panel panel-block" runat="server">
             <div class="panel-heading">
-                <h1 class="panel-title"><i class="fa fa-money"></i>Transation Entities</h1>
+                <h1 class="panel-title"><i class="fa fa-money"></i> Transation Entities</h1>
             </div>
             <div class="panel-body">
                 <div class="grid grid-panel">
