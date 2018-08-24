@@ -584,13 +584,14 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 financialTransaction.AuthorizedPersonAlias.Person != null )
             {
 	            Literal lAddress = e.Row.FindControl( "lAddress" ) as Literal;
-	            if ( lAddress != null )
-	            {
-	                var location = financialTransaction.AuthorizedPersonAlias.Person.GetMailingLocation();
-	                lAddress.Text = location != null ? location.GetFullStreetAddress() : string.Empty;
-	            }
+                if ( lAddress != null )
+                {
+                    var location = financialTransaction.AuthorizedPersonAlias.Person.GetMailingLocation();
+                    string streetAddress = location != null ? location.GetFullStreetAddress() : string.Empty;
+                    lAddress.Text = financialTransaction.ShowAsAnonymous ? string.Empty : streetAddress;
+                }
 
-	            Literal lPersonName = e.Row.FindControl( "lPersonName" ) as Literal;
+                Literal lPersonName = e.Row.FindControl( "lPersonName" ) as Literal;
 	            if ( lPersonName != null )
 	            {
 	                lPersonName.Text = financialTransaction.ShowAsAnonymous ? "Anonymous" : financialTransaction.AuthorizedPersonAlias.Person.FullName;
