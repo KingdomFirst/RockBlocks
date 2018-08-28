@@ -164,38 +164,44 @@ namespace RockWeb.Plugins.com_kfs.Connection
                 if ( AttributeOne != null )
                 {
                     var control = phAttributeOne.Controls[0] as DropDownList;
-                    searchSelections.Add( "ddlAttributeOne", control.SelectedValue );
-
-                    var attributeValueService = new AttributeValueService( rockContext );
-                    var parameterExpression = attributeValueService.ParameterExpression;
-
-                    var value = AttributeOne.FieldType.Field.GetEditValue( control, AttributeOne.QualifierValues );
-                    if ( !string.IsNullOrWhiteSpace( value ) )
+                    if ( control != null )
                     {
-                        var attributeValues = attributeValueService
-                            .Queryable()
-                            .Where( v => v.Attribute.Id == AttributeOne.Id )
-                            .Where( v => v.Value.Equals( value ) );
-                        qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
+                        searchSelections.Add( "ddlAttributeOne", control.SelectedValue );
+
+                        var attributeValueService = new AttributeValueService( rockContext );
+                        var parameterExpression = attributeValueService.ParameterExpression;
+
+                        var value = AttributeOne.FieldType.Field.GetEditValue( control, AttributeOne.QualifierValues );
+                        if ( !string.IsNullOrWhiteSpace( value ) )
+                        {
+                            var attributeValues = attributeValueService
+                                .Queryable()
+                                .Where( v => v.Attribute.Id == AttributeOne.Id )
+                                .Where( v => v.Value.Equals( value ) );
+                            qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
+                        }
                     }
                 }
 
                 if ( AttributeTwo != null )
                 {
                     var control = phAttributeTwo.Controls[0] as DropDownList;
-                    searchSelections.Add( "ddlAttributeTwo", control.SelectedValue );
-
-                    var attributeValueService = new AttributeValueService( rockContext );
-                    var parameterExpression = attributeValueService.ParameterExpression;
-
-                    var value = AttributeTwo.FieldType.Field.GetEditValue( control, AttributeTwo.QualifierValues );
-                    if ( !string.IsNullOrWhiteSpace( value ) )
+                    if ( control != null )
                     {
-                        var attributeValues = attributeValueService
-                            .Queryable()
-                            .Where( v => v.Attribute.Id == AttributeTwo.Id )
-                            .Where( v => v.Value.Equals( value ) );
-                        qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
+                        searchSelections.Add( "ddlAttributeTwo", control.SelectedValue );
+
+                        var attributeValueService = new AttributeValueService( rockContext );
+                        var parameterExpression = attributeValueService.ParameterExpression;
+
+                        var value = AttributeTwo.FieldType.Field.GetEditValue( control, AttributeTwo.QualifierValues );
+                        if ( !string.IsNullOrWhiteSpace( value ) )
+                        {
+                            var attributeValues = attributeValueService
+                                .Queryable()
+                                .Where( v => v.Attribute.Id == AttributeTwo.Id )
+                                .Where( v => v.Value.Equals( value ) );
+                            qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
+                        }
                     }
                 }
 
@@ -321,9 +327,12 @@ namespace RockWeb.Plugins.com_kfs.Connection
                     phAttributeOne.Controls.Clear();
                     AttributeOne.AddControl( phAttributeOne.Controls, string.Empty, string.Empty, true, true, false );
                     var control = phAttributeOne.Controls[0] as DropDownList;
-                    control.EnableViewState = true;
-                    control.AutoPostBack = true;
-                    control.SelectedIndexChanged += new EventHandler( ddlAttributeOne_SelectedIndexChanged );
+                    if ( control != null )
+                    {
+                        control.EnableViewState = true;
+                        control.AutoPostBack = true;
+                        control.SelectedIndexChanged += new EventHandler( ddlAttributeOne_SelectedIndexChanged );
+                    }
                 }
 
                 if ( AttributeTwo != null )
@@ -331,9 +340,12 @@ namespace RockWeb.Plugins.com_kfs.Connection
                     phAttributeTwo.Controls.Clear();
                     AttributeTwo.AddControl( phAttributeTwo.Controls, string.Empty, string.Empty, true, true, false );
                     var control = phAttributeTwo.Controls[0] as DropDownList;
-                    control.EnableViewState = true;
-                    control.AutoPostBack = true;
-                    control.SelectedIndexChanged += new EventHandler( ddlAttributeTwo_SelectedIndexChanged );
+                    if ( control != null )
+                    {
+                        control.EnableViewState = true;
+                        control.AutoPostBack = true;
+                        control.SelectedIndexChanged += new EventHandler( ddlAttributeTwo_SelectedIndexChanged );
+                    }
                 }
 
             }
