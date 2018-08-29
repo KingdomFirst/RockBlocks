@@ -181,6 +181,25 @@ namespace RockWeb.Plugins.com_kfs.Connection
                             qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
                         }
                     }
+                    else
+                    {
+                        var newDdlOne = phAttributeOne.Controls[2] as DropDownList;
+
+                        searchSelections.Add( "ddlAttributeOne", newDdlOne.SelectedValue );
+
+                        var attributeValueService = new AttributeValueService( rockContext );
+                        var parameterExpression = attributeValueService.ParameterExpression;
+
+                        var value = newDdlOne.SelectedValue;
+                        if ( !string.IsNullOrWhiteSpace( value ) )
+                        {
+                            var attributeValues = attributeValueService
+                                .Queryable()
+                                .Where( v => v.Attribute.Id == AttributeOne.Id )
+                                .Where( v => v.Value.Contains( value ) );
+                            qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
+                        }
+                    }
                 }
 
                 if ( AttributeTwo != null )
@@ -200,6 +219,25 @@ namespace RockWeb.Plugins.com_kfs.Connection
                                 .Queryable()
                                 .Where( v => v.Attribute.Id == AttributeTwo.Id )
                                 .Where( v => v.Value.Equals( value ) );
+                            qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
+                        }
+                    }
+                    else
+                    {
+                        var newDdlTwo = phAttributeTwo.Controls[2] as DropDownList;
+
+                        searchSelections.Add( "ddlAttributeTwo", newDdlTwo.SelectedValue );
+
+                        var attributeValueService = new AttributeValueService( rockContext );
+                        var parameterExpression = attributeValueService.ParameterExpression;
+
+                        var value = newDdlTwo.SelectedValue;
+                        if ( !string.IsNullOrWhiteSpace( value ) )
+                        {
+                            var attributeValues = attributeValueService
+                                .Queryable()
+                                .Where( v => v.Attribute.Id == AttributeTwo.Id )
+                                .Where( v => v.Value.Contains( value ) );
                             qrySearch = qrySearch.Where( o => attributeValues.Select( v => v.EntityId ).Contains( o.Id ) ).ToList();
                         }
                     }
@@ -333,6 +371,42 @@ namespace RockWeb.Plugins.com_kfs.Connection
                         control.AutoPostBack = true;
                         control.SelectedIndexChanged += new EventHandler( ddlAttributeOne_SelectedIndexChanged );
                     }
+                    else
+                    {
+                        var theseControls = phAttributeOne.Controls[0] as DropDownList;
+                        DropDownList ddl = new DropDownList();
+                        string[] theseValues = AttributeOne.QualifierValues.Values.ElementAt( 0 ).Value.Split( ',' );
+
+                        foreach ( string nameValue in theseValues )
+                        {
+                            string[] nameAndValue = nameValue.Split( new char[] { '^' } );
+
+                            if ( nameAndValue.Length == 2 )
+                            {
+                                ddl.Items.Add( new ListItem( nameAndValue[1].Trim(), nameAndValue[0].Trim() ) );
+                            }
+                        }
+
+                        ddl.Items.Insert( 0, new ListItem( String.Empty, String.Empty ) );
+                        ddl.SelectedIndex = 0;
+                        ddl.CssClass = "form-control";
+                        var attributeOneLabel = new HtmlGenericContainer( "label" );
+                        attributeOneLabel.InnerHtml = AttributeOne.Name;
+                        attributeOneLabel.CssClass = "control-label";
+
+                        phAttributeOne.Controls.Clear();
+                        phAttributeOne.Controls.Add( new Literal() { Text = "<div class='form-group rock-drop-down-list'>" } );
+                        phAttributeOne.Controls.Add( attributeOneLabel );
+                        phAttributeOne.Controls.Add( ddl );
+                        phAttributeOne.Controls.Add( new Literal() { Text = "</div>" } );
+
+                        var newDdl = phAttributeOne.Controls[2] as DropDownList;
+
+                        newDdl.EnableViewState = true;
+                        newDdl.AutoPostBack = true;
+                        newDdl.SelectedIndexChanged += new EventHandler( ddlAttributeOne_SelectedIndexChanged );
+
+                    }
                 }
 
                 if ( AttributeTwo != null )
@@ -345,6 +419,42 @@ namespace RockWeb.Plugins.com_kfs.Connection
                         control.EnableViewState = true;
                         control.AutoPostBack = true;
                         control.SelectedIndexChanged += new EventHandler( ddlAttributeTwo_SelectedIndexChanged );
+                    }
+                    else
+                    {
+                        var theseControls = phAttributeTwo.Controls[0] as DropDownList;
+                        DropDownList ddl = new DropDownList();
+                        string[] theseValues = AttributeTwo.QualifierValues.Values.ElementAt( 0 ).Value.Split( ',' );
+
+                        foreach ( string nameValue in theseValues )
+                        {
+                            string[] nameAndValue = nameValue.Split( new char[] { '^' } );
+
+                            if ( nameAndValue.Length == 2 )
+                            {
+                                ddl.Items.Add( new ListItem( nameAndValue[1].Trim(), nameAndValue[0].Trim() ) );
+                            }
+                        }
+
+                        ddl.Items.Insert( 0, new ListItem( String.Empty, String.Empty ) );
+                        ddl.SelectedIndex = 0;
+                        ddl.CssClass = "form-control";
+                        var attributeTwoLabel = new HtmlGenericContainer("label");
+                        attributeTwoLabel.InnerHtml = AttributeTwo.Name;
+                        attributeTwoLabel.CssClass = "control-label";
+
+                        phAttributeTwo.Controls.Clear();
+                        phAttributeTwo.Controls.Add( new Literal() { Text="<div class='form-group rock-drop-down-list'>" } );
+                        phAttributeTwo.Controls.Add( attributeTwoLabel );
+                        phAttributeTwo.Controls.Add( ddl );
+                        phAttributeTwo.Controls.Add( new Literal() { Text = "</div>" } );
+
+                        var newDdl = phAttributeTwo.Controls[2] as DropDownList;
+
+                        newDdl.EnableViewState = true;
+                        newDdl.AutoPostBack = true;
+                        newDdl.SelectedIndexChanged += new EventHandler( ddlAttributeTwo_SelectedIndexChanged );
+
                     }
                 }
 
@@ -359,7 +469,16 @@ namespace RockWeb.Plugins.com_kfs.Connection
             if ( phAttributeTwo.Controls.Count > 0 )
             {
                 var control = phAttributeTwo.Controls[0] as DropDownList;
-                control.SelectedIndex = 0;
+                if ( control != null )
+                {
+                    control.SelectedIndex = 0;
+                }
+                else
+                {
+                    control = phAttributeTwo.Controls[2] as DropDownList;
+                    control.SelectedIndex = 0;
+                }
+                
             }
             UpdateList();
         }
@@ -369,7 +488,15 @@ namespace RockWeb.Plugins.com_kfs.Connection
             if ( phAttributeOne.Controls.Count > 0 )
             {
                 var control = phAttributeOne.Controls[0] as DropDownList;
-                control.SelectedIndex = 0;
+                if ( control != null )
+                {
+                    control.SelectedIndex = 0;
+                }
+                else
+                {
+                    control = phAttributeOne.Controls[2] as DropDownList;
+                    control.SelectedIndex = 0;
+                }
             }
             UpdateList();
         }
