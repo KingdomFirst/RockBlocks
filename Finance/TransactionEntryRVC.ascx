@@ -37,6 +37,7 @@
                                                 <Rock:CurrencyBox ID="txtAccountAmount" runat="server" Placeholder="0.00" CssClass="account-amount" />
                                             </ItemTemplate>
                                         </asp:Repeater>
+
                                         <Rock:ButtonDropDownList ID="btnAddAccount" runat="server" Visible="false" Label=" "
                                             DataTextField="PublicName" DataValueField="Id" OnSelectionChanged="btnAddAccount_SelectionChanged" />
 
@@ -208,8 +209,6 @@
 
             </div>
 
-            
-
             <div class="panel panel-default no-border">
                 <div class="panel-body">
                     <Rock:NotificationBox ID="nbSelectionMessage" runat="server" Visible="false"></Rock:NotificationBox>
@@ -222,7 +221,7 @@
                     </div>
                 </div>
             </div>
-
+            
             <iframe id="iframeStep2" src="<%=this.Step2IFrameUrl%>" style="display:none"></iframe>
 
             <asp:HiddenField ID="hfStep2AutoSubmit" runat="server" Value="false" />
@@ -275,17 +274,18 @@
                             </p>
                             <asp:LinkButton ID="btnConfirm" runat="server" Text="Yes, submit another transaction" CssClass="btn btn-danger margin-t-sm" OnClick="btnConfirm_Click" />
                         </asp:Panel>
-                    
 
-                    <Rock:NotificationBox ID="nbConfirmationMessage" runat="server" Visible="false"></Rock:NotificationBox>
+                        <Rock:NotificationBox ID="nbConfirmationMessage" runat="server" Visible="false"></Rock:NotificationBox>
 
-                    <div class="actions clearfix margin-b-lg">
-                        <asp:LinkButton ID="btnConfirmationPrev" runat="server" Text="Previous" CssClass="btn btn-link" OnClick="btnConfirmationPrev_Click" Visible="false" />
-                        <Rock:BootstrapButton ID="btnConfirmationNext" runat="server" Text="Finish" CssClass="btn btn-primary pull-right" OnClick="btnConfirmationNext_Click" />
+                        <div class="actions clearfix margin-b-lg">
+                            <asp:LinkButton ID="btnConfirmationPrev" runat="server" Text="Previous" CssClass="btn btn-link" OnClick="btnConfirmationPrev_Click" Visible="false" />
+                            <Rock:BootstrapButton ID="btnConfirmationNext" runat="server" Text="Finish" CssClass="btn btn-primary pull-right" OnClick="btnConfirmationNext_Click" />
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            
 
         </asp:Panel>
 
