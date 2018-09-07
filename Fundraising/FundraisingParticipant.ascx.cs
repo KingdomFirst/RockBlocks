@@ -18,7 +18,7 @@ using Rock.Web.UI.Controls;
 namespace RockWeb.Plugins.com_kfs.Fundraising
 {
     [DisplayName( "Fundraising Opportunity Participant KFS" )]
-    [Category( "Fundraising" )]
+    [Category( "KFS > Fundraising" )]
     [Description( "Public facing block that shows a fundraising opportunity participant" )]
 
     [CodeEditorField( "Profile Lava Template", "Lava template for what to display at the top of the main panel. Usually used to display information about the participant such as photo, name, etc.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false,
@@ -37,6 +37,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
     [TextField( "Image CSS Class", "CSS class to apply to the image.", false, "img-thumbnail", key: "ImageCssClass", order: 9 )]
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "PersonAttributes", "The Person Attributes that the participant can edit", false, true, order: 7 )]
     [BooleanField( "Show Amount", "Determines if the Amount column should be displayed in the Contributions List.", order: 8 )]
+    [BooleanField( "Show Address", "Determines if the Address column should be displayed in the Contributions List.", order: 8 )]
 
     public partial class FundraisingParticipant : RockBlock
     {
@@ -554,8 +555,11 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         protected void BindContributionsGrid()
         {
             var showAmount = GetAttributeValue( "ShowAmount" ).AsBoolean();
-            gContributions.Columns[3].Visible = showAmount;            
-            
+            gContributions.Columns[3].Visible = showAmount;
+
+            var showAddress = GetAttributeValue( "ShowAddress" ).AsBoolean();
+            gContributions.Columns[1].Visible = showAddress;
+
             var rockContext = new RockContext();
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
             int groupMemberId = hfGroupMemberId.Value.AsInteger();
