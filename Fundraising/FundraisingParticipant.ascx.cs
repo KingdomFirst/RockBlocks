@@ -36,8 +36,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
     [BooleanField( "Show Clipboard Icon", "Show a clipboard icon which will copy the page url to the users clipboard", true, order:8)]
     [TextField( "Image CSS Class", "CSS class to apply to the image.", false, "img-thumbnail", key: "ImageCssClass", order: 9 )]
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "PersonAttributes", "The Person Attributes that the participant can edit", false, true, order: 7 )]
-    [BooleanField( "Show Amount", "Determines if the Amount column should be displayed in the Contributions List.", order: 8 )]
-    [BooleanField( "Show Address", "Determines if the Address column should be displayed in the Contributions List.", order: 8 )]
+    [BooleanField( "Show Amount", "Determines if the Amount column should be displayed in the Contributions List.", true, order: 8 )]
+    [BooleanField( "Show Address", "Determines if the Address column should be displayed in the Contributions List.", true, order: 8 )]
 
     public partial class FundraisingParticipant : RockBlock
     {
