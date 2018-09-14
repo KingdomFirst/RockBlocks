@@ -62,7 +62,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
 
             nbWarning.Visible = false;
 
-            var campusEntity = RockPage.GetCurrentContext( EntityTypeCache.Read( typeof( Campus ) ) );
+            var campusEntity = RockPage.GetCurrentContext( EntityTypeCache.Get( typeof( Campus ) ) );
             var campusGuid = GetAttributeValue( "ContextCampus" ).AsGuidOrNull();
             var campusMatch = true;
             if ( campusEntity != null && campusGuid != null )

@@ -383,7 +383,7 @@ as fields on the workflow or activity)...
 
         private List<int> GetCategories( RockContext rockContext )
         {
-            int entityTypeId = EntityTypeCache.Read( typeof( Rock.Model.WorkflowType ) ).Id;
+            int entityTypeId = EntityTypeCache.Get( typeof( Rock.Model.WorkflowType ) ).Id;
 
             var selectedCategories = new List<Guid>();
             GetAttributeValue( "Categories" ).SplitDelimitedValues().ToList().ForEach( c => selectedCategories.Add( c.AsGuid() ) );

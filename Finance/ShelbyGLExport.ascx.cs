@@ -166,7 +166,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
             string attributeKey = String.Empty;
             if ( v.HasValue )
             {
-                var attribute = AttributeCache.Read( v.Value, rockContext );
+                var attribute = AttributeCache.Get( v.Value, rockContext );
                 if ( attribute != null )
                 {
                     attributeKey = attribute.Key;
@@ -259,7 +259,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                         var transactionTypeValueId = e.Value.AsIntegerOrNull();
                         if ( transactionTypeValueId.HasValue )
                         {
-                            var transactionTypeValue = DefinedValueCache.Read( transactionTypeValueId.Value );
+                            var transactionTypeValue = DefinedValueCache.Get( transactionTypeValueId.Value );
                             e.Value = transactionTypeValue != null ? transactionTypeValue.ToString() : string.Empty;
                         }
                         else
@@ -272,7 +272,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
 
                 case "Campus":
                     {
-                        var campus = CampusCache.Read( e.Value.AsInteger() );
+                        var campus = CampusCache.Get( e.Value.AsInteger() );
                         if ( campus != null )
                         {
                             e.Value = campus.Name;
@@ -443,7 +443,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
             var attributes = attributeService.GetByEntityTypeId( EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id );
             var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == attributeKeyDateExported );
 
-            var attribute = AttributeCache.Read( exported.Id );
+            var attribute = AttributeCache.Get( exported.Id );
 
             var attributeValues = attributeValueService
                     .Queryable()
@@ -586,8 +586,8 @@ namespace RockWeb.Plugins.com_kfs.Finance
 
                 if ( !String.IsNullOrWhiteSpace( transaction.projectCode ) )
                 {
-                    var dt = DefinedValueCache.Read( transaction.projectCode );
-                    var projects = DefinedTypeCache.Read( dt.DefinedTypeId );
+                    var dt = DefinedValueCache.Get( transaction.projectCode );
+                    var projects = DefinedTypeCache.Get( dt.DefinedTypeId );
                     if ( projects != null )
                     {
                         foreach ( var project in projects.DefinedValues.OrderByDescending( a => a.Value.AsInteger() ).Where( p => p.Guid.ToString().ToLower() == transaction.projectCode.ToString().ToLower() ) )
@@ -650,7 +650,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
         private string convertGLItemToStr( GLExportLineItem item )
         {
             string[] str = new string[] { "", "".PadLeft( 5, '0' ), null, null, null, null, null, null, null, null };
-            string[] strArrays = new string[] { item.CompanyNumber.ToString().PadLeft( 3, '0' ), item.FundNumber.ToString().PadLeft( 3, '0' ), item.AccountingPeriod.ToString().PadLeft( 2, '0' ), item.JournalType, null };
+            string[] strArrays = new string[] { item.CompanyNumber.ToString().PadLeft( 4, '0' ), item.FundNumber.ToString().PadLeft( 5, '0' ), item.AccountingPeriod.ToString().PadLeft( 2, '0' ), item.JournalType, null };
             int journalNumber = item.JournalNumber;
             strArrays[4] = journalNumber.ToString().PadLeft( 5, '0' );
             str[2] = string.Concat( strArrays );
@@ -722,7 +722,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
 
             ddlStatus.SetValue( statusFilter );
 
-            var definedTypeTransactionTypes = DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.FINANCIAL_TRANSACTION_TYPE.AsGuid() );
+            var definedTypeTransactionTypes = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.FINANCIAL_TRANSACTION_TYPE.AsGuid() );
             ddlTransactionType.BindToDefinedType( definedTypeTransactionTypes, true );
             ddlTransactionType.SetValue( gfBatchFilter.GetUserPreference( "Contains Transaction Type" ) );
 
@@ -906,7 +906,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
             }
 
             // filter by campus
-            var campus = CampusCache.Read( gfBatchFilter.GetUserPreference( "Campus" ).AsInteger() );
+            var campus = CampusCache.Get( gfBatchFilter.GetUserPreference( "Campus" ).AsInteger() );
             if ( campus != null )
             {
                 qry = qry.Where( b => b.CampusId == campus.Id );

@@ -909,7 +909,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         //        var campusId = e.Value.AsIntegerOrNull();
         //        if ( campusId.HasValue )
         //        {
-        //            var campusCache = CampusCache.Read( campusId.Value );
+        //            var campusCache = CampusCache.Get( campusId.Value );
         //            e.Value = campusCache.Name;
         //        }
         //        else

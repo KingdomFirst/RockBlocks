@@ -430,7 +430,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
         protected void btnFrequency_SelectionChanged( object sender, EventArgs e )
         {
-            int oneTimeFrequencyId = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME ).Id;
+            int oneTimeFrequencyId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME ).Id;
             bool oneTime = ( btnFrequency.SelectedValueAsInt() ?? 0 ) == oneTimeFrequencyId;
 
             dtpStartDate.Label = oneTime ? "When" : "First Gift";
@@ -641,8 +641,8 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
                     if ( gateway != null )
                     {
-                        var ccCurrencyType = DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_CREDIT_CARD ) );
-                        var achCurrencyType = DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_ACH ) );
+                        var ccCurrencyType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_CREDIT_CARD ) );
+                        var achCurrencyType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_ACH ) );
 
                         string errorMessage = string.Empty;
 
@@ -688,7 +688,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
                                     rockContext,
                                     authorizedPersonAlias.Person,
                                     Rock.Model.AuthenticationServiceType.Internal,
-                                    EntityTypeCache.Read( Rock.SystemGuid.EntityType.AUTHENTICATION_DATABASE.AsGuid() ).Id,
+                                    EntityTypeCache.Get( Rock.SystemGuid.EntityType.AUTHENTICATION_DATABASE.AsGuid() ).Id,
                                     txtUserName.Text,
                                     txtPassword.Text,
                                     false );
@@ -839,7 +839,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
                     btnFrequency.DataBind();
 
                     // If gateway didn't specifically support one-time, add it anyway for immediate gifts
-                    var oneTimeFrequency = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME );
+                    var oneTimeFrequency = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME );
                     if ( !supportedFrequencies.Where( f => f.Id == oneTimeFrequency.Id ).Any() )
                     {
                         btnFrequency.Items.Insert( 0, new ListItem( oneTimeFrequency.Value, oneTimeFrequency.Id.ToString() ) );
@@ -926,7 +926,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
                 // Find the saved accounts that are valid for the selected CC gateway
                 var ccSavedAccountIds = new List<int>();
-                var ccCurrencyType = DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_CREDIT_CARD ) );
+                var ccCurrencyType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_CREDIT_CARD ) );
                 if ( _ccGateway != null &&
                     _ccGatewayComponent != null &&
                     _ccGatewayComponent.SupportsSavedAccount( !oneTime ) &&
@@ -943,7 +943,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
                 // Find the saved accounts that are valid for the selected ACH gateway
                 var achSavedAccountIds = new List<int>();
-                var achCurrencyType = DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_ACH ) );
+                var achCurrencyType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.CURRENCY_TYPE_ACH ) );
                 if ( _achGateway != null &&
                     _achGatewayComponent != null &&
                     _achGatewayComponent.SupportsSavedAccount( !oneTime ) &&
@@ -1020,13 +1020,13 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
                 if ( displayPhone )
                 {
-                    var phoneNumber = personService.GetPhoneNumber( person, DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME ) ) );
+                    var phoneNumber = personService.GetPhoneNumber( person, DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME ) ) );
 
                     // If person did not have a home phone number, read the cell phone number (which would then
                     // get saved as a home number also if they don't change it, which is ok ).
                     if ( phoneNumber == null || string.IsNullOrWhiteSpace( phoneNumber.Number ) )
                     {
-                        phoneNumber = personService.GetPhoneNumber( person, DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE ) ) );
+                        phoneNumber = personService.GetPhoneNumber( person, DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE ) ) );
                     }
 
                     if ( phoneNumber != null )
@@ -1046,7 +1046,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
                     addressTypeGuid = new Guid( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME );
                 }
 
-                var groupLocation = personService.GetFirstLocation( person.Id, DefinedValueCache.Read( addressTypeGuid ).Id );
+                var groupLocation = personService.GetFirstLocation( person.Id, DefinedValueCache.Get( addressTypeGuid ).Id );
                 if ( groupLocation != null )
                 {
                     GroupLocationId = groupLocation.Id;
@@ -1219,8 +1219,8 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
                     if ( person == null )
                     {
-                        DefinedValueCache dvcConnectionStatus = DefinedValueCache.Read( GetAttributeValue( "ConnectionStatus" ).AsGuid() );
-                        DefinedValueCache dvcRecordStatus = DefinedValueCache.Read( GetAttributeValue( "RecordStatus" ).AsGuid() );
+                        DefinedValueCache dvcConnectionStatus = DefinedValueCache.Get( GetAttributeValue( "ConnectionStatus" ).AsGuid() );
+                        DefinedValueCache dvcRecordStatus = DefinedValueCache.Get( GetAttributeValue( "RecordStatus" ).AsGuid() );
 
                         // Create Person
                         person = new Person();
@@ -1228,7 +1228,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
                         person.LastName = txtLastName.Text;
                         person.IsEmailActive = true;
                         person.EmailPreference = EmailPreference.EmailAllowed;
-                        person.RecordTypeValueId = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_PERSON.AsGuid() ).Id;
+                        person.RecordTypeValueId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_PERSON.AsGuid() ).Id;
                         if ( dvcConnectionStatus != null )
                         {
                             person.ConnectionStatusValueId = dvcConnectionStatus.Id;
@@ -1253,7 +1253,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
 
                 if ( GetAttributeValue( "DisplayPhone" ).AsBooleanOrNull() ?? false )
                 {
-                    var numberTypeId = DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME ) ).Id;
+                    var numberTypeId = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME ) ).Id;
                     var phone = person.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValueId == numberTypeId );
                     if ( phone == null )
                     {
@@ -1634,7 +1634,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             if ( GetAttributeValue( "AllowScheduled" ).AsBoolean() )
             {
                 // If a one-time gift was selected for today's date, then treat as a onetime immediate transaction (not scheduled)
-                int oneTimeFrequencyId = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME ).Id;
+                int oneTimeFrequencyId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME ).Id;
                 if ( btnFrequency.SelectedValue == oneTimeFrequencyId.ToString() && dtpStartDate.SelectedDate <= RockDateTime.Today )
                 {
                     // one-time immediate payment
@@ -1642,7 +1642,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
                 }
 
                 var schedule = new PaymentSchedule();
-                schedule.TransactionFrequencyValue = DefinedValueCache.Read( btnFrequency.SelectedValueAsId().Value );
+                schedule.TransactionFrequencyValue = DefinedValueCache.Get( btnFrequency.SelectedValueAsId().Value );
                 if ( dtpStartDate.SelectedDate.HasValue && dtpStartDate.SelectedDate > RockDateTime.Today )
                 {
                     schedule.StartDate = dtpStartDate.SelectedDate.Value;
@@ -1872,7 +1872,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             Guid sourceGuid = Guid.Empty;
             if ( Guid.TryParse( GetAttributeValue( "Source" ), out sourceGuid ) )
             {
-                var source = DefinedValueCache.Read( sourceGuid );
+                var source = DefinedValueCache.Get( sourceGuid );
                 if ( source != null )
                 {
                     scheduledTransaction.SourceTypeValueId = source.Id;
@@ -1911,7 +1911,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             rockContext.SaveChanges();
 
             // Add a note about the change
-            var noteType = NoteTypeCache.Read( Rock.SystemGuid.NoteType.SCHEDULED_TRANSACTION_NOTE.AsGuid() );
+            var noteType = NoteTypeCache.Get( Rock.SystemGuid.NoteType.SCHEDULED_TRANSACTION_NOTE.AsGuid() );
             if ( noteType != null )
             {
                 var noteService = new NoteService( rockContext );
@@ -1944,7 +1944,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             transaction.FinancialGatewayId = financialGateway.Id;
             History.EvaluateChange( txnChanges, "Gateway", string.Empty, financialGateway.Name );
 
-            var txnType = DefinedValueCache.Read( new Guid( Rock.SystemGuid.DefinedValue.TRANSACTION_TYPE_CONTRIBUTION ) );
+            var txnType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.TRANSACTION_TYPE_CONTRIBUTION ) );
             transaction.TransactionTypeValueId = txnType.Id;
             History.EvaluateChange( txnChanges, "Type", string.Empty, txnType.Value );
 
@@ -1960,7 +1960,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
             Guid sourceGuid = Guid.Empty;
             if ( Guid.TryParse( GetAttributeValue( "Source" ), out sourceGuid ) )
             {
-                var source = DefinedValueCache.Read( sourceGuid );
+                var source = DefinedValueCache.Get( sourceGuid );
                 if ( source != null )
                 {
                     transaction.SourceTypeValueId = source.Id;
@@ -2167,7 +2167,7 @@ namespace RockWeb.Plugins.com_kfs.Giving
         {
             RockPage.AddScriptLink( ResolveUrl( "~/Scripts/jquery.creditCardTypeDetector.js" ) );
 
-            int oneTimeFrequencyId = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME ).Id;
+            int oneTimeFrequencyId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.TRANSACTION_FREQUENCY_ONE_TIME ).Id;
 
             string scriptFormat = @"
     Sys.Application.add_load(function () {{
