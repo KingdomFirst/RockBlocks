@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
-using System.Linq.Dynamic;
 using System.Web.UI;
+using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 using Newtonsoft.Json;
 
@@ -359,14 +359,14 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void rFilter_ApplyFilterClick( object sender, EventArgs e )
         {
-            rFilter.SaveUserPreference( "First Name", "First Name", tbFirstName.Text );
-            rFilter.SaveUserPreference( "Last Name", "Last Name", tbLastName.Text );
-            rFilter.SaveUserPreference( "Role", "Role", cblRole.SelectedValues.AsDelimited( ";" ) );
-            rFilter.SaveUserPreference( "Status", "Status", cblGroupMemberStatus.SelectedValues.AsDelimited( ";" ) );
-            rFilter.SaveUserPreference( "Campus", "Campus", cpCampusFilter.SelectedCampusId.ToString() );
-            rFilter.SaveUserPreference( "Gender", "Gender", cblGenderFilter.SelectedValues.AsDelimited( ";" ) );
-            rFilter.SaveUserPreference( "Registration", "Registration", ddlRegistration.SelectedValue );
-            rFilter.SaveUserPreference( "Signed Document", "Signed Document", ddlSignedDocument.SelectedValue );
+            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( "First Name" ), "First Name", tbFirstName.Text );
+            rFilter.SaveUserPreference( MakeKeyUniqueToGroup(  "Last Name"), "Last Name", tbLastName.Text );
+            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( "Role" ), "Role", cblRole.SelectedValues.AsDelimited( ";" ) );
+            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( "Status" ), "Status", cblGroupMemberStatus.SelectedValues.AsDelimited( ";" ) );
+            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( "Campus" ), "Campus", cpCampusFilter.SelectedCampusId.ToString() );
+            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( "Gender" ), "Gender", cblGenderFilter.SelectedValues.AsDelimited( ";" ) );
+            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( "Registration" ), "Registration", ddlRegistration.SelectedValue );
+            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( "Signed Document" ), "Signed Document", ddlSignedDocument.SelectedValue );
             rFilter.SaveUserPreference( DATE_ADDED_FILTER_KEY, DATE_ADDED_FILTER_KEY, drpDateAdded.DelimitedValues );
 
             if ( AvailableAttributes != null )
@@ -379,7 +379,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         try
                         {
                             var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                            rFilter.SaveUserPreference( attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                            rFilter.SaveUserPreference( MakeKeyUniqueToGroup( attribute.Id.ToString() + attribute.Key ), attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
                         }
                         catch
                         {
@@ -406,7 +406,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         {
             if ( AvailableAttributes != null )
             {
-                var attribute = AvailableAttributes.FirstOrDefault( a => a.Key == e.Key );
+                var attribute = AvailableAttributes.FirstOrDefault( a => MakeKeyUniqueToGroup( a.Key ) == e.Key );
                 if ( attribute != null )
                 {
                     try
@@ -422,27 +422,27 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 }
             }
 
-            if ( e.Key == "First Name" )
+            if ( e.Key == MakeKeyUniqueToGroup( "First Name" ) )
             {
                 return;
             }
-            else if ( e.Key == "Last Name" )
+            else if ( e.Key == MakeKeyUniqueToGroup( "Last Name" ) )
             {
                 return;
             }
-            else if ( e.Key == "Role" )
+            else if ( e.Key == MakeKeyUniqueToGroup( "Role" ) )
             {
                 e.Value = ResolveValues( e.Value, cblRole );
             }
-            else if ( e.Key == "Status" )
+            else if ( e.Key == MakeKeyUniqueToGroup( "Status" ) )
             {
                 e.Value = ResolveValues( e.Value, cblGroupMemberStatus );
             }
-            else if ( e.Key == "Gender" )
+            else if ( e.Key == MakeKeyUniqueToGroup( "Gender" ) )
             {
                 e.Value = ResolveValues( e.Value, cblGenderFilter );
             }
-            else if ( e.Key == "Campus" )
+            else if ( e.Key == MakeKeyUniqueToGroup( "Campus" ) )
             {
                 var campusId = e.Value.AsIntegerOrNull();
                 if ( campusId.HasValue )
@@ -462,7 +462,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     e.Value = string.Empty;
                 }
             }
-            else if ( e.Key == "Registration" )
+            else if ( e.Key == MakeKeyUniqueToGroup( "Registration" ) )
             {
                 var instanceId = e.Value.AsIntegerOrNull();
                 if ( instanceId.HasValue )
@@ -485,7 +485,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     e.Value = string.Empty;
                 }
             }
-            else if ( e.Key == "Signed Document" )
+            else if ( e.Key == MakeKeyUniqueToGroup( "Signed Document" ) )
             {
                 return;
             }
@@ -621,11 +621,11 @@ namespace RockWeb.Plugins.com_kfs.Groups
             BindAttributes();
             AddDynamicControls();
 
-            tbFirstName.Text = rFilter.GetUserPreference( "First Name" );
-            tbLastName.Text = rFilter.GetUserPreference( "Last Name" );
-            cpCampusFilter.SelectedCampusId = rFilter.GetUserPreference( "Campus" ).AsIntegerOrNull();
+            tbFirstName.Text = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "First Name" ) );
+            tbLastName.Text = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Last Name" ) );
+            cpCampusFilter.SelectedCampusId = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Campus" ) ).AsIntegerOrNull();
 
-            string genderValue = rFilter.GetUserPreference( "Gender" );
+            string genderValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Gender" ) );
             if ( !string.IsNullOrWhiteSpace( genderValue ) )
             {
                 cblGenderFilter.SetValues( genderValue.Split( ';' ).ToList() );
@@ -635,22 +635,22 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 cblGenderFilter.ClearSelection();
             }
 
-            string roleValue = rFilter.GetUserPreference( "Role" );
+            string roleValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Role" ) );
             if ( !string.IsNullOrWhiteSpace( roleValue ) )
             {
                 cblRole.SetValues( roleValue.Split( ';' ).ToList() );
             }
 
-            string statusValue = rFilter.GetUserPreference( "Status" );
+            string statusValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Status" ) );
             if ( !string.IsNullOrWhiteSpace( statusValue ) )
             {
                 cblGroupMemberStatus.SetValues( statusValue.Split( ';' ).ToList() );
             }
 
-            ddlRegistration.SetValue( rFilter.GetUserPreference( "Registration" ) );
+            ddlRegistration.SetValue( rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Registration" ) ) );
             ddlRegistration.Visible = ddlRegistration.Items.Count > 1;
 
-            ddlSignedDocument.SetValue( rFilter.GetUserPreference( "Signed Document" ) );
+            ddlSignedDocument.SetValue( rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Signed Document" ) ) );
             ddlSignedDocument.Visible = _group.RequiredSignatureDocumentTemplateId.HasValue;
 
             drpDateAdded.DelimitedValues = rFilter.GetUserPreference( DATE_ADDED_FILTER_KEY );
@@ -683,7 +683,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 {
                     if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
                     {
-                        AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                        AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
                     }
                 }
 
@@ -693,7 +693,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 {
                     while ( inheritedGroupTypeId.HasValue )
                     {
-                        var inheritedGroupType = GroupTypeCache.Read( inheritedGroupTypeId.Value );
+                        var inheritedGroupType = GroupTypeCache.Get( inheritedGroupTypeId.Value );
 
                         if ( inheritedGroupType != null )
                         {
@@ -708,7 +708,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                             {
                                 if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
                                 {
-                                    AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                                    AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
                                 }
                             }
 
@@ -730,7 +730,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                 if ( _group.Attributes != null )
                 {
-                    var attributeFieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.ATTRIBUTE ).Id;
+                    var attributeFieldTypeId = FieldTypeCache.Get( Rock.SystemGuid.FieldType.ATTRIBUTE ).Id;
                     var personAttributes = _group.Attributes.Values.FirstOrDefault( a =>
                                                 a.FieldTypeId == attributeFieldTypeId &&
                                                 a.QualifierValues.ContainsKey( "entitytype" ) &&
@@ -743,7 +743,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                         foreach ( var personAttribute in personAttributeValues.Split( ',' ).AsGuidList() )
                         {
-                            AvailablePersonAttributeIds.Add( AttributeCache.Read( personAttribute ).Id );
+                            AvailablePersonAttributeIds.Add( AttributeCache.Get( personAttribute ).Id );
                         }
                     }
                 }
@@ -758,7 +758,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 {
                     if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
                     {
-                        AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                        AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
                     }
                 }
             }
@@ -804,7 +804,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                             phAttributeFilters.Controls.Add( wrapper );
                         }
 
-                        string savedValue = rFilter.GetUserPreference( attribute.Key );
+                        string savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Key ) );
                         if ( !string.IsNullOrWhiteSpace( savedValue ) )
                         {
                             try
@@ -828,7 +828,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         boundField.HeaderText = attribute.Name;
                         boundField.Visible = addColumn;
 
-                        var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
+                        var attributeCache = Rock.Web.Cache.AttributeCache.Get( attribute.Id );
                         if ( attributeCache != null )
                         {
                             boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;
@@ -1293,7 +1293,10 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     // Since we're not binding to actual group member list, but are using AttributeField columns,
                     // we need to save the group members into the grid's object list
                     gGroupMembers.ObjectList = new Dictionary<string, object>();
-                    groupMembersList.ForEach( m => gGroupMembers.ObjectList.Add( m.Id.ToString(), m ) );
+                    //
+                    // KFS don't add the group members here, wait until the attributes are bound below
+                    //
+                    //groupMembersList.ForEach( m => gGroupMembers.ObjectList.Add( m.Id.ToString(), m ) );
                     gGroupMembers.EntityTypeId = EntityTypeCache.Get( Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid() ).Id;
 
                     var homePhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
@@ -1380,6 +1383,12 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         }
                     }
 
+                    bool showDateAdded = GetAttributeValue( "ShowDateAdded" ).AsBoolean();
+                    gGroupMembers.ColumnsOfType<DateField>().First( a => a.DataField == "DateTimeAdded" ).Visible = showDateAdded;
+
+                    bool showNoteColumn = GetAttributeValue( "ShowNoteColumn" ).AsBoolean();
+                    gGroupMembers.ColumnsOfType<RockBoundField>().First( a => a.DataField == "Note" ).Visible = showNoteColumn;
+
                     var dataSource = groupMembersList.Select( m => new
                     {
                         m.Id,
@@ -1388,24 +1397,27 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         m.Person.NickName,
                         m.Person.LastName,
                         Name =
-                        ( isExporting ? m.Person.LastName + ", " + m.Person.NickName : string.Format( photoFormat, m.PersonId, m.Person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-male.svg" ) ) +
-                            m.Person.NickName + " " + m.Person.LastName
-                            + ( ( hasGroupRequirements && groupMemberIdsThatLackGroupRequirements.Contains( m.Id ) ) 
+                        isExporting ? m.Person.LastName + ", " + m.Person.NickName : string.Format( photoFormat, m.PersonId, m.Person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) )
+                                    + m.Person.NickName + " " + m.Person.LastName
+                            + ( !string.IsNullOrWhiteSpace( m.Person.TopSignalColor ) ? " " + m.Person.GetSignalMarkup() : string.Empty )
+                            + ( ( hasGroupRequirements && groupMemberIdsThatLackGroupRequirements.Contains( m.Id ) )
                                 ? " <i class='fa fa-exclamation-triangle text-warning'></i>"
                                 : string.Empty )
-                            + ( !string.IsNullOrEmpty( m.Note )
-                                ? " <i class='fa fa-file-text-o text-info'></i>"
+                            + ( ( !showNoteColumn && !string.IsNullOrEmpty( m.Note ) )
+                                ? " <span class='js-group-member-note' data-toggle='tooltip' data-placement='top' title='" + m.Note.EncodeHtml() + "'><i class='fa fa-file-text-o text-info'></i></span>"
                                 : string.Empty )
-                            + ((personIdsThatHaventSigned.Contains( m.PersonId ))
+                            + ( personIdsThatHaventSigned.Contains( m.PersonId )
                                 ? " <i class='fa fa-pencil-square-o text-danger'></i>"
-                                : string.Empty)),
+                                : string.Empty ),
                         m.Person.BirthDate,
                         m.Person.Age,
                         m.Person.ConnectionStatusValueId,
                         m.DateTimeAdded,
+                        m.Note,
                         FirstAttended = attendanceFirstLast.Where( a => a.Key == m.PersonId ).Select( a => a.Value.Start ).FirstOrDefault(),
                         LastAttended = attendanceFirstLast.Where( a => a.Key == m.PersonId ).Select( a => a.Value.End ).FirstOrDefault(),
-                        Email = m.Person.Email,
+                        m.Person.Email,
+                        Gender = isExporting ? m.Person.Gender.ToString() : string.Empty,
                         HomePhone = isExporting && homePhoneType != null ?
                             m.Person.PhoneNumbers
                                 .Where( p => p.NumberTypeValueId.HasValue && p.NumberTypeValueId.Value == homePhoneType.Id )
@@ -1419,13 +1431,16 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         HomeAddress = homeLocations.ContainsKey( m.Id ) && homeLocations[m.Id] != null ?
                             homeLocations[m.Id].FormattedAddress : string.Empty,
                         Latitude = homeLocations.ContainsKey( m.Id ) && homeLocations[m.Id] != null ?
-                            homeLocations[m.Id].Latitude : (double?)null,
+                            homeLocations[m.Id].Latitude : ( double? )null,
                         Longitude = homeLocations.ContainsKey( m.Id ) && homeLocations[m.Id] != null ?
                             homeLocations[m.Id].Longitude : (double?)null,
                         GroupRole = m.GroupRole.Name,
                         m.GroupMemberStatus,
-                        RecordStatusValueId = m.Person.RecordStatusValueId,
-                        IsDeceased = m.Person.IsDeceased
+                        m.Person.RecordStatusValueId,
+                        m.Person.IsDeceased,
+                        m.Person.MaritalStatusValueId,
+                        m.GroupRoleId,
+                        m.IsArchived
                     } ).ToList();
 
                     if ( sortProperty != null )
@@ -1507,12 +1522,12 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     var attributes = new Dictionary<string, AttributeCache>();
                     AvailableAttributes.ForEach( a => attributes
                             .Add( a.Id.ToString() + a.Key, a ) );
-                    
-                    // Loop through each of the current page's registrants and build an attribute
-                    // field object for storing attributes and the values for each of the registrants
-                    foreach ( var gm in groupMembersList )
+
+                    // Loop through each of the current page's group members and build an attribute
+                    // field object for storing attributes and the values for each of the group members
+                    if ( attributes.Count > 0 )
                     {
-                        if ( attributes.Count > 0 )
+                        foreach ( var gm in groupMembersList )
                         {
                             // Create a row attribute object
                             var attributeFieldObject = new AttributeFieldObject();
@@ -1542,7 +1557,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                             gGroupMembers.ObjectList.Add( gm.Id.ToString(), attributeFieldObject );
                         }
                     }
-                    
+
                     gGroupMembers.DataSource = dataSource;
                     gGroupMembers.DataBind();
                 }
