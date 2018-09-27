@@ -527,11 +527,29 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
 
                     var rockContext = new RockContext();
                     var batchService = new FinancialBatchService( rockContext );
-                    var batchesToUpdate = batchService.Queryable()
-                        .Where( b =>
-                            batchesSelected.Contains( b.Id ) &&
-                            b.Status != newStatus )
-                        .ToList();
+                    var batchesToUpdate = new List<FinancialBatch>();
+
+                    if ( newStatus == BatchStatus.Open )
+                    {
+                        batchesToUpdate = batchService.Queryable()
+                            .Where( b =>
+                                batchesSelected.Contains( b.Id ) &&
+                                b.Status != newStatus )
+                            .ToList();
+                    }
+                    else
+                    {
+                        var exportedBatches = batchService.Queryable()
+                            .WhereAttributeValue( rockContext, a => a.Attribute.Key == "com.kfs.ShelbyFinancials.DateExported" && ( a.Value != null || a.Value != "" ) )
+                            .Select( b => b.Id )
+                            .ToList();
+
+                        batchesToUpdate = batchService.Queryable()
+                            .Where( b =>
+                                batchesSelected.Contains( b.Id ) &&
+                                !exportedBatches.Contains( b.Id ) )
+                            .ToList();
+                    }
 
                     foreach ( var batch in batchesToUpdate )
                     {
