@@ -190,6 +190,7 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
                     }}
                     else
                     {{
+                        Rock.dialogs.alert(""Please select a valid Journal Type and Period."");
                         var $ddl = $(this);
                         $ddl.val('');
                     }}
