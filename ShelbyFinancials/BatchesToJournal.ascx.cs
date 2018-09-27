@@ -71,7 +71,6 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
             ddlAction.Items.Add( new ListItem( "-- Select Action --", string.Empty ) );
             ddlAction.Items.Add( new ListItem( "Open Selected Batches", "OPEN" ) );
             ddlAction.Items.Add( new ListItem( "Export Selected Batches", "EXPORT" ) );
-            //ddlAction.ValidationGroup = "KFSGLExport";
 
             string deleteScript = @"
                 $('table.js-grid-batch-list a.grid-delete-button').click(function( e ){
