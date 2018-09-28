@@ -30,6 +30,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         private EventCalendar _eventCalendar = null;
         private bool _canView = false;
         private bool _canEdit = false;
+        private bool _canDelete = false;
 
         #endregion
 
@@ -91,8 +92,9 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( _eventCalendar != null )
                 {
+                    _canDelete = _eventCalendar.IsAuthorized( Authorization.DELETE, CurrentPerson );
                     _canEdit = UserCanEdit || _eventCalendar.IsAuthorized( Authorization.EDIT, CurrentPerson );
-                    _canView = _canEdit || _eventCalendar.IsAuthorized( Authorization.VIEW, CurrentPerson );
+                    _canView = _canDelete || _canEdit || _eventCalendar.IsAuthorized( Authorization.VIEW, CurrentPerson );
 
                     rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
 
@@ -101,7 +103,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     gEventCalendarItems.Actions.AddClick += gEventCalendarItems_AddClick;
                     gEventCalendarItems.GridRebind += gEventCalendarItems_GridRebind;
                     gEventCalendarItems.ExportFilename = _eventCalendar.Name;
-                    gEventCalendarItems.IsDeleteEnabled = _canEdit;
+                    gEventCalendarItems.IsDeleteEnabled = _canDelete;
                 }
             }
         }
@@ -248,7 +250,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 EventItem eventItem = eventItemService.Get( e.RowKeyId );
                 if ( eventItem != null )
                 {
-                    if ( _canEdit )
+                    if ( _canDelete )
                     {
                         string errorMessage;
                         if ( !eventItemService.CanDelete( eventItem, out errorMessage ) )
@@ -489,7 +491,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             gEventCalendarItems.Columns.Add( approvalStatusField );
 
             // Add delete column
-            if ( _canEdit )
+            if ( _canDelete )
             {
                 var deleteField = new DeleteField();
                 gEventCalendarItems.Columns.Add( deleteField );
