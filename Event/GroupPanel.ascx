@@ -12,20 +12,8 @@
             <asp:Panel ID="pnlGroupDescription" runat="server" CssClass="alert alert-info" >
                 <asp:Label ID="lblGroupDescription" runat="server"></asp:Label>
             </asp:Panel>
-            <%--<Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue">
-                <Rock:RockTextBox ID="tbFirstName" runat="server" Label="First Name" />
-                <Rock:RockTextBox ID="tbLastName" runat="server" Label="Last Name" />
-                <Rock:RockCheckBoxList ID="cblRole" runat="server" Label="Role" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" />
-                <Rock:RockCheckBoxList ID="cblGroupMemberStatus" runat="server" Label="Group Member Status" RepeatDirection="Horizontal" />
-                <Rock:CampusPicker ID="cpCampusFilter" runat="server" Label="Family Campus" />
-                <Rock:RockCheckBoxList ID="cblGenderFilter" runat="server" RepeatDirection="Horizontal" Label="Gender">
-                    <asp:ListItem Text="Male" Value="Male" />
-                    <asp:ListItem Text="Female" Value="Female" />
-                    <asp:ListItem Text="Unknown" Value="Unknown" />
-                </Rock:RockCheckBoxList>
-                <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
-            </Rock:GridFilter>--%>
-            <Rock:Grid ID="gGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gGroupMembers_RowSelected" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
+            
+            <Rock:Grid ID="pnlGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="pnlGroupMembers_RowSelected" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
                 <Columns>
                     <Rock:SelectField></Rock:SelectField>
                     <Rock:RockBoundField DataField="Person.FullName" HeaderText="Name" SortExpression="Person.LastName,Person.NickName" HtmlEncode="false" />
