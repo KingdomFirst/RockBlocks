@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Web.UI.WebControls;
+using com.kfs.Attribute;
 using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
@@ -21,8 +22,9 @@ namespace RockWeb.Plugins.com_kfs.Event
     [DisplayName( "KFS Calendar Event Item List" )]
     [Category( "KFS > Event" )]
     [Description( "Lists all the event items in the given calendar." )]
-
     [LinkedPage( "Detail Page" )]
+    [SecurityRoleField( "Role(s) Allowed to Delete", "By default, any user with edit rights can delete calendar items. Optionally select the only security role(s) allowed to delete items.", false )]
+    //[GroupsField( "Role(s) Allowed to Delete", "By default, any user with edit rights can delete calendar items. Optionally select the only security role(s) allowed to delete items.", false,  "", "" )]
     public partial class EventItemList : RockBlock, ISecondaryBlock, ICustomGridColumns
     {
         #region Private Variables
@@ -357,7 +359,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         private void BindAttributes()
         {
-            // Parse the attribute filters 
+            // Parse the attribute filters
             AvailableAttributes = new List<AttributeCache>();
             if ( _eventCalendar != null )
             {
@@ -497,9 +499,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 gEventCalendarItems.Columns.Add( deleteField );
                 deleteField.Click += DeleteEventCalendarItem_Click;
             }
-
         }
-
 
         /// <summary>
         /// Binds the event calendar items grid.
@@ -597,7 +597,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         {
                             qry = qry.Where( w =>
                                 filteredAttributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
-                        }   
+                        }
                     }
                 }
 
@@ -689,7 +689,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     Guid = i.EventCalendarItem.EventItem.Guid,
                     Date = i.NextStartDateTime.HasValue ? i.NextStartDateTime.Value.ToShortDateString() : "N/A",
                     Name = i.EventCalendarItem.EventItem.Name,
-                    Occurrences = campusIds.Any() ? 
+                    Occurrences = campusIds.Any() ?
                         i.EventCalendarItem.EventItem.EventItemOccurrences.Count( c => !c.CampusId.HasValue || campusIds.Contains( c.CampusId.Value ) ):
                         i.EventCalendarItem.EventItem.EventItemOccurrences.Count(),
                     Calendar = i.EventCalendarItem.EventItem.EventCalendarItems.ToList().Select( c => c.EventCalendar.Name ).ToList().AsDelimited( "<br>" ),
