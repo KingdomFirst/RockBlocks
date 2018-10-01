@@ -33,7 +33,7 @@
                                 </Rock:RockDropDownList>
                                 <Rock:RockCheckBoxList ID="cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" />
                                 <Rock:RockCheckBoxList ID="cblAudience" runat="server" Label="Audiences" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" />
-                                <Rock:PersonPicker ID="ppPerson" runat="server" Label="Created By" />
+                                <Rock:PersonPicker ID="ppCreatedBy" runat="server" Label="Created By" />
                                 <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
                             </Rock:GridFilter>
                             <Rock:Grid ID="gEventCalendarItems" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gEventCalendarItems_Edit">

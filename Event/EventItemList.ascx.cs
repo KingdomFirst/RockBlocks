@@ -165,7 +165,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "Audience" ), "Audience", cblAudience.SelectedValues.AsDelimited( ";" ) );
             rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "Status" ), "Status", ddlStatus.SelectedValue );
             rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "ApprovalStatus" ), "Approval Status", ddlApprovalStatus.SelectedValue );
-            rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "CreatedBy" ), "CreatedBy", ppPerson.SelectedValue.ToStringSafe() );
+            rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "CreatedBy" ), "CreatedBy", ppCreatedBy.SelectedValue.ToStringSafe() );
 
             if ( AvailableAttributes != null )
             {
@@ -238,7 +238,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
             else if ( e.Key == MakeKeyUniqueToEventCalendar( "CreatedBy" ) )
             {
-                ppPerson.SelectedValue = e.Value.AsIntegerOrNull();
+                ppCreatedBy.SelectedValue = e.Value.AsIntegerOrNull();
             }
             else
             {
@@ -359,6 +359,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             ddlStatus.SetValue( rFilter.GetUserPreference( MakeKeyUniqueToEventCalendar( "Status" ) ) );
 
             ddlApprovalStatus.SetValue( rFilter.GetUserPreference( MakeKeyUniqueToEventCalendar( "ApprovalStatus" ) ) );
+
+            ppCreatedBy.SelectedValue = rFilter.GetUserPreference( MakeKeyUniqueToEventCalendar( "CreatedBy" ) ).AsIntegerOrNull();
 
             BindAttributes();
             AddDynamicControls();
@@ -565,11 +567,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 // Filter by CreatedBy
-                int? personId = ppPerson.SelectedValue;
+                int? personId = ppCreatedBy.SelectedValue;
                 if ( personId.HasValue )
                 {
                     qry = qry
-                        .Where( i => i.EventItem.CreatedByPersonId == personId.Value );
+                        .Where( i => i.EventItem.CreatedByPersonAlias.Person.Id == personId.Value );
                 }
 
                 // Filter query by any configured attribute filters
