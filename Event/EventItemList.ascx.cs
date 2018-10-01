@@ -23,7 +23,9 @@ namespace RockWeb.Plugins.com_kfs.Event
     [Category( "KFS > Event" )]
     [Description( "Lists all the event items in the given calendar." )]
     [LinkedPage( "Detail Page" )]
-    [SecurityRoleField( "Role(s) Allowed to Delete", "By default, any user with edit rights can delete calendar items. Optionally select the only security role(s) allowed to delete items.", false )]
+    [SecurityRoleField( "Role Allowed to Delete", "By default, any user with edit rights can delete calendar items. Optionally select the only security role allowed to delete items.", false, "", Key = "RoleAllowedDelete" )]
+    [SecurityRoleField( "Secondary Role Allowed to Delete", "By default, any user with edit rights can delete calendar items. Optionally select an additional security role allowed to delete items.", false, "", Key = "SecondaryRoleAllowedDelete" )]
+    // Note: Rock won't load this attribute via MEF, possibly due to the sealed Rock.Field.Types namespace
     //[GroupsField( "Role(s) Allowed to Delete", "By default, any user with edit rights can delete calendar items. Optionally select the only security role(s) allowed to delete items.", false,  "", "" )]
     public partial class EventItemList : RockBlock, ISecondaryBlock, ICustomGridColumns
     {
@@ -94,7 +96,12 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( _eventCalendar != null )
                 {
-                    _canDelete = _eventCalendar.IsAuthorized( Authorization.DELETE, CurrentPerson );
+                    var primaryRoleGuid = GetAttributeValue( "RoleAllowedDelete" ).AsGuidOrNull();
+                    var secondaryRoleGuid = GetAttributeValue( "SecondaryRoleAllowedDelete" ).AsGuidOrNull();
+
+                    // could use GroupService.GroupHasMembers here for more consistency
+                    _canDelete = new GroupMemberService( new RockContext() ).Queryable().Any( m => m.PersonId == CurrentPerson.Id
+                            && new[] { primaryRoleGuid, secondaryRoleGuid }.Contains( m.Group.Guid ) );
                     _canEdit = UserCanEdit || _eventCalendar.IsAuthorized( Authorization.EDIT, CurrentPerson );
                     _canView = _canDelete || _canEdit || _eventCalendar.IsAuthorized( Authorization.VIEW, CurrentPerson );
 
