@@ -165,7 +165,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "Audience" ), "Audience", cblAudience.SelectedValues.AsDelimited( ";" ) );
             rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "Status" ), "Status", ddlStatus.SelectedValue );
             rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "ApprovalStatus" ), "Approval Status", ddlApprovalStatus.SelectedValue );
-            rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "CreatedBy" ), "CreatedBy", ppCreatedBy.SelectedValue.ToStringSafe() );
+            rFilter.SaveUserPreference( MakeKeyUniqueToEventCalendar( "CreatedBy" ), "CreatedBy", string.Join( ";", ppCreatedBy.PersonId, ppCreatedBy.PersonName ) );
 
             if ( AvailableAttributes != null )
             {
@@ -238,7 +238,12 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
             else if ( e.Key == MakeKeyUniqueToEventCalendar( "CreatedBy" ) )
             {
-                ppCreatedBy.SelectedValue = e.Value.AsIntegerOrNull();
+                var createdBy = e.Value.Split( ';' );
+                if ( createdBy.Length > 1 )
+                {
+                    // display PersonName instead of PersonId in the filter overview
+                    e.Value = createdBy[1];
+                }
             }
             else
             {
@@ -360,7 +365,13 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             ddlApprovalStatus.SetValue( rFilter.GetUserPreference( MakeKeyUniqueToEventCalendar( "ApprovalStatus" ) ) );
 
-            ppCreatedBy.SelectedValue = rFilter.GetUserPreference( MakeKeyUniqueToEventCalendar( "CreatedBy" ) ).AsIntegerOrNull();
+            var createdBy = rFilter.GetUserPreference( MakeKeyUniqueToEventCalendar( "CreatedBy" ) ).Split( ';' );
+            if ( createdBy.Length > 1 && createdBy[0].AsIntegerOrNull().HasValue )
+            {
+                ppCreatedBy.SelectedValue = createdBy[0].AsIntegerOrNull();
+                ppCreatedBy.PersonName = createdBy[1];
+            }
+            
 
             BindAttributes();
             AddDynamicControls();
