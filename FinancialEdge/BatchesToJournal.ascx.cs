@@ -518,7 +518,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                     else
                     {
                         var exportedBatches = batchService.Queryable()
-                            .WhereAttributeValue( rockContext, a => a.Attribute.Key == "com.kfs.FinancialEdge.DateExported" && ( a.Value != null || a.Value != "" ) )
+                            .WhereAttributeValue( rockContext, a => a.Attribute.Key == "com.kfs.FinancialEdge.DateExported" && ( a.Value != null && a.Value != "" ) )
                             .Select( b => b.Id )
                             .ToList();
 
