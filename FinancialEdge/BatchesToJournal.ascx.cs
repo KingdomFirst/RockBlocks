@@ -25,7 +25,6 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
     [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
     [BooleanField( "Show Accounts Column", "Should the accounts column be displayed.", true, "", 2 )]
     [TextField( "Journal Type", "The Financial Edge Journal to post in. For example: JE", true, "", "", 3 )]
-    [CustomDropdownListField( "Journal Reference Style", "Option to indicate how the Journal Reference text should be created.", "0^Use Batch Name,1^Use Account Name", true, "0", "", 4 )]
 
     public partial class BatchesToJournal : RockBlock, IPostBackEventHandler, ICustomGridColumns
     {
@@ -572,7 +571,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                             newDate = RockDateTime.Now.ToString();
                             History.EvaluateChange( changes, "Date Exported", oldDate, newDate.ToString() );
 
-                            items.AddRange( feJournal.GetGlEntries( rockContext, batch, GetAttributeValue( "JournalType" ), ( ReferenceStyle ) GetAttributeValue( "JournalReferenceStyle" ).AsInteger() ) );
+                            items.AddRange( feJournal.GetGlEntries( rockContext, batch, GetAttributeValue( "JournalType" ) ) );
                         }
 
                         HistoryService.SaveChanges(
@@ -830,36 +829,10 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
             // Filter query by any configured attribute filters
             if ( AvailableAttributes != null && AvailableAttributes.Any() )
             {
-                var attributeValueService = new AttributeValueService( rockContext );
-                var parameterExpression = attributeValueService.ParameterExpression;
-
                 foreach ( var attribute in AvailableAttributes )
                 {
                     var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                    if (filterControl == null) continue;
-
-                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                    var filterIsDefault = attribute.FieldType.Field.IsEqualToValue( filterValues, attribute.DefaultValue );
-                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                    if (expression == null) continue;
-
-                    var attributeValues = attributeValueService
-                        .Queryable()
-                        .Where(v => v.Attribute.Id == attribute.Id);
-
-                    var filteredAttributeValues = attributeValues.Where( parameterExpression, expression, null );
-
-                    if (filterIsDefault)
-                    {
-                        qry = qry.Where(w =>
-                            !attributeValues.Any(v => v.EntityId == w.Id) ||
-                            filteredAttributeValues.Select( v => v.EntityId ).Contains( w.Id ));
-                    }
-                    else
-                    {
-                        qry = qry.Where( w =>
-                            filteredAttributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
-                    }
+                    qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, batchService, Rock.Reporting.FilterMode.SimpleFilter );
                 }
             }
 

@@ -19,7 +19,6 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
     [Description( "Block used to create Journal Entries in Intacct from a Rock Financial Batch." )]
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Create FE CSV", "", 0 )]
     [TextField( "Journal Type", "The Financial Edge Journal to post in. For example: JE", true, "", "", 1 )]
-    [CustomDropdownListField( "Journal Reference Style", "Option to indicate how the Journal Reference text should be created.", "0^Use Batch Name,1^Use Account Name", true, "0", "", 2 )]
     [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.", true, "", 3 )]
     public partial class BatchToJournal : RockBlock
     {
@@ -119,7 +118,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                 var rockContext = new RockContext();
                 var feJournal = new FEJournal();
 
-                var items = feJournal.GetGlEntries( rockContext, _financialBatch, GetAttributeValue( "JournalType" ), ( ReferenceStyle ) GetAttributeValue( "JournalReferenceStyle" ).AsInteger() );
+                var items = feJournal.GetGlEntries( rockContext, _financialBatch, GetAttributeValue( "JournalType" ) );
 
                 if ( items.Count > 0 )
                 {
