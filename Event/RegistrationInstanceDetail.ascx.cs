@@ -7089,16 +7089,18 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( categoryGroup != null )
                 {
                     // save the related groups as attributes on the registration
-                    CreateAttribute( rockContext, instance, attributeKey, categoryGroup.Guid );
-                    parentGroupId = categoryGroup.Id;
+                    CreateInstanceGroupAttribute( rockContext, instance, attributeKey, categoryGroup.Guid );
                     currentCategory = currentCategory.ParentCategory;
                 }
+
+                // save the category group to set as a parent on the template
+                parentGroupId = categoryGroup.Id;
 
                 // walk up the category tree to create group placeholders
                 while ( currentCategory != null )
                 {
                     var parentCategoryGroup = CreateGroup( rockContext, string.Empty, templateGroupType.Id, null, currentCategory.Name );
-                    if ( categoryGroup.ParentGroup == null && categoryGroup != parentCategoryGroup )
+                    if ( categoryGroup.ParentGroup != parentCategoryGroup && categoryGroup != parentCategoryGroup )
                     {
                         categoryGroup.ParentGroup = parentCategoryGroup;
                     }
@@ -7113,7 +7115,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var templateGroup = CreateGroup( rockContext, instance.GetAttributeValue( attributeKey ), templateGroupType.Id, parentGroupId, instance.RegistrationTemplate.Name );
                 if ( templateGroup != null )
                 {
-                    CreateAttribute( rockContext, instance, attributeKey, templateGroup.Guid );
+                    CreateInstanceGroupAttribute( rockContext, instance, attributeKey, templateGroup.Guid );
                 }
                 parentGroupId = templateGroup.Id;
 
@@ -7122,7 +7124,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var instanceGroup = CreateGroup( rockContext, instance.GetAttributeValue( attributeKey ), templateGroupType.Id, parentGroupId, instance.Name );
                 if ( instanceGroup != null )
                 {
-                    CreateAttribute( rockContext, instance, attributeKey, instanceGroup.Guid );
+                    CreateInstanceGroupAttribute( rockContext, instance, attributeKey, instanceGroup.Guid );
                 }
 
                 // resource groups
@@ -7148,7 +7150,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             {
                                 // verify group structure
                                 groupTypeGroupUI.ParentGroupId = parentGroupId ?? groupTypeGroupUI.ParentGroupId;
-                                CreateAttribute( rockContext, instance, groupType.Name, groupTypeGroupUI.Guid );
+                                CreateInstanceGroupAttribute( rockContext, instance, groupType.Name, groupTypeGroupUI.Guid );
                             }
                             else
                             {
@@ -8201,15 +8203,15 @@ namespace RockWeb.Plugins.com_kfs.Event
             nbInvalid.Text = string.Format( "Please correct the following:<ul><li>{0}</li></ul>", validationResults.AsDelimited( "</li><li>" ) );
             nbInvalid.Visible = true;
         }
-
+        
         /// <summary>
-        /// Creates the attribute for this registration instance.
+        /// Creates the instance group attribute.
         /// </summary>
         /// <param name="rockContext">The rock context.</param>
         /// <param name="instance">The instance.</param>
         /// <param name="attributeKey">The attribute key.</param>
         /// <param name="groupGuid">The group unique identifier.</param>
-        private void CreateAttribute( RockContext rockContext, RegistrationInstance instance, string attributeKey, Guid groupGuid )
+        private void CreateInstanceGroupAttribute( RockContext rockContext, RegistrationInstance instance, string attributeKey, Guid groupGuid )
         {
             if ( instance.Attributes == null || !instance.Attributes.Any() )
             {
@@ -8259,7 +8261,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             var registrationGroup = groupService.Get( existingGroupGuid.AsGuid() );
             // next look for the group by name and parent
             registrationGroup = registrationGroup ?? groupService.GetByGroupTypeId( groupTypeId ).FirstOrDefault( g => g.Name.Equals( groupName ) &&
-                ( g.ParentGroupId == null || g.ParentGroupId == parentGroupId || g.ParentGroup.Name.Equals( parentGroupName ) )
+                ( g.ParentGroupId == parentGroupId || g.ParentGroup.Name.Equals( parentGroupName ) || parentGroupId == null )
             );
             if ( registrationGroup == null )
             {
