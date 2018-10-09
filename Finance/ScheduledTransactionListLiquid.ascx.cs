@@ -224,7 +224,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                 }
                 else
                 {
-                    content.Text = String.Format( "<div class='alert alert-danger'>An error occured while deleting your scheduled transation. Message: {0}</div>", errorMessage );
+                    content.Text = String.Format( "<div class='alert alert-danger'>An error occured while deleting your scheduled transaction. Message: {0}</div>", errorMessage );
                 }
             }
 
