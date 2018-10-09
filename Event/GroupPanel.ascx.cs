@@ -107,20 +107,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         protected override void LoadViewState( object savedState )
         {
             base.LoadViewState( savedState );
-            AvailableAttributes = ViewState["AvailableAttributes"] as List<AttributeCache>;
             AddDynamicControls();
-        }
-
-        /// <summary>
-        /// Saves any user control view-state changes that have occurred since the last page postback.
-        /// </summary>
-        /// <returns>
-        /// Returns the user control's current view state. If there is no view state associated with the control, it returns null.
-        /// </returns>
-        protected override object SaveViewState()
-        {
-            ViewState["AvailableAttributes"] = AvailableAttributes;
-            return base.SaveViewState();
         }
 
         /// <summary>
@@ -129,7 +116,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="group">The group.</param>
         /// <param name="resourceTypes">The resource types.</param>
         /// <param name="resources">The resources.</param>
-        public void BuildControl( Group group, List<GroupTypeCache> resourceTypes, Dictionary<string, AttributeValueCache> resources  )
+        public void BuildControl( Group group, List<GroupTypeCache> resourceTypes, Dictionary<string, AttributeValueCache> resources )
         {
             if ( _group == null )
             {
@@ -148,7 +135,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             // Set up group panel
             SetGroupHeader( group );
-
 
             //rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
             pnlGroupMembers.DataKeyNames = new string[] { "Id" };
@@ -174,7 +160,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             pnlGroupMembers.Actions.ShowAdd = true;
             pnlGroupMembers.IsDeleteEnabled = true;
 
-
             // if group is being sync'ed remove ability to add/delete members
             if ( _group != null && _group.GroupSyncs != null && _group.GroupSyncs.Count() > 0 )
             {
@@ -185,26 +170,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 // link to the DataView
                 var pageId = PageCache.Get( Rock.SystemGuid.Page.DATA_VIEWS.AsGuid() ).Id;
                 var dataViewId = _group.GroupSyncs.FirstOrDefault().SyncDataViewId;
-                hlSyncSource.NavigateUrl = System.Web.VirtualPathUtility.ToAbsolute( String.Format( "~/page/{0}?DataViewId={1}", pageId, dataViewId ) );
-
-                //string syncedRolesHtml = string.Empty;
-                //var dataViewDetailPage = GetAttributeValue( "DataViewDetailPage" );
-
-                //if ( !string.IsNullOrWhiteSpace( dataViewDetailPage ) )
-                //{
-                //    syncedRolesHtml = string.Join( "<br>", _group.GroupSyncs.Select( s => string.Format( "<small><a href='{0}'>{1}</a> as {2}</small>", LinkedPageUrl( "DataViewDetailPage", new Dictionary<string, string>() { { "DataViewId", s.SyncDataViewId.ToString() } } ), s.SyncDataView.Name, s.GroupTypeRole.Name ) ).ToArray() );
-                //}
-                //else
-                //{
-                //    syncedRolesHtml = string.Join( "<br>", _group.GroupSyncs.Select( s => string.Format( "<small><i class='text-info'>{0}</i> as {1}</small>", s.SyncDataView.Name, s.GroupTypeRole.Name ) ).ToArray() );
-                //}
-
-                //spanSyncLink.Attributes.Add( "data-content", syncedRolesHtml );
-                //spanSyncLink.Visible = true;
+                hlSyncSource.NavigateUrl = System.Web.VirtualPathUtility.ToAbsolute( string.Format( "~/page/{0}?DataViewId={1}", pageId, dataViewId ) );
             }
-           
-            //SetFilter();
-            BindAttributes();
+
             AddDynamicControls();
             BindGroupMembersGrid();
         }
@@ -249,46 +217,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             lbGroupDelete.CommandArgument = group.Id.ToString();
             pnlSubGroup.DataBind();
         }
-
-        /// <summary>
-        /// Binds the filter.
-        /// </summary>
-        //private void SetFilter()
-        //{
-        //    if ( _group != null )
-        //    {
-        //        cblRole.DataSource = _group.GroupType.Roles.OrderBy( a => a.Order ).ToList();
-        //        cblRole.DataBind();
-        //    }
-
-        //    cblGroupMemberStatus.BindToEnum<GroupMemberStatus>();
-
-        //    cpCampusFilter.Campuses = CampusCache.All();
-
-        //    BindAttributes();
-        //    AddDynamicControls();
-        //    tbFirstName.Text = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "First Name" ) );
-        //    tbLastName.Text = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Last Name" ) );
-        //    cpCampusFilter.SelectedCampusId = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Campus" ) ).AsIntegerOrNull();
-
-        //    var genderValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Gender" ) );
-        //    if ( !string.IsNullOrWhiteSpace( genderValue ) )
-        //    {
-        //        cblGenderFilter.SetValues( genderValue.Split( ';' ).ToList() );
-        //    }
-
-        //    var roleValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Role" ) );
-        //    if ( !string.IsNullOrWhiteSpace( roleValue ) )
-        //    {
-        //        cblRole.SetValues( roleValue.Split( ';' ).ToList() );
-        //    }
-
-        //    var statusValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( "Status" ) );
-        //    if ( !string.IsNullOrWhiteSpace( statusValue ) )
-        //    {
-        //        cblGroupMemberStatus.SetValues( statusValue.Split( ';' ).ToList() );
-        //    }
-        //}
 
         /// <summary>
         /// Adds the attribute columns.
@@ -340,54 +268,18 @@ namespace RockWeb.Plugins.com_kfs.Event
             };
             pnlGroupMembers.Columns.Add( lFamilyCampus );
 
-            // Clear the filter controls
-            //phAttributeFilters.Controls.Clear();
-
             // Set up group member attribute columns
             var rockContext = new RockContext();
             var attributeValueService = new AttributeValueService( rockContext );
-            foreach ( var attribute in AvailableAttributes )
+            foreach ( var attribute in GetGroupAttributes() )
             {
-                // TODO: may not need BindAttributes() if AvailableAttributes only used here
-
-                // add filter control for that attribute
-                //var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
-                //if ( control != null )
-                //{
-                //    if ( control is IRockControl )
-                //    {
-                //        var rockControl = (IRockControl)control;
-                //        rockControl.Label = attribute.Name;
-                //        rockControl.Help = attribute.Description;
-                //        phAttributeFilters.Controls.Add( control );
-                //    }
-                //    else
-                //    {
-                //        var wrapper = new RockControlWrapper
-                //        {
-                //            ID = control.ID + "_wrapper",
-                //            Label = attribute.Name
-                //        };
-                //        wrapper.Controls.Add( control );
-                //        phAttributeFilters.Controls.Add( wrapper );
-                //    }
-
-                //    var savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Key ) );
-                //    if ( !string.IsNullOrWhiteSpace( savedValue ) )
-                //    {
-                //        var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
-                //        attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
-
-                //    }
-                //}
-
                 // add the attribute data column
                 var attributeColumn = pnlGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id );
                 if ( attributeColumn == null )
                 {
                     var boundField = new AttributeField
                     {
-                        DataField = attribute.Id.ToString() + attribute.Key,
+                        DataField = attribute.Id + attribute.Key,
                         AttributeId = attribute.Id,
                         HeaderText = attribute.Name
                     };
@@ -478,7 +370,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             pnlGroupMembers.Columns.Add( deleteField );
             deleteField.Click += pnlGroupMembers_DeleteClick;
         }
-       
+
         /// <summary>
         /// Makes the key unique to group.
         /// </summary>
@@ -539,7 +431,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         .Where( m =>
                             m.GroupId == _group.Id &&
                             m.Person != null );
-                    
+
                     // Sort the query
                     IOrderedQueryable<GroupMember> orderedQry = null;
                     var sortProperty = pnlGroupMembers.SortProperty;
@@ -563,7 +455,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var homePhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
                     var cellPhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
 
-                    if ( AvailableAttributes != null )
+                    var groupAttributes = GetGroupAttributes();
+                    if ( groupAttributes.Any() )
                     {
                         // Get the query results for the current page
                         var currentGroupMembers = pnlGroupMembers.DataSource as List<GroupMember>;
@@ -580,7 +473,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 .Distinct()
                                 .ToList();
 
-                            var groupMemberAttributesIds = AvailableAttributes.Select( a => a.Id ).Distinct().ToList();
+                            var groupMemberAttributesIds = groupAttributes.Select( a => a.Id ).Distinct().ToList();
 
                             // If there are any attributes that were selected to be displayed, we're going
                             // to try and read all attribute values in one query and then put them into a
@@ -600,9 +493,8 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                 // Get the attributes to add to each row's object
                                 var attributes = new Dictionary<string, AttributeCache>();
-                                AvailableAttributes
-                                    .ForEach( a => attributes
-                                        .Add( a.Id.ToString() + a.Key, a ) );
+                                groupAttributes.ForEach( a =>
+                                    attributes.Add( a.Id + a.Key, a ) );
 
                                 // Initialize the grid's object list
                                 pnlGroupMembers.ObjectList = new Dictionary<string, object>();
@@ -670,37 +562,44 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Binds the attributes.
+        /// Gets the group attributes.
         /// </summary>
-        private void BindAttributes()
+        private List<AttributeCache> GetGroupAttributes()
         {
-            // TODO: make sure this doesn't fire unnecessarily
-            // Parse the attribute filters
-            AvailableAttributes = new List<AttributeCache>();
+            if ( AvailableAttributes != null )
+            {
+                return AvailableAttributes;
+            }
+
+            var updatedAttributes = new List<AttributeCache>();
             if ( _group != null )
             {
                 var rockContext = new RockContext();
-                var entityTypeId = new GroupMember().TypeId;
+                var groupMemberTypeId = new GroupMember().TypeId;
                 var groupQualifier = _group.Id.ToString();
                 var groupTypeQualifier = _group.GroupTypeId.ToString();
                 foreach ( var attribute in new AttributeService( rockContext ).Queryable()
                     .Where( a =>
-                        a.EntityTypeId == entityTypeId &&
+                        a.EntityTypeId == groupMemberTypeId &&
                         a.IsGridColumn &&
                         ( ( a.EntityTypeQualifierColumn.Equals( "GroupId", StringComparison.OrdinalIgnoreCase ) && a.EntityTypeQualifierValue.Equals( groupQualifier ) ) ) )
                     .OrderByDescending( a => a.EntityTypeQualifierColumn )
                     .ThenBy( a => a.Order )
-                    .ThenBy( a => a.Name ) )
+                    .ThenBy( a => a.Name )
+                    .Select( a => a.Guid ) )
                 {
-                    AvailableAttributes.Add( AttributeCache.Get( attribute ) );
+                    updatedAttributes.Add( AttributeCache.Get( attribute, rockContext ) );
                 }
 
                 var inheritedAttributes = ( new GroupMember { GroupId = _group.Id } ).GetInheritedAttributes( rockContext ).Where( a => a.IsGridColumn && a.IsActive ).ToList();
                 if ( inheritedAttributes.Count > 0 )
                 {
-                    AvailableAttributes.AddRange( inheritedAttributes );
+                    updatedAttributes.AddRange( inheritedAttributes );
                 }
             }
+
+            AvailableAttributes = updatedAttributes;
+            return updatedAttributes;
         }
 
         /// <summary>
@@ -734,7 +633,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         #endregion
 
         #region Click Methods
-        
+
         /// <summary>
         /// Handles the AddClick event of the Actions control.
         /// </summary>
