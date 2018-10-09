@@ -3,8 +3,10 @@
 <asp:UpdatePanel ID="upnlSync" runat="server">
     <ContentTemplate>
         <div class="row">
-            <asp:Literal runat="server" ID="litDateExported" Visible="false"></asp:Literal>
-            <Rock:BootstrapButton runat="server" Visible="false" ID="btnRemoveDate" Text="Remove Date Exported" OnClick="btnRemoveDateExported_Click" CssClass="btn btn-link pull-left" />
+            <asp:Panel runat="server" ID="pnlExportedDetails" CssClass="col-sm-2" Visible="false">
+                <asp:Literal runat="server" ID="litDateExported" Visible="false"></asp:Literal>
+                <Rock:BootstrapButton runat="server" Visible="false" ID="btnRemoveDate" Text="Remove Date Exported" OnClick="btnRemoveDateExported_Click" CssClass="btn btn-link pull-left" />
+            </asp:Panel>
             <div class="col-sm-2">
                 <Rock:RockDropDownList ID="ddlJournalType" runat="server" Label="Journal Type" Required="true" ValidationGroup="KFSGLExport" Visible="false">
                     <asp:ListItem Text="" Value="" Selected="True"></asp:ListItem>
