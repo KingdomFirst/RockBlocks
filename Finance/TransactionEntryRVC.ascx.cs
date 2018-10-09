@@ -825,7 +825,7 @@ TransactionAccountDetails: [
                 {
                     if ( string.IsNullOrWhiteSpace( txtUserName.Text ) || string.IsNullOrWhiteSpace( txtPassword.Text ) )
                     {
-                        nbSaveAccount.Title = "Missing Informaton";
+                        nbSaveAccount.Title = "Missing Information";
                         nbSaveAccount.Text = "A username and password are required when saving an account";
                         nbSaveAccount.NotificationBoxType = NotificationBoxType.Danger;
                         nbSaveAccount.Visible = true;
@@ -2338,6 +2338,7 @@ TransactionAccountDetails: [
             }
             else
             {
+                paymentInfo.FirstName = string.Empty;
                 paymentInfo.LastName = txtBusinessName.Text;
             }
 

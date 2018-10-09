@@ -540,7 +540,7 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
                     else
                     {
                         var exportedBatches = batchService.Queryable()
-                            .WhereAttributeValue( rockContext, a => a.Attribute.Key == "com.kfs.ShelbyFinancials.DateExported" && ( a.Value != null || a.Value != "" ) )
+                            .WhereAttributeValue( rockContext, a => a.Attribute.Key == "com.kfs.ShelbyFinancials.DateExported" && ( a.Value != null && a.Value != "" ) )
                             .Select( b => b.Id )
                             .ToList();
 
