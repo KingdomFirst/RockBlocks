@@ -507,7 +507,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     // Set any of the template's person fields
                     foreach ( var field in TemplateState.Forms
-                    .SelectMany( f => f.Fields
+                        .SelectMany( f => f.Fields
                         .Where( t =>
                             t.FieldSource == RegistrationFieldSource.PersonAttribute &&
                             t.AttributeId.HasValue ) ) )
