@@ -137,7 +137,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 foreach ( int id in ViewState["ResourceGroupTypes"] as List<int> )
                 {
-                    ResourceGroupTypes.Add( GroupTypeCache.Read( id, rockContext ) );
+                    ResourceGroupTypes.Add( GroupTypeCache.Get( id, rockContext ) );
                 }
 
                 Group group = null;
@@ -1158,7 +1158,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             foreach ( var control in phRegistrantFormFieldFilters.ControlsOfTypeRecursive<Control>().Where( a => a.ID != null && a.ID.StartsWith( "filter" ) && a.ID.Contains( "_" ) ) )
             {
                 var attributeId = control.ID.Split( '_' )[1].AsInteger();
-                var attribute = AttributeCache.Read( attributeId );
+                var attribute = AttributeCache.Get( attributeId );
                 if ( attribute != null )
                 {
                     attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, new List<string>() );
@@ -1333,7 +1333,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         var campusId = e.Value.AsIntegerOrNull();
                         if ( campusId.HasValue )
                         {
-                            var campus = CampusCache.Read( campusId.Value );
+                            var campus = CampusCache.Get( campusId.Value );
                             e.Value = campus != null ? campus.Name : string.Empty;
                         }
                         else
@@ -1347,7 +1347,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         var dvId = e.Value.AsIntegerOrNull();
                         if ( dvId.HasValue )
                         {
-                            var maritalStatus = DefinedValueCache.Read( dvId.Value );
+                            var maritalStatus = DefinedValueCache.Get( dvId.Value );
                             e.Value = maritalStatus != null ? maritalStatus.Value : string.Empty;
                         }
                         else
@@ -1435,7 +1435,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 var campusNames = new List<string>();
                                 foreach ( int campusId in campusIds )
                                 {
-                                    var campus = CampusCache.Read( campusId );
+                                    var campus = CampusCache.Get( campusId );
                                     if ( campus != null )
                                     {
                                         campusNames.Add( campus.Name );
@@ -2112,7 +2112,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             foreach ( var control in phWaitListFormFieldFilters.ControlsOfTypeRecursive<Control>().Where( a => a.ID != null && a.ID.StartsWith( "filter" ) && a.ID.Contains( "_" ) ) )
             {
                 var attributeId = control.ID.Split( '_' )[1].AsInteger();
-                var attribute = AttributeCache.Read( attributeId );
+                var attribute = AttributeCache.Get( attributeId );
                 if ( attribute != null )
                 {
                     attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, new List<string>() );
@@ -2281,7 +2281,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             int? campusId = e.Value.AsIntegerOrNull();
                             if ( campusId.HasValue )
                             {
-                                var campus = CampusCache.Read( campusId.Value );
+                                var campus = CampusCache.Get( campusId.Value );
                                 e.Value = campus != null ? campus.Name : string.Empty;
                             }
                             else
@@ -2295,7 +2295,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             int? dvId = e.Value.AsIntegerOrNull();
                             if ( dvId.HasValue )
                             {
-                                var maritalStatus = DefinedValueCache.Read( dvId.Value );
+                                var maritalStatus = DefinedValueCache.Get( dvId.Value );
                                 e.Value = maritalStatus != null ? maritalStatus.Value : string.Empty;
                             }
                             else
@@ -2376,7 +2376,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 var campusNames = new List<string>();
                                 foreach ( int campusId in campusIds )
                                 {
-                                    var campus = CampusCache.Read( campusId );
+                                    var campus = CampusCache.Get( campusId );
                                     if ( campus != null )
                                     {
                                         campusNames.Add( campus.Name );
@@ -3023,7 +3023,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     !r.IsTemporary )
                 .Select( r => r.Id );
 
-            var registrationEntityType = EntityTypeCache.Read( typeof( Rock.Model.Registration ) );
+            var registrationEntityType = EntityTypeCache.Get( typeof( Rock.Model.Registration ) );
             hfHasPayments.Value = new FinancialTransactionDetailService( rockContext )
                 .Queryable().AsNoTracking()
                 .Any( d =>
@@ -3061,7 +3061,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 using ( var rockContext = new RockContext() )
                 {
-                    var registrationEntityType = EntityTypeCache.Read( typeof( Rock.Model.Registration ) );
+                    var registrationEntityType = EntityTypeCache.Get( typeof( Rock.Model.Registration ) );
 
                     var instance = new RegistrationInstanceService( rockContext ).Get( instanceId.Value );
                     if ( instance != null )
@@ -3855,7 +3855,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 new RegistrantFormField
                                 {
                                     FieldSource = formField.FieldSource,
-                                    Attribute = AttributeCache.Read( formField.AttributeId.Value )
+                                    Attribute = AttributeCache.Get( formField.AttributeId.Value )
                                 } );
                         }
                     }
@@ -4230,7 +4230,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             case RegistrationPersonFieldType.MaritalStatus:
                                 {
                                     var ddlRegistrantsMaritalStatusFilter = new RockDropDownList();
-                                    ddlRegistrantsMaritalStatusFilter.BindToDefinedType( DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
+                                    ddlRegistrantsMaritalStatusFilter.BindToDefinedType( DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
                                     ddlRegistrantsMaritalStatusFilter.ID = "ddlRegistrantsMaritalStatusFilter";
                                     ddlRegistrantsMaritalStatusFilter.Label = "Marital Status";
 
@@ -4242,7 +4242,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     phRegistrantFormFieldFilters.Controls.Add( ddlRegistrantsMaritalStatusFilter );
 
                                     var ddlGroupPlacementsMaritalStatusFilter = new RockDropDownList();
-                                    ddlGroupPlacementsMaritalStatusFilter.BindToDefinedType( DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
+                                    ddlGroupPlacementsMaritalStatusFilter.BindToDefinedType( DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
                                     ddlGroupPlacementsMaritalStatusFilter.ID = "ddlGroupPlacementsMaritalStatusFilter";
                                     ddlGroupPlacementsMaritalStatusFilter.Label = "Marital Status";
 
@@ -4254,7 +4254,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     phGroupPlacementsFormFieldFilters.Controls.Add( ddlGroupPlacementsMaritalStatusFilter );
 
                                     var ddlWaitlistMaritalStatusFilter = new RockDropDownList();
-                                    ddlWaitlistMaritalStatusFilter.BindToDefinedType( DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
+                                    ddlWaitlistMaritalStatusFilter.BindToDefinedType( DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
                                     ddlWaitlistMaritalStatusFilter.ID = "ddlWaitlistMaritalStatusFilter";
                                     ddlWaitlistMaritalStatusFilter.Label = "Marital Status";
                                     ddlWaitlistMaritalStatusFilter.SetValue( fRegistrants.GetUserPreference( "WL-Marital Status" ) );
@@ -4456,7 +4456,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             boundField3.AttributeId = attribute.Id;
                             boundField3.HeaderText = attribute.Name;
 
-                            var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
+                            var attributeCache = Rock.Web.Cache.AttributeCache.Get( attribute.Id );
                             if ( attributeCache != null )
                             {
                                 boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;
@@ -4567,7 +4567,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var creditCardTypes = new Dictionary<int, string>();
 
                     // If configured for a registration and registration is null, return
-                    var registrationEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Registration ) ).Id;
+                    var registrationEntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Registration ) ).Id;
 
                     // Get all the registrations for this instance
                     PaymentRegistrations = new RegistrationService( rockContext )
@@ -5814,7 +5814,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             foreach ( var control in phGroupPlacementsFormFieldFilters.ControlsOfTypeRecursive<Control>().Where( a => a.ID != null && a.ID.StartsWith( "filter" ) && a.ID.Contains( "_" ) ) )
             {
                 var attributeId = control.ID.Split( '_' )[1].AsInteger();
-                var attribute = AttributeCache.Read( attributeId );
+                var attribute = AttributeCache.Get( attributeId );
                 if ( attribute != null )
                 {
                     attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, new List<string>() );
@@ -5983,7 +5983,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             int? campusId = e.Value.AsIntegerOrNull();
                             if ( campusId.HasValue )
                             {
-                                var campus = CampusCache.Read( campusId.Value );
+                                var campus = CampusCache.Get( campusId.Value );
                                 e.Value = campus != null ? campus.Name : string.Empty;
                             }
                             else
@@ -5997,7 +5997,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             int? dvId = e.Value.AsIntegerOrNull();
                             if ( dvId.HasValue )
                             {
-                                var maritalStatus = DefinedValueCache.Read( dvId.Value );
+                                var maritalStatus = DefinedValueCache.Get( dvId.Value );
                                 e.Value = maritalStatus != null ? maritalStatus.Value : string.Empty;
                             }
                             else
@@ -6516,7 +6516,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     foreach ( var groupTypeId in groupTypeIds )
                     {
-                        ResourceGroupTypes.Add( GroupTypeCache.Read( groupTypeId ) );
+                        ResourceGroupTypes.Add( GroupTypeCache.Get( groupTypeId ) );
                     }
                 }
             }
@@ -7705,7 +7705,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 // attribute doesn't exist, create a new one
                 var newAttribute = new Attribute
                 {
-                    FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.KEY_VALUE_LIST ).Id,
+                    FieldTypeId = FieldTypeCache.Get( Rock.SystemGuid.FieldType.KEY_VALUE_LIST ).Id,
                     Name = attributeKey,
                     Key = attributeKey,
                     DefaultValue = string.Empty

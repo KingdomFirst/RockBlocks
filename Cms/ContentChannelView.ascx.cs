@@ -1129,7 +1129,7 @@ $(document).ready(function() {
         {
             if ( channel != null )
             {
-                var entityTypeCache = EntityTypeCache.Read( ITEM_TYPE_NAME );
+                var entityTypeCache = EntityTypeCache.Get( ITEM_TYPE_NAME );
                 if ( entityTypeCache != null )
                 {
                     var entityType = entityTypeCache.GetEntityType();
@@ -1142,7 +1142,7 @@ $(document).ready(function() {
                             f.AttributeGuid.HasValue )
                         .ToList() )
                     {
-                        var attribute = AttributeCache.Read( entityField.AttributeGuid.Value );
+                        var attribute = AttributeCache.Get( entityField.AttributeGuid.Value );
                         if ( attribute != null && 
                             attribute.EntityTypeQualifierColumn == "ContentChannelTypeId" && 
                             attribute.EntityTypeQualifierValue.AsInteger() != channel.ContentChannelTypeId )
@@ -1243,7 +1243,7 @@ $(document).ready(function() {
 
                     if ( filter.EntityTypeId.HasValue )
                     {
-                        var entityTypeCache = Rock.Web.Cache.EntityTypeCache.Read( filter.EntityTypeId.Value, rockContext );
+                        var entityTypeCache = Rock.Web.Cache.EntityTypeCache.Get( filter.EntityTypeId.Value, rockContext );
                         if ( entityTypeCache != null )
                         {
                             filterControl.FilterEntityTypeName = entityTypeCache.Name;
@@ -1345,7 +1345,7 @@ $(document).ready(function() {
             filter.Expanded = filterField.Expanded;
             if ( filterField.FilterEntityTypeName != null )
             {
-                filter.EntityTypeId = Rock.Web.Cache.EntityTypeCache.Read( filterField.FilterEntityTypeName ).Id;
+                filter.EntityTypeId = Rock.Web.Cache.EntityTypeCache.Get( filterField.FilterEntityTypeName ).Id;
                 filter.Selection = filterField.GetSelection();
             }
 

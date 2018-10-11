@@ -23,7 +23,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Utility
         protected void Page_Init( object sender, EventArgs e )
         {
             // Check to see if exception should be logged
-            if ( GlobalAttributesCache.Read().GetValue( "Log404AsException" ).AsBoolean( true ) )
+            if ( GlobalAttributesCache.Get().GetValue( "Log404AsException" ).AsBoolean( true ) )
             {
                 ExceptionLogService.LogException( new Exception( string.Format( "404 Error: {0}", Request.Url.AbsoluteUri ) ), Context );
             }

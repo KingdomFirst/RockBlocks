@@ -18,8 +18,7 @@ namespace RockWeb.Plugins.com_kfs.Event
     /// <summary>
     /// The KFS Group Panel that displays for resource subgroups
     /// </summary>
-    /// <seealso cref="System.Web.UI.UserControl" />
-
+    /// <see cref="RockWeb.Blocks.Groups.GroupMemberList"/>
     [DisplayName( "Advanced Registration Group Detail" )]
     [Category( "KFS > Advanced Event Registration" )]
     [Description( "The Group Panel that displays for resource subgroups." )]
@@ -160,6 +159,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMembers.RowItemText = _group.GroupType.GroupTerm + " " + _group.GroupType.GroupMemberTerm;
             gGroupMembers.ExportFilename = _group.Name;
             gGroupMembers.ExportSource = ExcelExportSource.ColumnOutput;
+
+            // we'll have custom javascript (see GroupMemberList.ascx ) do this instead
             gGroupMembers.ShowConfirmDeleteDialog = false;
             gGroupMembers.Actions.ShowMergePerson = false;
 
@@ -171,17 +172,35 @@ namespace RockWeb.Plugins.com_kfs.Event
             gGroupMembers.Actions.ShowAdd = true;
             gGroupMembers.IsDeleteEnabled = true;
 
+
             // if group is being sync'ed remove ability to add/delete members
-            if ( _group != null && _group.SyncDataViewId.HasValue )
+            if ( _group != null && _group.GroupSyncs != null && _group.GroupSyncs.Count() > 0 )
             {
                 gGroupMembers.IsDeleteEnabled = false;
                 gGroupMembers.Actions.ShowAdd = false;
                 hlSyncStatus.Visible = true;
-                // link to the DataView
-                int pageId = Rock.Web.Cache.PageCache.Read( Rock.SystemGuid.Page.DATA_VIEWS.AsGuid() ).Id;
-                hlSyncSource.NavigateUrl = System.Web.VirtualPathUtility.ToAbsolute( String.Format( "~/page/{0}?DataViewId={1}", pageId, _group.SyncDataViewId.Value ) );
-            }
 
+                // link to the DataView
+                var pageId = PageCache.Get( Rock.SystemGuid.Page.DATA_VIEWS.AsGuid() ).Id;
+                var dataViewId = _group.GroupSyncs.FirstOrDefault().SyncDataViewId;
+                hlSyncSource.NavigateUrl = System.Web.VirtualPathUtility.ToAbsolute( String.Format( "~/page/{0}?DataViewId={1}", pageId, dataViewId ) );
+
+                //string syncedRolesHtml = string.Empty;
+                //var dataViewDetailPage = GetAttributeValue( "DataViewDetailPage" );
+
+                //if ( !string.IsNullOrWhiteSpace( dataViewDetailPage ) )
+                //{
+                //    syncedRolesHtml = string.Join( "<br>", _group.GroupSyncs.Select( s => string.Format( "<small><a href='{0}'>{1}</a> as {2}</small>", LinkedPageUrl( "DataViewDetailPage", new Dictionary<string, string>() { { "DataViewId", s.SyncDataViewId.ToString() } } ), s.SyncDataView.Name, s.GroupTypeRole.Name ) ).ToArray() );
+                //}
+                //else
+                //{
+                //    syncedRolesHtml = string.Join( "<br>", _group.GroupSyncs.Select( s => string.Format( "<small><i class='text-info'>{0}</i> as {1}</small>", s.SyncDataView.Name, s.GroupTypeRole.Name ) ).ToArray() );
+                //}
+
+                //spanSyncLink.Attributes.Add( "data-content", syncedRolesHtml );
+                //spanSyncLink.Visible = true;
+            }
+           
             //SetFilter();
             BindAttributes();
             AddDynamicControls();
@@ -364,10 +383,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var attributeColumn = gGroupMembers.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id );
                 if ( attributeColumn == null )
                 {
-                    var boundField = new AttributeField();
-                    boundField.DataField = attribute.Id.ToString() + attribute.Key;
-                    boundField.AttributeId = attribute.Id;
-                    boundField.HeaderText = attribute.Name;
+                    var boundField = new AttributeField
+                    {
+                        DataField = attribute.Id.ToString() + attribute.Key,
+                        AttributeId = attribute.Id,
+                        HeaderText = attribute.Name
+                    };
+
                     boundField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
 
                     decimal needsFilled = 0;
@@ -635,10 +657,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // Set the grids LinqDataSource which will run query and set results for current page
                     gGroupMembers.SetLinqDataSource( orderedQry );
 
-                    var homePhoneType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
-                    var cellPhoneType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
-
-                    List<GroupMember> groupMembersList = null;
+                    var homePhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
+                    var cellPhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
 
                     if ( AvailableAttributes != null )
                     {
@@ -683,7 +703,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                 // Initialize the grid's object list
                                 gGroupMembers.ObjectList = new Dictionary<string, object>();
-                                gGroupMembers.EntityTypeId = EntityTypeCache.Read( Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid() ).Id;
+                                gGroupMembers.EntityTypeId = EntityTypeCache.Get( Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid() ).Id;
 
                                 // Loop through each of the current group's members and build an attribute
                                 // field object for storing attributes and the values for each of the members
@@ -757,9 +777,9 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( _group != null )
             {
                 var rockContext = new RockContext();
-                int entityTypeId = new GroupMember().TypeId;
-                string groupQualifier = _group.Id.ToString();
-                string groupTypeQualifier = _group.GroupTypeId.ToString();
+                var entityTypeId = new GroupMember().TypeId;
+                var groupQualifier = _group.Id.ToString();
+                var groupTypeQualifier = _group.GroupTypeId.ToString();
                 foreach ( var attributeModel in new AttributeService( rockContext ).Queryable()
                     .Where( a =>
                         a.EntityTypeId == entityTypeId &&
@@ -769,7 +789,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     .ThenBy( a => a.Order )
                     .ThenBy( a => a.Name ) )
                 {
-                    AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                    AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
                 }
 
                 var inheritedAttributes = ( new GroupMember { GroupId = _group.Id } ).GetInheritedAttributes( rockContext );
@@ -786,7 +806,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void RegisterScript()
         {
-            string deleteScript = @"
+            var deleteScript = @"
     $('table.js-grid-group-members a.grid-delete-button').click(function( e ){
         var $btn = $(this);
         e.preventDefault();
@@ -889,7 +909,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         //        var campusId = e.Value.AsIntegerOrNull();
         //        if ( campusId.HasValue )
         //        {
-        //            var campusCache = CampusCache.Read( campusId.Value );
+        //            var campusCache = CampusCache.Get( campusId.Value );
         //            e.Value = campusCache.Name;
         //        }
         //        else

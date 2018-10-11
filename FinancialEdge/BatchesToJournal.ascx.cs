@@ -264,7 +264,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                         var transactionTypeValueId = e.Value.AsIntegerOrNull();
                         if ( transactionTypeValueId.HasValue )
                         {
-                            var transactionTypeValue = DefinedValueCache.Read( transactionTypeValueId.Value );
+                            var transactionTypeValue = DefinedValueCache.Get( transactionTypeValueId.Value );
                             e.Value = transactionTypeValue != null ? transactionTypeValue.ToString() : string.Empty;
                         }
                         else
@@ -277,7 +277,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
 
                 case "Campus":
                     {
-                        var campus = CampusCache.Read( e.Value.AsInteger() );
+                        var campus = CampusCache.Get( e.Value.AsInteger() );
                         if ( campus != null )
                         {
                             e.Value = campus.Name;
@@ -362,12 +362,15 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                         {
                             transactionService.Delete( txn );
                         }
+
+                        var changes = new History.HistoryChangeList();
+                        changes.AddChange( History.HistoryVerb.Delete, History.HistoryChangeType.Record, "Batch" );
                         HistoryService.SaveChanges(
                             rockContext,
                             typeof( FinancialBatch ),
                             Rock.SystemGuid.Category.HISTORY_FINANCIAL_BATCH.AsGuid(),
                             batch.Id,
-                            new List<string> { "Deleted the batch" } );
+                            changes );
 
                         batchService.Delete( batch );
 
@@ -489,7 +492,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
         /// <param name="eventArgument">A <see cref="T:System.String" /> that represents an optional event argument to be passed to the event handler.</param>
         public void RaisePostBackEvent( string eventArgument )
         {
-            if ( eventArgument == "StatusUpdate" && hfAction.Value.IsNotNullOrWhitespace() )
+            if ( eventArgument == "StatusUpdate" && hfAction.Value.IsNotNullOrWhiteSpace() )
             {
                 var batchesSelected = new List<int>();
 
@@ -511,7 +514,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
 
                     foreach ( var batch in batchesToUpdate )
                     {
-                        var changes = new List<string>();
+                        var changes = new History.HistoryChangeList();
                         History.EvaluateChange( changes, "Status", batch.Status, newStatus );
 
                         string errorMessage;
@@ -646,7 +649,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
 
             ddlStatus.SetValue( statusFilter );
 
-            var definedTypeTransactionTypes = DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.FINANCIAL_TRANSACTION_TYPE.AsGuid() );
+            var definedTypeTransactionTypes = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.FINANCIAL_TRANSACTION_TYPE.AsGuid() );
             ddlTransactionType.BindToDefinedType( definedTypeTransactionTypes, true );
             ddlTransactionType.SetValue( gfBatchFilter.GetUserPreference( "Contains Transaction Type" ) );
 
@@ -709,7 +712,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
 
                 gBatchList.SetLinqDataSource( financialBatchQry );
                 gBatchList.ObjectList = ( (List<FinancialBatch>)gBatchList.DataSource ).ToDictionary( k => k.Id.ToString(), v => v as object );
-                gBatchList.EntityTypeId = EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id;
+                gBatchList.EntityTypeId = EntityTypeCache.Get<FinancialBatch>().Id;
 
                 gBatchList.DataBind();
 
@@ -800,7 +803,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
             }
 
             // filter by campus
-            var campus = CampusCache.Read( gfBatchFilter.GetUserPreference( "Campus" ).AsInteger() );
+            var campus = CampusCache.Get( gfBatchFilter.GetUserPreference( "Campus" ).AsInteger() );
             if ( campus != null )
             {
                 qry = qry.Where( b => b.CampusId == campus.Id );
@@ -1058,7 +1061,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                 .OrderBy( a => a.Order )
                 .ThenBy( a => a.Name ) )
             {
-                AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
             }
 
         }
@@ -1123,7 +1126,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                         boundField.AttributeId = attribute.Id;
                         boundField.HeaderText = attribute.Name;
 
-                        var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
+                        var attributeCache = Rock.Web.Cache.AttributeCache.Get( attribute.Id );
                         if ( attributeCache != null )
                         {
                             boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;

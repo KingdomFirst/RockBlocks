@@ -210,7 +210,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                 if ( GetAttributeValue( "EnableCampusContext" ).AsBoolean() )
                 {
-                    var campusEntityType = EntityTypeCache.Read( "Rock.Model.Campus" );
+                    var campusEntityType = EntityTypeCache.Get( "Rock.Model.Campus" );
                     var contextCampus = RockPage.GetCurrentContext( campusEntityType ) as Campus;
 
                     if ( contextCampus != null )
@@ -452,7 +452,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             cbCampusContext.Checked = GetAttributeValue( "EnableCampusContext" ).AsBoolean();
 
             cbShowMap.Checked = GetAttributeValue( "ShowMap" ).AsBoolean();
-            ddlMapStyle.BindToDefinedType( DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.MAP_STYLES.AsGuid() ) );
+            ddlMapStyle.BindToDefinedType( DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.MAP_STYLES.AsGuid() ) );
             ddlMapStyle.SetValue( GetAttributeValue( "MapStyle" ) );
             nbMapHeight.Text = GetAttributeValue( "MapHeight" );
             cbShowFence.Checked = GetAttributeValue( "ShowFence" ).AsBoolean();
@@ -500,7 +500,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             if ( gtpGroupType.SelectedGroupTypeId.HasValue )
             {
-                var groupType = GroupTypeCache.Read( gtpGroupType.SelectedGroupTypeId.Value );
+                var groupType = GroupTypeCache.Get( gtpGroupType.SelectedGroupTypeId.Value );
                 if ( groupType != null )
                 {
                     bool hasWeeklyschedule = ( groupType.AllowedScheduleTypes & ScheduleType.Weekly ) == ScheduleType.Weekly;
@@ -623,7 +623,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 Guid? attributeGuid = attr.AsGuidOrNull();
                 if ( attributeGuid.HasValue )
                 {
-                    var attribute = AttributeCache.Read( attributeGuid.Value );
+                    var attribute = AttributeCache.Get( attributeGuid.Value );
                     if ( attribute != null && attribute.FieldType.Field.HasFilterControl() )
                     {
                         AttributeFilters.Add( attribute );
@@ -639,7 +639,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 Guid? attributeGuid = attr.AsGuidOrNull();
                 if ( attributeGuid.HasValue )
                 {
-                    var attribute = AttributeCache.Read( attributeGuid.Value );
+                    var attribute = AttributeCache.Get( attributeGuid.Value );
                     if ( attribute != null )
                     {
                         AttributeColumns.Add( attribute );
@@ -731,7 +731,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         boundField.AttributeId = attribute.Id;
                         boundField.HeaderText = attribute.Name;
 
-                        var attributeCache = AttributeCache.Read( attribute.Id );
+                        var attributeCache = AttributeCache.Get( attribute.Id );
                         if ( attributeCache != null )
                         {
                             boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;
@@ -859,7 +859,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             var dowFilterControl = phFilterControls.FindControl( "filter_dow" );
             if ( dowFilterControl != null )
             {
-                var field = FieldTypeCache.Read( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field;
+                var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field;
 
                 var filterValues = field.GetFilterValues( dowFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
                 var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyDayOfWeek", typeof( DayOfWeek? ) );
@@ -869,7 +869,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             var timeFilterControl = phFilterControls.FindControl( "filter_time" );
             if ( timeFilterControl != null )
             {
-                var field = FieldTypeCache.Read( Rock.SystemGuid.FieldType.TIME ).Field;
+                var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.TIME ).Field;
 
                 var filterValues = field.GetFilterValues( timeFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
                 var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyTimeOfDay", typeof( TimeSpan? ) );
@@ -990,7 +990,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         Guid? campusGuid = GetAttributeValue( "DefaultLocation" ).AsGuidOrNull();
                         if ( campusGuid != null )
                         {
-                            var campusLocation = CampusCache.Read( ( Guid ) campusGuid ).LocationId;
+                            var campusLocation = CampusCache.Get( ( Guid ) campusGuid ).LocationId;
                             personLocation = new LocationService( rockContext ).Get( ( int ) campusLocation );
                         }
                     }
@@ -1078,7 +1078,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         foreach ( var fence in fences )
                         {
                             var mapItem = new FinderMapItem( fence.Location );
-                            mapItem.EntityTypeId = EntityTypeCache.Read( "Rock.Model.Group" ).Id;
+                            mapItem.EntityTypeId = EntityTypeCache.Get( "Rock.Model.Group" ).Id;
                             mapItem.EntityId = fence.GroupId;
                             mapItem.Name = fence.Group.Name;
                             fenceMapItems.Add( mapItem );
@@ -1136,7 +1136,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                             }
 
                             mergeFields.Add( "LinkedPages", linkedPages );
-                            mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Read( "Rock.Model.Campus" ) ) as Campus );
+                            mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Get( "Rock.Model.Campus" ) ) as Campus );
 
                             // add collection of allowed security actions
                             Dictionary<string, object> securityActions = new Dictionary<string, object>();
@@ -1155,7 +1155,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                             // Add a map item for group
                             var mapItem = new FinderMapItem( gl.Location );
-                            mapItem.EntityTypeId = EntityTypeCache.Read( "Rock.Model.Group" ).Id;
+                            mapItem.EntityTypeId = EntityTypeCache.Get( "Rock.Model.Group" ).Id;
                             mapItem.EntityId = group.Id;
                             mapItem.Name = group.Name;
                             mapItem.InfoWindow = HttpUtility.HtmlEncode( infoWindow.Replace( Environment.NewLine, string.Empty ).Replace( "\n", string.Empty ).Replace( "\t", string.Empty ) );
@@ -1207,7 +1207,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 }
 
                 mergeFields.Add( "LinkedPages", linkedPages );
-                mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Read( "Rock.Model.Campus" ) ) as Campus );
+                mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Get( "Rock.Model.Campus" ) ) as Campus );
 
                 lLavaOverview.Text = template.ResolveMergeFields( mergeFields );
 
@@ -1238,7 +1238,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 gGroups.DataSource = groups.Select( g =>
                 {
                     var qryMembers = new GroupMemberService( rockContext ).Queryable().Where( a => a.GroupId == g.Id );
-                    var groupType = GroupTypeCache.Read( g.GroupTypeId );
+                    var groupType = GroupTypeCache.Get( g.GroupTypeId );
 
                     return new
                     {
@@ -1297,7 +1297,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         {
             if ( groupTypeGuid.HasValue )
             {
-                var groupType = GroupTypeCache.Read( groupTypeGuid.Value );
+                var groupType = GroupTypeCache.Get( groupTypeGuid.Value );
                 if ( groupType != null )
                 {
                     return groupType.Id;
@@ -1315,7 +1315,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         {
             if ( groupTypeId.HasValue )
             {
-                var groupType = GroupTypeCache.Read( groupTypeId.Value );
+                var groupType = GroupTypeCache.Get( groupTypeId.Value );
                 if ( groupType != null )
                 {
                     return groupType.Guid.ToString();
@@ -1352,7 +1352,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             string styleCode = "null";
             var markerColors = new List<string>();
 
-            DefinedValueCache dvcMapStyle = DefinedValueCache.Read( GetAttributeValue( "MapStyle" ).AsInteger() );
+            DefinedValueCache dvcMapStyle = DefinedValueCache.Get( GetAttributeValue( "MapStyle" ).AsInteger() );
             if ( dvcMapStyle != null )
             {
                 styleCode = dvcMapStyle.GetAttributeValue( "DynamicMapStyle" );
@@ -1374,7 +1374,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             string latitude = "39.8282";
             string longitude = "-98.5795";
             string zoom = "4";
-            var orgLocation = GlobalAttributesCache.Read().OrganizationLocation;
+            var orgLocation = GlobalAttributesCache.Get().OrganizationLocation;
             if ( orgLocation != null && orgLocation.GeoPoint != null )
             {
                 latitude = orgLocation.GeoPoint.Latitude.ToString();

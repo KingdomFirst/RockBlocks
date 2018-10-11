@@ -120,7 +120,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
                 string validationGroup = string.Format( "vgAttributeValues_{0}", this.BlockId );
                 btnSave.ValidationGroup = validationGroup;
 
-                var attribute = AttributeCache.Read( targetAttribute );
+                var attribute = AttributeCache.Get( targetAttribute );
                 string attributeValue = CurrentPerson.GetAttributeValue( attribute.Key );
                 string formattedValue = string.Empty;
 
@@ -173,11 +173,11 @@ namespace RockWeb.Plugins.com_kfs.Utility
             var attributeService = new AttributeService( rockContext );
             var targetAttribute = attributeService.GetByGuids( new List<Guid>() { sourceAttributeValue.AsGuid() } ).ToList().FirstOrDefault();
 
-            int personEntityTypeId = EntityTypeCache.Read( typeof( Person ) ).Id;
+            int personEntityTypeId = EntityTypeCache.Get( typeof( Person ) ).Id;
 
-            var changes = new List<string>();
+            var changes = new History.HistoryChangeList();
 
-            var attribute = AttributeCache.Read( targetAttribute );
+            var attribute = AttributeCache.Get( targetAttribute );
 
             if ( CurrentPerson != null )
             {

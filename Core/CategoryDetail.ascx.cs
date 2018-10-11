@@ -83,12 +83,12 @@ namespace RockWeb.Plugins.com_kfs.Core
             var entityTypeGuid = Guid.Empty;
             if ( Guid.TryParse( GetAttributeValue( "EntityType" ), out entityTypeGuid ) )
             {
-                entityTypeId = EntityTypeCache.Read( entityTypeGuid ).Id;
+                entityTypeId = EntityTypeCache.Get( entityTypeGuid ).Id;
             }
             entityTypeQualifierProperty = GetAttributeValue( "EntityTypeQualifierProperty" );
             entityTypeQualifierValue = GetAttributeValue( "EntityTypeQualifierValue" );
 
-            btnSecurity.EntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Category ) ).Id;
+            btnSecurity.EntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Category ) ).Id;
 
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
@@ -346,13 +346,13 @@ namespace RockWeb.Plugins.com_kfs.Core
             int? categoryEntityTypeId = null;
             var attributeService = new AttributeService( rockContext );
             Rock.Model.Attribute attribute = null;
-            categoryEntityTypeId = EntityTypeCache.Read( typeof( Category ) ).Id;
+            categoryEntityTypeId = EntityTypeCache.Get( typeof( Category ) ).Id;
             var attributeExists = attributeService.Get( categoryEntityTypeId, string.Empty, string.Empty ).Any( a => a.Key == attributeKey );
             if ( !attributeExists )
             {
                 var edtAttribute = new Rock.Model.Attribute
                 {
-                    FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id,
+                    FieldTypeId = FieldTypeCache.Get( Rock.SystemGuid.FieldType.GROUP_TYPE ).Id,
                     Name = "Associated Group",
                     Key = attributeKey
                 };
@@ -503,7 +503,7 @@ namespace RockWeb.Plugins.com_kfs.Core
 
             if ( category.EntityTypeId != 0 )
             {
-                var entityType = EntityTypeCache.Read( category.EntityTypeId );
+                var entityType = EntityTypeCache.Get( category.EntityTypeId );
                 lblEntityTypeName.Text = entityType.Name;
             }
             else
@@ -517,7 +517,7 @@ namespace RockWeb.Plugins.com_kfs.Core
             {
                 foreach ( var excludeCategoryGuid in excludeCategoriesGuids )
                 {
-                    var excludedCategory = CategoryCache.Read( excludeCategoryGuid );
+                    var excludedCategory = CategoryCache.Get( excludeCategoryGuid );
                     if ( excludedCategory != null )
                     {
                         excludedCategoriesIds.Add( excludedCategory.Id );
@@ -529,7 +529,7 @@ namespace RockWeb.Plugins.com_kfs.Core
             cpParentCategory.EntityTypeQualifierColumn = category.EntityTypeQualifierColumn;
             cpParentCategory.EntityTypeQualifierValue = category.EntityTypeQualifierValue;
             cpParentCategory.ExcludedCategoryIds = excludedCategoriesIds.AsDelimited( "," );
-            var rootCategory = CategoryCache.Read( this.GetAttributeValue( "RootCategory" ).AsGuid() );
+            var rootCategory = CategoryCache.Get( this.GetAttributeValue( "RootCategory" ).AsGuid() );
 
             cpParentCategory.RootCategoryId = rootCategory != null ? rootCategory.Id : (int?)null;
             cpParentCategory.SetValue( category.ParentCategoryId );
@@ -577,7 +577,7 @@ namespace RockWeb.Plugins.com_kfs.Core
         {
             var rockContext = new RockContext();
             var categoryService = new CategoryService( rockContext );
-            var entityType = EntityTypeCache.Read( this.GetAttributeValue( "EntityType" ).AsGuid() );
+            var entityType = EntityTypeCache.Get( this.GetAttributeValue( "EntityType" ).AsGuid() );
             var rootCategory = categoryService.Get( this.GetAttributeValue( "RootCategory" ).AsGuid() );
 
             cpRootCategoryDetail.EntityTypeId = entityType != null ? entityType.Id : 0;
@@ -619,14 +619,14 @@ namespace RockWeb.Plugins.com_kfs.Core
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void mdCategoryDetailConfig_SaveClick( object sender, EventArgs e )
         {
-            var selectedCategory = CategoryCache.Read( cpRootCategoryDetail.SelectedValue.AsInteger() );
+            var selectedCategory = CategoryCache.Get( cpRootCategoryDetail.SelectedValue.AsInteger() );
             this.SetAttributeValue( "RootCategory", selectedCategory != null ? selectedCategory.Guid.ToString() : string.Empty );
 
             var excludedCategoryIds = cpExcludeCategoriesDetail.SelectedValuesAsInt();
             var excludedCategoryGuids = new List<Guid>();
             foreach ( int excludedCategoryId in excludedCategoryIds )
             {
-                var excludedCategory = CategoryCache.Read( excludedCategoryId );
+                var excludedCategory = CategoryCache.Get( excludedCategoryId );
                 if ( excludedCategory != null )
                 {
                     excludedCategoryGuids.Add( excludedCategory.Guid );

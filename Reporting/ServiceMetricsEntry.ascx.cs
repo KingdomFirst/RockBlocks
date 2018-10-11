@@ -162,8 +162,8 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnSave_Click( object sender, EventArgs e )
         {
-            int campusEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Campus ) ).Id;
-            int scheduleEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Schedule ) ).Id;
+            int campusEntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Campus ) ).Id;
+            int scheduleEntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Schedule ) ).Id;
 
             int? campusId = bddlCampus.SelectedValueAsInt();
             int? scheduleId = bddlService.SelectedValueAsInt();
@@ -420,7 +420,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         {
             var services = new List<Schedule>();
 
-            var scheduleCategory = CategoryCache.Read( GetAttributeValue( "ScheduleCategory" ).AsGuid() );
+            var scheduleCategory = CategoryCache.Get( GetAttributeValue( "ScheduleCategory" ).AsGuid() );
             if ( scheduleCategory != null )
             {
                 using ( var rockContext = new RockContext() )
@@ -447,8 +447,8 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         {
             var serviceMetricValues = new List<ServiceMetric>();
 
-            int campusEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Campus ) ).Id;
-            int scheduleEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Schedule ) ).Id;
+            int campusEntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Campus ) ).Id;
+            int scheduleEntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Schedule ) ).Id;
 
             int? campusId = bddlCampus.SelectedValueAsInt();
             int? scheduleId = bddlService.SelectedValueAsInt();

@@ -149,7 +149,7 @@ namespace RockWeb.Plugins.com_kfs.Intacct
                 {
                     var rockContext = new RockContext();
                     var financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
-                    var changes = new List<string>();
+                    var changes = new History.HistoryChangeList();
 
                     //
                     // Close Batch if we're supposed to
@@ -198,7 +198,7 @@ namespace RockWeb.Plugins.com_kfs.Intacct
             {
                 var rockContext = new RockContext();
                 var financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
-                var changes = new List<string>();
+                var changes = new History.HistoryChangeList();
 
                 //
                 // Open Batch is we Closed it

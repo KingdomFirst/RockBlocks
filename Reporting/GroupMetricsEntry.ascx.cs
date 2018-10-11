@@ -149,8 +149,8 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnSave_Click( object sender, EventArgs e )
         {
-            int groupEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Group ) ).Id;
-            int campusEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Campus ) ).Id;
+            int groupEntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Group ) ).Id;
+            int campusEntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Campus ) ).Id;
 
             int? groupId = gpSelectGroup.SelectedValueAsInt();
             DateTime? dateVal = dpMetricValueDateTime.SelectedDate;
@@ -263,8 +263,8 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         {
             var groupMetricValues = new List<GroupMetric>();
 
-            int groupEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Group ) ).Id;
-            int campusEntityTypeId = EntityTypeCache.Read( typeof( Rock.Model.Campus ) ).Id;
+            int groupEntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Group ) ).Id;
+            int campusEntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.Campus ) ).Id;
 
             int? groupId = gpSelectGroup.SelectedValueAsInt();
             DateTime? weekend = dpMetricValueDateTime.SelectedDate;

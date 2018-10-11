@@ -202,7 +202,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     newGroup.SaveAttributeValues( rockContext );
 
                     /* Take care of Group Member Attributes */
-                    var entityTypeId = EntityTypeCache.Read( typeof( GroupMember ) ).Id;
+                    var entityTypeId = EntityTypeCache.Get( typeof( GroupMember ) ).Id;
                     string qualifierColumn = "GroupId";
                     string qualifierValue = group.Id.ToString();
 
@@ -265,7 +265,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     }
 
                     rockContext.SaveChanges();
-                    Rock.Security.Authorization.Flush();
+                    Rock.Security.Authorization.Clear();
                 } );
 
                 NavigateToCurrentPage( new Dictionary<string, string> { { "GroupId", newGroup.Id.ToString() } } );

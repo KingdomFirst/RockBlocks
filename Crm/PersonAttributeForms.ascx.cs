@@ -290,8 +290,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
                         var person = new PersonService( rockContext ).Get( CurrentPersonId.Value );
                         if ( person != null )
                         {
-                            var personChanges = new List<string>();
-                            var familyChanges = new List<string>();
+                            var personChanges = new History.HistoryChangeList();
+                            var familyChanges = new History.HistoryChangeList();
 
                             var pagePersonFields = new List<PersonFieldType>();
                             if ( saveEachPage && CurrentPageIndex > 0 && CurrentPageIndex <= FormState.Count )
@@ -428,7 +428,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                             }
                                         case PersonFieldType.ConnectionStatus:
                                             {
-                                                var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT ).Id;
+                                                var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT ).Id;
                                                 History.EvaluateChange( personChanges, "Connection Status", DefinedValueCache.GetName( person.ConnectionStatusValueId ), DefinedValueCache.GetName( newConnectionStatusId ) );
                                                 person.ConnectionStatusValueId = newConnectionStatusId;
                                                 break;
@@ -463,8 +463,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         History.EvaluateChange(
                                             familyChanges,
                                             "Campus",
-                                            family.CampusId.HasValue ? CampusCache.Read( family.CampusId.Value ).Name : string.Empty,
-                                            campusId.HasValue ? CampusCache.Read( campusId.Value ).Name : string.Empty );
+                                            family.CampusId.HasValue ? CampusCache.Get( family.CampusId.Value ).Name : string.Empty,
+                                            campusId.HasValue ? CampusCache.Get( campusId.Value ).Name : string.Empty );
 
                                         family.CampusId = campusId;
 
@@ -488,7 +488,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                     var location = new LocationService( new RockContext() ).Get( ( int ) locationId );
                                     if ( location != null )
                                     {
-                                        var homeLocationType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME.AsGuid() );
+                                        var homeLocationType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME.AsGuid() );
                                         if ( homeLocationType != null )
                                         {
                                             var familyGroup = new GroupService( rockContext ).Get( family.Id );
@@ -532,7 +532,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                             foreach ( var keyVal in AttributeValueState )
                             {
-                                var attribute = AttributeCache.Read( keyVal.Key );
+                                var attribute = AttributeCache.Get( keyVal.Key );
                                 if ( attribute != null && ( CurrentPageIndex >= FormState.Count || !pageAttributeIds.Any() || pageAttributeIds.Contains( attribute.Id ) ) )
                                 {
                                     person.SetAttributeValue( attribute.Key, keyVal.Value );
@@ -546,7 +546,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                 Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
                                 if ( workflowTypeGuid.HasValue )
                                 {
-                                    var workflowType = WorkflowTypeCache.Read( workflowTypeGuid.Value );
+                                    var workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
                                     if ( workflowType != null && ( workflowType.IsActive ?? true ) )
                                     {
                                         try
@@ -1169,7 +1169,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                             }
                             else if ( field.AttributeId.HasValue && field.FieldSource == FormFieldSource.PersonAttribute )
                             {
-                                var attributeCache = AttributeCache.Read( field.AttributeId.Value );
+                                var attributeCache = AttributeCache.Get( field.AttributeId.Value );
                                 if ( attributeCache != null )
                                 {
                                     AttributeValueState.AddOrReplace( field.AttributeId.Value, CurrentPerson.GetAttributeValue( attributeCache.Key ) );
@@ -1254,7 +1254,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                 value = AttributeValueState[field.AttributeId.Value];
                             }
 
-                            var attribute = AttributeCache.Read( field.AttributeId.Value );
+                            var attribute = AttributeCache.Get( field.AttributeId.Value );
                             if ( attribute != null )
                             {
                                 attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
@@ -1434,7 +1434,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                     }
                     else if ( field.AttributeId.HasValue && field.FieldSource == FormFieldSource.PersonAttribute )
                     {
-                        var attribute = AttributeCache.Read( field.AttributeId.Value );
+                        var attribute = AttributeCache.Get( field.AttributeId.Value );
                         if ( attribute != null )
                         {
                             string fieldId = "attribute_field_" + attribute.Id.ToString();
@@ -1626,7 +1626,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                         ddlMaritalStatus.Label = "Marital Status";
                         ddlMaritalStatus.Required = field.IsRequired;
                         ddlMaritalStatus.ValidationGroup = BlockValidationGroup;
-                        ddlMaritalStatus.BindToDefinedType( DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
+                        ddlMaritalStatus.BindToDefinedType( DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
                         phContent.Controls.Add( ddlMaritalStatus );
 
                         if ( setValue && fieldValue != null )
@@ -1640,7 +1640,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                 case PersonFieldType.MobilePhone:
                     {
-                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
+                        var dv = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
                         if ( dv != null )
                         {
                             var ppMobile = new PhoneNumberBox();
@@ -1662,7 +1662,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                     }
                 case PersonFieldType.HomePhone:
                     {
-                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
+                        var dv = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
                         if ( dv != null )
                         {
                             var ppHome = new PhoneNumberBox();
@@ -1685,7 +1685,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                 case PersonFieldType.WorkPhone:
                     {
-                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK );
+                        var dv = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK );
                         if ( dv != null )
                         {
                             var ppWork = new PhoneNumberBox();
@@ -1712,7 +1712,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                         ddlConnectionStatus.Label = "Connection Status";
                         ddlConnectionStatus.Required = field.IsRequired;
                         ddlConnectionStatus.ValidationGroup = BlockValidationGroup;
-                        ddlConnectionStatus.BindToDefinedType( DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.PERSON_CONNECTION_STATUS ) ), true );
+                        ddlConnectionStatus.BindToDefinedType( DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_CONNECTION_STATUS ) ), true );
 
                         phContent.Controls.Add( ddlConnectionStatus );
 
@@ -1912,7 +1912,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                 }
 
                 var attribute = new Rock.Model.Attribute();
-                attribute.FieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.TEXT ).Id;
+                attribute.FieldTypeId = FieldTypeCache.Get( Rock.SystemGuid.FieldType.TEXT ).Id;
 
                 if ( field.FieldSource == FormFieldSource.PersonAttribute )
                 {
@@ -2048,24 +2048,26 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// <param name="person">The person.</param>
         /// <param name="phoneTypeGuid">The phone type unique identifier.</param>
         /// <param name="changes">The changes.</param>
-        private void SavePhone( string cleanNumber, Person person, Guid phoneTypeGuid, List<string> changes )
+        private void SavePhone( string cleanNumber, Person person, Guid phoneTypeGuid, History.HistoryChangeList changes )
         {
             if ( !string.IsNullOrWhiteSpace( cleanNumber ) )
             {
-                var numberType = DefinedValueCache.Read( phoneTypeGuid );
+                var numberType = DefinedValueCache.Get( phoneTypeGuid );
                 if ( numberType != null )
                 {
                     var phone = person.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValueId == numberType.Id );
                     string oldPhoneNumber = string.Empty;
                     if ( phone == null )
                     {
-                        phone = new PhoneNumber { NumberTypeValueId = numberType.Id };
+                        phone = new PhoneNumber();
                         person.PhoneNumbers.Add( phone );
+                        phone.NumberTypeValueId = numberType.Id;
                     }
                     else
                     {
                         oldPhoneNumber = phone.NumberFormattedWithCountryCode;
                     }
+
                     phone.CountryCode = PhoneNumber.CleanNumber( PhoneNumber.DefaultCountryCode() );
                     phone.Number = cleanNumber;
 
@@ -2772,7 +2774,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
             {
                 if ( AttributeId.HasValue && FieldSource == FormFieldSource.PersonAttribute )
                 {
-                    return AttributeCache.Read( AttributeId.Value );
+                    return AttributeCache.Get( AttributeId.Value );
                 }
 
                 return null;
