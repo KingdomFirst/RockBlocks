@@ -1,3 +1,8 @@
+/****** Object:  StoredProcedure [dbo].[com_kfs_spSimpleGive]    Script Date: 10/11/2018 2:44:46 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[com_kfs_spSimpleGive]
     @ImportTable NVARCHAR(250),
     @CleanupTable bit = 1
@@ -44,12 +49,14 @@ WAITFOR DELAY '00:00:01';
 -- Variables
 DECLARE @CurrencyTypeId AS INT = (SELECT [Id] FROM DefinedType WHERE [Name] = 'Currency Type');
 DECLARE @CreditCardTypeId AS INT = (SELECT [Id] FROM DefinedType WHERE [Name] = 'Credit Card Type');
+DECLARE @HomePhoneValueId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Home' AND DefinedTypeId = 13);
 DECLARE @ContributionValueId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Contribution' AND DefinedTypeId = 25);
-DECLARE @WebsiteValueId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Website' AND DefinedTypeId = 12);
+DECLARE @WebsiteSourceId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Website' AND DefinedTypeId = 12);
 DECLARE @PersonRecordTypeId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Person' AND DefinedTypeId = 1);
 DECLARE @PendingRecordStatusId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Pending' AND DefinedTypeId = 2);
 DECLARE @NewWebsiteConnectionStatusId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'New From Website' AND DefinedTypeId = 4);
 
+DECLARE @CustomSourceId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = @BatchPrefix AND DefinedTypeId = 12);
 
 /* =================================
 Initial cleanup tasks
@@ -147,6 +154,35 @@ INSERT Person (FirstName, NickName, LastName, Email, CreatedDateTime, ModifiedDa
 SELECT FirstName, FirstName, LastName, Email, CreatedDateTime, GETDATE(), 0, ' + CONVERT(VARCHAR(20), @PersonRecordTypeId) + ', ' + CONVERT(VARCHAR(20), @PendingRecordStatusId) + ', ' + CONVERT(VARCHAR(20), @NewWebsiteConnectionStatusId) + ', 0, 0, 1, NEWID(), 0, 1
 FROM NewPeople
 WHERE rownum = 1
+';
+
+EXEC(@cmd)
+
+-- Insert Phone
+SELECT @cmd = '
+;WITH financialData AS (
+    SELECT * FROM ' + QUOTENAME(@ImportTable) +
+'), PersonPhones AS (
+    SELECT 
+		p.Id PersonId,
+		REPLACE(REPLACE(REPLACE(fd.[Phone], ''-'', ''''), ''('', ''''), '')'', '''') Number
+    FROM financialData fd
+	JOIN Person p
+		ON p.Email = fd.Email
+		AND p.LastName = RTRIM(LTRIM(SUBSTRING(fd.Name,CHARINDEX('' '',fd.Name), LEN(fd.Name))))
+		AND (p.FirstName = RTRIM(LTRIM(SUBSTRING(fd.Name,1,CHARINDEX('' '',fd.Name))))
+			OR p.NickName = RTRIM(LTRIM(SUBSTRING(fd.Name,1,CHARINDEX('' '',fd.Name)))))
+    LEFT JOIN PersonAlias pa
+        ON pa.[PersonId] = p.Id
+	LEFT JOIN PhoneNumber pn
+		ON p.[Id] = pn.PersonId
+		AND pn.Number = REPLACE(REPLACE(REPLACE(fd.[Phone], ''-'', ''''), ''('', ''''), '')'', '''')
+    WHERE pa.[Id] IS NULL
+		AND pn.[Id] IS NULL
+)
+INSERT PhoneNumber( IsSystem, PersonId, Number, NumberTypeValueId, IsMessagingEnabled, IsUnlisted, Guid, CountryCode)
+SELECT 0, PersonId, Number, ' + CONVERT(VARCHAR(20), @HomePhoneValueId) + ', 0, 0, NEWID(), 1
+FROM PersonPhones
 ';
 
 EXEC(@cmd)
@@ -303,7 +339,7 @@ SELECT
     tl.TransactionCode,
     tl.Summary,
     ' + CONVERT(VARCHAR(50), @ContributionValueId) + ' TransactionValueId,
-    ' + CONVERT(VARCHAR(50), @WebsiteValueId) + ' SourceValueId,
+    ' + CONVERT(VARCHAR(50), ISNULL(@CustomSourceId, @WebsiteSourceId)) + ' SourceValueId,
     tl.TransactionGuid,
     tl.TransactionDate, 
     tl.PersonAliasId, 
