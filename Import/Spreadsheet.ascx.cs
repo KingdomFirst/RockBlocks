@@ -151,24 +151,29 @@ namespace RockWeb.Plugins.com_kfs.Import
                 return;
             }
 
-            // get SP name
-            var storedProcedure = GetAttributeValue( "DefaultStoredProcedure" );
-
             // create parameters
             var paramsList = new List<SqlParameter>
             {
                 // TODO clean this up to read parameters from SP
                 new SqlParameter { ParameterName = "@ImportTable", SqlDbType = SqlDbType.NVarChar, Value = tableName }
-                //new SqlParameter { ParameterName = "@BatchPrefix", SqlDbType = SqlDbType.NVarChar, Value = GetAttributeValue( "BatchPrefix" ) }
             };
 
             var cleanupTable = GetAttributeValue( "CleanupTableParameter" ).AsBoolean();
-            if ( cleanupTable  )
+            if ( cleanupTable )
             {
                 paramsList.Add( new SqlParameter { ParameterName = "@CleanupTable", SqlDbType = SqlDbType.NVarChar, Value = 1 } );
             }
 
-            RunSQL( storedProcedure, paramsList, true, out statusText );
+            var storedProcedure = GetAttributeValue( "DefaultStoredProcedure" );
+            if ( !string.IsNullOrWhiteSpace( storedProcedure ) )
+            {
+                RunSQL( storedProcedure, paramsList, true, out statusText );
+            }
+            else
+            {
+                nbWarning.Text = "Block settings were not configured with a stored procedure.";
+                return;
+            }
         }
 
         /// <summary>
@@ -213,7 +218,11 @@ namespace RockWeb.Plugins.com_kfs.Import
                     tableToUpload.TableName = fileInfo.Name.Replace( fileInfo.Extension, "" );
                     tableToUpload.TableName = tableToUpload.TableName.RemoveSpecialCharacters();
                     tableToUpload.TableName = "_com_kfs_" + tableToUpload.TableName;
-                    var sb = new System.Text.StringBuilder( string.Format("DROP TABLE IF EXISTS [{0}]; CREATE TABLE [{0}] (", tableToUpload.TableName ) );
+                    var sb = new System.Text.StringBuilder(
+                        string.Format( @"IF EXISTS
+                                    ( SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{0}')
+                                    DROP TABLE [{0}];
+                                    CREATE TABLE [{0}] (", tableToUpload.TableName ) );
                     foreach ( DataColumn column in tableToUpload.Columns )
                     {
                         sb.Append( " [" + column.ColumnName.RemoveSpecialCharacters() + "] " + TableExtensions.GetSQLType( column ) + "," );
@@ -250,7 +259,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                         tableName = tableToUpload.TableName;
                     }
                 }
-                
+
                 // cleanup whether we could read the file or not
                 File.Delete( filePath );
             }
