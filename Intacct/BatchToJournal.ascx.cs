@@ -19,12 +19,12 @@ namespace RockWeb.Plugins.com_kfs.Intacct
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Export to Intacct", "", 1 )]
     [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.", true, "", 2 )]
     [BooleanField( "Log Response", "Flag indicating if the Intacct Response should be logged to the Batch Audit Log", true, "", 3 )]
-    [EncryptedTextField( "Sender Id", "The Intacct Sender Id", true, "", "Configuration", 0 )]
-    [EncryptedTextField( "Sender Password", "The Intacct Sender Password", true, "", "Configuration", 1 )]
-    [EncryptedTextField( "Company Id", "The Intacct Sender Id", true, "", "Configuration", 2 )]
-    [EncryptedTextField( "User Id", "The Intacct Sender Id", true, "", "Configuration", 3 )]
-    [EncryptedTextField( "User Password", "The Intacct Sender Id", true, "", "Configuration", 4 )]
-    [EncryptedTextField( "Location Id", "The Intacct Sender Id", false, "", "Configuration", 5 )]
+    [EncryptedTextField( "Sender Id", "The permanent Web Services sender Id.", true, "", "Configuration", 0 )]
+    [EncryptedTextField( "Sender Password", "The permanent Web Services sender password.", true, "", "Configuration", 1 )]
+    [EncryptedTextField( "Company Id", "The Intacct Company Id. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 2 )]
+    [EncryptedTextField( "User Id", "The Intacct User Id. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 3 )]
+    [EncryptedTextField( "User Password", "The Intacct User Password. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 4 )]
+    [EncryptedTextField( "Location Id", "The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.", false, "", "Configuration", 5 )]
     public partial class BatchToJournal : RockBlock
     {
         private int _batchId = 0;
