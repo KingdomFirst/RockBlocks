@@ -44,7 +44,7 @@
     }
 </style>
 
-<asp:UpdatePanel ID="upnlContent" runat="server">
+<asp:UpdatePanel ID="upnlContent" runat="server" UpdateMode="Conditional">
     <ContentTemplate>
 
         <div class="wizard">
@@ -285,7 +285,8 @@
                     </div>
                 </asp:Panel>
 
-                <asp:Panel ID="pnlRegistrants" runat="server" Visible="false" CssClass="panel panel-block">
+                <asp:UpdatePanel ID="pnlRegistrants" runat="server" Visible="false" CssClass="panel panel-block">
+                    <ContentTemplate>
                     <div class="panel-heading">
                         <h1 class="panel-title">
                             <i class="fa fa-users"></i>
@@ -306,7 +307,7 @@
                             <Rock:Grid ID="gRegistrants" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gRegistrants_RowSelected" RowItemText="Registrant" PersonIdField="PersonId" ExportSource="ColumnOutput">
                                 <Columns>
                                     <Rock:SelectField ItemStyle-Width="48px" />
-                                    <Rock:RockTemplateField HeaderText="Registrant" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" ExcelExportBehavior="NeverInclude">
+                                    <Rock:RockTemplateField HeaderText="Registrant" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" ExcelExportBehavior="NeverInclude" >
                                         <ItemTemplate>
                                             <asp:Literal ID="lRegistrant" runat="server"></asp:Literal>
                                         </ItemTemplate>
@@ -353,7 +354,8 @@
                             </Rock:Grid>
                         </div>
                     </div>
-                </asp:Panel>
+                    </ContentTemplate>
+                </asp:UpdatePanel>
 
                 <asp:Panel ID="pnlPayments" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
@@ -609,13 +611,11 @@
                         </div>
                     </div>
                 </asp:Panel>
-                <asp:HiddenField ID="hfActiveTabParentGroup" runat="server" />
-                <asp:HiddenField ID="hfEditGroup" runat="server" />
-                <Rock:HiddenFieldWithClass ID="hfExpandedGroups" runat="server" CssClass="hf-expanded-groups" />
 
-                <asp:Repeater ID="rpResourcePanels" runat="server" Visible="false">
+                <asp:Repeater ID="rpTabResources" runat="server" Visible="false">
                     <ItemTemplate>
-                        <asp:Panel ID="pnlAssociatedGroup" runat="server" Visible="false" CssClass="panel panel-block">
+                        <asp:UpdatePanel ID="pnlAssociatedGroup" runat="server" Visible="false" CssClass="panel panel-block">
+                            <ContentTemplate>
                             <asp:Panel ID="pnlGroupHeading" runat="server" CssClass="panel-heading">
                                 <asp:PlaceHolder ID="phGroupHeading" runat="server"></asp:PlaceHolder>
                                 <div class="pull-right">
@@ -633,7 +633,8 @@
                                 <asp:HiddenField ID="hfParentGroupId" runat="server" />
                                 <asp:PlaceHolder ID="phGroupControl" runat="server"></asp:PlaceHolder>
                             </asp:Panel>
-                        </asp:Panel>
+                            </ContentTemplate>
+                        </asp:UpdatePanel>
                     </ItemTemplate>
                 </asp:Repeater>
 
