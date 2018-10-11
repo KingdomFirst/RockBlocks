@@ -2297,7 +2297,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         memoryStream.Write( buffer, 0, read );
                     }
 
-                    var labelPath = string.Format( "~/App_Data/Cache/{0}_{1}_{2}_{3}.pdf", person.Person.FullName.RemoveSpaces(), personId, locationId, labelGuid );
+                    var labelPath = string.Format( "~/Cache/{0}_{1}_{2}_{3}.pdf", person.Person.FullName.RemoveSpaces(), personId, locationId, labelGuid );
 
                     byte[] bytes = memoryStream.ToArray();
                     System.IO.Directory.CreateDirectory( Server.MapPath( "~/Cache" ) );
