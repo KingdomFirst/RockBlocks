@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -37,7 +36,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [LinkedPage( "Area Select Page", "The page to redirect user to if area has not be configured or selected.", order: 3 )]
     [DefinedValueField( Rock.SystemGuid.DefinedType.CHART_STYLES, "Chart Style", order: 4, defaultValue: Rock.SystemGuid.DefinedValue.CHART_STYLE_ROCK )]
     [BooleanField( "Search By Code", "A flag indicating if security codes should also be evaluated in the search box results.", order: 5 )]
-	[IntegerField( "Lookback Minutes", "The number of minutes the chart will lookback.", true, 120, order: 6 )]
+    [IntegerField( "Lookback Minutes", "The number of minutes the chart will lookback.", true, 120, order: 6 )]
     [BooleanField( "Location Active", "A flag indicating if location should currently have a schedule assigned to it to be displayed.", order: 7 )]
     [BooleanField( "Show Delete", "A flag indicating if the Delete button should be displayed.", true, "Attendee Actions", 0 )]
     [BooleanField( "Show Checkout", "A flag indicating if the Checkout button should be displayed.", true, "Attendee Actions", 1 )]
@@ -47,13 +46,12 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [CustomDropdownListField( "Print Density", "The default print density for reprint.", "6^6 dpmm (152 dpi),8^8 dpmm (203 dpi),12^12 dpmm (300 dpi),24^24 dpmm (600 dpi)", true, "8", "Print Actions", 1 )]
     [TextField( "Label Width", "The default width of label for reprint.", true, "4", "Print Actions", 2 )]
     [TextField( "Label Height", "The default height of label for reprint.", true, "2", "Print Actions", 3 )]
-
     public partial class Locations : Rock.Web.UI.RockBlock
     {
         #region Fields
 
         private string _configuredMode = "L";
-		private bool _showAdvancedPrintOptions = false;
+        private bool _showAdvancedPrintOptions = false;
 
         #endregion
 
@@ -64,8 +62,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         public string CurrentNavPath { get; set; }
 
         public NavigationData NavData { get; set; }
-		
-		public static bool ShowDelete { get; set; }
+
+        public static bool ShowDelete { get; set; }
         public static bool ShowCheckout { get; set; }
         public static bool ShowMove { get; set; }
         public static bool ShowPrintLabel { get; set; }
@@ -100,13 +98,12 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
-			
-			ShowDelete = GetAttributeValue( "ShowDelete" ).AsBoolean();
+
+            ShowDelete = GetAttributeValue( "ShowDelete" ).AsBoolean();
             ShowCheckout = GetAttributeValue( "ShowCheckout" ).AsBoolean();
             ShowMove = GetAttributeValue( "ShowMove" ).AsBoolean();
             ShowPrintLabel = GetAttributeValue( "ShowPrintLabel" ).AsBoolean();
             _showAdvancedPrintOptions = GetAttributeValue( "ShowAdvancedPrintOptions" ).AsBoolean();
-
 
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.js" );
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.time.js" );
@@ -152,7 +149,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
             if ( campus != null )
             {
-
                 var scheduleEntityType = EntityTypeCache.Get( "Rock.Model.Schedule" );
                 var scheduleContext = RockPage.GetCurrentContext( scheduleEntityType ) as Schedule;
                 string scheduleId = string.Empty;
@@ -199,7 +195,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                     SetChartOptions();
                     BuildNavigationControls();
-					SetPrintControls();
+                    SetPrintControls();
                 }
             }
             else
@@ -381,7 +377,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 rptPeople.Visible = true;
                 rptPeople.DataSource = results;
                 rptPeople.DataBind();
-
             }
 
             RegisterStartupScript();
@@ -396,7 +391,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         {
             SetChartOptions();
             BuildNavigationControls();
-			SetPrintControls();
+            SetPrintControls();
         }
 
         /// <summary>
@@ -460,7 +455,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         tgl.Visible = false;
                     }
                 }
-
             }
         }
 
@@ -549,8 +543,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             person.Age );
                     }
                 }
-				
-				var lbPrintLabel = e.Item.FindControl( "lbPrintLabel" ) as LinkButton;
+
+                var lbPrintLabel = e.Item.FindControl( "lbPrintLabel" ) as LinkButton;
                 if ( lbPrintLabel != null )
                 {
                     lbPrintLabel.CommandArgument = string.Format( "{0}^{1}", person.Id, person.ScheduleGroupIds );
@@ -592,8 +586,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 }
             }
         }
-		
-		/// <summary>
+
+        /// <summary>
         /// Handles the Click event of the lbMoveAll control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -643,7 +637,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
             BuildNavigationControls();
         }
-
 
         protected void lbUpdateThreshold_Click( object sender, EventArgs e )
         {
@@ -738,8 +731,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     }
                 }
             }
-			
-			if ( e.CommandName == "Checkout" )
+
+            if ( e.CommandName == "Checkout" )
             {
                 int personId = e.CommandArgument.ToString().AsInteger();
 
@@ -937,7 +930,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                 using ( var rockContext = new RockContext() )
                 {
-
                     foreach ( var personId in personIds.Split( ',' ).AsIntegerList() )
                     {
                         var activeSchedules = new List<int>();
@@ -1127,7 +1119,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             using ( var rockContext = new RockContext() )
             {
                 var occurrences = new List<AttendanceOccurrence>();
-				var schedules = new List<Schedule>();
+                var schedules = new List<Schedule>();
 
                 if ( scheduleId.HasValue )
                 {
@@ -1182,7 +1174,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         }
                     }
                 }
-				
+
                 var validLocationids = new List<int>();
                 if ( campus.LocationId.HasValue )
                 {
@@ -1194,8 +1186,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         .ToList()
                         .ForEach( l => validLocationids.Add( l ) );
                 }
-				
-				// Get location Ids which are currently active
+
+                // Get location Ids which are currently active
                 var validLocationIdsFiltered = new List<int>();
                 if ( GetAttributeValue( "LocationActive" ).AsBoolean() )
                 {
@@ -1279,7 +1271,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             .ToList();
 
                         // look for locations in use by this group currently and add to the childLocationIds
-                        foreach( var occurrence in occurrences )
+                        foreach ( var occurrence in occurrences )
                         {
                             if ( occurrence.GroupId == group.Id && !childLocationIds.Contains( occurrence.LocationId.Value ) )
                             {
@@ -1382,10 +1374,10 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                     foreach ( DateTime chartTime in chartTimes )
                     {
-						bool current = chartTime.Equals( chartTimes.Max() );
+                        bool current = chartTime.Equals( chartTimes.Max() );
 
                         activeSchedules.Clear();
-						
+
                         // Get the active schedules
                         foreach ( var schedule in schedules )
                         {
@@ -1616,8 +1608,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         #endregion
 
         #region Rebuild Controls
-		
-		private void SetPrintControls()
+
+        private void SetPrintControls()
         {
             if ( ShowPrintLabel )
             {
@@ -1666,8 +1658,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                 .Where( l => l.ParentId == itemId )
                                 .ToList()
                                 .ForEach( l => navItems.Add( l ) );
-							
-							if ( itemId != null )
+
+                            if ( itemId != null )
                             {
                                 var location = new LocationService( new RockContext() ).Get( ( int ) itemId );
                                 if ( location != null )
@@ -1825,8 +1817,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         rptPeople.Visible = true;
                         rptPeople.DataSource = people;
                         rptPeople.DataBind();
-						
-						if ( ShowMove && attendees.Any() )
+
+                        if ( ShowMove && attendees.Any() )
                         {
                             var attendeeIds = new List<int>();
                             var attendeeList = attendees.ToList();
@@ -1847,7 +1839,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     else
                     {
                         tglHeadingRoom.Visible = false;
-						lbMoveAll.Visible = false;
+                        lbMoveAll.Visible = false;
                         pnlThreshold.Visible = false;
                         rptPeople.Visible = false;
                     }
@@ -1869,8 +1861,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         }
 
         #endregion
-		
-		#region Modal
+
+        #region Modal
+
         /// <summary>
         /// Shows the dialog.
         /// </summary>
@@ -1922,6 +1915,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             hfLocationId.Value = string.Empty;
             hfGroupIds.Value = string.Empty;
         }
+
         #endregion
 
         #endregion
@@ -2079,7 +2073,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             public PersonResult()
             {
                 ShowCancel = false;
-				ShowCheckout = false;
+                ShowCheckout = false;
                 ShowMove = false;
                 ShowPrintLabel = false;
             }
@@ -2108,8 +2102,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         .Distinct()
                         .ToList()
                         .AsDelimited( "\r\n" );
-					
-					ScheduleGroupIds = attendances
+
+                    ScheduleGroupIds = attendances
                         .Select( a => a.Occurrence.Group.Id )
                         .Distinct()
                         .ToList()
@@ -2119,8 +2113,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         }
 
         #endregion
-		
-		#region Print
+
+        #region Print
 
         protected void btnViewLabel_Click( object sender, EventArgs e )
         {
