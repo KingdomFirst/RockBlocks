@@ -4,9 +4,10 @@ using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using com.kfs.FinancialEdge;
+using com.kfs.ShelbyBatchExport;
 using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
@@ -16,16 +17,14 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Plugins.com_kfs.FinancialEdge
+namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
 {
-    [DisplayName( "Financial Edge Batches to Journal" )]
-    [Category( "com_kfs > Financial Edge" )]
-    [Description( "Block used to create Journal Entries in Financial Edge from multiple Rock Financial Batches." )]
-    [LinkedPage( "Detail Page","",true,"606BDA31-A8FE-473A-B3F8-A00ECF7E06EC", order: 0 )]
+    [DisplayName( "Shelby Financials Batches to Journal" )]
+    [Category( "KFS > Shelby Financials" )]
+    [Description( "Block used to create Journal Entries in Shelby Financials from multiple Rock Financial Batches." )]
+    [LinkedPage( "Detail Page", "", true, "606BDA31-A8FE-473A-B3F8-A00ECF7E06EC", order: 0 )]
     [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
     [BooleanField( "Show Accounts Column", "Should the accounts column be displayed.", true, "", 2 )]
-    [TextField( "Journal Type", "The Financial Edge Journal to post in. For example: JE", true, "", "", 3 )]
-    [CustomDropdownListField( "Journal Reference Style", "Option to indicate how the Journal Reference text should be created.", "0^Use Batch Name,1^Use Account Name", true, "0", "", 4 )]
 
     public partial class BatchesToJournal : RockBlock, IPostBackEventHandler, ICustomGridColumns
     {
@@ -95,6 +94,17 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
             ScriptManager.RegisterStartupScript( gBatchList, gBatchList.GetType(), "deleteBatchScript", deleteScript, true );
 
             gBatchList.Actions.AddCustomActionControl( ddlAction );
+
+            object journalType = Session["JournalType"];
+            if ( journalType != null )
+            {
+                ddlJournalType.SetValue( journalType.ToString() );
+            }
+            object accountingPeriod = Session["AccountingPeriod"];
+            if ( accountingPeriod != null )
+            {
+                tbAccountingPeriod.Text = accountingPeriod.ToString();
+            }
         }
 
         /// <summary>
@@ -159,27 +169,35 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
             string scriptFormat = @"
                 $('#{0}').change(function( e ){{
                     var count = $(""#{1} input[id$='_cbSelect_0']:checked"").length;
-                    if (count == 0) {{
-                        $('#{3}').val($ddl.val());
-                        window.location = ""javascript:{2}"";
+                    if (Page_ClientValidate('KFSGLExport')) {{
+                        if (count == 0) {{
+                            $('#{3}').val($ddl.val());
+                            window.location = ""javascript:{2}"";
+                        }}
+                        else
+                        {{
+                            var $ddl = $(this);
+                            if ($ddl.val() != '') {{
+                                Rock.dialogs.confirm('Are you sure you want to ' + ($ddl.val() == 'OPEN' ? 'open' : 'export') + ' the selected batches?', function (result) {{
+                                    if (result) {{
+                                        $('#{3}').val($ddl.val());
+                                        window.location = ""javascript:{2}"";
+                                    }}
+                                    $ddl.val('');
+                                }});
+                            }}
+                        }}
                     }}
                     else
                     {{
+                        Rock.dialogs.alert(""Please select a valid Journal Type and Period."");
                         var $ddl = $(this);
-                        if ($ddl.val() != '') {{
-                            Rock.dialogs.confirm('Are you sure you want to ' + ($ddl.val() == 'OPEN' ? 'open' : 'export') + ' the selected batches?', function (result) {{
-                                if (result) {{
-                                    $('#{3}').val($ddl.val());
-                                    window.location = ""javascript:{2}"";
-                                }}
-                                $ddl.val('');
-                            }});
-                        }}
+                        $ddl.val('');
                     }}
                 }});";
 
-            string script = string.Format( 
-                scriptFormat, 
+            string script = string.Format(
+                scriptFormat,
                 ddlAction.ClientID, // {0}
                 gBatchList.ClientID,  // {1}
                 Page.ClientScript.GetPostBackEventReference( this, "StatusUpdate" ),  // {2}
@@ -379,7 +397,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                 }
                 else
                 {
-                    mdGridWarning.Show( "You are not authorized to delete the selected batch.", ModalAlertType.Warning);
+                    mdGridWarning.Show( "You are not authorized to delete the selected batch.", ModalAlertType.Warning );
                 }
             }
 
@@ -417,7 +435,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                         .Select( s => new BatchAccountSummary
                         {
                             AccountId = s.Key,
-                            Amount = s.Sum( d => (decimal?)d.Amount ) ?? 0.0M
+                            Amount = s.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M
                         } )
                         .ToList()
                     };
@@ -426,7 +444,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                 }
             }
         }
-        
+
         /// <summary>
         /// Handles the RowDataBound event of the gBatchList control.
         /// </summary>
@@ -492,6 +510,9 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
         /// <param name="eventArgument">A <see cref="T:System.String" /> that represents an optional event argument to be passed to the event handler.</param>
         public void RaisePostBackEvent( string eventArgument )
         {
+            Session["JournalType"] = ddlJournalType.SelectedValue;
+            Session["AccountingPeriod"] = tbAccountingPeriod.Text;
+
             if ( eventArgument == "StatusUpdate" && hfAction.Value.IsNotNullOrWhiteSpace() )
             {
                 var batchesSelected = new List<int>();
@@ -500,8 +521,8 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
 
                 if ( batchesSelected.Any() )
                 {
-                    var feJournal = new FEJournal();
-                    var items = new List<JournalEntryLine>();
+                    var sfJournal = new SFJournal();
+                    var items = new List<SFJournal.GLExcelLine>();
                     var newStatus = hfAction.Value == "OPEN" ? BatchStatus.Open : BatchStatus.Closed;
 
                     var rockContext = new RockContext();
@@ -519,7 +540,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                     else
                     {
                         var exportedBatches = batchService.Queryable()
-                            .WhereAttributeValue( rockContext, a => a.Attribute.Key == "com.kfs.FinancialEdge.DateExported" && ( a.Value != null || a.Value != "" ) )
+                            .WhereAttributeValue( rockContext, a => a.Attribute.Key == "com.kfs.ShelbyFinancials.DateExported" && ( a.Value != null && a.Value != "" ) )
                             .Select( b => b.Id )
                             .ToList();
 
@@ -547,7 +568,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                             errorMessage = string.Format( "{0} is an automated batch and the status can not be modified when the status is pending. The system will automatically set this batch to OPEN when all transactions have been downloaded.", batch.Name );
                             maWarningDialog.Show( errorMessage, ModalAlertType.Warning );
                             return;
-                        } 
+                        }
 
                         batch.Status = newStatus;
 
@@ -563,16 +584,19 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                         var newDate = string.Empty;
                         if ( newStatus.Equals( BatchStatus.Open ) )
                         {
-                            var oldDate = batch.GetAttributeValue( "com.kfs.FinancialEdge.DateExported" ).AsDateTime().ToString();
+                            var oldDate = batch.GetAttributeValue( "com.kfs.ShelbyFinancials.DateExported" ).AsDateTime().ToString();
                             History.EvaluateChange( changes, "Date Exported", oldDate, newDate );
                         }
                         else if ( newStatus.Equals( BatchStatus.Closed ) )
                         {
-                            var oldDate = batch.GetAttributeValue( "com.kfs.FinancialEdge.DateExported" );
+                            var oldDate = batch.GetAttributeValue( "com.kfs.ShelbyFinancials.DateExported" );
                             newDate = RockDateTime.Now.ToString();
                             History.EvaluateChange( changes, "Date Exported", oldDate, newDate.ToString() );
 
-                            items.AddRange( feJournal.GetGlEntries( rockContext, batch, GetAttributeValue( "JournalType" ), ( ReferenceStyle ) GetAttributeValue( "JournalReferenceStyle" ).AsInteger() ) );
+                            var journalCode = ddlJournalType.SelectedValue;
+                            var period = tbAccountingPeriod.Text.AsInteger();
+
+                            items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period ) );
                         }
 
                         HistoryService.SaveChanges(
@@ -583,15 +607,27 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                             changes,
                             false );
 
-                        batch.SetAttributeValue( "com.kfs.FinancialEdge.DateExported", newDate );
-                        batch.SaveAttributeValue( "com.kfs.FinancialEdge.DateExported", rockContext );
+                        batch.SetAttributeValue( "com.kfs.ShelbyFinancials.DateExported", newDate );
+                        batch.SaveAttributeValue( "com.kfs.ShelbyFinancials.DateExported", rockContext );
                     }
 
                     rockContext.SaveChanges();
 
                     if ( hfAction.Value.Equals( "EXPORT", StringComparison.CurrentCultureIgnoreCase ) )
                     {
-                        feJournal.SetFinancialEdgeSessions( items, RockDateTime.Now.ToString( "yyyyMMdd_HHmmss" ) );
+                        if ( HttpContext.Current.Session["ShelbyFinancialsExcelExport"] != null )
+                        {
+                            HttpContext.Current.Session["ShelbyFinancialsExcelExport"] = null;
+                        }
+                        if ( HttpContext.Current.Session["ShelbyFinancialsFileId"] != null )
+                        {
+                            HttpContext.Current.Session["ShelbyFinancialsFileId"] = string.Empty;
+                        }
+
+                        var excel = sfJournal.GLExcelExport( items );
+
+                        Session["ShelbyFinancialsExcelExport"] = excel;
+                        Session["ShelbyFinancialsFileId"] = RockDateTime.Now.ToString( "yyyyMMdd_HHmmss" );
                     }
 
                     nbResult.Text = string.Format(
@@ -729,7 +765,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                     .Include( b => b.Transactions.Select( t => t.TransactionDetails ) );
 
                 gBatchList.SetLinqDataSource( financialBatchQry );
-                gBatchList.ObjectList = ( (List<FinancialBatch>)gBatchList.DataSource ).ToDictionary( k => k.Id.ToString(), v => v as object );
+                gBatchList.ObjectList = ( ( List<FinancialBatch> ) gBatchList.DataSource ).ToDictionary( k => k.Id.ToString(), v => v as object );
                 gBatchList.EntityTypeId = EntityTypeCache.Get<FinancialBatch>().Id;
 
                 gBatchList.DataBind();
@@ -741,7 +777,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                 {
                     a.Key.Name,
                     a.Key.Order,
-                    TotalAmount = (decimal?)a.Sum( d => d.Amount )
+                    TotalAmount = ( decimal? ) a.Sum( d => d.Amount )
                 } ).OrderBy( a => a.Order );
 
                 var summaryList = accountSummaryQry.ToList();
@@ -830,36 +866,10 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
             // Filter query by any configured attribute filters
             if ( AvailableAttributes != null && AvailableAttributes.Any() )
             {
-                var attributeValueService = new AttributeValueService( rockContext );
-                var parameterExpression = attributeValueService.ParameterExpression;
-
                 foreach ( var attribute in AvailableAttributes )
                 {
                     var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                    if (filterControl == null) continue;
-
-                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                    var filterIsDefault = attribute.FieldType.Field.IsEqualToValue( filterValues, attribute.DefaultValue );
-                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                    if (expression == null) continue;
-
-                    var attributeValues = attributeValueService
-                        .Queryable()
-                        .Where(v => v.Attribute.Id == attribute.Id);
-
-                    var filteredAttributeValues = attributeValues.Where( parameterExpression, expression, null );
-
-                    if (filterIsDefault)
-                    {
-                        qry = qry.Where(w =>
-                            !attributeValues.Any(v => v.EntityId == w.Id) ||
-                            filteredAttributeValues.Select( v => v.EntityId ).Contains( w.Id ));
-                    }
-                    else
-                    {
-                        qry = qry.Where( w =>
-                            filteredAttributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
-                    }
+                    qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, batchService, Rock.Reporting.FilterMode.SimpleFilter );
                 }
             }
 
@@ -888,11 +898,11 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                         {
                             if ( sortProperty.Direction == SortDirection.Ascending )
                             {
-                                sortedQry = qry.OrderBy( b => b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M );
+                                sortedQry = qry.OrderBy( b => b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M );
                             }
                             else
                             {
-                                sortedQry = qry.OrderByDescending( b => b.Transactions.Sum( t => (decimal?)( t.TransactionDetails.Sum( d => (decimal?)d.Amount ) ?? 0.0M ) ) ?? 0.0M );
+                                sortedQry = qry.OrderByDescending( b => b.Transactions.Sum( t => ( decimal? ) ( t.TransactionDetails.Sum( d => ( decimal? ) d.Amount ) ?? 0.0M ) ) ?? 0.0M );
                             }
 
                             break;
@@ -1024,9 +1034,12 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                 {
                     switch ( Status )
                     {
-                        case BatchStatus.Closed: return "label label-default";
-                        case BatchStatus.Open: return "label label-info";
-                        case BatchStatus.Pending: return "label label-warning";
+                        case BatchStatus.Closed:
+                            return "label label-default";
+                        case BatchStatus.Open:
+                            return "label label-info";
+                        case BatchStatus.Pending:
+                            return "label label-warning";
                     }
 
                     return string.Empty;
@@ -1107,7 +1120,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                     {
                         if ( control is IRockControl )
                         {
-                            var rockControl = (IRockControl)control;
+                            var rockControl = ( IRockControl ) control;
                             rockControl.Label = attribute.Name;
                             rockControl.Help = attribute.Description;
                             phAttributeFilters.Controls.Add( control );
