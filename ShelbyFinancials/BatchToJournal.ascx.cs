@@ -116,6 +116,8 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
             }
             else
             {
+                pnlExportedDetails.Visible = true;
+
                 litDateExported.Text = string.Format( "<div class=\"small\">Exported: {0}</div>", dateExported.ToRelativeDateString() );
                 litDateExported.Visible = true;
 
