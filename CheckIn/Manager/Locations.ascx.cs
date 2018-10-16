@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -21,16 +20,17 @@ using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
+using Group = Rock.Model.Group;
 
 namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 {
     /// <summary>
     /// Block used to view current check-in counts and locations
     /// </summary>
-    [DisplayName( "Locations KFS" )]
+    [DisplayName( "KFS > Locations" )]
     [Category( "Check-in > Manager" )]
     [Description( "Block used to view current check-in counts and locations." )]
-    [CustomRadioListField( "Navigation Mode", "Navigation and attendance counts can be grouped and displayed either by 'Group Type > Group Type (etc) > Group > Location' or by 'location > location (etc).'  Select the navigation heirarchy that is most appropriate for your organization.", "T^Group Type,L^Location,", true, "T", "", 0, "Mode" )]
+    [CustomRadioListField( "Navigation Mode", "Navigation and attendance counts can be grouped and displayed either by 'Group Type > Group Type (etc) > Group > Location' or by 'location > location (etc).'  Select the navigation hierarchy that is most appropriate for your organization.", "T^Group Type,L^Location,", true, "T", "", 0, "Mode" )]
     [GroupTypeField( "Check-in Type", "The Check-in Area to display.  This value can also be overridden through the URL query string key (e.g. when navigated to from the Check-in Type selection block).", false, "", "", 1, "GroupTypeTemplate", Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_TEMPLATE )]
     [LinkedPage( "Person Page", "The page used to display a selected person's details.", order: 2 )]
     [LinkedPage( "Area Select Page", "The page to redirect user to if area has not be configured or selected.", order: 3 )]
@@ -46,7 +46,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [CustomDropdownListField( "Print Density", "The default print density for reprint.", "6^6 dpmm (152 dpi),8^8 dpmm (203 dpi),12^12 dpmm (300 dpi),24^24 dpmm (600 dpi)", true, "8", "Print Actions", 1 )]
     [TextField( "Label Width", "The default width of label for reprint.", true, "4", "Print Actions", 2 )]
     [TextField( "Label Height", "The default height of label for reprint.", true, "2", "Print Actions", 3 )]
-
     public partial class Locations : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -68,6 +67,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         public static bool ShowCheckout { get; set; }
         public static bool ShowMove { get; set; }
         public static bool ShowPrintLabel { get; set; }
+
         #endregion
 
         #region Base Control Methods
@@ -135,12 +135,12 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
             nbWarning.Visible = false;
 
-            var campusEntityType = EntityTypeCache.Read( "Rock.Model.Campus" );
+            var campusEntityType = EntityTypeCache.Get( "Rock.Model.Campus" );
             var campusContext = RockPage.GetCurrentContext( campusEntityType ) as Campus;
             CampusCache campus = null;
             if ( campusContext != null )
             {
-                campus = CampusCache.Read( campusContext );
+                campus = CampusCache.Get( campusContext );
             }
             else
             {
@@ -149,8 +149,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
             if ( campus != null )
             {
-
-                var scheduleEntityType = EntityTypeCache.Read( "Rock.Model.Schedule" );
+                var scheduleEntityType = EntityTypeCache.Get( "Rock.Model.Schedule" );
                 var scheduleContext = RockPage.GetCurrentContext( scheduleEntityType ) as Schedule;
                 string scheduleId = string.Empty;
                 if ( scheduleContext != null )
@@ -160,8 +159,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                 if ( campus.Id.ToString() != CurrentCampusId || scheduleId != CurrentScheduleId || NavData == null )
                 {
-                    NavData = GetNavigationData( campus, scheduleId.AsIntegerOrNull() );
                     CurrentCampusId = campus.Id.ToString();
+                    NavData = GetNavigationData( campus, scheduleId.AsIntegerOrNull() );
                     CurrentScheduleId = scheduleId;
 
                     if ( Page.IsPostBack )
@@ -240,50 +239,41 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 // Get a lit of the schedule ids
                 var scheduleIds = schedules.Select( s => s.Id ).ToList();
 
-                // Get a list of the schedule id that are currently active for checkin
-                var activeScheduleIds = new List<int>();
-                foreach ( var schedule in schedules )
-                {
-                    if ( schedule.IsScheduleOrCheckInActive )
-                    {
-                        activeScheduleIds.Add( schedule.Id );
-                    }
-                }
-
                 // Get a list of all the groups that we're concerned about
                 var groupIds = NavData.Groups.Select( g => g.Id ).ToList();
 
                 // Get a list of all the people that are currently checked in
-                var today = RockDateTime.Today;
+                var minDate = RockDateTime.Today.AddDays( -1 );
                 var attendanceService = new AttendanceService( rockContext );
                 var currentAttendeeIds = attendanceService
                     .Queryable().AsNoTracking()
                     .Where( a =>
-                        a.ScheduleId.HasValue &&
-                        a.GroupId.HasValue &&
-                        a.LocationId.HasValue &&
+                        a.Occurrence.ScheduleId.HasValue &&
+                        a.Occurrence.GroupId.HasValue &&
+                        a.Occurrence.LocationId.HasValue &&
                         a.PersonAlias != null &&
                         a.DidAttend.HasValue &&
                         a.DidAttend.Value &&
-                        a.StartDateTime > today &&
+                        a.StartDateTime > minDate &&
                         !a.EndDateTime.HasValue &&
-                        activeScheduleIds.Contains( a.ScheduleId.Value ) &&
-                        groupIds.Contains( a.GroupId.Value ) )
-                    .Select( a =>
-                        a.PersonAlias.PersonId )
+                        scheduleIds.Contains( a.Occurrence.ScheduleId.Value ) &&
+                        groupIds.Contains( a.Occurrence.GroupId.Value ) )
+                    .ToList()
+                    .Where( a => a.IsCurrentlyCheckedIn )
+                    .Select( a => a.PersonAlias.PersonId )
                     .Distinct();
 
                 // Create a qry to get the last checkin date (used in next statement's join)
                 var attendanceQry = attendanceService
                     .Queryable().AsNoTracking()
                     .Where( a =>
-                        a.ScheduleId.HasValue &&
-                        a.GroupId.HasValue &&
-                        a.LocationId.HasValue &&
+                        a.Occurrence.ScheduleId.HasValue &&
+                        a.Occurrence.GroupId.HasValue &&
+                        a.Occurrence.LocationId.HasValue &&
                         a.PersonAliasId.HasValue &&
                         a.DidAttend.Value &&
-                        scheduleIds.Contains( a.ScheduleId.Value ) &&
-                        groupIds.Contains( a.GroupId.Value ) )
+                        scheduleIds.Contains( a.Occurrence.ScheduleId.Value ) &&
+                        groupIds.Contains( a.Occurrence.GroupId.Value ) )
                     .GroupBy( a => new
                     {
                         PersonId = a.PersonAlias.PersonId
@@ -316,7 +306,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     if ( GetAttributeValue( "SearchByCode" ).AsBoolean() )
                     {
                         var dayStart = RockDateTime.Today;
-                        var now = RockDateTime.Now;
+                        var now = GetCampusTime();
                         var personIds = new AttendanceService( rockContext )
                             .Queryable().Where( a =>
                                 a.StartDateTime >= dayStart &&
@@ -387,7 +377,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 rptPeople.Visible = true;
                 rptPeople.DataSource = results;
                 rptPeople.DataBind();
-
             }
 
             RegisterStartupScript();
@@ -466,7 +455,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         tgl.Visible = false;
                     }
                 }
-
             }
         }
 
@@ -492,7 +480,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         {
                             location.SoftRoomThreshold = threshold;
                             rockContext.SaveChanges();
-                            Rock.CheckIn.KioskDevice.FlushAll();
+                            Rock.CheckIn.KioskDevice.Clear();
                         }
                     }
 
@@ -579,7 +567,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 if ( campusId.HasValue )
                 {
                     int? scheduleId = CurrentScheduleId.AsIntegerOrNull();
-                    NavData = GetNavigationData( CampusCache.Read( campusId.Value ), scheduleId );
+                    NavData = GetNavigationData( CampusCache.Get( campusId.Value ), scheduleId );
                 }
                 BuildNavigationControls();
             }
@@ -640,7 +628,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         {
                             location.IsActive = tgl.Checked;
                             rockContext.SaveChanges();
-                            Rock.CheckIn.KioskDevice.FlushAll();
+                            Rock.CheckIn.KioskDevice.Clear();
                         }
                     }
                     NavData.Locations.Where( l => l.Id == id.Value ).ToList().ForEach( l => l.IsActive = tgl.Checked );
@@ -649,7 +637,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
             BuildNavigationControls();
         }
-
 
         protected void lbUpdateThreshold_Click( object sender, EventArgs e )
         {
@@ -664,7 +651,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     {
                         location.SoftRoomThreshold = nbThreshold.Text.AsIntegerOrNull();
                         rockContext.SaveChanges();
-                        Rock.CheckIn.KioskDevice.FlushAll();
+                        Rock.CheckIn.KioskDevice.Clear();
 
                         NavData.Locations.Where( l => l.Id == id.Value ).ToList().ForEach( l => l.SoftThreshold = softThreshold );
                     }
@@ -703,51 +690,41 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                         if ( itemType == "L" && itemId.HasValue )
                         {
-                            var dayStart = RockDateTime.Today;
-                            var now = RockDateTime.Now;
+                            // Only get attendance for last couple days. We'll then check each one based on timezone
+                            // to see if it's active.
+                            var minDate = RockDateTime.Today.AddDays( -1 );
 
                             using ( var rockContext = new RockContext() )
                             {
-                                var activeSchedules = new List<int>();
-                                foreach ( var schedule in new ScheduleService( rockContext )
-                                    .Queryable().AsNoTracking()
-                                    .Where( s => s.IsActive && s.CheckInStartOffsetMinutes.HasValue ) )
-                                {
-                                    if ( schedule.IsScheduleOrCheckInActive )
-                                    {
-                                        activeSchedules.Add( schedule.Id );
-                                    }
-                                }
-
                                 var attendanceService = new AttendanceService( rockContext );
                                 foreach ( var attendance in attendanceService
                                     .Queryable()
                                     .Where( a =>
-                                        a.StartDateTime > dayStart &&
-                                        a.StartDateTime < now &&
+                                        a.StartDateTime > minDate &&
                                         !a.EndDateTime.HasValue &&
-                                        a.LocationId.HasValue &&
-                                        a.LocationId.Value == itemId.Value &&
+                                        a.Occurrence.LocationId.HasValue &&
+                                        a.Occurrence.LocationId.Value == itemId.Value &&
                                         a.PersonAlias != null &&
                                         a.PersonAlias.PersonId == personId &&
                                         a.DidAttend.HasValue &&
                                         a.DidAttend.Value &&
-                                        a.ScheduleId.HasValue &&
-                                        activeSchedules.Contains( a.ScheduleId.Value ) ) )
+                                        a.Occurrence.ScheduleId.HasValue )
+                                    .ToList()
+                                    .Where( a => a.IsCurrentlyCheckedIn ) )
                                 {
                                     attendanceService.Delete( attendance );
                                 }
 
                                 rockContext.SaveChanges();
 
-                                Rock.CheckIn.KioskLocationAttendance.Flush( itemId.Value );
+                                Rock.CheckIn.KioskLocationAttendance.Remove( itemId.Value );
                             }
 
                             int? campusId = CurrentCampusId.AsIntegerOrNull();
                             if ( campusId.HasValue )
                             {
                                 int? scheduleId = CurrentScheduleId.AsIntegerOrNull();
-                                NavData = GetNavigationData( CampusCache.Read( campusId.Value ), scheduleId );
+                                NavData = GetNavigationData( CampusCache.Get( campusId.Value ), scheduleId );
                             }
                             BuildNavigationControls();
                         }
@@ -778,7 +755,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         if ( itemType == "L" && itemId.HasValue )
                         {
                             var dayStart = RockDateTime.Today;
-                            var now = RockDateTime.Now;
+                            var now = GetCampusTime();
 
                             using ( var rockContext = new RockContext() )
                             {
@@ -787,7 +764,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                     .Queryable().AsNoTracking()
                                     .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
                                 {
-                                    if ( schedule.IsScheduleOrCheckInActive )
+                                    if ( schedule.WasScheduleOrCheckInActive( now ) )
                                     {
                                         activeSchedules.Add( schedule.Id );
                                     }
@@ -800,28 +777,28 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                         a.StartDateTime > dayStart &&
                                         a.StartDateTime < now &&
                                         !a.EndDateTime.HasValue &&
-                                        a.LocationId.HasValue &&
-                                        a.LocationId.Value == itemId.Value &&
+                                        a.Occurrence.LocationId.HasValue &&
+                                        a.Occurrence.LocationId.Value == itemId.Value &&
                                         a.PersonAlias != null &&
                                         a.PersonAlias.PersonId == personId &&
                                         a.DidAttend.HasValue &&
                                         a.DidAttend.Value &&
-                                        a.ScheduleId.HasValue &&
-                                        activeSchedules.Contains( a.ScheduleId.Value ) ) )
+                                        a.Occurrence.ScheduleId.HasValue &&
+                                        activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) ) )
                                 {
                                     attendance.EndDateTime = now;
                                 }
 
                                 rockContext.SaveChanges();
 
-                                Rock.CheckIn.KioskLocationAttendance.Flush( itemId.Value );
+                                Rock.CheckIn.KioskLocationAttendance.Remove( itemId.Value );
                             }
 
                             int? campusId = CurrentCampusId.AsIntegerOrNull();
                             if ( campusId.HasValue )
                             {
                                 int? scheduleId = CurrentScheduleId.AsIntegerOrNull();
-                                NavData = GetNavigationData( CampusCache.Read( campusId.Value ), scheduleId );
+                                NavData = GetNavigationData( CampusCache.Get( campusId.Value ), scheduleId );
                             }
                             BuildNavigationControls();
                         }
@@ -902,7 +879,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                             Guid? binaryFileGuid = groupType.GetAttributeValue( attribute.Key ).AsGuidOrNull();
                                             if ( binaryFileGuid != null )
                                             {
-                                                var labelCache = KioskLabel.Read( binaryFileGuid.Value );
+                                                var labelCache = KioskLabel.Get( binaryFileGuid.Value );
                                                 labelCache.Order = attribute.Value.Order;
                                                 if ( labelCache != null )
                                                 {
@@ -949,11 +926,10 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             if ( !string.IsNullOrWhiteSpace( personIds ) && locationId > 0 && newLocationId > 0 )
             {
                 var dayStart = RockDateTime.Today;
-                var now = RockDateTime.Now;
+                var now = GetCampusTime();
 
                 using ( var rockContext = new RockContext() )
                 {
-
                     foreach ( var personId in personIds.Split( ',' ).AsIntegerList() )
                     {
                         var activeSchedules = new List<int>();
@@ -961,7 +937,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             .Queryable().AsNoTracking()
                             .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
                         {
-                            if ( schedule.IsScheduleOrCheckInActive )
+                            if ( schedule.WasScheduleOrCheckInActive( now ) )
                             {
                                 activeSchedules.Add( schedule.Id );
                             }
@@ -976,21 +952,19 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                 a.StartDateTime > dayStart &&
                                 a.StartDateTime < now &&
                                 !a.EndDateTime.HasValue &&
-                                a.LocationId.HasValue &&
-                                a.LocationId.Value == locationId &&
+                                a.Occurrence.LocationId.HasValue &&
+                                a.Occurrence.LocationId.Value == locationId &&
                                 a.PersonAlias != null &&
                                 a.PersonAlias.PersonId == personId &&
                                 a.DidAttend.HasValue &&
                                 a.DidAttend.Value &&
-                                a.ScheduleId.HasValue &&
-                                activeSchedules.Contains( a.ScheduleId.Value ) ) )
+                                a.Occurrence.ScheduleId.HasValue &&
+                                activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) ) )
                         {
                             var newAttendance = new Attendance();
-                            newAttendance.CopyPropertiesFrom( attendance );
-                            newAttendance.LocationId = newLocationId;
-                            newAttendance.StartDateTime = now;
+                            newAttendance = attendanceService.AddOrUpdate( attendance.PersonAliasId, now, attendance.Occurrence.GroupId, newLocationId, attendance.Occurrence.ScheduleId, attendance.CampusId, attendance.DeviceId, attendance.SearchTypeValueId, attendance.SearchValue, attendance.SearchResultGroupId, attendance.AttendanceCodeId );
+                            newAttendance.EndDateTime = null;
                             movedAttendance.Add( newAttendance );
-
                             attendance.EndDateTime = now;
                         }
 
@@ -998,7 +972,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                         rockContext.SaveChanges();
 
-                        Rock.CheckIn.KioskLocationAttendance.Flush( locationId );
+                        Rock.CheckIn.KioskLocationAttendance.Remove( locationId );
                     }
                 }
 
@@ -1006,7 +980,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 if ( campusId.HasValue )
                 {
                     int? scheduleId = CurrentScheduleId.AsIntegerOrNull();
-                    NavData = GetNavigationData( CampusCache.Read( campusId.Value ), scheduleId );
+                    NavData = GetNavigationData( CampusCache.Get( campusId.Value ), scheduleId );
                 }
                 BuildNavigationControls();
             }
@@ -1140,10 +1114,11 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
         #region Get Navigation Data
 
-        private NavigationData GetNavigationData( CampusCache campus, int? scheduleId ) // KFS
+        private NavigationData GetNavigationData( CampusCache campus, int? scheduleId )
         {
             using ( var rockContext = new RockContext() )
             {
+                var occurrences = new List<AttendanceOccurrence>();
                 var schedules = new List<Schedule>();
 
                 if ( scheduleId.HasValue )
@@ -1161,8 +1136,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         .ToList();
                 }
 
-                var chartTimes = GetChartTimes();
+                var chartTimes = GetChartTimes( campus );
                 var activeSchedules = new List<int>();
+                var minDate = RockDateTime.Today.AddDays( -1 );
                 foreach ( DateTime chartTime in chartTimes )
                 {
                     // Get the active schedules
@@ -1171,6 +1147,30 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         if ( schedule.WasScheduleOrCheckInActive( chartTime ) )
                         {
                             activeSchedules.Add( schedule.Id );
+
+                            var currentAttendance = new AttendanceService( rockContext )
+                                .Queryable()
+                                .Where( a =>
+                                    a.StartDateTime > minDate &&
+                                    !a.EndDateTime.HasValue &&
+                                    a.Occurrence.LocationId.HasValue &&
+                                    a.PersonAlias != null &&
+                                    a.DidAttend.HasValue &&
+                                    a.DidAttend.Value &&
+                                    a.Occurrence.ScheduleId.HasValue &&
+                                    a.Occurrence.ScheduleId == schedule.Id )
+                                .ToList();
+
+                            if ( currentAttendance.Any() )
+                            {
+                                foreach ( var attendance in currentAttendance )
+                                {
+                                    if ( attendance.Occurrence.LocationId.HasValue && !occurrences.Any( o => o.Id == attendance.OccurrenceId ) )
+                                    {
+                                        occurrences.Add( attendance.Occurrence );
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1234,7 +1234,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     NavData = new NavigationData();
 
                     // Get the group types
-                    var parentGroupType = GroupTypeCache.Read( groupTypeTemplateGuid.Value );
+                    var parentGroupType = GroupTypeCache.Get( groupTypeTemplateGuid.Value );
                     if ( parentGroupType != null )
                     {
                         foreach ( var childGroupType in parentGroupType.ChildGroupTypes )
@@ -1242,6 +1242,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             AddGroupType( null, childGroupType, chartTimes );
                         }
                     }
+
+                    lGroupTypeName.Text = parentGroupType.Name ?? "";
 
                     // Get the groups
                     var groupTypeIds = NavData.GroupTypes.Select( t => t.Id ).ToList();
@@ -1267,6 +1269,15 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             .Where( l => validLocationIdsFiltered.Contains( l.LocationId ) )
                             .Select( l => l.LocationId )
                             .ToList();
+
+                        // look for locations in use by this group currently and add to the childLocationIds
+                        foreach ( var occurrence in occurrences )
+                        {
+                            if ( occurrence.GroupId == group.Id && !childLocationIds.Contains( occurrence.LocationId.Value ) )
+                            {
+                                childLocationIds.Add( occurrence.LocationId.Value );
+                            }
+                        }
 
                         if ( childLocationIds.Any() || childGroupIds.Any() )
                         {
@@ -1337,25 +1348,26 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                     // Get the attendance counts
                     var dayStart = RockDateTime.Today;
-                    var now = RockDateTime.Now;
+                    var now = GetCampusTime();
+
                     groupIds = NavData.Groups.Select( g => g.Id ).ToList();
 
                     var attendanceQry = new AttendanceService( rockContext ).Queryable()
                         .Where( a =>
-                            a.ScheduleId.HasValue &&
-                            a.GroupId.HasValue &&
-                            a.LocationId.HasValue &&
+                            a.Occurrence.ScheduleId.HasValue &&
+                            a.Occurrence.GroupId.HasValue &&
+                            a.Occurrence.LocationId.HasValue &&
                             a.StartDateTime > dayStart &&
                             a.StartDateTime < now &&
                             !a.EndDateTime.HasValue &&
                             a.DidAttend.HasValue &&
                             a.DidAttend.Value &&
-                            groupIds.Contains( a.GroupId.Value ) &&
-                            locationIds.Contains( a.LocationId.Value ) );
+                            groupIds.Contains( a.Occurrence.GroupId.Value ) &&
+                            locationIds.Contains( a.Occurrence.LocationId.Value ) );
 
                     if ( scheduleId.HasValue )
                     {
-                        attendanceQry = attendanceQry.Where( a => a.ScheduleId == scheduleId.Value );
+                        attendanceQry = attendanceQry.Where( a => a.Occurrence.ScheduleId == scheduleId.Value );
                     }
 
                     var attendanceList = attendanceQry.ToList();
@@ -1379,12 +1391,12 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             .Where( a =>
                                 a.StartDateTime < chartTime &&
                                 a.PersonAlias != null &&
-                                activeSchedules.Contains( a.ScheduleId.Value ) )
+                                activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) )
                             .GroupBy( a => new
                             {
-                                ScheduleId = a.ScheduleId.Value,
-                                GroupId = a.GroupId.Value,
-                                LocationId = a.LocationId.Value
+                                ScheduleId = a.Occurrence.ScheduleId.Value,
+                                GroupId = a.Occurrence.GroupId.Value,
+                                LocationId = a.Occurrence.LocationId.Value
                             } )
                             .Select( g => new
                             {
@@ -1438,11 +1450,23 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             return null;
         }
 
-        private List<DateTime> GetChartTimes()
+        private DateTime GetCampusTime()
+        {
+            int? campusId = CurrentCampusId.AsIntegerOrNull();
+            if ( !campusId.HasValue )
+            {
+                return RockDateTime.Now;
+            }
+
+            var cacheCampus = CampusCache.Get( campusId.Value );
+            return cacheCampus != null ? cacheCampus.CurrentDateTime : RockDateTime.Now;
+        }
+
+        private List<DateTime> GetChartTimes( CampusCache campus )
         {
             // Get the current minute
-            var now = DateTime.Now;
-            now = new DateTime( now.Year, now.Month, now.Day, now.Hour, now.Minute, 0 );
+            var rockNow = campus != null ? campus.CurrentDateTime : RockDateTime.Now;
+            var now = new DateTime( rockNow.Year, rockNow.Month, rockNow.Day, rockNow.Hour, rockNow.Minute, 0 );
 
             // Find the end mark
             var endTime = now.AddMinutes( 1 );
@@ -1754,32 +1778,21 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         lbUpdateThreshold.Attributes["data-key"] = locationItem.Id.ToString();
 
                         var rockContext = new RockContext();
-                        var activeSchedules = new List<int>();
-                        foreach ( var schedule in new ScheduleService( rockContext )
-                            .Queryable().AsNoTracking()
-                            .Where( s => s.IsActive && s.CheckInStartOffsetMinutes.HasValue ) )
-                        {
-                            if ( schedule.IsScheduleOrCheckInActive )
-                            {
-                                activeSchedules.Add( schedule.Id );
-                            }
-                        }
 
-                        var dayStart = RockDateTime.Today;
-                        var now = RockDateTime.Now;
+                        var dayStart = RockDateTime.Today.AddDays( -1 );
                         var attendees = new AttendanceService( rockContext )
-                            .Queryable( "Group,PersonAlias.Person,Schedule,AttendanceCode" )
+                            .Queryable( "Occurrence.Group,PersonAlias.Person,Occurrence.Schedule,AttendanceCode" )
                             .AsNoTracking()
                             .Where( a =>
                                 a.StartDateTime > dayStart &&
-                                a.StartDateTime < now &&
                                 !a.EndDateTime.HasValue &&
-                                a.LocationId.HasValue &&
-                                a.LocationId == locationItem.Id &&
+                                a.Occurrence.LocationId.HasValue &&
+                                a.Occurrence.LocationId == locationItem.Id &&
                                 a.DidAttend.HasValue &&
                                 a.DidAttend.Value &&
-                                a.ScheduleId.HasValue &&
-                                activeSchedules.Contains( a.ScheduleId.Value ) )
+                                a.Occurrence.ScheduleId.HasValue )
+                            .ToList()
+                            .Where( a => a.IsCurrentlyCheckedIn )
                             .ToList();
 
                         int? scheduleId = CurrentScheduleId.AsIntegerOrNull();
@@ -1795,7 +1808,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                 .Where( a => a.PersonAlias.PersonId == personId )
                                 .ToList();
 
-                            if ( !scheduleId.HasValue || matchingAttendees.Any( a => a.ScheduleId == scheduleId.Value ) )
+                            if ( !scheduleId.HasValue || matchingAttendees.Any( a => a.Occurrence.ScheduleId == scheduleId.Value ) )
                             {
                                 people.Add( new PersonResult( matchingAttendees ) );
                             }
@@ -1850,6 +1863,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         #endregion
 
         #region Modal
+
         /// <summary>
         /// Shows the dialog.
         /// </summary>
@@ -1901,6 +1915,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             hfLocationId.Value = string.Empty;
             hfGroupIds.Value = string.Empty;
         }
+
         #endregion
 
         #endregion
@@ -2024,7 +2039,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             public List<int> ChildLocationIds { get; set; }
             public List<int> ChildGroupIds { get; set; }
 
-            public NavigationGroup( Rock.Model.Group group, List<DateTime> chartTimes )
+            public NavigationGroup( Group group, List<DateTime> chartTimes )
             {
                 Id = group.Id;
                 Name = group.Name;
@@ -2081,15 +2096,15 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                     ScheduleGroupNames = attendances
                         .Select( a => string.Format( "<br/><small>{0}{1}{2}</small>",
-                                a.Group.Name,
-                                a.Schedule != null ? " - " + a.Schedule.Name : "",
+                                a.Occurrence.Group.Name,
+                                a.Occurrence.Schedule != null ? " - " + a.Occurrence.Schedule.Name : "",
                                 a.AttendanceCode != null ? " - " + a.AttendanceCode.Code : "" ) )
                         .Distinct()
                         .ToList()
                         .AsDelimited( "\r\n" );
 
                     ScheduleGroupIds = attendances
-                        .Select( a => a.Group.Id )
+                        .Select( a => a.Occurrence.Group.Id )
                         .Distinct()
                         .ToList()
                         .AsDelimited( "," );
@@ -2111,7 +2126,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             if ( personId > 0 && groupId > 0 && labelGuid != Guid.Empty )
             {
                 var dayStart = RockDateTime.Today;
-                var now = RockDateTime.Now;
+                var now = GetCampusTime();
                 var locationId = hfLocationId.Value.AsInteger();
 
                 var schedule = new CheckInSchedule();
@@ -2128,7 +2143,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         .Queryable().AsNoTracking()
                         .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
                     {
-                        if ( activeSchedule.IsScheduleOrCheckInActive )
+                        if ( activeSchedule.WasScheduleOrCheckInActive( now ) )
                         {
                             activeSchedules.Add( activeSchedule.Id );
                         }
@@ -2156,23 +2171,23 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                         a.StartDateTime > dayStart &&
                                         a.StartDateTime < now &&
                                         !a.EndDateTime.HasValue &&
-                                        a.LocationId.HasValue &&
-                                        a.LocationId.Value == locationId &&
+                                        a.Occurrence.LocationId.HasValue &&
+                                        a.Occurrence.LocationId.Value == locationId &&
                                         a.PersonAlias != null &&
                                         a.PersonAlias.PersonId == personId &&
                                         a.DidAttend.HasValue &&
                                         a.DidAttend.Value &&
-                                        a.ScheduleId.HasValue &&
-                                        activeSchedules.Contains( a.ScheduleId.Value ) )
-                                    .OrderBy( t => t.Schedule.WeeklyTimeOfDay )
-                                    .OrderBy( t => t.Schedule.Name ) )
+                                        a.Occurrence.ScheduleId.HasValue &&
+                                        activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) )
+                                    .OrderBy( t => t.Occurrence.Schedule.WeeklyTimeOfDay )
+                                    .OrderBy( t => t.Occurrence.Schedule.Name ) )
                     {
                         rockPerson = attendance.PersonAlias.Person;
                         code = attendance.AttendanceCode.ToString();
-                        if ( !schedules.Contains( attendance.Schedule ) )
+                        if ( !schedules.Contains( attendance.Occurrence.Schedule ) )
                         {
-                            schedules.Add( attendance.Schedule );
-                            var test = attendance.Location;
+                            schedules.Add( attendance.Occurrence.Schedule );
+                            var test = attendance.Occurrence.Location;
                         }
                     }
 
@@ -2203,7 +2218,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     group.Locations.Add( location );
                     group.SelectedForSchedule.Add( schedule.Schedule.Id );
 
-                    groupType.GroupType = GroupTypeCache.Read( gr.GroupTypeId );
+                    groupType.GroupType = GroupTypeCache.Get( gr.GroupTypeId );
                     groupType.Groups.Add( group );
                     groupType.SelectedForSchedule.Add( schedule.Schedule.Id );
 
@@ -2220,7 +2235,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 var index = nbShowLabel.Text;
                 var zpl = string.Empty;
 
-                var kioskLabel = KioskLabel.Read( labelGuid );
+                var kioskLabel = KioskLabel.Get( labelGuid );
                 if ( kioskLabel != null )
                 {
                     var mergeObjects = new Dictionary<string, object>();

@@ -403,19 +403,19 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                                         case PersonFieldType.MobilePhone:
                                             {
-                                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid(), personChanges );
+                                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() );
                                                 break;
                                             }
 
                                         case PersonFieldType.HomePhone:
                                             {
-                                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid(), personChanges );
+                                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid() );
                                                 break;
                                             }
 
                                         case PersonFieldType.WorkPhone:
                                             {
-                                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid(), personChanges );
+                                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() );
                                                 break;
                                             }
 
@@ -2047,8 +2047,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
         /// <param name="fieldValue">The field value.</param>
         /// <param name="person">The person.</param>
         /// <param name="phoneTypeGuid">The phone type unique identifier.</param>
-        /// <param name="changes">The changes.</param>
-        private void SavePhone( string cleanNumber, Person person, Guid phoneTypeGuid, History.HistoryChangeList changes )
+        private void SavePhone( string cleanNumber, Person person, Guid phoneTypeGuid )
         {
             if ( !string.IsNullOrWhiteSpace( cleanNumber ) )
             {
@@ -2070,12 +2069,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                     phone.CountryCode = PhoneNumber.CleanNumber( PhoneNumber.DefaultCountryCode() );
                     phone.Number = cleanNumber;
-
-                    History.EvaluateChange(
-                        changes,
-                        string.Format( "{0} Phone", numberType.Value ),
-                        oldPhoneNumber,
-                        phone.NumberFormattedWithCountryCode );
                 }
             }
         }
