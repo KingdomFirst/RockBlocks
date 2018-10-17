@@ -22,10 +22,10 @@ using Rock.Web.UI.Controls;
 namespace RockWeb.Plugins.com_kfs.Crm
 {
     /// <summary>
-    /// Block to display dynamic report, html, xml, or transformed xml based on a SQL query or stored procedure.
+    /// Block to capture person data from currently logged in user.
     /// </summary>
     [DisplayName( "Person Attribute Forms Advanced" )]
-    [Category( "CRM" )]
+    [Category( "KFS > CRM" )]
     [Description( "Block to capture person data from currently logged in user." )]
 
     // Block Properties
