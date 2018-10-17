@@ -2180,7 +2180,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                         a.Occurrence.ScheduleId.HasValue &&
                                         activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) )
                                     .OrderBy( t => t.Occurrence.Schedule.WeeklyTimeOfDay )
-                                    .OrderBy( t => t.Occurrence.Schedule.Name ) )
+                                    .ThenBy( t => t.Occurrence.Schedule.Name ) )
                     {
                         rockPerson = attendance.PersonAlias.Person;
                         code = attendance.AttendanceCode.ToString();
@@ -2191,7 +2191,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         }
                     }
 
-                    schedule.Schedule = schedules.OrderBy( t => t.WeeklyTimeOfDay ).OrderBy( t => t.Name ).FirstOrDefault();
+                    schedule.Schedule = schedules.OrderBy( t => t.WeeklyTimeOfDay ).ThenBy( t => t.Name ).FirstOrDefault();
 
                     var loc = new LocationService( rockContext )
                         .Queryable()
