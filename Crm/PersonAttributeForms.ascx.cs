@@ -290,8 +290,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
                         var person = new PersonService( rockContext ).Get( CurrentPersonId.Value );
                         if ( person != null )
                         {
-                            var personChanges = new History.HistoryChangeList();
-                            var familyChanges = new History.HistoryChangeList();
 
                             var pagePersonFields = new List<PersonFieldType>();
                             if ( saveEachPage && CurrentPageIndex > 0 && CurrentPageIndex <= FormState.Count )
@@ -323,12 +321,10 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                                     updateBoth = true;
                                                 }
 
-                                                History.EvaluateChange( personChanges, "First Name", person.FirstName, newName );
                                                 person.FirstName = newName;
 
                                                 if ( updateBoth )
                                                 {
-                                                    History.EvaluateChange( personChanges, "Nick Name", person.NickName, newName );
                                                     person.NickName = newName;
                                                 }
 
@@ -338,7 +334,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         case PersonFieldType.LastName:
                                             {
                                                 var newLastName = fieldValue.ToString() ?? string.Empty;
-                                                History.EvaluateChange( personChanges, "Last Name", person.LastName, newLastName );
                                                 person.LastName = newLastName;
                                                 break;
                                             }
@@ -366,17 +361,12 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                                                 person.SetBirthDate( fieldValue.AsDateTime() );
 
-                                                History.EvaluateChange( personChanges, "Birth Month", birthMonth, person.BirthMonth );
-                                                History.EvaluateChange( personChanges, "Birth Day", birthDay, person.BirthDay );
-                                                History.EvaluateChange( personChanges, "Birth Year", birthYear, person.BirthYear );
-
                                                 break;
                                             }
 
                                         case PersonFieldType.Grade:
                                             {
                                                 var newGraduationYear = fieldValue.ToString().AsIntegerOrNull();
-                                                History.EvaluateChange( personChanges, "Graduation Year", person.GraduationYear, newGraduationYear );
                                                 person.GraduationYear = newGraduationYear;
 
                                                 break;
@@ -385,7 +375,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         case PersonFieldType.Gender:
                                             {
                                                 var newGender = fieldValue.ToString().ConvertToEnumOrNull<Gender>() ?? Gender.Unknown;
-                                                History.EvaluateChange( personChanges, "Gender", person.Gender, newGender );
                                                 person.Gender = newGender;
                                                 break;
                                             }
@@ -395,7 +384,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                                 if ( fieldValue != null )
                                                 {
                                                     int? newMaritalStatusId = fieldValue.ToString().AsIntegerOrNull();
-                                                    History.EvaluateChange( personChanges, "Marital Status", DefinedValueCache.GetName( person.MaritalStatusValueId ), DefinedValueCache.GetName( newMaritalStatusId ) );
                                                     person.MaritalStatusValueId = newMaritalStatusId;
                                                 }
                                                 break;
@@ -422,14 +410,12 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                         case PersonFieldType.Email:
                                             {
                                                 var newEmail = fieldValue.ToString() ?? string.Empty;
-                                                History.EvaluateChange( personChanges, "Email", person.Email, newEmail );
                                                 person.Email = newEmail;
                                                 break;
                                             }
                                         case PersonFieldType.ConnectionStatus:
                                             {
                                                 var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT ).Id;
-                                                History.EvaluateChange( personChanges, "Connection Status", DefinedValueCache.GetName( person.ConnectionStatusValueId ), DefinedValueCache.GetName( newConnectionStatusId ) );
                                                 person.ConnectionStatusValueId = newConnectionStatusId;
                                                 break;
                                             }
@@ -439,19 +425,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                             var saveChangeResult = rockContext.SaveChanges();
 
-                            if ( saveChangeResult > 0 )
-                            {
-                                if ( personChanges.Any() )
-                                {
-                                    HistoryService.SaveChanges(
-                                        rockContext,
-                                        typeof( Person ),
-                                        Rock.SystemGuid.Category.HISTORY_PERSON_DEMOGRAPHIC_CHANGES.AsGuid(),
-                                        person.Id,
-                                        personChanges );
-                                }
-                            }
-
                             // Set the family guid for any other registrants that were selected to be in the same family
                             var family = person.GetFamilies( rockContext ).FirstOrDefault();
                             if ( family != null )
@@ -460,26 +433,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                 {
                                     if ( family.CampusId != campusId )
                                     {
-                                        History.EvaluateChange(
-                                            familyChanges,
-                                            "Campus",
-                                            family.CampusId.HasValue ? CampusCache.Get( family.CampusId.Value ).Name : string.Empty,
-                                            campusId.HasValue ? CampusCache.Get( campusId.Value ).Name : string.Empty );
-
                                         family.CampusId = campusId;
-
-                                        foreach ( var fm in family.Members )
-                                        {
-                                            HistoryService.SaveChanges(
-                                                rockContext,
-                                                typeof( Person ),
-                                                Rock.SystemGuid.Category.HISTORY_PERSON_FAMILY_CHANGES.AsGuid(),
-                                                fm.PersonId,
-                                                familyChanges,
-                                                family.Name,
-                                                typeof( Group ),
-                                                family.Id );
-                                        }
                                     }
                                 }
 
