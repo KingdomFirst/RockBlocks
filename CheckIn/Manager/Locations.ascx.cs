@@ -835,7 +835,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
             if ( e.CommandName == "PrintLabel" )
             {
-                lbPrintButton.Visible = false;
                 litLabel.Text = string.Empty;
                 var commandArgs = e.CommandArgument.ToString().Split( new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries );
                 var personId = commandArgs[0];
@@ -2180,7 +2179,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                         a.Occurrence.ScheduleId.HasValue &&
                                         activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) )
                                     .OrderBy( t => t.Occurrence.Schedule.WeeklyTimeOfDay )
-                                    .OrderBy( t => t.Occurrence.Schedule.Name ) )
+                                    .ThenBy( t => t.Occurrence.Schedule.Name ) )
                     {
                         rockPerson = attendance.PersonAlias.Person;
                         code = attendance.AttendanceCode.ToString();
@@ -2191,7 +2190,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         }
                     }
 
-                    schedule.Schedule = schedules.OrderBy( t => t.WeeklyTimeOfDay ).OrderBy( t => t.Name ).FirstOrDefault();
+                    schedule.Schedule = schedules.OrderBy( t => t.WeeklyTimeOfDay ).ThenBy( t => t.Name ).FirstOrDefault();
 
                     var loc = new LocationService( rockContext )
                         .Queryable()
@@ -2302,13 +2301,16 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     byte[] bytes = memoryStream.ToArray();
                     System.IO.Directory.CreateDirectory( Server.MapPath( "~/Cache" ) );
                     System.IO.File.WriteAllBytes( Server.MapPath( labelPath ), bytes );
-                    var iframe = "<iframe src=\"{0}\" type=\"application/pdf\" width=\"698px\" height=\"350px\" id=\"pdfDocument\" ></iframe>";
-                    litLabel.Text = string.Format( iframe, ResolveRockUrlIncludeRoot( labelPath ) );
+                    var embed = "<div class=\"pdfObject\" style=\"width:100%;height:350px;\"><object toolbar=\"true\" id=\"pdfDocument\" width=\"100%\" height=\"100%\" data=\"{0}\" type=\"application/pdf\"><p>It appears you don't have a PDF plugin for this browser. <a href=\"{0}\">click here to download the PDF file.</a></p></object></div>";
+                    litLabel.Text = string.Format( embed, ResolveRockUrlIncludeRoot( labelPath ) );
                     memoryStream.Close();
 
                     responseStream.Close();
 
-                    lbPrintButton.Visible = true;
+                    if ( hfIsEdge.Value == "true" )
+                    {
+                        pnlEdgeAlert.Visible = true;
+                    }
                 }
                 catch ( WebException ex )
                 {
