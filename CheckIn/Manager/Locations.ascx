@@ -21,11 +21,11 @@
         $('#<%=hfGroupIds.ClientID %>').val('');
     }
 
-    function printLabel() {
-        var printFrame = jQuery("#pdfDocument")[0];
-        printFrame.contentWindow.focus();
-        printFrame.contentWindow.print();
-        return false;
+    function isEdge() {
+        var hiddenControl = '<%=hfIsEdge.ClientID %>';
+        if (window.navigator.userAgent.indexOf("Edge") > -1) {
+            document.getElementById(hiddenControl).value = 'true';
+        }
     }
 </script>
 <Rock:RockUpdatePanel ID="upnlContent" runat="server">
@@ -131,6 +131,7 @@
         <asp:HiddenField ID="hfPersonId" runat="server" />
         <asp:HiddenField ID="hfLocationId" runat="server" />
         <asp:HiddenField ID="hfGroupIds" runat="server" />
+        <asp:HiddenField ID="hfIsEdge" runat="server" />
 
         <Rock:ModalDialog ID="dlgMoveLocation" runat="server" Title="Select Move Location" OnSaveClick="dlgMoveLocation_SaveClick" OnCancelScript="clearActiveDialog();" ValidationGroup="MoveLocation">
             <Content>
@@ -146,9 +147,9 @@
                     <div class="form-inline">
                         <Rock:RockDropDownList ID="ddlLabelToPrint" runat="server" Label="Select Label" AppendDataBoundItems="false" ValidationGroup="PrintLabel" Required="true"></Rock:RockDropDownList>
                         <Rock:RockControlWrapper ID="rcwPrint" runat="server" Label=" " FormGroupCssClass="margin-l-md">
-                            <asp:LinkButton ID="lbViewLabel" runat="server" Text="View Label" CssClass="btn btn-default margin-l-lg" OnClick="btnViewLabel_Click" ValidationGroup="PrintLabel" />
-                            <asp:LinkButton ID="lbPrintButton" runat="server" Visible="false" CssClass="btn btn-primary margin-l-lg" OnClientClick="return printLabel();"><span class="fa fa-print" aria-hidden="true"></span> Print</asp:LinkButton>
+                            <asp:LinkButton ID="lbViewLabel" runat="server" Text="View Label" CssClass="btn btn-default margin-l-lg" OnClick="btnViewLabel_Click" OnClientClick="isEdge();" ValidationGroup="PrintLabel" />
                         </Rock:RockControlWrapper>
+                        <asp:Panel runat="server" id="pnlEdgeAlert" Visible="false" class="alert alert-warning">For Microsoft Edge, right-click the label and select Print.</asp:Panel>
                     </div>
                 </div>
                 <br />
