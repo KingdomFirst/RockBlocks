@@ -968,6 +968,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             newAttendance.EndDateTime = null;
                             movedAttendance.Add( newAttendance );
                             attendance.EndDateTime = now;
+                            Rock.CheckIn.KioskLocationAttendance.AddAttendance( newAttendance );
                         }
 
                         attendanceService.AddRange( movedAttendance );
