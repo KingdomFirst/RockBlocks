@@ -46,12 +46,14 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [CustomDropdownListField( "Print Density", "The default print density for reprint.", "6^6 dpmm (152 dpi),8^8 dpmm (203 dpi),12^12 dpmm (300 dpi),24^24 dpmm (600 dpi)", true, "8", "Print Actions", 1 )]
     [TextField( "Label Width", "The default width of label for reprint.", true, "4", "Print Actions", 2 )]
     [TextField( "Label Height", "The default height of label for reprint.", true, "2", "Print Actions", 3 )]
+    [BooleanField( "Show ZPL Print Button", "A flag indicating if the ZPL Print Button should be displayed.", false, "Print Actions", 4 )]
     public partial class Locations : Rock.Web.UI.RockBlock
     {
         #region Fields
 
         private string _configuredMode = "L";
         private bool _showAdvancedPrintOptions = false;
+        private bool _showZplPrintButton = false;
 
         #endregion
 
@@ -104,6 +106,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             ShowMove = GetAttributeValue( "ShowMove" ).AsBoolean();
             ShowPrintLabel = GetAttributeValue( "ShowPrintLabel" ).AsBoolean();
             _showAdvancedPrintOptions = GetAttributeValue( "ShowAdvancedPrintOptions" ).AsBoolean();
+            _showZplPrintButton = GetAttributeValue( "ShowZPLPrintButton" ).AsBoolean();
 
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.js" );
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.time.js" );
@@ -1612,6 +1615,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         {
             if ( ShowPrintLabel )
             {
+                ddlLabelToPrint.Required = _showZplPrintButton;
+                rcwPrint.Visible = _showZplPrintButton;
                 wpAdvancedPrintOptions.Visible = _showAdvancedPrintOptions;
 
                 ddlPrintDensity.SelectedValue = GetAttributeValue( "PrintDensity" );
@@ -1890,6 +1895,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     break;
                 case "PRINTLABEL":
                     dlgPrintLabel.Show();
+                    ViewState["LabelJSON"] = string.Empty;
                     break;
             }
         }
@@ -1906,6 +1912,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     break;
                 case "PRINTLABEL":
                     dlgPrintLabel.Hide();
+                    ViewState["LabelJSON"] = string.Empty;
                     break;
             }
 
@@ -2117,206 +2124,282 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
         protected void btnViewLabel_Click( object sender, EventArgs e )
         {
+            var labelJson = string.Empty;
             var ddlValues = ddlLabelToPrint.SelectedValue.Split( new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries );
-            var labelGuid = ddlValues[0].AsGuid();
-            var groupId = ddlValues[1].AsInteger();
-            var personId = hfPersonId.Value.AsInteger();
-
-            if ( personId > 0 && groupId > 0 && labelGuid != Guid.Empty )
+            if ( ddlValues.Any() )
             {
-                var dayStart = RockDateTime.Today;
-                var now = GetCampusTime();
-                var locationId = hfLocationId.Value.AsInteger();
+                var labelGuid = ddlValues[0].AsGuid();
+                var groupId = ddlValues[1].AsInteger();
+                var personId = hfPersonId.Value.AsInteger();
 
-                var schedule = new CheckInSchedule();
-                var location = new CheckInLocation();
-                var group = new CheckInGroup();
-                var groupType = new CheckInGroupType();
-                var person = new CheckInPerson();
-                var people = new List<CheckInPerson>();
-
-                using ( var rockContext = new RockContext() )
+                if ( personId > 0 && groupId > 0 && labelGuid != Guid.Empty )
                 {
-                    var activeSchedules = new List<int>();
-                    foreach ( var activeSchedule in new ScheduleService( rockContext )
-                        .Queryable().AsNoTracking()
-                        .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
+                    var dayStart = RockDateTime.Today;
+                    var now = GetCampusTime();
+                    var locationId = hfLocationId.Value.AsInteger();
+
+                    var schedule = new CheckInSchedule();
+                    var location = new CheckInLocation();
+                    var group = new CheckInGroup();
+                    var groupType = new CheckInGroupType();
+                    var person = new CheckInPerson();
+                    var people = new List<CheckInPerson>();
+
+                    using ( var rockContext = new RockContext() )
                     {
-                        if ( activeSchedule.WasScheduleOrCheckInActive( now ) )
+                        var rockPerson = new Person();
+                        var code = string.Empty;
+                        var schedules = new List<Schedule>();
+
+                        var attendanceService = new AttendanceService( rockContext );
+                        var firstTime = !attendanceService
+                                .Queryable()
+                                .AsNoTracking()
+                                .Where( a =>
+                                    a.PersonAlias != null &&
+                                    a.PersonAlias.PersonId == personId &&
+                                    a.StartDateTime < dayStart
+                                    )
+                                .Any();
+
+                        foreach ( var attendance in attendanceService
+                                        .Queryable()
+                                        .AsNoTracking()
+                                        .Where( a =>
+                                            a.StartDateTime > dayStart &&
+                                            a.StartDateTime < now &&
+                                            !a.EndDateTime.HasValue &&
+                                            a.Occurrence.LocationId.HasValue &&
+                                            a.Occurrence.LocationId.Value == locationId &&
+                                            a.PersonAlias != null &&
+                                            a.PersonAlias.PersonId == personId &&
+                                            a.DidAttend.HasValue &&
+                                            a.DidAttend.Value &&
+                                            a.Occurrence.ScheduleId.HasValue &&
+                                            ActiveScheduleIds.Contains( a.Occurrence.ScheduleId.Value ) )
+                                        .OrderBy( t => t.Occurrence.Schedule.WeeklyTimeOfDay )
+                                        .ThenBy( t => t.Occurrence.Schedule.Name ) )
                         {
-                            activeSchedules.Add( activeSchedule.Id );
+                            rockPerson = attendance.PersonAlias.Person;
+                            code = attendance.AttendanceCode.ToString();
+                            if ( !schedules.Contains( attendance.Occurrence.Schedule ) )
+                            {
+                                schedules.Add( attendance.Occurrence.Schedule );
+                                var test = attendance.Occurrence.Location;
+                            }
                         }
-                    }
 
-                    var rockPerson = new Person();
-                    var code = string.Empty;
-                    var schedules = new List<Schedule>();
+                        schedule.Schedule = schedules.OrderBy( t => t.WeeklyTimeOfDay ).ThenBy( t => t.Name ).FirstOrDefault();
 
-                    var attendanceService = new AttendanceService( rockContext );
-                    var firstTime = !attendanceService
+                        var loc = new LocationService( rockContext )
                             .Queryable()
                             .AsNoTracking()
-                            .Where( a =>
-                                a.PersonAlias != null &&
-                                a.PersonAlias.PersonId == personId &&
-                                a.StartDateTime < dayStart
-                                )
-                            .Any();
+                            .Where( l => l.Id == locationId )
+                            .FirstOrDefault();
 
-                    foreach ( var attendance in attendanceService
-                                    .Queryable()
-                                    .AsNoTracking()
-                                    .Where( a =>
-                                        a.StartDateTime > dayStart &&
-                                        a.StartDateTime < now &&
-                                        !a.EndDateTime.HasValue &&
-                                        a.Occurrence.LocationId.HasValue &&
-                                        a.Occurrence.LocationId.Value == locationId &&
-                                        a.PersonAlias != null &&
-                                        a.PersonAlias.PersonId == personId &&
-                                        a.DidAttend.HasValue &&
-                                        a.DidAttend.Value &&
-                                        a.Occurrence.ScheduleId.HasValue &&
-                                        activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) )
-                                    .OrderBy( t => t.Occurrence.Schedule.WeeklyTimeOfDay )
-                                    .ThenBy( t => t.Occurrence.Schedule.Name ) )
-                    {
-                        rockPerson = attendance.PersonAlias.Person;
-                        code = attendance.AttendanceCode.ToString();
-                        if ( !schedules.Contains( attendance.Occurrence.Schedule ) )
+                        foreach ( var s in schedules )
                         {
-                            schedules.Add( attendance.Occurrence.Schedule );
-                            var test = attendance.Occurrence.Location;
+                            var sch = new CheckInSchedule();
+                            sch.Schedule = s;
+                            location.Location = loc;
+                            location.Schedules.Add( sch );
+                            location.SelectedForSchedule.Add( s.Id );
+                        }
+
+                        var gr = new GroupService( rockContext )
+                            .Queryable()
+                            .AsNoTracking()
+                            .Where( g => g.Id == groupId )
+                            .FirstOrDefault();
+
+                        group.Group = gr;
+                        group.Locations.Add( location );
+                        group.SelectedForSchedule.Add( schedule.Schedule.Id );
+
+                        groupType.GroupType = GroupTypeCache.Get( gr.GroupTypeId );
+                        groupType.Groups.Add( group );
+                        groupType.SelectedForSchedule.Add( schedule.Schedule.Id );
+
+                        person.Person = rockPerson;
+                        person.SecurityCode = code;
+                        person.GroupTypes.Add( groupType );
+                        person.FirstTime = firstTime;
+                        people.Add( person );
+                    }
+
+                    var dpmm = ddlPrintDensity.SelectedValue;
+                    var width = nbLabelWidth.Text;
+                    var height = nbLabelHeight.Text;
+                    var index = nbShowLabel.Text;
+                    var zpl = string.Empty;
+
+                    var kioskLabel = KioskLabel.Get( labelGuid );
+                    if ( kioskLabel != null )
+                    {
+                        var mergeObjects = new Dictionary<string, object>();
+                        var commonMergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( null );
+                        foreach ( var keyValue in commonMergeFields )
+                        {
+                            mergeObjects.Add( keyValue.Key, keyValue.Value );
+                        }
+
+                        mergeObjects.Add( "Location", location );
+                        mergeObjects.Add( "Group", group );
+                        mergeObjects.Add( "Person", person );
+                        mergeObjects.Add( "People", people );
+                        mergeObjects.Add( "GroupType", groupType );
+
+                        var checkinLabel = new CheckInLabel( kioskLabel, mergeObjects, personId );
+                        var urlRoot = string.Format( "{0}://{1}", Request.Url.Scheme, Request.Url.Authority );
+                        checkinLabel.LabelFile = urlRoot + checkinLabel.LabelFile;
+                        checkinLabel.FileGuid = kioskLabel.Guid;
+                        checkinLabel.PrintTo = PrintTo.Kiosk;
+                        //
+                        // tbd if null for these messes anything up
+                        //
+                        //checkinLabel.PrinterDeviceId = null;
+                        //checkinLabel.PrinterAddress = null;
+                        //
+                        //
+                        var checkinLabelList = new List<CheckInLabel>();
+                        checkinLabelList.Add( checkinLabel );
+                        labelJson = checkinLabelList.ToJson();
+
+                        string printContent = kioskLabel.FileContent;
+                        foreach ( var mergeField in checkinLabel.MergeFields )
+                        {
+                            if ( !string.IsNullOrWhiteSpace( mergeField.Value ) )
+                            {
+                                printContent = Regex.Replace( printContent, string.Format( @"(?<=\^FD){0}(?=\^FS)", mergeField.Key ), ZebraFormatString( mergeField.Value ) );
+                            }
+                            else
+                            {
+                                // Remove the box preceding merge field
+                                printContent = Regex.Replace( printContent, string.Format( @"\^FO.*\^FS\s*(?=\^FT.*\^FD{0}\^FS)", mergeField.Key ), string.Empty );
+                                // Remove the merge field
+                                printContent = Regex.Replace( printContent, string.Format( @"\^FD{0}\^FS", mergeField.Key ), "^FD^FS" );
+                            }
+                        }
+                        zpl = printContent;
+                    }
+
+                    byte[] zplBytes = Encoding.UTF8.GetBytes( zpl );
+
+                    var labelaryUrl = string.Format( "http://api.labelary.com/v1/printers/{0}dpmm/labels/{1}x{2}/{3}", dpmm, width, height, ( index != string.Empty ? index + "/" : string.Empty ) );
+                    var request = ( HttpWebRequest ) WebRequest.Create( labelaryUrl );
+                    request.Method = "POST";
+                    request.Accept = "application/pdf"; // omit this line to get PNG images back
+                    request.ContentType = "application/x-www-form-urlencoded";
+                    request.ContentLength = zplBytes.Length;
+
+                    var requestStream = request.GetRequestStream();
+                    requestStream.Write( zplBytes, 0, zplBytes.Length );
+                    requestStream.Close();
+
+                    try
+                    {
+                        var response = ( HttpWebResponse ) request.GetResponse();
+                        var responseStream = response.GetResponseStream();
+                        var memoryStream = new MemoryStream();
+
+                        byte[] buffer = new byte[16 * 1024];
+                        int read;
+                        while ( ( read = responseStream.Read( buffer, 0, buffer.Length ) ) > 0 )
+                        {
+                            memoryStream.Write( buffer, 0, read );
+                        }
+
+                        var labelPath = string.Format( "~/Cache/{0}_{1}_{2}_{3}.pdf", person.Person.FullName.RemoveSpaces(), personId, locationId, labelGuid );
+
+                        byte[] bytes = memoryStream.ToArray();
+                        System.IO.Directory.CreateDirectory( Server.MapPath( "~/Cache" ) );
+                        System.IO.File.WriteAllBytes( Server.MapPath( labelPath ), bytes );
+                        var embed = "<div class=\"pdfObject\" style=\"width:100%;height:350px;\"><object toolbar=\"true\" id=\"pdfDocument\" width=\"100%\" height=\"100%\" data=\"{0}\" type=\"application/pdf\"><p>It appears you don't have a PDF plugin for this browser. <a href=\"{0}\">click here to download the PDF file.</a></p></object></div>";
+                        litLabel.Text = string.Format( embed, ResolveRockUrlIncludeRoot( labelPath ) );
+                        memoryStream.Close();
+
+                        responseStream.Close();
+
+                        if ( hfIsEdge.Value == "true" )
+                        {
+                            pnlEdgeAlert.Visible = true;
                         }
                     }
-
-                    schedule.Schedule = schedules.OrderBy( t => t.WeeklyTimeOfDay ).ThenBy( t => t.Name ).FirstOrDefault();
-
-                    var loc = new LocationService( rockContext )
-                        .Queryable()
-                        .AsNoTracking()
-                        .Where( l => l.Id == locationId )
-                        .FirstOrDefault();
-
-                    foreach ( var s in schedules )
+                    catch ( WebException ex )
                     {
-                        var sch = new CheckInSchedule();
-                        sch.Schedule = s;
-                        location.Location = loc;
-                        location.Schedules.Add( sch );
-                        location.SelectedForSchedule.Add( s.Id );
+                        Console.WriteLine( "Error: {0}", ex.Status );
                     }
-
-                    var gr = new GroupService( rockContext )
-                        .Queryable()
-                        .AsNoTracking()
-                        .Where( g => g.Id == groupId )
-                        .FirstOrDefault();
-
-                    group.Group = gr;
-                    group.Locations.Add( location );
-                    group.SelectedForSchedule.Add( schedule.Schedule.Id );
-
-                    groupType.GroupType = GroupTypeCache.Get( gr.GroupTypeId );
-                    groupType.Groups.Add( group );
-                    groupType.SelectedForSchedule.Add( schedule.Schedule.Id );
-
-                    person.Person = rockPerson;
-                    person.SecurityCode = code;
-                    person.GroupTypes.Add( groupType );
-                    person.FirstTime = firstTime;
-                    people.Add( person );
-                }
-
-                var dpmm = ddlPrintDensity.SelectedValue;
-                var width = nbLabelWidth.Text;
-                var height = nbLabelHeight.Text;
-                var index = nbShowLabel.Text;
-                var zpl = string.Empty;
-
-                var kioskLabel = KioskLabel.Get( labelGuid );
-                if ( kioskLabel != null )
-                {
-                    var mergeObjects = new Dictionary<string, object>();
-                    var commonMergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( null );
-                    foreach ( var keyValue in commonMergeFields )
-                    {
-                        mergeObjects.Add( keyValue.Key, keyValue.Value );
-                    }
-
-                    mergeObjects.Add( "Location", location );
-                    mergeObjects.Add( "Group", group );
-                    mergeObjects.Add( "Person", person );
-                    mergeObjects.Add( "People", people );
-                    mergeObjects.Add( "GroupType", groupType );
-
-                    var checkinLabel = new CheckInLabel( kioskLabel, mergeObjects, personId );
-
-                    string printContent = kioskLabel.FileContent;
-                    foreach ( var mergeField in checkinLabel.MergeFields )
-                    {
-                        if ( !string.IsNullOrWhiteSpace( mergeField.Value ) )
-                        {
-                            printContent = Regex.Replace( printContent, string.Format( @"(?<=\^FD){0}(?=\^FS)", mergeField.Key ), ZebraFormatString( mergeField.Value ) );
-                        }
-                        else
-                        {
-                            // Remove the box preceding merge field
-                            printContent = Regex.Replace( printContent, string.Format( @"\^FO.*\^FS\s*(?=\^FT.*\^FD{0}\^FS)", mergeField.Key ), string.Empty );
-                            // Remove the merge field
-                            printContent = Regex.Replace( printContent, string.Format( @"\^FD{0}\^FS", mergeField.Key ), "^FD^FS" );
-                        }
-                    }
-                    zpl = printContent;
-                }
-
-                byte[] zplBytes = Encoding.UTF8.GetBytes( zpl );
-
-                var labelaryUrl = string.Format( "http://api.labelary.com/v1/printers/{0}dpmm/labels/{1}x{2}/{3}", dpmm, width, height, ( index != string.Empty ? index + "/" : string.Empty ) );
-                var request = ( HttpWebRequest ) WebRequest.Create( labelaryUrl );
-                request.Method = "POST";
-                request.Accept = "application/pdf"; // omit this line to get PNG images back
-                request.ContentType = "application/x-www-form-urlencoded";
-                request.ContentLength = zplBytes.Length;
-
-                var requestStream = request.GetRequestStream();
-                requestStream.Write( zplBytes, 0, zplBytes.Length );
-                requestStream.Close();
-
-                try
-                {
-                    var response = ( HttpWebResponse ) request.GetResponse();
-                    var responseStream = response.GetResponseStream();
-                    var memoryStream = new MemoryStream();
-
-                    byte[] buffer = new byte[16 * 1024];
-                    int read;
-                    while ( ( read = responseStream.Read( buffer, 0, buffer.Length ) ) > 0 )
-                    {
-                        memoryStream.Write( buffer, 0, read );
-                    }
-
-                    var labelPath = string.Format( "~/Cache/{0}_{1}_{2}_{3}.pdf", person.Person.FullName.RemoveSpaces(), personId, locationId, labelGuid );
-
-                    byte[] bytes = memoryStream.ToArray();
-                    System.IO.Directory.CreateDirectory( Server.MapPath( "~/Cache" ) );
-                    System.IO.File.WriteAllBytes( Server.MapPath( labelPath ), bytes );
-                    var embed = "<div class=\"pdfObject\" style=\"width:100%;height:350px;\"><object toolbar=\"true\" id=\"pdfDocument\" width=\"100%\" height=\"100%\" data=\"{0}\" type=\"application/pdf\"><p>It appears you don't have a PDF plugin for this browser. <a href=\"{0}\">click here to download the PDF file.</a></p></object></div>";
-                    litLabel.Text = string.Format( embed, ResolveRockUrlIncludeRoot( labelPath ) );
-                    memoryStream.Close();
-
-                    responseStream.Close();
-
-                    if ( hfIsEdge.Value == "true" )
-                    {
-                        pnlEdgeAlert.Visible = true;
-                    }
-                }
-                catch ( WebException ex )
-                {
-                    Console.WriteLine( "Error: {0}", ex.Status );
                 }
             }
+            else
+            {
+                litLabel.Text = string.Empty;
+            }
+
+            ViewState["LabelJSON"] = labelJson;
+        }
+
+        protected void btnPrintLabel_Click( object sender, EventArgs e )
+        {
+            var jsonObject = ViewState["LabelJSON"] as string;
+            AddLabelScript( jsonObject );
+        }
+
+        /// <summary>
+        /// Adds the label script.
+        /// </summary>
+        /// <param name="jsonObject">The json object.</param>
+        private void AddLabelScript( string jsonObject )
+        {
+            string script = string.Format( @"
+
+        // setup deviceready event to wait for cordova
+	    if (navigator.userAgent.match(/(iPhone|iPod|iPad)/)) {{
+            document.addEventListener('deviceready', onDeviceReady, false);
+        }} else {{
+            $( document ).ready(function() {{
+                onDeviceReady();
+            }});
+        }}
+
+	    // label data
+        var labelData = {0};
+
+		function onDeviceReady() {{
+            try {{			
+                printLabels();
+            }} 
+            catch (err) {{
+                console.log('An error occurred printing labels: ' + err);
+            }}
+		}}
+		
+		function alertDismissed() {{
+		    // do something
+		}}
+		
+		function printLabels() {{
+		    ZebraPrintPlugin.printTags(
+            	JSON.stringify(labelData), 
+            	function(result) {{ 
+			        console.log('Tag printed');
+			    }},
+			    function(error) {{   
+				    // error is an array where:
+				    // error[0] is the error message
+				    // error[1] determines if a re-print is possible (in the case where the JSON is good, but the printer was not connected)
+			        console.log('An error occurred: ' + error[0]);
+                    navigator.notification.alert(
+                        'An error occurred while printing the labels.' + error[0],  // message
+                        alertDismissed,         // callback
+                        'Error',            // title
+                        'Ok'                  // buttonName
+                    );
+			    }}
+            );
+	    }}
+", jsonObject );
+            ScriptManager.RegisterStartupScript( this, this.GetType(), "addLabelScript", script, true );
         }
 
         private string ZebraFormatString( string input, bool isJson = false )
