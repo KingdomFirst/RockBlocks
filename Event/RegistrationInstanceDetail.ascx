@@ -102,7 +102,9 @@
                         <i class="fa fa-file-o"></i>
                         <asp:Literal ID="lReadOnlyTitle" runat="server" />
                     </h1>
+                    
                     <div class="panel-labels">
+                        <asp:LinkButton ID="lbAdditionalLink" runat="server" CssClass="btn btn-link" Visible="false" OnClick="lbAdditionalLink_Click" />
                         <Rock:HighlightLabel ID="hlInactive" runat="server" LabelType="Danger" Text="Inactive" />
                         <Rock:HighlightLabel ID="hlType" runat="server" LabelType="Type" />
                     </div>
@@ -287,73 +289,73 @@
 
                 <asp:UpdatePanel ID="pnlRegistrants" runat="server" Visible="false" CssClass="panel panel-block">
                     <ContentTemplate>
-                    <div class="panel-heading">
-                        <h1 class="panel-title">
-                            <i class="fa fa-users"></i>
-                            Registrants
-                        </h1>
-                    </div>
-                    <div class="panel-body">
-                        <Rock:ModalAlert ID="mdRegistrantsGridWarning" runat="server" />
-                        <div class="grid grid-panel">
-                            <Rock:GridFilter ID="fRegistrants" runat="server" OnDisplayFilterValue="fRegistrants_DisplayFilterValue" OnClearFilterClick="fRegistrants_ClearFilterClick">
-                                <Rock:SlidingDateRangePicker ID="sdrpRegistrantsRegistrantDateRange" runat="server" Label="Registration Date Range" />
-                                <Rock:RockTextBox ID="tbRegistrantFirstName" runat="server" Label="First Name" />
-                                <Rock:RockTextBox ID="tbRegistrantLastName" runat="server" Label="Last Name" />
-                                <Rock:RockDropDownList ID="ddlRegistrantsInGroup" runat="server" Label="In Group" />
-                                <Rock:RockDropDownList ID="ddlRegistrantsSignedDocument" runat="server" Label="Signed Document" />
-                                <asp:PlaceHolder ID="phRegistrantFormFieldFilters" runat="server" />
-                            </Rock:GridFilter>
-                            <Rock:Grid ID="gRegistrants" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gRegistrants_RowSelected" RowItemText="Registrant" PersonIdField="PersonId" ExportSource="ColumnOutput">
-                                <Columns>
-                                    <Rock:SelectField ItemStyle-Width="48px" />
-                                    <Rock:RockTemplateField HeaderText="Registrant" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" ExcelExportBehavior="NeverInclude" >
-                                        <ItemTemplate>
-                                            <asp:Literal ID="lRegistrant" runat="server"></asp:Literal>
-                                        </ItemTemplate>
-                                    </Rock:RockTemplateField>
-                                    <Rock:RockBoundField HeaderText="First Name" DataField="Person.NickName" ExcelExportBehavior="AlwaysInclude" Visible="false" />
-                                    <Rock:RockBoundField HeaderText="Last Name" DataField="Person.LastName" ExcelExportBehavior="AlwaysInclude" Visible="false" />
-                                    <Rock:RockTemplateFieldUnselected HeaderText="Group">
-                                        <ItemTemplate>
-                                            <asp:Literal ID="lGroup" runat="server"></asp:Literal>
-                                        </ItemTemplate>
-                                    </Rock:RockTemplateFieldUnselected>
-                                    <Rock:RockTemplateField Visible="false" HeaderText="Street 1" ExcelExportBehavior="AlwaysInclude">
-                                        <ItemTemplate>
-                                            <asp:Literal ID="lStreet1" runat="server"></asp:Literal>
-                                        </ItemTemplate>
-                                    </Rock:RockTemplateField>
-                                    <Rock:RockTemplateField Visible="false" HeaderText="Street 2" ExcelExportBehavior="AlwaysInclude">
-                                        <ItemTemplate>
-                                            <asp:Literal ID="lStreet2" runat="server"></asp:Literal>
-                                        </ItemTemplate>
-                                    </Rock:RockTemplateField>
-                                    <Rock:RockTemplateField Visible="false" HeaderText="City" ExcelExportBehavior="AlwaysInclude">
-                                        <ItemTemplate>
-                                            <asp:Literal ID="lCity" runat="server"></asp:Literal>
-                                        </ItemTemplate>
-                                    </Rock:RockTemplateField>
-                                    <Rock:RockTemplateField Visible="false" HeaderText="State" ExcelExportBehavior="AlwaysInclude">
-                                        <ItemTemplate>
-                                            <asp:Literal ID="lState" runat="server"></asp:Literal>
-                                        </ItemTemplate>
-                                    </Rock:RockTemplateField>
-                                    <Rock:RockTemplateField Visible="false" HeaderText="Postal Code" ExcelExportBehavior="AlwaysInclude">
-                                        <ItemTemplate>
-                                            <asp:Literal ID="lPostalCode" runat="server"></asp:Literal>
-                                        </ItemTemplate>
-                                    </Rock:RockTemplateField>
-                                    <Rock:RockTemplateField Visible="false" HeaderText="Country" ExcelExportBehavior="AlwaysInclude">
-                                        <ItemTemplate>
-                                            <asp:Literal ID="lCountry" runat="server"></asp:Literal>
-                                        </ItemTemplate>
-                                    </Rock:RockTemplateField>
-                                    <Rock:RockBoundField HeaderText="Created Datetime" DataField="CreatedDateTime" ExcelExportBehavior="AlwaysInclude" Visible="false" />
-                                </Columns>
-                            </Rock:Grid>
+                        <div class="panel-heading">
+                            <h1 class="panel-title">
+                                <i class="fa fa-users"></i>
+                                Registrants
+                            </h1>
                         </div>
-                    </div>
+                        <div class="panel-body">
+                            <Rock:ModalAlert ID="mdRegistrantsGridWarning" runat="server" />
+                            <div class="grid grid-panel">
+                                <Rock:GridFilter ID="fRegistrants" runat="server" OnDisplayFilterValue="fRegistrants_DisplayFilterValue" OnClearFilterClick="fRegistrants_ClearFilterClick">
+                                    <Rock:SlidingDateRangePicker ID="sdrpRegistrantsRegistrantDateRange" runat="server" Label="Registration Date Range" />
+                                    <Rock:RockTextBox ID="tbRegistrantFirstName" runat="server" Label="First Name" />
+                                    <Rock:RockTextBox ID="tbRegistrantLastName" runat="server" Label="Last Name" />
+                                    <Rock:RockDropDownList ID="ddlRegistrantsInGroup" runat="server" Label="In Group" />
+                                    <Rock:RockDropDownList ID="ddlRegistrantsSignedDocument" runat="server" Label="Signed Document" />
+                                    <asp:PlaceHolder ID="phRegistrantFormFieldFilters" runat="server" />
+                                </Rock:GridFilter>
+                                <Rock:Grid ID="gRegistrants" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gRegistrants_RowSelected" RowItemText="Registrant" PersonIdField="PersonId" ExportSource="ColumnOutput">
+                                    <Columns>
+                                        <Rock:SelectField ItemStyle-Width="48px" />
+                                        <Rock:RockTemplateField HeaderText="Registrant" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" ExcelExportBehavior="NeverInclude">
+                                            <ItemTemplate>
+                                                <asp:Literal ID="lRegistrant" runat="server"></asp:Literal>
+                                            </ItemTemplate>
+                                        </Rock:RockTemplateField>
+                                        <Rock:RockBoundField HeaderText="First Name" DataField="Person.NickName" ExcelExportBehavior="AlwaysInclude" Visible="false" />
+                                        <Rock:RockBoundField HeaderText="Last Name" DataField="Person.LastName" ExcelExportBehavior="AlwaysInclude" Visible="false" />
+                                        <Rock:RockTemplateFieldUnselected HeaderText="Group">
+                                            <ItemTemplate>
+                                                <asp:Literal ID="lGroup" runat="server"></asp:Literal>
+                                            </ItemTemplate>
+                                        </Rock:RockTemplateFieldUnselected>
+                                        <Rock:RockTemplateField Visible="false" HeaderText="Street 1" ExcelExportBehavior="AlwaysInclude">
+                                            <ItemTemplate>
+                                                <asp:Literal ID="lStreet1" runat="server"></asp:Literal>
+                                            </ItemTemplate>
+                                        </Rock:RockTemplateField>
+                                        <Rock:RockTemplateField Visible="false" HeaderText="Street 2" ExcelExportBehavior="AlwaysInclude">
+                                            <ItemTemplate>
+                                                <asp:Literal ID="lStreet2" runat="server"></asp:Literal>
+                                            </ItemTemplate>
+                                        </Rock:RockTemplateField>
+                                        <Rock:RockTemplateField Visible="false" HeaderText="City" ExcelExportBehavior="AlwaysInclude">
+                                            <ItemTemplate>
+                                                <asp:Literal ID="lCity" runat="server"></asp:Literal>
+                                            </ItemTemplate>
+                                        </Rock:RockTemplateField>
+                                        <Rock:RockTemplateField Visible="false" HeaderText="State" ExcelExportBehavior="AlwaysInclude">
+                                            <ItemTemplate>
+                                                <asp:Literal ID="lState" runat="server"></asp:Literal>
+                                            </ItemTemplate>
+                                        </Rock:RockTemplateField>
+                                        <Rock:RockTemplateField Visible="false" HeaderText="Postal Code" ExcelExportBehavior="AlwaysInclude">
+                                            <ItemTemplate>
+                                                <asp:Literal ID="lPostalCode" runat="server"></asp:Literal>
+                                            </ItemTemplate>
+                                        </Rock:RockTemplateField>
+                                        <Rock:RockTemplateField Visible="false" HeaderText="Country" ExcelExportBehavior="AlwaysInclude">
+                                            <ItemTemplate>
+                                                <asp:Literal ID="lCountry" runat="server"></asp:Literal>
+                                            </ItemTemplate>
+                                        </Rock:RockTemplateField>
+                                        <Rock:RockBoundField HeaderText="Created Datetime" DataField="CreatedDateTime" ExcelExportBehavior="AlwaysInclude" Visible="false" />
+                                    </Columns>
+                                </Rock:Grid>
+                            </div>
+                        </div>
                     </ContentTemplate>
                 </asp:UpdatePanel>
 
@@ -407,21 +409,21 @@
                         <div class="grid grid-panel">
                             <Rock:GridFilter ID="fFees" runat="server" OnDisplayFilterValue="fFees_DisplayFilterValue" OnClearFilterClick="fFees_ClearFilterCick">
                                 <Rock:SlidingDateRangePicker ID="sdrpFeeDateRange" runat="server" Label="Fee Date Range" />
-                                <Rock:RockDropDownList ID="ddlFeeName" runat="server" Label="Fee Name" AutoPostBack="true" OnSelectedIndexChanged="ddlFeeName_SelectedIndexChanged" ></Rock:RockDropDownList>
+                                <Rock:RockDropDownList ID="ddlFeeName" runat="server" Label="Fee Name" AutoPostBack="true" OnSelectedIndexChanged="ddlFeeName_SelectedIndexChanged"></Rock:RockDropDownList>
                                 <Rock:RockCheckBoxList ID="cblFeeOptions" runat="server" Label="Fee Options"></Rock:RockCheckBoxList>
                             </Rock:GridFilter>
                             <Rock:Grid ID="gFees" runat="server" DisplayType="Full" AllowSorting="true" RowItemText="Fee" ExportSource="DataSource">
                                 <Columns>
-                                        <Rock:RockBoundField HeaderText ="Registration ID" DataField="RegistrationId" ExcelExportBehavior="AlwaysInclude" Visible="false" />
-                                        <Rock:DateField HeaderText ="Registration Date" DataField="RegistrationDate" SortExpression="RegistrationDate" />
-                                        <Rock:RockBoundField HeaderText ="Registered By" DataField="RegisteredByName" SortExpression="RegisteredByName" />
-                                        <Rock:RockBoundField HeaderText ="Registrant" DataField="RegistrantName" SortExpression="RegistrantName" />
-                                        <Rock:RockBoundField HeaderText ="Registrant ID" DataField="RegistrantId" ExcelExportBehavior="AlwaysInclude" Visible="false" />
-		                                <Rock:RockBoundField HeaderText ="Fee Name" DataField="FeeName" SortExpression="FeeName" />
-                                        <Rock:RockBoundField HeaderText ="Option" DataField="Option" SortExpression="Option" />
-		                                <Rock:RockBoundField HeaderText ="Quantity" DataField="Quantity" SortExpression="Quantity" />
-                                        <Rock:CurrencyField HeaderText ="Cost" DataField="Cost" SortExpression="Cost" />
-                                        <Rock:CurrencyField HeaderText ="Fee Total" DataField="FeeTotal" SortExpression="FeeTotal" />
+                                    <Rock:RockBoundField HeaderText="Registration ID" DataField="RegistrationId" ExcelExportBehavior="AlwaysInclude" Visible="false" />
+                                    <Rock:DateField HeaderText="Registration Date" DataField="RegistrationDate" SortExpression="RegistrationDate" />
+                                    <Rock:RockBoundField HeaderText="Registered By" DataField="RegisteredByName" SortExpression="RegisteredByName" />
+                                    <Rock:RockBoundField HeaderText="Registrant" DataField="RegistrantName" SortExpression="RegistrantName" />
+                                    <Rock:RockBoundField HeaderText="Registrant ID" DataField="RegistrantId" ExcelExportBehavior="AlwaysInclude" Visible="false" />
+                                    <Rock:RockBoundField HeaderText="Fee Name" DataField="FeeName" SortExpression="FeeName" />
+                                    <Rock:RockBoundField HeaderText="Option" DataField="Option" SortExpression="Option" />
+                                    <Rock:RockBoundField HeaderText="Quantity" DataField="Quantity" SortExpression="Quantity" />
+                                    <Rock:CurrencyField HeaderText="Cost" DataField="Cost" SortExpression="Cost" />
+                                    <Rock:CurrencyField HeaderText="Fee Total" DataField="FeeTotal" SortExpression="FeeTotal" />
                                 </Columns>
                             </Rock:Grid>
                         </div>
@@ -468,28 +470,34 @@
                                     <div class="panel-body">
                                         <div class="row">
                                             <div class="col-xs-8">Total Cost</div>
-                                            <div class='col-xs-4 text-right'><asp:Literal ID="lTotalTotalCost" runat="server" /></div>
+                                            <div class='col-xs-4 text-right'>
+                                                <asp:Literal ID="lTotalTotalCost" runat="server" /></div>
                                         </div>
                                         <div class="row">
                                             <div class="col-xs-8">Discount Qualified Cost</div>
-                                            <div class='col-xs-4 text-right'><asp:Literal ID="lTotalDiscountQualifiedCost" runat="server" /></div>
+                                            <div class='col-xs-4 text-right'>
+                                                <asp:Literal ID="lTotalDiscountQualifiedCost" runat="server" /></div>
                                         </div>
                                         <div class="row">
                                             <div class="col-xs-8">Total Discount</div>
-                                            <div class='col-xs-4 text-right'><asp:Literal ID="lTotalDiscounts" runat="server" /></div>
+                                            <div class='col-xs-4 text-right'>
+                                                <asp:Literal ID="lTotalDiscounts" runat="server" /></div>
                                         </div>
                                         <div class="row">
                                             <div class="col-xs-8">Registration Cost</div>
-                                            <div class='col-xs-4 text-right'><asp:Literal ID="lTotalRegistrationCost" runat="server" /></div>
+                                            <div class='col-xs-4 text-right'>
+                                                <asp:Literal ID="lTotalRegistrationCost" runat="server" /></div>
                                         </div>
                                         <br />
                                         <div class="row">
                                             <div class="col-xs-8">Total Registrations</div>
-                                            <div class='col-xs-4 text-right'><asp:Literal ID="lTotalRegistrations" runat="server" /></div>
+                                            <div class='col-xs-4 text-right'>
+                                                <asp:Literal ID="lTotalRegistrations" runat="server" /></div>
                                         </div>
                                         <div class="row">
                                             <div class="col-xs-8">Total Registrants</div>
-                                            <div class='col-xs-4 text-right'><asp:Literal ID="lTotalRegistrants" runat="server" /></div>
+                                            <div class='col-xs-4 text-right'>
+                                                <asp:Literal ID="lTotalRegistrants" runat="server" /></div>
                                         </div>
                                     </div>
                                 </asp:Panel>
@@ -537,7 +545,7 @@
 
                 <asp:Panel ID="pnlWaitList" runat="server" Visible="false" CssClass="panel panel-block">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-clock-o"></i> Wait List</h1>
+                        <h1 class="panel-title"><i class="fa fa-clock-o"></i>Wait List</h1>
                     </div>
                     <div class="panel-body">
                         <Rock:ModalAlert ID="mdWaitListWarning" runat="server" />
@@ -576,7 +584,7 @@
                             Group Placement
                         </h1>
                     </div>
-                     <Rock:GridFilter ID="fGroupPlacements" runat="server" OnDisplayFilterValue="fGroupPlacements_DisplayFilterValue" OnClearFilterClick="fGroupPlacements_ClearFilterClick">
+                    <Rock:GridFilter ID="fGroupPlacements" runat="server" OnDisplayFilterValue="fGroupPlacements_DisplayFilterValue" OnClearFilterClick="fGroupPlacements_ClearFilterClick">
                         <Rock:SlidingDateRangePicker ID="sdrpGroupPlacementsDateRange" runat="server" Label="Registration Date Range" />
                         <Rock:RockTextBox ID="tbGroupPlacementsFirstName" runat="server" Label="First Name" />
                         <Rock:RockTextBox ID="tbGroupPlacementsLastName" runat="server" Label="Last Name" />
@@ -616,23 +624,23 @@
                     <ItemTemplate>
                         <asp:UpdatePanel ID="pnlAssociatedGroup" runat="server" Visible="false" CssClass="panel panel-block">
                             <ContentTemplate>
-                            <asp:Panel ID="pnlGroupHeading" runat="server" CssClass="panel-heading">
-                                <asp:PlaceHolder ID="phGroupHeading" runat="server"></asp:PlaceHolder>
-                                <div class="pull-right">
-                                    <span class="label label-success">Vacancy</span>
-                                    <span class="label label-warning">Full</span>
-                                    <span class="label label-danger">Overfilled</span>
-                                </div>
-                            </asp:Panel>
-                            <asp:Panel ID="pnlGroupBody" runat="server" CssClass="panel-body">
-                                <a id="lbAddSubGroup" runat="server" class="btn btn-action btn-xs">
-                                    <i class="fa fa-plus-circle"></i>
-                                </a>
-                                <br />
-                                <br />
-                                <asp:HiddenField ID="hfParentGroupId" runat="server" />
-                                <asp:PlaceHolder ID="phGroupControl" runat="server"></asp:PlaceHolder>
-                            </asp:Panel>
+                                <asp:Panel ID="pnlGroupHeading" runat="server" CssClass="panel-heading">
+                                    <asp:PlaceHolder ID="phGroupHeading" runat="server"></asp:PlaceHolder>
+                                    <div class="pull-right">
+                                        <span class="label label-success">Vacancy</span>
+                                        <span class="label label-warning">Full</span>
+                                        <span class="label label-danger">Overfilled</span>
+                                    </div>
+                                </asp:Panel>
+                                <asp:Panel ID="pnlGroupBody" runat="server" CssClass="panel-body">
+                                    <a id="lbAddSubGroup" runat="server" class="btn btn-action btn-xs">
+                                        <i class="fa fa-plus-circle"></i>
+                                    </a>
+                                    <br />
+                                    <br />
+                                    <asp:HiddenField ID="hfParentGroupId" runat="server" />
+                                    <asp:PlaceHolder ID="phGroupControl" runat="server"></asp:PlaceHolder>
+                                </asp:Panel>
                             </ContentTemplate>
                         </asp:UpdatePanel>
                     </ItemTemplate>

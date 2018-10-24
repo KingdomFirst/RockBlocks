@@ -43,6 +43,7 @@ namespace RockWeb.Plugins.com_kfs.Event
     [LinkedPage( "Wait List Process Page", "The page for moving a person from the wait list to a full registrant.", true, "", "", 8 )]
     [BooleanField( "Display Discount Codes", "Display the discount code used with a payment", false, "", 9 )]
     [LinkedPage( "Group Modal Page", "The modal page to view and edit details for a group", true, "", "", 10 )]
+    [LinkedPage( "Additional Link Page", "A link to display at the top of the page for reports or additional info.", false, "", "", 11 )]
     public partial class KFSRegistrationInstanceDetail : RockBlock, IDetailBlock
     {
         #region Fields
@@ -607,7 +608,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            ShowDetail();  // TODO not needed
+            ShowDetail();
         }
 
         /// <summary>
@@ -675,6 +676,16 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
             NavigateToParentPage( qryParams );
+        }
+
+        /// <summary>
+        /// Handles the Click event of the lbAdditionalLink control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void lbAdditionalLink_Click( object sender, EventArgs e )
+        {
+            NavigateToLinkedPage( "AdditionalLinkPage", "RegistrationId", 0, "RegistrationInstanceId", hfRegistrationInstanceId.ValueAsInt() );
         }
 
         #endregion
