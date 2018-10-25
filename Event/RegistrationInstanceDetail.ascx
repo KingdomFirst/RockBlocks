@@ -9,9 +9,6 @@
 </script>
 
 <style>
-    .panel-labels {
-        display: none;
-    }
     .resource-item {
         padding: 12px;
         border: 1px solid #d8d1c8;
