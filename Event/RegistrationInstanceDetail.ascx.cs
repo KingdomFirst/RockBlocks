@@ -8000,6 +8000,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
 
                         nbErrorMessage.Visible = true;
+                        ShowTab();
                         return;
                     }
 
