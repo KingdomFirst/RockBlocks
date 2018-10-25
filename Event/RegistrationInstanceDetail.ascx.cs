@@ -1493,52 +1493,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
         }
-
-        /// <summary>
-        /// Handles the RowCommand event of the gRegistrants control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        protected void gRegistrants_RowCommand( object sender, GridViewCommandEventArgs e )
-        {
-            if ( e.CommandName == "AssignSubGroup" )
-            {
-                var argument = e.CommandArgument.ToString().Split( '|' ).ToList();
-                var parentGroupId = argument[0].AsInteger();
-                var personId = argument[1].AsInteger();
-                if ( parentGroupId > 0 && personId > 0 )
-                {
-                    using ( var rockContext = new RockContext() )
-                    {
-                        var parentGroup = new GroupService( rockContext ).Get( parentGroupId );
-                        var person = new PersonService( rockContext ).Get( personId );
-                        if ( person != null )
-                        {
-                            RenderGroupMemberModal( rockContext, parentGroup, null, null, person );
-                        }
-                    }
-                }
-            }
-
-            if ( e.CommandName == "ChangeSubGroup" )
-            {
-                var subGroupMemberId = 0;
-                if ( int.TryParse( e.CommandArgument.ToString(), out subGroupMemberId ) && subGroupMemberId > 0 )
-                {
-                    using ( var rockContext = new RockContext() )
-                    {
-                        var groupMemberService = new GroupMemberService( rockContext );
-                        var groupMember = groupMemberService.Get( subGroupMemberId );
-                        RenderGroupMemberModal( rockContext, groupMember.Group.ParentGroup, groupMember.Group, groupMember );
-                    }
-                }
-            }
-            if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
-            {
-                BindRegistrantsFilter( new RegistrationInstanceService( new RockContext() ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
-            }
-        }
-
+        
         /// <summary>
         /// Handles the Delete event of the gRegistrants control.
         /// </summary>
@@ -4741,8 +4696,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     // create a column for quick assignments
                                     var groupAssignment = new LinkButtonField();
                                     groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                                    groupAssignment.ItemStyle.CssClass = "col-sm-1";
-                                    groupAssignment.HeaderStyle.CssClass = "col-sm-1";
+                                    groupAssignment.ItemStyle.CssClass = "col-sm-2 col-md-2";
+                                    groupAssignment.HeaderStyle.CssClass = "col-sm-2 col-md-2";
                                     groupAssignment.HeaderText = parentGroup.Name;
                                     gRegistrants.Columns.Add( groupAssignment );
 
@@ -7543,7 +7498,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 {
                                     var typeAllowsMultipleRegistrations = ResourceGroupTypes.FirstOrDefault( gt => gt.Id == parentGroup.GroupTypeId )
                                         .GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean();
-                                    var groupMemberships = currentPerson.Members.Where( m => subGroupIds.Contains( m.GroupId ) );
+                                    // this depends on the groupMemberList being bound to full GroupMember object
+                                    var groupMemberships = currentPerson.Members.Where( m => subGroupIds.Contains( m.GroupId ) ).ToList();
                                     if ( !groupMemberships.Any() )
                                     {
                                         btnGroupAssignment.CssClass = "btn btn-default btn-sd";
@@ -7587,16 +7543,19 @@ namespace RockWeb.Plugins.com_kfs.Event
                                             lGroupExport.Text = string.Join( ",", groupExportText );
                                         }
 
-                                        using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                        if ( subGroupIds.Count > groupMemberships.Count )
                                         {
-                                            btnGroupAssignment.Controls.Add( literalControl );
-                                        }
+                                            using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                            {
+                                                btnGroupAssignment.Controls.Add( literalControl );
+                                            }
 
-                                        // TODO: figure out why command args aren't passing
-                                        btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, currentPerson.Id );
-                                        btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
-                                        //btnGroupAssignment.CommandName = "AssignSubGroup";
-                                        //btnGroupAssignment.CommandArgument = string.Format( "subgroup_{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
+                                            // TODO: figure out why command args aren't passing
+                                            btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, currentPerson.Id );
+                                            btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
+                                            //btnGroupAssignment.CommandName = "AssignSubGroup";
+                                            //btnGroupAssignment.CommandArgument = string.Format( "subgroup_{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
+                                        }
                                     }
                                     else
                                     {
@@ -7790,7 +7749,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
             if ( ResourceGroups != null && ResourceGroups.Any() )
             {
-                registrationGroupGuids = ResourceGroups.Values.Where( v => !string.IsNullOrWhiteSpace( v.Value ) )
+                registrationGroupGuids = ResourceGroups.Values.Where( v => !string.IsNullOrWhiteSpace( v.Value ) && !Guid.Empty.Equals( v.Value ) )
                     .Select( v => v.Value.AsGuid() ).ToList();
                 hfRegistrationGroupGuid.Value = string.Join( ",", registrationGroupGuids );
             }
@@ -7826,10 +7785,14 @@ namespace RockWeb.Plugins.com_kfs.Event
                 ddlRegistrantList.Enabled = true;
                 if ( group == null && person != null )
                 {
-                    var availableGroups = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count ).ToList();
+                    // groups of this type not already joined and not over capacity
+                    var availableGroups = parentGroup.Groups
+                        .Where( g => !person.Members.Any( m => m.GroupId == g.Id ) ) 
+                        .Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count )
+                        .ToList();
                     ddlRegistrantList.Help = null;
                     ddlRegistrantList.Items.Add( new ListItem( person.FullNameReversed, person.Guid.ToString() ) );
-                    ddlRegistrantList.Enabled = false;
+                    //ddlRegistrantList.Enabled = false;
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0}", groupMemberTerm );
                     ddlSubGroup.Visible = true;
                     ddlSubGroup.DataSource = availableGroups;
@@ -7944,7 +7907,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 mdlAddSubGroupMember.Title = string.Format( "Edit {0} in {1}", groupMemberTerm, group.Name );
                 ddlSubGroup.Visible = true;
 
-                ddlSubGroup.DataSource = group.ParentGroup.Groups;
+                ddlSubGroup.DataSource = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count ).ToList();
                 ddlSubGroup.DataTextField = "Name";
                 ddlSubGroup.DataValueField = "Id";
                 ddlSubGroup.DataBind();
@@ -7956,7 +7919,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             groupMember.LoadAttributes();
             phAttributes.Controls.Clear();
             Helper.AddEditControls( groupMember, phAttributes, true, string.Empty, true );
-
+            
             mdlAddSubGroupMember.Show();
             upnlContent.Update();
 
@@ -8132,6 +8095,16 @@ namespace RockWeb.Plugins.com_kfs.Event
                 ShowTab();
                 mdlAddSubGroupMember.Hide();
             }
+        }
+
+        /// <summary>
+        /// Handles the Click event of the mdlSubGroupMemberCancel control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void mdlSubGroupMemberCancel_Click( object sender, EventArgs e )
+        {
+            ShowTab();
         }
 
         #endregion

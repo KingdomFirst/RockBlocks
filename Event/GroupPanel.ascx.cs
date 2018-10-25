@@ -427,7 +427,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     // Start query for group members
                     var qry = new GroupMemberService( rockContext )
-                        .Queryable( "Person,GroupRole", true ).AsNoTracking()
+                        .Queryable( "Person,GroupRole", true )
                         .Where( m =>
                             m.GroupId == _group.Id &&
                             m.Person != null );
