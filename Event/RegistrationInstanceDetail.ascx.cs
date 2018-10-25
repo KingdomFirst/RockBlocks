@@ -7785,11 +7785,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 ddlRegistrantList.Enabled = true;
                 if ( group == null && person != null )
                 {
-                    // groups of this type not already joined and not over capacity
-                    var availableGroups = parentGroup.Groups
-                        .Where( g => !person.Members.Any( m => m.GroupId == g.Id ) ) 
-                        .Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count )
-                        .ToList();
+                    var availableGroups = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count ).ToList();
                     ddlRegistrantList.Help = null;
                     ddlRegistrantList.Items.Add( new ListItem( person.FullNameReversed, person.Guid.ToString() ) );
                     //ddlRegistrantList.Enabled = false;
