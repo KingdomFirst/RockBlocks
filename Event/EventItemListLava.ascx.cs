@@ -188,7 +188,7 @@ namespace RockWeb.Blocks.Event
                         {
                             EventItemOccurrence = eventItemOccurrence,
                             EventItem = eventItemOccurrence.EventItem,
-                            EventItemAudiences = eventAudiences.Select( o => DefinedValueCache.Read( o.DefinedValueId ).Value ).ToList(),
+                            EventItemAudiences = eventAudiences.Select( o => DefinedValueCache.Get( o.DefinedValueId ).Value ).ToList(),
                             Name = eventItemOccurrence.EventItem.Name,
                             DateTime = datetime,
                             Date = datetime.ToShortDateString(),
@@ -409,7 +409,7 @@ namespace RockWeb.Blocks.Event
         {
             if ( channel != null )
             {
-                var entityTypeCache = EntityTypeCache.Read( ITEM_TYPE_NAME );
+                var entityTypeCache = EntityTypeCache.Get( ITEM_TYPE_NAME );
                 if ( entityTypeCache != null )
                 {
                     var entityType = entityTypeCache.GetEntityType();
@@ -422,7 +422,7 @@ namespace RockWeb.Blocks.Event
                             f.AttributeGuid.HasValue )
                         .ToList() )
                     {
-                        var attribute = AttributeCache.Read( entityField.AttributeGuid.Value );
+                        var attribute = AttributeCache.Get( entityField.AttributeGuid.Value );
                         if ( attribute != null &&
                             attribute.EntityTypeQualifierColumn == "ContentChannelTypeId" &&
                             attribute.EntityTypeQualifierValue.AsInteger() != channel.ContentChannelTypeId )

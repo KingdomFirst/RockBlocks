@@ -61,7 +61,7 @@ namespace RockWeb.Blocks.CheckIn
 
                 // set search type
                 var searchTypeValue = GetAttributeValue( "SearchType" ).AsGuid();
-                var definedValue = DefinedValueCache.Read( searchTypeValue );
+                var definedValue = DefinedValueCache.Get( searchTypeValue );
                 if ( searchTypeValue == Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_PHONE_NUMBER.AsGuid() )
                 {
                     pnlSearchName.Visible = false;
@@ -97,7 +97,7 @@ namespace RockWeb.Blocks.CheckIn
             {
                 // check search type
                 var searchTypeValue = GetAttributeValue( "SearchType" ).AsGuid();
-                var definedValue = DefinedValueCache.Read( searchTypeValue );
+                var definedValue = DefinedValueCache.Get( searchTypeValue );
 
                 if ( searchTypeValue == Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_PHONE_NUMBER.AsGuid() )
                 {
@@ -131,7 +131,7 @@ namespace RockWeb.Blocks.CheckIn
         {
             CurrentCheckInState.CheckIn.UserEnteredSearch = true;
             CurrentCheckInState.CheckIn.ConfirmSingleFamily = true;
-            CurrentCheckInState.CheckIn.SearchType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_NAME );
+            CurrentCheckInState.CheckIn.SearchType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_NAME );
             CurrentCheckInState.CheckIn.SearchValue = txtName.Text;
 
             ProcessSelection();
@@ -162,7 +162,7 @@ namespace RockWeb.Blocks.CheckIn
 
                 CurrentCheckInState.CheckIn.UserEnteredSearch = true;
                 CurrentCheckInState.CheckIn.ConfirmSingleFamily = true;
-                CurrentCheckInState.CheckIn.SearchType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_PHONE_NUMBER );
+                CurrentCheckInState.CheckIn.SearchType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.CHECKIN_SEARCH_TYPE_PHONE_NUMBER );
                 CurrentCheckInState.CheckIn.SearchValue = searchInput;
 
                 ProcessSelection();
@@ -195,7 +195,7 @@ namespace RockWeb.Blocks.CheckIn
 
             CurrentCheckInState.CheckIn.UserEnteredSearch = true;
             CurrentCheckInState.CheckIn.ConfirmSingleFamily = true;
-            CurrentCheckInState.CheckIn.SearchType = DefinedValueCache.Read( GetAttributeValue( "SearchType" ).AsGuid() );
+            CurrentCheckInState.CheckIn.SearchType = DefinedValueCache.Get( GetAttributeValue( "SearchType" ).AsGuid() );
             CurrentCheckInState.CheckIn.SearchValue = groupId.ToString();
 
             ProcessSelection();
