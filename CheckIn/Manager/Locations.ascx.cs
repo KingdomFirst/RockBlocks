@@ -1276,7 +1276,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         // look for locations in use by this group currently and add to the childLocationIds
                         foreach ( var occurrence in occurrences )
                         {
-                            if ( occurrence.GroupId == group.Id && !childLocationIds.Contains( occurrence.LocationId.Value ) )
+                            if ( occurrence.GroupId == group.Id && !childLocationIds.Contains( occurrence.LocationId.Value ) && validLocationids.Contains( occurrence.LocationId.Value ) )
                             {
                                 childLocationIds.Add( occurrence.LocationId.Value );
                             }
