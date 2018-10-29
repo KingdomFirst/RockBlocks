@@ -13,6 +13,7 @@ using com.kfs.EventRegistration.Advanced;
 using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
+using Rock.CheckIn;
 using Rock.Constants;
 using Rock.Data;
 using Rock.Model;
@@ -42,7 +43,8 @@ namespace RockWeb.Plugins.com_kfs.Event
     [LinkedPage( "Wait List Process Page", "The page for moving a person from the wait list to a full registrant.", true, "", "", 8 )]
     [BooleanField( "Display Discount Codes", "Display the discount code used with a payment", false, "", 9 )]
     [LinkedPage( "Group Modal Page", "The modal page to view and edit details for a group", true, "", "", 10 )]
-    public partial class KFSRegistrationInstanceDetail : Rock.Web.UI.RockBlock, IDetailBlock
+    [LinkedPage( "Additional Link Page", "A link to display at the top of the page for reports or additional info.", false, "", "", 11 )]
+    public partial class KFSRegistrationInstanceDetail : RockBlock, IDetailBlock
     {
         #region Fields
 
@@ -50,7 +52,10 @@ namespace RockWeb.Plugins.com_kfs.Event
         private List<Registration> PaymentRegistrations;
         private bool _instanceHasCost = false;
         private Dictionary<int, Location> _homeAddresses = new Dictionary<int, Location>();
+        private Dictionary<int, PhoneNumber> _mobilePhoneNumbers = new Dictionary<int, PhoneNumber>();
+        private Dictionary<int, PhoneNumber> _homePhoneNumbers = new Dictionary<int, PhoneNumber>();
         private List<int> _waitListOrder = null;
+        private bool _isExporting = false;
 
         #endregion
 
@@ -104,12 +109,11 @@ namespace RockWeb.Plugins.com_kfs.Event
         protected int? RegistrationInstanceGroupId = null;
         protected int? TemplateGroupTypeId = null;
 
-        // TODO: clean up some of these fields
-        private List<string> _expandedGroupPanels = new List<string>();
-
+        private List<string> _expandedPanels = new List<string>();
         private List<Guid> _resourceGroupTypes = new List<Guid>();
         private List<Guid> _resourceGroups = new List<Guid>();
         private List<Guid> _expandedRows = new List<Guid>();
+
         private Guid? _currentGroupTypeGuid = null;
         private Guid? _currentGroupGuid = null;
 
@@ -125,7 +129,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             base.LoadViewState( savedState );
 
-            ActiveTab = ( ViewState["ActiveTab"] as string ) ?? "";
+            ActiveTab = ( ViewState["ActiveTab"] as string ) ?? string.Empty;
             RegistrantFields = ViewState["RegistrantFields"] as List<RegistrantFormField>;
             TemplateGroupTypeId = ViewState["TemplateGroupTypeId"] as int?;
             RegistrationInstanceGroupId = ViewState["RegistrationInstanceGroupId"] as int?;
@@ -181,14 +185,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             if ( Page.IsPostBack )
             {
-                var httpForm = Request.Form;
-                foreach ( string key in httpForm.AllKeys )
-                {
-                    if ( httpForm[key] == "True" && key.Contains( "hfExpanded" ) )
-                    {
-                        _expandedGroupPanels.Add( key );
-                    }
-                }
+                _expandedPanels.AddRange( Request.Form.AllKeys.Where( k => Request.Form[k].AsBoolean() && k.Contains( "hfExpanded" ) ) );
             }
 
             fRegistrations.ApplyFilterClick += fRegistrations_ApplyFilterClick;
@@ -235,7 +232,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             gWaitList.GridRebind += gWaitList_GridRebind;
 
             // add button to the wait list action grid
-            Button btnProcessWaitlist = new Button();
+            var btnProcessWaitlist = new Button();
             btnProcessWaitlist.CssClass = "pull-left margin-l-none btn btn-sm btn-default";
             btnProcessWaitlist.Text = "Move From Wait List";
             btnProcessWaitlist.Click += btnProcessWaitlist_Click;
@@ -257,11 +254,17 @@ namespace RockWeb.Plugins.com_kfs.Event
             fGroupPlacements.ApplyFilterClick += fGroupPlacements_ApplyFilterClick;
             gGroupPlacements.DataKeyNames = new string[] { "Id" };
             gGroupPlacements.Actions.ShowAdd = false;
-            gGroupPlacements.RowDataBound += gRegistrants_RowDataBound; //intentionally using same row data bound event as the gRegistrants grid
+            gGroupPlacements.RowDataBound += gRegistrants_RowDataBound; // Intentionally using same row data bound event as the gRegistrants grid
             gGroupPlacements.GridRebind += gGroupPlacements_GridRebind;
 
-            rpResourcePanels.ItemDataBound += rpResourcePanels_ItemDataBound;
-            rpResourcePanels.ItemCommand += rpResourcePanels_ItemCommand;
+            fFees.ApplyFilterClick += fFees_ApplyFilterClick;
+            gFees.GridRebind += gFees_GridRebind;
+
+            fDiscounts.ApplyFilterClick += fDiscounts_ApplyFilterClick;
+            gDiscounts.GridRebind += gDiscounts_GridRebind;
+
+            rpTabResources.ItemDataBound += rpTabResources_ItemDataBound;
+            rpTabResources.ItemCommand += rpTabResources_ItemCommand;
 
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
             this.BlockUpdated += Block_BlockUpdated;
@@ -312,6 +315,18 @@ namespace RockWeb.Plugins.com_kfs.Event
                         case 5:
                             ActiveTab = "lbGroupPlacement";
                             break;
+
+                        case 6:
+                            ActiveTab = "lbFees";
+                            break;
+
+                        case 7:
+                            ActiveTab = "lbDiscounts";
+                            break;
+
+                        default:
+                            ActiveTab = "lb" + ResourceGroupTypes[tab.Value - 7];
+                            break;
                     }
                 }
 
@@ -357,7 +372,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     groupMember.LoadAttributes();
                     phAttributes.Controls.Clear();
-                    Rock.Attribute.Helper.AddEditControls( groupMember, phAttributes, false, mdlAddSubGroupMember.ValidationGroup );
+                    Helper.AddEditControls( groupMember, phAttributes, false, mdlAddSubGroupMember.ValidationGroup );
                 }
 
                 SetFollowingOnPostback();
@@ -465,7 +480,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             new RegistrationService( rockContext ).DeleteRange( instance.Registrations );
                             instanceService.Delete( instance );
 
-                            // delete all instance groups 
+                            // delete all instance groups
                             if ( !RegistrationInstanceGroupId.HasValue )
                             {
                                 // refresh the instance viewstate
@@ -487,7 +502,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 var instanceGroup = groupService.Get( (int)RegistrationInstanceGroupId );
                                 groupService.Delete( instanceGroup );
                                 rockContext.SaveChanges();
-                            }   
+                            }
                         } );
 
                         var qryParams = new Dictionary<string, string> { { "RegistrationTemplateId", instance.RegistrationTemplateId.ToString() } };
@@ -559,64 +574,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     return;
                 }
 
-                if ( resourceAreaPanel.Visible )
-                {
-                    var groupType = new GroupTypeService( rockContext ).Get( resourceAreaPanel.GroupTypeGuid );
-                    if ( groupType != null )
-                    {
-                        resourceAreaPanel.GetGroupTypeValues( groupType );
-
-                        if ( groupType.IsValid )
-                        {
-                            rockContext.SaveChanges();
-                            groupType.SaveAttributeValues( rockContext );
-
-                            // Make sure default role is set
-                            if ( !groupType.DefaultGroupRoleId.HasValue && groupType.Roles.Any() )
-                            {
-                                groupType.DefaultGroupRoleId = groupType.Roles.First().Id;
-                            }
-
-                            GroupTypeCache.Flush( groupType.Id );
-                            nbSaveSuccess.Visible = true;
-                        }
-                        else
-                        {
-                            ShowInvalidResults( groupType.ValidationResults );
-                        }
-                    }
-                }
-
-                if ( resourceGroupPanel.Visible )
-                {
-                    var groupService = new GroupService( rockContext );
-                    var groupLocationService = new GroupLocationService( rockContext );
-
-                    var group = groupService.Get( resourceGroupPanel.GroupGuid );
-                    if ( group != null )
-                    {
-                        group.LoadAttributes( rockContext );
-                        resourceGroupPanel.GetGroupValues( group );
-
-                        // make sure child groups can be created
-                        if ( !group.GroupType.ChildGroupTypes.Contains( group.GroupType ) )
-                        {
-                            group.GroupType.ChildGroupTypes.Add( group.GroupType );
-                        }
-
-                        if ( group.IsValid )
-                        {
-                            rockContext.SaveChanges();
-                            group.SaveAttributeValues( rockContext );
-                            nbSaveSuccess.Visible = true;
-                        }
-                        else
-                        {
-                            ShowInvalidResults( group.ValidationResults );
-                        }
-                    }
-                }
-
                 rockContext.SaveChanges();
                 BuildRegistrationGroupHierarchy( instance, rockContext );
             }
@@ -648,7 +605,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            ShowDetail();  // TODO not needed
+            ShowDetail();
         }
 
         /// <summary>
@@ -716,6 +673,16 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
             NavigateToParentPage( qryParams );
+        }
+
+        /// <summary>
+        /// Handles the Click event of the lbAdditionalLink control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void lbAdditionalLink_Click( object sender, EventArgs e )
+        {
+            NavigateToLinkedPage( "AdditionalLinkPage", "RegistrationId", 0, "RegistrationInstanceId", hfRegistrationInstanceId.ValueAsInt() );
         }
 
         #endregion
@@ -787,6 +754,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void gRegistrations_GridRebind( object sender, EventArgs e )
         {
+            gRegistrations.ExportTitleName = lReadOnlyTitle.Text + " - Registrations";
+            gRegistrations.ExportFilename = gRegistrations.ExportFilename ?? lReadOnlyTitle.Text + "Registrations";
             BindRegistrationsGrid();
         }
 
@@ -935,8 +904,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         return;
                     }
 
-                    var changes = new List<string>();
-                    changes.Add( "Deleted registration" );
+                    var changes = new History.HistoryChangeList();
+                    changes.AddChange( History.HistoryVerb.Delete, History.HistoryChangeType.Record, "Registration" );
 
                     // remove registrants from any associated groups
                     var memberService = new GroupMemberService( rockContext );
@@ -1106,16 +1075,24 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                     break;
                                 }
-                            case RegistrationPersonFieldType.MobilePhone:
-                                {
-                                    var tbPhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsPhoneFilter" ) as RockTextBox;
-                                    if ( tbPhoneFilter != null )
-                                    {
-                                        fRegistrants.SaveUserPreference( "Phone", tbPhoneFilter.Text );
-                                    }
 
-                                    break;
+                            case RegistrationPersonFieldType.MobilePhone:
+                                var tbMobilePhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsMobilePhoneFilter" ) as RockTextBox;
+                                if ( tbMobilePhoneFilter != null )
+                                {
+                                    fRegistrants.SaveUserPreference( "Cell Phone", "Cell Phone", tbMobilePhoneFilter.Text );
                                 }
+
+                                break;
+
+                            case RegistrationPersonFieldType.HomePhone:
+                                var tbRegistrantsMobilePhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsHomePhoneFilter" ) as RockTextBox;
+                                if ( tbRegistrantsMobilePhoneFilter != null )
+                                {
+                                    fRegistrants.SaveUserPreference( "Home Phone", tbRegistrantsMobilePhoneFilter.Text );
+                                }
+
+                                break;
                         }
                     }
 
@@ -1134,13 +1111,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
                     }
                 }
-            }
-
-            // save fee filters
-            var nreFeeFilter = phRegistrantFormFieldFilters.FindControl( "nreRegistrantsFeeFilter" ) as NumberRangeEditor;
-            if ( nreFeeFilter != null )
-            {
-                fRegistrants.SaveUserPreference( "Fee Amount", nreFeeFilter.DelimitedValues );
             }
 
             BindRegistrantsGrid();
@@ -1239,24 +1209,22 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     break;
                                 }
                             case RegistrationPersonFieldType.MobilePhone:
+                                var tbMobilePhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsMobilePhoneFilter" ) as RockTextBox;
+                                if ( tbMobilePhoneFilter != null )
                                 {
-                                    var tbPhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsPhoneFilter" ) as RockTextBox;
-                                    if ( tbPhoneFilter != null )
-                                    {
-                                        tbPhoneFilter.Text = string.Empty;
-                                    }
-
-                                    break;
+                                    tbMobilePhoneFilter.Text = string.Empty;
                                 }
+                                break;
+                            case RegistrationPersonFieldType.HomePhone:
+                                var tbRegistrantsHomePhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsHomePhoneFilter" ) as RockTextBox;
+                                if ( tbRegistrantsHomePhoneFilter != null )
+                                {
+                                    tbRegistrantsHomePhoneFilter.Text = string.Empty;
+                                }
+                                break;
                         }
                     }
                 }
-            }
-
-            var nreFeeFilter = phRegistrantFormFieldFilters.FindControl( "nreRegistrantsFeeFilter" ) as NumberRangeEditor;
-            if ( nreFeeFilter != null )
-            {
-                nreFeeFilter.DelimitedValues = string.Empty;
             }
 
             BindRegistrantsFilter( null );
@@ -1467,7 +1435,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 // add addresses if exporting
-                if ( _homeAddresses.Count > 0 )
+                if ( _homeAddresses.Count > 0 && _homeAddresses.ContainsKey( registrant.PersonId.Value ) )
                 {
                     var lStreet1 = e.Row.FindControl( "lStreet1" ) as Literal;
                     var lStreet2 = e.Row.FindControl( "lStreet2" ) as Literal;
@@ -1525,52 +1493,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
         }
-
-        /// <summary>
-        /// Handles the RowCommand event of the gRegistrants control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        protected void gRegistrants_RowCommand( object sender, GridViewCommandEventArgs e )
-        {
-            if ( e.CommandName == "AssignSubGroup" )
-            {
-                var argument = e.CommandArgument.ToString().Split( '|' ).ToList();
-                var parentGroupId = argument[0].AsInteger();
-                var personId = argument[1].AsInteger();
-                if ( parentGroupId > 0 && personId > 0 )
-                {
-                    using ( var rockContext = new RockContext() )
-                    {
-                        var parentGroup = new GroupService( rockContext ).Get( parentGroupId );
-                        var person = new PersonService( rockContext ).Get( personId );
-                        if ( person != null )
-                        {
-                            RenderGroupMemberModal( rockContext, parentGroup, null, null, person );
-                        }
-                    }
-                }
-            }
-
-            if ( e.CommandName == "ChangeSubGroup" )
-            {
-                var subGroupMemberId = 0;
-                if ( int.TryParse( e.CommandArgument.ToString(), out subGroupMemberId ) && subGroupMemberId > 0 )
-                {
-                    using ( var rockContext = new RockContext() )
-                    {
-                        var groupMemberService = new GroupMemberService( rockContext );
-                        var groupMember = groupMemberService.Get( subGroupMemberId );
-                        RenderGroupMemberModal( rockContext, groupMember.Group.ParentGroup, groupMember.Group, groupMember );
-                    }
-                }
-            }
-            if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
-            {
-                BindRegistrantsFilter( new RegistrationInstanceService( new RockContext() ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
-            }
-        }
-
+        
         /// <summary>
         /// Handles the Delete event of the gRegistrants control.
         /// </summary>
@@ -1725,6 +1648,155 @@ namespace RockWeb.Plugins.com_kfs.Event
                 lRegistrar.Text = registrars.AsDelimited( "<br/>" );
                 lRegistrants.Text = registrants.AsDelimited( "<br/>" );
             }
+        }
+
+        #endregion
+
+        #region Fee Tab Events
+
+        /// <summary>
+        /// fs the fees display filter value.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The e.</param>
+        protected void fFees_DisplayFilterValue( object sender, GridFilter.DisplayFilterValueArgs e )
+        {
+            switch ( e.Key )
+            {
+                case "FeeDateRange":
+                    e.Value = SlidingDateRangePicker.FormatDelimitedValues( e.Value );
+                    break;
+
+                case "FeeName":
+                    break;
+
+                case "FeeOptions":
+                    var values = new List<string>();
+                    foreach ( string value in e.Value.Split( ';' ) )
+                    {
+                        var item = cblFeeOptions.Items.FindByValue( value );
+                        if ( item != null )
+                        {
+                            values.Add( item.Text );
+                        }
+                    }
+
+                    e.Value = values.AsDelimited( ", " );
+                    break;
+
+                default:
+                    e.Value = string.Empty;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Handles the ClearFilterCick event of the fFees control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void fFees_ClearFilterCick( object sender, EventArgs e )
+        {
+            fFees.DeleteUserPreferences();
+            BindFeesFilter();
+        }
+
+        /// <summary>
+        /// Handles the ApplyFilterClick event of the fFees control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void fFees_ApplyFilterClick( object sender, EventArgs e )
+        {
+            fFees.SaveUserPreference( "FeeDateRange", "Fee Date Range", sdrpFeeDateRange.DelimitedValues );
+            fFees.SaveUserPreference( "FeeName", "Fee Name", ddlFeeName.SelectedItem.Text );
+            fFees.SaveUserPreference( "FeeOptions", "Fee Options", cblFeeOptions.SelectedValues.AsDelimited( ";" ) );
+
+            BindFeesGrid();
+        }
+
+        /// <summary>
+        /// Handles the SelectedIndexChanged event of the ddlFeeName control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void ddlFeeName_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            if ( ddlFeeName.SelectedIndex > 0 )
+            {
+                Populate_cblFeeOptions();
+                cblFeeOptions.Visible = true;
+            }
+        }
+
+        #endregion
+
+        #region Discount Tab Events
+
+        /// <summary>
+        /// fs the discounts display filter value.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The e.</param>
+        protected void fDiscounts_DisplayFilterValue( object sender, GridFilter.DisplayFilterValueArgs e )
+        {
+            switch ( e.Key )
+            {
+                case "DiscountDateRange":
+                    e.Value = SlidingDateRangePicker.FormatDelimitedValues( e.Value );
+                    break;
+
+                case "DiscountCode":
+                    // If that discount code is not in the list, don't show it anymore.
+                    if ( ddlDiscountCode.Items.FindByText( e.Value ) == null )
+                    {
+                        e.Value = string.Empty;
+                    }
+                    break;
+
+                case "DiscountCodeSearch":
+                    break;
+
+                default:
+                    e.Value = string.Empty;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Handles the ClearFilterClick event of the fDiscounts control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void fDiscounts_ClearFilterClick( object sender, EventArgs e )
+        {
+            fDiscounts.DeleteUserPreferences();
+            tbDiscountCodeSearch.Enabled = true;
+            BindDiscountsFilter();
+        }
+
+        /// <summary>
+        /// Handles the ApplyFilterClick event of the fDiscounts control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void fDiscounts_ApplyFilterClick( object sender, EventArgs e )
+        {
+            fDiscounts.SaveUserPreference( "DiscountDateRange", "Discount Date Range", sdrpDiscountDateRange.DelimitedValues );
+            fDiscounts.SaveUserPreference( "DiscountCode", "Discount Code", ddlDiscountCode.SelectedItem.Text );
+            fDiscounts.SaveUserPreference( "DiscountCodeSearch", "Discount Code Search", tbDiscountCodeSearch.Text );
+
+            BindDiscountsGrid();
+        }
+
+        /// <summary>
+        /// Handles the SelectedIndexChanged event of the ddlDiscountCode control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void ddlDiscountCode_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            tbDiscountCodeSearch.Enabled = ddlDiscountCode.SelectedIndex == 0 ? true : false;
         }
 
         #endregion
@@ -1939,8 +2011,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             var keys = gWaitList.SelectedKeys.ToList();
             if ( keys.Any() )
             {
-                var entitySet = new Rock.Model.EntitySet();
-                entitySet.EntityTypeId = Rock.Web.Cache.EntityTypeCache.Read<Rock.Model.RegistrationRegistrant>().Id;
+                var entitySet = new EntitySet();
+                entitySet.EntityTypeId = EntityTypeCache.Get<RegistrationRegistrant>().Id;
                 entitySet.ExpireDateTime = RockDateTime.Now.AddMinutes( 20 );
 
                 foreach ( var key in keys )
@@ -1965,7 +2037,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     rockContext.SaveChanges();
 
                     // redirect to the waitlist page
-                    Dictionary<string, string> queryParms = new Dictionary<string, string>();
+                    var queryParms = new Dictionary<string, string>();
                     queryParms.Add( "WaitListSetId", entitySet.Id.ToString() );
                     NavigateToLinkedPage( "WaitListProcessPage", queryParms );
                 }
@@ -2265,7 +2337,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     case "First Name":
                     case "Last Name":
                     case "Email":
-                    case "Phone":
+                    case "Mobile Phone":
+                    case "Home Phone":
                     case "Signed Document":
                         {
                             break;
@@ -2329,6 +2402,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="GridRebindEventArgs"/> instance containing the event data.</param>
         private void gWaitList_GridRebind( object sender, GridRebindEventArgs e )
         {
+            gWaitList.ExportTitleName = lReadOnlyTitle.Text + " - Registration Wait List";
+            gWaitList.ExportFilename = gWaitList.ExportFilename ?? lReadOnlyTitle.Text + " - Registration Wait List";
             BindWaitListGrid( e.IsExporting );
         }
 
@@ -2363,7 +2438,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 // Set the campus
-                var lCampus = e.Row.FindControl( "lCampus" ) as Literal;
+                var lCampus = e.Row.FindControl( "lWaitlistCampus" ) as Literal;
                 if ( lCampus != null && PersonCampusIds != null )
                 {
                     if ( registrant.PersonAlias != null )
@@ -2386,6 +2461,41 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 lCampus.Text = campusNames.AsDelimited( "<br/>" );
                             }
                         }
+                    }
+                }
+
+                var lAddress = e.Row.FindControl( "lWaitlistAddress" ) as Literal;
+                if ( lAddress != null && _homeAddresses.Count() > 0 )
+                {
+                    var location = _homeAddresses[registrant.PersonId.Value];
+                    lAddress.Text = location != null && location.FormattedAddress.IsNotNullOrWhiteSpace() ? location.FormattedAddress : string.Empty;
+                }
+
+                var mobileField = e.Row.FindControl( "lWaitlistMobile" ) as Literal;
+                if ( mobileField != null )
+                {
+                    var homePhoneNumber = _homePhoneNumbers[registrant.PersonId.Value];
+                    if ( homePhoneNumber == null || homePhoneNumber.NumberFormatted.IsNullOrWhiteSpace() )
+                    {
+                        mobileField.Text = string.Empty;
+                    }
+                    else
+                    {
+                        mobileField.Text = homePhoneNumber.IsUnlisted ? "Unlisted" : homePhoneNumber.NumberFormatted;
+                    }
+                }
+
+                var homePhoneField = e.Row.FindControl( "lWaitlistHomePhone" ) as Literal;
+                if ( homePhoneField != null )
+                {
+                    var homePhoneNumber = _homePhoneNumbers[registrant.PersonId.Value];
+                    if ( homePhoneNumber == null || homePhoneNumber.NumberFormatted.IsNullOrWhiteSpace() )
+                    {
+                        homePhoneField.Text = string.Empty;
+                    }
+                    else
+                    {
+                        homePhoneField.Text = homePhoneNumber.IsUnlisted ? "Unlisted" : homePhoneNumber.NumberFormatted;
                     }
                 }
             }
@@ -2438,7 +2548,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 var placements = new Dictionary<int, List<int>>();
 
-                var colIndex = gGroupPlacements.Columns.IndexOf( col ).ToString();
+                var colIndex = gGroupPlacements.GetColumnIndex( col ).ToString();
                 foreach ( GridViewRow row in gGroupPlacements.Rows )
                 {
                     var gp = row.FindControl( "groupPicker_" + colIndex.ToString() ) as GroupPicker;
@@ -2570,6 +2680,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     .AsNoTracking()
                     .FirstOrDefault( i => i.Id == registrationInstanceId );
 
+                // #TODO
                 // refresh local copy of instance attributes
                 if ( instance != null )
                 {
@@ -2579,7 +2690,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 RockPage.SaveSharedItem( key, instance );
             }
-            
+
             return instance;
         }
 
@@ -2702,16 +2813,31 @@ namespace RockWeb.Plugins.com_kfs.Event
                     btnSendPaymentReminder.Visible = false;
                 }
 
+                // show additional link page
+                var additionalLinkPage = GetAttributeValue( "AdditionalLinkPage" );
+                if ( !string.IsNullOrWhiteSpace( additionalLinkPage ) )
+                {
+                    var page = new PageService( rockContext ).Get( additionalLinkPage.AsGuid() );
+                    if ( page != null )
+                    {
+                        lbAdditionalLink.Visible = true;
+                        lbAdditionalLink.Text = " " + page.PageTitle;
+                        lbAdditionalLink.CssClass = page.IconCssClass + " btn btn-link";
+                    }
+                }
+
                 BuildResourcesInterface();
                 BuildCustomTabs();
 
-                // TODO: are all of these still necessary?
+                // #TODO: are all of these still necessary?
                 LoadRegistrantFormFields( instance );
                 BindRegistrationsFilter();
                 BindRegistrantsFilter( instance );
                 BindWaitListFilter( instance );
                 BindGroupPlacementsFilter( instance );
                 BindLinkagesFilter();
+                BindFeesFilter();
+                BindDiscountsFilter();
                 AddDynamicControls( true );
 
                 // do the ShowTab now since it may depend on DynamicControls and Filter Bindings
@@ -2756,6 +2882,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 lWizardInstanceName.Text = instance.Name;
             }
 
+            pdAuditDetails.Visible = false;
             pnlSubGroups.Visible = ResourceGroupTypes.Any();
 
             SetEditMode( true );
@@ -2851,7 +2978,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         private void ShowTab()
         {
             // remove custom resource panels from view
-            rpResourcePanels.Visible = false;
+            rpTabResources.Visible = false;
 
             // only show active tab
             liRegistrations.RemoveCssClass( "active" );
@@ -2862,6 +2989,12 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             liPayments.RemoveCssClass( "active" );
             pnlPayments.Visible = false;
+
+            liFees.RemoveCssClass( "active" );
+            pnlFees.Visible = false;
+
+            liDiscounts.RemoveCssClass( "active" );
+            pnlDiscounts.Visible = false;
 
             liLinkage.RemoveCssClass( "active" );
             pnlLinkages.Visible = false;
@@ -2877,53 +3010,53 @@ namespace RockWeb.Plugins.com_kfs.Event
             switch ( ActiveTab ?? string.Empty )
             {
                 case "lbRegistrants":
-                    {
-                        liRegistrants.AddCssClass( "active" );
-                        pnlRegistrants.Visible = true;
-                        BindRegistrantsGrid();
-                        break;
-                    }
+                    liRegistrants.AddCssClass( "active" );
+                    pnlRegistrants.Visible = true;
+                    BindRegistrantsGrid();
+                    break;
 
                 case "lbPayments":
-                    {
-                        liPayments.AddCssClass( "active" );
-                        pnlPayments.Visible = true;
-                        BindPaymentsGrid();
-                        break;
-                    }
+                    liPayments.AddCssClass( "active" );
+                    pnlPayments.Visible = true;
+                    BindPaymentsGrid();
+                    break;
+
+                case "lbFees":
+                    liFees.AddCssClass( "active" );
+                    pnlFees.Visible = true;
+                    BindFeesGrid();
+                    break;
+
+                case "lbDiscounts":
+                    liDiscounts.AddCssClass( "active" );
+                    pnlDiscounts.Visible = true;
+                    BindDiscountsGrid();
+                    break;
 
                 case "lbLinkage":
-                    {
-                        liLinkage.AddCssClass( "active" );
-                        pnlLinkages.Visible = true;
-                        BindLinkagesGrid();
-                        break;
-                    }
+                    liLinkage.AddCssClass( "active" );
+                    pnlLinkages.Visible = true;
+                    BindLinkagesGrid();
+                    break;
 
                 case "lbGroupPlacement":
-                    {
-                        liGroupPlacement.AddCssClass( "active" );
-                        pnlGroupPlacement.Visible = true;
-                        cbSetGroupAttributes.Checked = true;
-                        BindGroupPlacementGrid();
-                        break;
-                    }
+                    liGroupPlacement.AddCssClass( "active" );
+                    pnlGroupPlacement.Visible = true;
+                    cbSetGroupAttributes.Checked = true;
+                    BindGroupPlacementGrid();
+                    break;
 
                 case "lbWaitList":
-                    {
-                        liWaitList.AddCssClass( "active" );
-                        pnlWaitList.Visible = true;
-                        BindWaitListGrid();
-                        break;
-                    }
+                    liWaitList.AddCssClass( "active" );
+                    pnlWaitList.Visible = true;
+                    BindWaitListGrid();
+                    break;
 
                 case "lbRegistrations":
-                    {
-                        liRegistrations.AddCssClass( "active" );
-                        pnlRegistrations.Visible = true;
-                        BindRegistrationsGrid();
-                        break;
-                    }
+                    liRegistrations.AddCssClass( "active" );
+                    pnlRegistrations.Visible = true;
+                    BindRegistrationsGrid();
+                    break;
 
                 case "":
                     goto case "lbRegistrations";
@@ -2987,7 +3120,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                         var parentGroup = new GroupService( new RockContext() ).Get( resourceGroupGuid.Value.AsGuid() );
                         if ( parentGroup != null )
                         {
-                            hfActiveTabParentGroup.Value = parentGroup.Guid.ToString();
                             tabName = parentGroup.Name;
                         }
 
@@ -2998,7 +3130,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 liAssociatedGroup.RemoveCssClass( "active" );
                             }
 
-                            if ( ActiveTab == "lb" + tabName )
+                            if ( ActiveTab == "lb" + tabName || ActiveTab == "lb" + groupType.Name )
                             {
                                 liAssociatedGroup.AddCssClass( "active" );
                                 BindResourcePanels( parentGroup.GroupTypeId );
@@ -3043,6 +3175,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void BindRegistrationsFilter()
         {
+            fRegistrations.UserPreferenceKeyPrefix = string.Format( "{0}-", hfRegistrationTemplateId.Value );
             sdrpRegistrationDateRange.DelimitedValues = fRegistrations.GetUserPreference( "Registrations Date Range" );
             ddlRegistrationPaymentStatus.SetValue( fRegistrations.GetUserPreference( "Payment Status" ) );
             tbRegistrationRegisteredByFirstName.Text = fRegistrations.GetUserPreference( "Registered By First Name" );
@@ -3255,7 +3388,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             .ToList();
                     }
 
-                    var discountCodeHeader = gRegistrations.Columns.GetColumnByHeaderText( "Discount Code" );
+                    var discountCodeHeader = gRegistrations.GetColumnByHeaderText( "Discount Code" );
                     if ( discountCodeHeader != null )
                     {
                         discountCodeHeader.Visible = GetAttributeValue( "DisplayDiscountCodes" ).AsBoolean();
@@ -3273,8 +3406,10 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <summary>
         /// Binds the registrants filter.
         /// </summary>
+        /// <param name="instance">The instance.</param>
         private void BindRegistrantsFilter( RegistrationInstance instance )
         {
+            fRegistrants.UserPreferenceKeyPrefix = string.Format( "{0}-", hfRegistrationTemplateId.Value );
             sdrpRegistrantsRegistrantDateRange.DelimitedValues = fRegistrants.GetUserPreference( "Registrants Date Range" );
             tbRegistrantFirstName.Text = fRegistrants.GetUserPreference( "First Name" );
             tbRegistrantLastName.Text = fRegistrants.GetUserPreference( "Last Name" );
@@ -3287,6 +3422,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <summary>
         /// Binds the registrants grid.
         /// </summary>
+        /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         private void BindRegistrantsGrid( bool isExporting = false )
         {
             var instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
@@ -3316,7 +3452,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
 
                     // Start query for registrants
-                    var qry = new RegistrationRegistrantService( rockContext )
+                    var registrationRegistrantService = new RegistrationRegistrantService( rockContext );
+                    var qry = registrationRegistrantService
                     .Queryable( "PersonAlias.Person.PhoneNumbers.NumberTypeValue,Fees.RegistrationTemplateFee,GroupMember.Group" ).AsNoTracking()
                     .Where( r =>
                         r.Registration.RegistrationInstanceId == instanceId.Value &&
@@ -3386,15 +3523,17 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var personAttributesIds = new List<int>();
                     var groupMemberAttributesIds = new List<int>();
 
-                    if ( isExporting )
+                    var personIds = qry.Select( r => r.PersonAlias.PersonId ).Distinct().ToList();
+
+                    if ( isExporting || RegistrantFields != null && RegistrantFields.Any( f => f.PersonFieldType != null && f.PersonFieldType == RegistrationPersonFieldType.Address ) )
                     {
-                        // get list of home addresses
-                        var personIds = qry.Select( r => r.PersonAlias.PersonId ).ToList();
                         _homeAddresses = Person.GetHomeLocations( personIds );
                     }
 
                     if ( RegistrantFields != null )
                     {
+                        SetPhoneDictionary( rockContext, personIds );
+
                         // Filter by any selected
                         foreach ( var personFieldType in RegistrantFields
                             .Where( f =>
@@ -3509,22 +3648,40 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         break;
                                     }
                                 case RegistrationPersonFieldType.MobilePhone:
+                                    var tbMobilePhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsMobilePhoneFilter" ) as RockTextBox;
+                                    if ( tbMobilePhoneFilter != null && !string.IsNullOrWhiteSpace( tbMobilePhoneFilter.Text ) )
                                     {
-                                        var tbPhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsPhoneFilter" ) as RockTextBox;
-                                        if ( tbPhoneFilter != null && !string.IsNullOrWhiteSpace( tbPhoneFilter.Text ) )
+                                        string numericPhone = tbMobilePhoneFilter.Text.AsNumeric();
+                                        if ( !string.IsNullOrEmpty( numericPhone ) )
                                         {
-                                            var numericPhone = tbPhoneFilter.Text.AsNumeric();
-                                            if ( !string.IsNullOrEmpty( numericPhone ) )
-                                            {
-                                                var phoneNumberPersonIdQry = new PhoneNumberService( rockContext ).Queryable().Where( a => a.Number.Contains( numericPhone ) ).
-                                                    Select( a => a.PersonId );
+                                            var phoneNumberPersonIdQry = new PhoneNumberService( rockContext )
+                                                .Queryable()
+                                                .Where( a => a.Number.Contains( numericPhone ) )
+                                                .Select( a => a.PersonId );
 
-                                                qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
-                                            }
+                                            qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
                                         }
-
-                                        break;
                                     }
+
+                                    break;
+
+                                case RegistrationPersonFieldType.HomePhone:
+                                    var tbRegistrantsHomePhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsHomePhoneFilter" ) as RockTextBox;
+                                    if ( tbRegistrantsHomePhoneFilter != null && !string.IsNullOrWhiteSpace( tbRegistrantsHomePhoneFilter.Text ) )
+                                    {
+                                        string numericPhone = tbRegistrantsHomePhoneFilter.Text.AsNumeric();
+                                        if ( !string.IsNullOrEmpty( numericPhone ) )
+                                        {
+                                            var phoneNumberPersonIdQry = new PhoneNumberService( rockContext )
+                                                .Queryable()
+                                                .Where( a => a.Number.Contains( numericPhone ) )
+                                                .Select( a => a.PersonId );
+
+                                            qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
+                                        }
+                                    }
+
+                                    break;
                             }
                         }
 
@@ -3540,25 +3697,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // Filter query by any configured registrant attribute filters
                         if ( registrantAttributes != null && registrantAttributes.Any() )
                         {
-                            var attributeValueService = new AttributeValueService( rockContext );
-                            var parameterExpression = attributeValueService.ParameterExpression;
                             foreach ( var attribute in registrantAttributes )
                             {
                                 var filterControl = phRegistrantFormFieldFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                                if ( filterControl != null )
-                                {
-                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                    if ( expression != null )
-                                    {
-                                        var attributeValues = attributeValueService
-                                            .Queryable()
-                                            .Where( v => v.Attribute.Id == attribute.Id );
-                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
-                                        qry = qry
-                                            .Where( r => attributeValues.Select( v => v.EntityId ).Contains( r.Id ) );
-                                    }
-                                }
+                                qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, registrationRegistrantService, Rock.Reporting.FilterMode.SimpleFilter );
                             }
                         }
 
@@ -3574,26 +3716,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // Filter query by any configured person attribute filters
                         if ( personAttributes != null && personAttributes.Any() )
                         {
-                            var attributeValueService = new AttributeValueService( rockContext );
-                            var parameterExpression = attributeValueService.ParameterExpression;
+                            var personService = new PersonService( rockContext );
+                            var personQry = personService.Queryable().AsNoTracking();
                             foreach ( var attribute in personAttributes )
                             {
                                 var filterControl = phRegistrantFormFieldFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                                if ( filterControl != null )
-                                {
-                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                    if ( expression != null )
-                                    {
-                                        var attributeValues = attributeValueService
-                                            .Queryable()
-                                            .Where( v => v.Attribute.Id == attribute.Id );
-                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
-                                        qry = qry
-                                            .Where( r => attributeValues.Select( v => v.EntityId ).Contains( r.PersonAlias.PersonId ) );
-                                    }
-                                }
+                                personQry = attribute.FieldType.Field.ApplyAttributeQueryFilter( personQry, filterControl, attribute, personService, Rock.Reporting.FilterMode.SimpleFilter );
                             }
+
+                            qry = qry.Where( r => personQry.Any( p => p.Id == r.PersonAlias.PersonId ) );
                         }
 
                         // Get all the group member attributes selected to be on grid
@@ -3608,42 +3739,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // Filter query by any configured person attribute filters
                         if ( groupMemberAttributes != null && groupMemberAttributes.Any() )
                         {
-                            var attributeValueService = new AttributeValueService( rockContext );
-                            var parameterExpression = attributeValueService.ParameterExpression;
+                            var groupMemberService = new GroupMemberService( rockContext );
+                            var groupMemberQry = groupMemberService.Queryable().AsNoTracking();
                             foreach ( var attribute in groupMemberAttributes )
                             {
-                                var filterControl = phRegistrantFormFieldFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                                if ( filterControl != null )
-                                {
-                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                    if ( expression != null )
-                                    {
-                                        var attributeValues = attributeValueService
-                                            .Queryable()
-                                            .Where( v => v.Attribute.Id == attribute.Id );
-                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
-                                        qry = qry
-                                            .Where( r => r.GroupMemberId.HasValue &&
-                                            attributeValues.Select( v => v.EntityId ).Contains( r.GroupMemberId.Value ) );
-                                    }
-                                }
+                                var filterControl = phRegistrantFormFieldFilters.FindControl( "filter_" + attribute.Id );
+                                groupMemberQry = attribute.FieldType.Field.ApplyAttributeQueryFilter( groupMemberQry, filterControl, attribute, groupMemberService, Rock.Reporting.FilterMode.SimpleFilter );
                             }
-                        }
-                    }
 
-                    // Filter by fees
-                    var nreFeeFilter = phRegistrantFormFieldFilters.FindControl( "nreRegistrantsFeeFilter" ) as NumberRangeEditor;
-                    if ( nreFeeFilter != null )
-                    {
-                        if ( nreFeeFilter.LowerValue.HasValue )
-                        {
-                            qry = qry.Where( r => r.Fees.Any( f => f.Cost >= nreFeeFilter.LowerValue.Value ) );
-                        }
-
-                        if ( nreFeeFilter.UpperValue.HasValue )
-                        {
-                            qry = qry.Where( r => r.Fees.Any( f => f.Cost <= nreFeeFilter.UpperValue.Value ) );
+                            qry = qry.Where( r => groupMemberQry.Any( g => g.Id == r.GroupMemberId ) );
                         }
                     }
 
@@ -3680,7 +3784,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 .ToList();
 
                             // Get all the person ids in current page of query results
-                            var personIds = currentPageRegistrants
+                            var currentPagePersonIds = currentPageRegistrants
                                 .Select( r => r.PersonAlias.PersonId )
                                 .Distinct()
                                 .ToList();
@@ -3713,7 +3817,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     .Queryable().AsNoTracking()
                                     .Where( m =>
                                         m.Group.GroupType.Guid == familyGroupTypeGuid &&
-                                        personIds.Contains( m.PersonId ) )
+                                        currentPagePersonIds.Contains( m.PersonId ) )
                                     .GroupBy( m => m.PersonId )
                                     .Select( m => new
                                     {
@@ -3742,7 +3846,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         (
                                             (
                                                 personAttributesIds.Contains( v.AttributeId ) &&
-                                                personIds.Contains( v.EntityId.Value )
+                                                currentPagePersonIds.Contains( v.EntityId.Value )
                                             ) ||
                                             (
                                                 groupMemberAttributesIds.Contains( v.AttributeId ) &&
@@ -3816,6 +3920,32 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
 
                     gRegistrants.DataBind();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets the phone dictionary.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="personIds">The person ids.</param>
+        private void SetPhoneDictionary( RockContext rockContext, List<int> personIds )
+        {
+            if ( RegistrantFields.Any( f => f.PersonFieldType != null && f.PersonFieldType == RegistrationPersonFieldType.MobilePhone ) )
+            {
+                var phoneNumberService = new PhoneNumberService( rockContext );
+                foreach ( var personId in personIds )
+                {
+                    _mobilePhoneNumbers[personId] = phoneNumberService.GetNumberByPersonIdAndType( personId, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
+                }
+            }
+
+            if ( RegistrantFields.Any( f => f.PersonFieldType != null && f.PersonFieldType == RegistrationPersonFieldType.HomePhone ) )
+            {
+                var phoneNumberService = new PhoneNumberService( rockContext );
+                foreach ( var personId in personIds )
+                {
+                    _homePhoneNumbers[personId] = phoneNumberService.GetNumberByPersonIdAndType( personId, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
                 }
             }
         }
@@ -3927,6 +4057,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             ClearGrid( gRegistrants );
             ClearGrid( gWaitList );
 
+            var dataFieldExpression = string.Empty;
+
             if ( RegistrantFields != null )
             {
                 foreach ( var field in RegistrantFields )
@@ -4025,7 +4157,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     tbWaitlistEmailFilter.Text = fRegistrants.GetUserPreference( "WL-Email" );
                                     phWaitListFormFieldFilters.Controls.Add( tbWaitlistEmailFilter );
 
-                                    string dataFieldExpression = "PersonAlias.Person.Email";
+                                    dataFieldExpression = "PersonAlias.Person.Email";
                                     var emailField = new RockBoundField();
                                     emailField.DataField = dataFieldExpression;
                                     emailField.HeaderText = "Email";
@@ -4077,22 +4209,25 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     drpWaitlistBirthdateFilter.DelimitedValues = fRegistrants.GetUserPreference( "WL-Birthdate Range" );
                                     phWaitListFormFieldFilters.Controls.Add( drpWaitlistBirthdateFilter );
 
-                                    string dataFieldExpression = "PersonAlias.Person.BirthDate";
+                                    dataFieldExpression = "PersonAlias.Person.BirthDate";
                                     var birthdateField = new DateField();
                                     birthdateField.DataField = dataFieldExpression;
                                     birthdateField.HeaderText = "Birthdate";
+                                    birthdateField.IncludeAge = true;
                                     birthdateField.SortExpression = dataFieldExpression;
                                     gRegistrants.Columns.Add( birthdateField );
 
                                     var birthdateField2 = new DateField();
                                     birthdateField2.DataField = dataFieldExpression;
                                     birthdateField2.HeaderText = "Birthdate";
+                                    birthdateField2.IncludeAge = true;
                                     birthdateField2.SortExpression = dataFieldExpression;
                                     gGroupPlacements.Columns.Add( birthdateField2 );
 
                                     var birthdateField3 = new DateField();
                                     birthdateField3.DataField = dataFieldExpression;
                                     birthdateField3.HeaderText = "Birthdate";
+                                    birthdateField3.IncludeAge = true;
                                     birthdateField3.SortExpression = dataFieldExpression;
                                     gWaitList.Columns.Add( birthdateField3 );
 
@@ -4153,7 +4288,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     phWaitListFormFieldFilters.Controls.Add( gpWaitlistGradeFilter );
 
                                     // 2017-01-13 as discussed, changing this to Grade but keeping the sort based on grad year
-                                    string dataFieldExpression = "PersonAlias.Person.GradeFormatted";
+                                    dataFieldExpression = "PersonAlias.Person.GradeFormatted";
                                     var gradeField = new RockBoundField();
                                     gradeField.DataField = dataFieldExpression;
                                     gradeField.HeaderText = "Grade";
@@ -4206,7 +4341,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     ddlWaitlistGenderFilter.SetValue( fWaitList.GetUserPreference( "WL-Gender" ) );
                                     phWaitListFormFieldFilters.Controls.Add( ddlWaitlistGenderFilter );
 
-                                    string dataFieldExpression = "PersonAlias.Person.Gender";
+                                    dataFieldExpression = "PersonAlias.Person.Gender";
                                     var genderField = new EnumField();
                                     genderField.DataField = dataFieldExpression;
                                     genderField.HeaderText = "Gender";
@@ -4260,7 +4395,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     ddlWaitlistMaritalStatusFilter.SetValue( fRegistrants.GetUserPreference( "WL-Marital Status" ) );
                                     phWaitListFormFieldFilters.Controls.Add( ddlWaitlistMaritalStatusFilter );
 
-                                    string dataFieldExpression = "PersonAlias.Person.MaritalStatusValue.Value";
+                                    dataFieldExpression = "PersonAlias.Person.MaritalStatusValue.Value";
                                     var maritalStatusField = new RockBoundField();
                                     maritalStatusField.DataField = dataFieldExpression;
                                     maritalStatusField.HeaderText = "MaritalStatus";
@@ -4283,52 +4418,121 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 }
 
                             case RegistrationPersonFieldType.MobilePhone:
+                                // Per discussion this should not have "Phone" appended to the end if it's missing.
+                                var mobileLabel = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE ).Value;
+
+                                var tbRegistrantsMobilePhoneFilter = new RockTextBox();
+                                tbRegistrantsMobilePhoneFilter.ID = "tbRegistrantsMobilePhoneFilter";
+                                tbRegistrantsMobilePhoneFilter.Label = mobileLabel;
+
+                                if ( setValues )
                                 {
-                                    var tbRegistrantsPhoneFilter = new RockTextBox();
-                                    tbRegistrantsPhoneFilter.ID = "tbRegistrantsPhoneFilter";
-                                    tbRegistrantsPhoneFilter.Label = "Phone";
-
-                                    if ( setValues )
-                                    {
-                                        tbRegistrantsPhoneFilter.Text = fRegistrants.GetUserPreference( "Phone" );
-                                    }
-
-                                    phRegistrantFormFieldFilters.Controls.Add( tbRegistrantsPhoneFilter );
-
-                                    var tbGroupPlacementsPhoneFilter = new RockTextBox();
-                                    tbGroupPlacementsPhoneFilter.ID = "tbGroupPlacementsPhoneFilter";
-                                    tbGroupPlacementsPhoneFilter.Label = "Phone";
-
-                                    if ( setValues )
-                                    {
-                                        tbGroupPlacementsPhoneFilter.Text = fGroupPlacements.GetUserPreference( "GroupPlacements-Phone" );
-                                    }
-
-                                    phGroupPlacementsFormFieldFilters.Controls.Add( tbGroupPlacementsPhoneFilter );
-
-                                    var tbWaitlistPhoneFilter = new RockTextBox();
-                                    tbWaitlistPhoneFilter.ID = "tbWaitlistPhoneFilter";
-                                    tbWaitlistPhoneFilter.Label = "Phone";
-                                    tbWaitlistPhoneFilter.Text = fRegistrants.GetUserPreference( "WL-Phone" );
-                                    phWaitListFormFieldFilters.Controls.Add( tbWaitlistPhoneFilter );
-
-                                    var phoneNumbersField = new PhoneNumbersField();
-                                    phoneNumbersField.DataField = "PersonAlias.Person.PhoneNumbers";
-                                    phoneNumbersField.HeaderText = "Phone(s)";
-                                    gRegistrants.Columns.Add( phoneNumbersField );
-
-                                    var phoneNumbersField2 = new PhoneNumbersField();
-                                    phoneNumbersField2.DataField = "PersonAlias.Person.PhoneNumbers";
-                                    phoneNumbersField2.HeaderText = "Phone(s)";
-                                    gGroupPlacements.Columns.Add( phoneNumbersField2 );
-
-                                    var phoneNumbersField3 = new PhoneNumbersField();
-                                    phoneNumbersField3.DataField = "PersonAlias.Person.PhoneNumbers";
-                                    phoneNumbersField3.HeaderText = "Phone(s)";
-                                    gWaitList.Columns.Add( phoneNumbersField3 );
-
-                                    break;
+                                    tbRegistrantsMobilePhoneFilter.Text = fRegistrants.GetUserPreference( "Cell Phone" );
                                 }
+
+                                phRegistrantFormFieldFilters.Controls.Add( tbRegistrantsMobilePhoneFilter );
+
+                                var tbGroupPlacementsMobilePhoneFilter = new RockTextBox();
+                                tbGroupPlacementsMobilePhoneFilter.ID = "tbGroupPlacementsMobilePhoneFilter";
+                                tbGroupPlacementsMobilePhoneFilter.Label = mobileLabel;
+
+                                if ( setValues )
+                                {
+                                    tbGroupPlacementsMobilePhoneFilter.Text = fGroupPlacements.GetUserPreference( "GroupPlacements-Phone" );
+                                }
+
+                                phGroupPlacementsFormFieldFilters.Controls.Add( tbGroupPlacementsMobilePhoneFilter );
+
+                                var tbWaitlistMobilePhoneFilter = new RockTextBox();
+                                tbWaitlistMobilePhoneFilter.ID = "tbWaitlistMobilePhoneFilter";
+                                tbWaitlistMobilePhoneFilter.Label = mobileLabel;
+                                tbWaitlistMobilePhoneFilter.Text = fRegistrants.GetUserPreference( "WL-Phone" );
+                                phWaitListFormFieldFilters.Controls.Add( tbWaitlistMobilePhoneFilter );
+
+                                var phoneNumbersField = new RockLiteralField();
+                                phoneNumbersField.ID = "lRegistrantsMobile";
+                                phoneNumbersField.HeaderText = mobileLabel;
+                                gRegistrants.Columns.Add( phoneNumbersField );
+
+                                var phoneNumbersField2 = new RockLiteralField();
+                                phoneNumbersField2.ID = "lGroupPlacementsMobile";
+                                phoneNumbersField2.HeaderText = mobileLabel;
+                                gGroupPlacements.Columns.Add( phoneNumbersField2 );
+
+                                var phoneNumbersField3 = new RockLiteralField();
+                                phoneNumbersField3.ID = "lWaitlistMobile";
+                                phoneNumbersField3.HeaderText = mobileLabel;
+                                gWaitList.Columns.Add( phoneNumbersField3 );
+
+                                break;
+
+                            case RegistrationPersonFieldType.HomePhone:
+                                // Per discussion this should not have "Phone" appended to the end if it's missing.
+                                var homePhoneLabel = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME ).Value;
+
+                                var tbRegistrantsHomePhoneFilter = new RockTextBox();
+                                tbRegistrantsHomePhoneFilter.ID = "tbRegistrantsHomePhoneFilter";
+                                tbRegistrantsHomePhoneFilter.Label = homePhoneLabel;
+
+                                if ( setValues )
+                                {
+                                    tbRegistrantsHomePhoneFilter.Text = fRegistrants.GetUserPreference( "Home Phone" );
+                                }
+
+                                phRegistrantFormFieldFilters.Controls.Add( tbRegistrantsHomePhoneFilter );
+
+                                var tbGroupPlacementsHomePhoneFilter = new RockTextBox();
+                                tbGroupPlacementsHomePhoneFilter.ID = "tbGroupPlacementsHomePhoneFilter";
+                                tbGroupPlacementsHomePhoneFilter.Label = homePhoneLabel;
+
+                                if ( setValues )
+                                {
+                                    tbGroupPlacementsHomePhoneFilter.Text = fGroupPlacements.GetUserPreference( "GroupPlacements-HomePhone" );
+                                }
+
+                                phGroupPlacementsFormFieldFilters.Controls.Add( tbGroupPlacementsHomePhoneFilter );
+
+                                var tbWaitlistHomePhoneFilter = new RockTextBox();
+                                tbWaitlistHomePhoneFilter.ID = "tbWaitlistHomePhoneFilter";
+                                tbWaitlistHomePhoneFilter.Label = homePhoneLabel;
+                                tbWaitlistHomePhoneFilter.Text = fRegistrants.GetUserPreference( "WL-HomePhone" );
+                                phWaitListFormFieldFilters.Controls.Add( tbWaitlistHomePhoneFilter );
+
+                                var homePhoneNumbersField = new RockLiteralField();
+                                homePhoneNumbersField.ID = "lRegistrantsHomePhone";
+                                homePhoneNumbersField.HeaderText = homePhoneLabel;
+                                gRegistrants.Columns.Add( homePhoneNumbersField );
+
+                                var homePhoneNumbersField2 = new RockLiteralField();
+                                homePhoneNumbersField2.ID = "lGroupPlacementsHomePhone";
+                                homePhoneNumbersField2.HeaderText = homePhoneLabel;
+                                gGroupPlacements.Columns.Add( homePhoneNumbersField2 );
+
+                                var homePhoneNumbersField3 = new RockLiteralField();
+                                homePhoneNumbersField3.ID = "lWaitlistHomePhone";
+                                homePhoneNumbersField3.HeaderText = homePhoneLabel;
+                                gWaitList.Columns.Add( homePhoneNumbersField3 );
+
+                                break;
+
+                            case RegistrationPersonFieldType.Address:
+                                var addressField = new RockLiteralField();
+                                addressField.ID = "lRegistrantsAddress";
+                                addressField.HeaderText = "Address";
+                                // There are specific Street1, Street2, City, etc. fields included instead
+                                addressField.ExcelExportBehavior = ExcelExportBehavior.NeverInclude;
+                                gRegistrants.Columns.Add( addressField );
+
+                                var addressField2 = new RockLiteralField();
+                                addressField2.ID = "lGroupPlacementsAddress";
+                                addressField2.HeaderText = "Address";
+                                gGroupPlacements.Columns.Add( addressField2 );
+
+                                var addressField3 = new RockLiteralField();
+                                addressField3.ID = "lWaitlistAddress";
+                                addressField3.HeaderText = "Address";
+                                gWaitList.Columns.Add( addressField3 );
+                                break;
                         }
                     }
                     else if ( field.Attribute != null )
@@ -4336,7 +4540,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         var attribute = field.Attribute;
 
                         // add dynamic filter to registrant grid
-                        var registrantsControl = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
+                        var registrantsControl = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id, false, Rock.Reporting.FilterMode.SimpleFilter );
                         if ( registrantsControl != null )
                         {
                             if ( registrantsControl is IRockControl )
@@ -4437,7 +4641,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
                         }
 
-                        var dataFieldExpression = attribute.Id.ToString() + attribute.Key;
+                        dataFieldExpression = attribute.Id + attribute.Key;
                         var columnExists = gRegistrants.Columns.OfType<AttributeField>().FirstOrDefault( a => a.DataField.Equals( dataFieldExpression ) ) != null;
                         if ( !columnExists )
                         {
@@ -4456,7 +4660,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             boundField3.AttributeId = attribute.Id;
                             boundField3.HeaderText = attribute.Name;
 
-                            var attributeCache = Rock.Web.Cache.AttributeCache.Get( attribute.Id );
+                            var attributeCache = AttributeCache.Get( attribute.Id );
                             if ( attributeCache != null )
                             {
                                 boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;
@@ -4492,38 +4696,27 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     // create a column for quick assignments
                                     var groupAssignment = new LinkButtonField();
                                     groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                                    groupAssignment.HeaderStyle.CssClass = "";
+                                    groupAssignment.ItemStyle.CssClass = "col-sm-2 col-md-2";
+                                    groupAssignment.HeaderStyle.CssClass = "col-sm-2 col-md-2";
                                     groupAssignment.HeaderText = parentGroup.Name;
                                     gRegistrants.Columns.Add( groupAssignment );
 
-                                    // create a text column for assignment export
-                                    var assignmentExport = new RockLiteralField();
-                                    assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
-                                    assignmentExport.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                                    assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
-                                    assignmentExport.HeaderStyle.CssClass = "";
-                                    assignmentExport.HeaderText = parentGroup.Name;
-                                    assignmentExport.Visible = false;
-                                    gRegistrants.Columns.Add( assignmentExport );
+                                    if ( _isExporting )
+                                    {
+                                        // create a text column for assignment export
+                                        var assignmentExport = new RockLiteralField();
+                                        assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
+                                        assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
+                                        assignmentExport.HeaderText = parentGroup.Name;
+                                        assignmentExport.Visible = false;
+                                        gRegistrants.Columns.Add( assignmentExport );
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-
-            // Add fee filter
-            var nreFeeFilter = new NumberRangeEditor();
-            nreFeeFilter.NumberType = ValidationDataType.Double;
-            nreFeeFilter.ID = "nreRegistrantsFeeFilter";
-            nreFeeFilter.Label = "Fee Amount";
-
-            if ( setValues )
-            {
-                nreFeeFilter.DelimitedValues = fRegistrants.GetUserPreference( "Fee Amount" );
-            }
-
-            phRegistrantFormFieldFilters.Controls.Add( nreFeeFilter );
 
             // Add fee column
             var feeField = new RockLiteralField();
@@ -4550,6 +4743,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void BindPaymentsFilter()
         {
+            fPayments.UserPreferenceKeyPrefix = string.Format( "{0}-", hfRegistrationTemplateId.Value );
             sdrpPaymentDateRange.DelimitedValues = fPayments.GetUserPreference( "Payments Date Range" );
         }
 
@@ -4638,6 +4832,256 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         #endregion
 
+        #region Fees Tab
+
+        /// <summary>
+        /// Binds the fees filter.
+        /// </summary>
+        private void BindFeesFilter()
+        {
+            sdrpFeeDateRange.DelimitedValues = fFees.GetUserPreference( "FeeDateRange" );
+            Populate_ddlFeeName();
+            ddlFeeName.SelectedIndex = ddlFeeName.Items.IndexOf( ddlFeeName.Items.FindByText( fFees.GetUserPreference( "FeeName" ) ) );
+            Populate_cblFeeOptions();
+        }
+
+        /// <summary>
+        /// Binds the fees grid.
+        /// </summary>
+        private void BindFeesGrid()
+        {
+            int? instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
+            if ( instanceId == null || instanceId == 0 )
+            {
+                return;
+            }
+
+            var registrationTemplateFeeService = new RegistrationTemplateFeeService( new RockContext() );
+            var data = registrationTemplateFeeService.GetRegistrationTemplateFeeReport( (int)instanceId );
+
+            // Add Date Range
+            var dateRange = SlidingDateRangePicker.CalculateDateRangeFromDelimitedValues( sdrpFeeDateRange.DelimitedValues );
+            if ( dateRange.Start.HasValue )
+            {
+                data = data.Where( r => r.RegistrationDate >= dateRange.Start.Value );
+            }
+
+            if ( dateRange.End.HasValue )
+            {
+                data = data.Where( r => r.RegistrationDate < dateRange.End.Value );
+            }
+
+            // Fee Name
+            if ( ddlFeeName.SelectedIndex > 0 )
+            {
+                data = data.Where( r => r.FeeName == ddlFeeName.SelectedItem.Text );
+            }
+
+            // Fee Options
+            if ( cblFeeOptions.SelectedValues.Count > 0 )
+            {
+                data = data.Where( r => cblFeeOptions.SelectedValues.Contains( r.Option ) );
+            }
+
+            var sortProperty = gFees.SortProperty;
+            if ( sortProperty != null )
+            {
+                data = data.AsQueryable().Sort( sortProperty ).ToList();
+            }
+            else
+            {
+                data = data.OrderByDescending( f => f.RegistrationDate ).ToList();
+            }
+
+            gFees.DataSource = data;
+            gFees.DataBind();
+        }
+
+        /// <summary>
+        /// Handles the GridRebind event of the gFees control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="GridRebindEventArgs"/> instance containing the event data.</param>
+        protected void gFees_GridRebind( object sender, GridRebindEventArgs e )
+        {
+            gFees.ExportTitleName = lReadOnlyTitle.Text + " - Registration Fees";
+            gFees.ExportFilename = gFees.ExportFilename ?? lReadOnlyTitle.Text + "RegistrationFees";
+            BindFeesGrid();
+        }
+
+        /// <summary>
+        /// Populates ddlFeeName with the name of the DDL fee.
+        /// </summary>
+        private void Populate_ddlFeeName()
+        {
+            int? instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
+            if ( instanceId == null || instanceId == 0 )
+            {
+                return;
+            }
+
+            var rockContext = new RockContext();
+            var registrationInstanceService = new RegistrationInstanceService( rockContext );
+            var templateId = registrationInstanceService.Get( (int)instanceId ).RegistrationTemplateId;
+
+            var registrationTemplateFeeService = new RegistrationTemplateFeeService( new RockContext() );
+            var templateFees = registrationTemplateFeeService.Queryable().Where( f => f.RegistrationTemplateId == templateId ).ToList();
+
+            ddlFeeName.Items.Add( new ListItem() );
+            foreach ( var templateFee in templateFees )
+            {
+                ddlFeeName.Items.Add( new ListItem( templateFee.Name, templateFee.Id.ToString() ) );
+            }
+        }
+
+        /// <summary>
+        /// Populates cblFeeOptions with fee options.
+        /// </summary>
+        private void Populate_cblFeeOptions()
+        {
+            cblFeeOptions.Items.Clear();
+
+            string feeId = ddlFeeName.SelectedValue;
+            if ( feeId.IsNotNullOrWhiteSpace() )
+            {
+                var registrationTemplateFeeService = new RegistrationTemplateFeeService( new RockContext() );
+                var fees = registrationTemplateFeeService.GetParsedFeeOptionsWithoutCost( feeId.AsInteger() );
+
+                foreach ( var fee in fees )
+                {
+                    cblFeeOptions.Items.Add( new ListItem( fee, fee ) );
+                }
+
+                string feeOptionValues = fFees.GetUserPreference( "FeeOptions" );
+                if ( !string.IsNullOrWhiteSpace( feeOptionValues ) )
+                {
+                    cblFeeOptions.SetValues( feeOptionValues.Split( ';' ).ToList() );
+                }
+
+                cblFeeOptions.Visible = true;
+            }
+        }
+
+        #endregion
+
+        #region Discounts Tab
+
+        /// <summary>
+        /// Binds the discounts filter.
+        /// </summary>
+        private void BindDiscountsFilter()
+        {
+            sdrpDiscountDateRange.DelimitedValues = fDiscounts.GetUserPreference( "DiscountDateRange" );
+            Populate_ddlDiscountCode();
+            ddlDiscountCode.SelectedIndex = ddlDiscountCode.Items.IndexOf( ddlDiscountCode.Items.FindByText( fDiscounts.GetUserPreference( "DiscountCode" ) ) );
+            tbDiscountCodeSearch.Text = fDiscounts.GetUserPreference( "DiscountCodeSearch" );
+        }
+
+        /// <summary>
+        /// Binds the discounts grid.
+        /// </summary>
+        private void BindDiscountsGrid()
+        {
+            var instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
+            if ( instanceId == null || instanceId == 0 )
+            {
+                return;
+            }
+
+            var registrationTemplateDiscountService = new RegistrationTemplateDiscountService( new RockContext() );
+            var data = registrationTemplateDiscountService.GetRegistrationInstanceDiscountCodeReport( (int)instanceId );
+
+            // Add Date Range
+            var dateRange = SlidingDateRangePicker.CalculateDateRangeFromDelimitedValues( sdrpDiscountDateRange.DelimitedValues );
+            if ( dateRange.Start.HasValue )
+            {
+                data = data.Where( r => r.RegistrationDate >= dateRange.Start.Value );
+            }
+
+            if ( dateRange.End.HasValue )
+            {
+                data = data.Where( r => r.RegistrationDate < dateRange.End.Value );
+            }
+
+            // Discount code, use ddl if one is selected, otherwise try the search box.
+            if ( ddlDiscountCode.SelectedIndex > 0 )
+            {
+                data = data.Where( r => r.DiscountCode == ddlDiscountCode.SelectedItem.Text );
+            }
+            else if ( tbDiscountCodeSearch.Text.IsNotNullOrWhiteSpace() )
+            {
+                var regex = new System.Text.RegularExpressions.Regex( tbDiscountCodeSearch.Text.ToLower() );
+                data = data.Where( r => regex.IsMatch( r.DiscountCode.ToLower() ) );
+            }
+
+            var results = data.ToList();
+
+            var sortProperty = gDiscounts.SortProperty;
+            if ( sortProperty != null )
+            {
+                results = results.AsQueryable().Sort( sortProperty ).ToList();
+            }
+            else
+            {
+                results = results.OrderByDescending( d => d.RegistrationDate ).ToList();
+            }
+
+            gDiscounts.DataSource = results;
+            gDiscounts.DataBind();
+
+            PopulateTotals( results );
+        }
+
+        /// <summary>
+        /// Handles the GridRebind event of the gDiscounts control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="GridRebindEventArgs"/> instance containing the event data.</param>
+        protected void gDiscounts_GridRebind( object sender, GridRebindEventArgs e )
+        {
+            gDiscounts.ExportTitleName = lReadOnlyTitle.Text + " - Discount Codes";
+            gDiscounts.ExportFilename = gDiscounts.ExportFilename ?? lReadOnlyTitle.Text + "DiscountCodes";
+            BindDiscountsGrid();
+        }
+
+        /// <summary>
+        /// Populates the totals.
+        /// </summary>
+        /// <param name="report">The report.</param>
+        private void PopulateTotals( List<TemplateDiscountReport> report )
+        {
+            lTotalTotalCost.Text = string.Format( GlobalAttributesCache.Value( "CurrencySymbol" ) + "{0:#,##0.00}", report.Sum( r => r.TotalCost ) );
+            lTotalDiscountQualifiedCost.Text = string.Format( GlobalAttributesCache.Value( "CurrencySymbol" ) + "{0:#,##0.00}", report.Sum( r => r.DiscountQualifiedCost ) );
+            lTotalDiscounts.Text = string.Format( GlobalAttributesCache.Value( "CurrencySymbol" ) + "{0:#,##0.00}", report.Sum( r => r.TotalDiscount ) );
+            lTotalRegistrationCost.Text = string.Format( GlobalAttributesCache.Value( "CurrencySymbol" ) + "{0:#,##0.00}", report.Sum( r => r.RegistrationCost ) );
+            lTotalRegistrations.Text = report.Count().ToString();
+            lTotalRegistrants.Text = report.Sum( r => r.RegistrantCount ).ToString();
+        }
+
+        /// <summary>
+        /// Populates the DDL discount code.
+        /// </summary>
+        protected void Populate_ddlDiscountCode()
+        {
+            var instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
+            if ( instanceId == null || instanceId == 0 )
+            {
+                return;
+            }
+
+            var discountService = new RegistrationTemplateDiscountService( new RockContext() );
+            var discountCodes = discountService.GetDiscountsForRegistrationInstance( instanceId ).AsNoTracking().OrderBy( d => d.Code ).ToList();
+
+            ddlDiscountCode.Items.Clear();
+            ddlDiscountCode.Items.Add( new ListItem() );
+            foreach ( var discountCode in discountCodes )
+            {
+                ddlDiscountCode.Items.Add( new ListItem( discountCode.Code, discountCode.Id.ToString() ) );
+            }
+        }
+
+        #endregion
+
         #region Wait List Tab
 
         /// <summary>
@@ -4646,6 +5090,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="instance">The instance.</param>
         private void BindWaitListFilter( RegistrationInstance instance )
         {
+            fWaitList.UserPreferenceKeyPrefix = string.Format( "{0}-", hfRegistrationTemplateId.Value );
             drpWaitListDateRange.DelimitedValues = fWaitList.GetUserPreference( "WL-Date Range" );
             tbWaitListFirstName.Text = fWaitList.GetUserPreference( "WL-First Name" );
             tbWaitListLastName.Text = fWaitList.GetUserPreference( "WL-Last Name" );
@@ -4657,7 +5102,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         private void BindWaitListGrid( bool isExporting = false )
         {
-            int? instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
+            _isExporting = isExporting;
+            var instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
             if ( instanceId.HasValue )
             {
                 using ( var rockContext = new RockContext() )
@@ -4673,7 +5119,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         .Select( r => r.Id ).ToList();
 
                     // Start query for registrants
-                    var qry = new RegistrationRegistrantService( rockContext )
+                    var registrationRegistrantService = new RegistrationRegistrantService( rockContext );
+                    var qry = registrationRegistrantService
                     .Queryable( "PersonAlias.Person.PhoneNumbers.NumberTypeValue,Fees.RegistrationTemplateFee" ).AsNoTracking()
                     .Where( r =>
                         r.Registration.RegistrationInstanceId == instanceId.Value &&
@@ -4712,7 +5159,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                             r.PersonAlias.Person.LastName.StartsWith( rlname ) );
                     }
 
-                    bool preloadCampusValues = false;
+                    var personIds = qry.Select( r => r.PersonAlias.PersonId ).Distinct().ToList();
+                    if ( isExporting || RegistrantFields != null && RegistrantFields.Any( f => f.PersonFieldType != null && f.PersonFieldType == RegistrationPersonFieldType.Address ) )
+                    {
+                        _homeAddresses = Person.GetHomeLocations( personIds );
+                    }
+
+                    SetPhoneDictionary( rockContext, personIds );
+
+                    var preloadCampusValues = false;
                     var registrantAttributes = new List<AttributeCache>();
                     var personAttributes = new List<AttributeCache>();
                     var groupMemberAttributes = new List<AttributeCache>();
@@ -4835,24 +5290,44 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                         break;
                                     }
+
                                 case RegistrationPersonFieldType.MobilePhone:
+                                    var tbMobilePhoneFilter = phWaitListFormFieldFilters.FindControl( "tbWaitlistMobilePhoneFilter" ) as RockTextBox;
+                                    if ( tbMobilePhoneFilter != null && !string.IsNullOrWhiteSpace( tbMobilePhoneFilter.Text ) )
                                     {
-                                        var tbPhoneFilter = phWaitListFormFieldFilters.FindControl( "tbWaitlistPhoneFilter" ) as RockTextBox;
-                                        if ( tbPhoneFilter != null && !string.IsNullOrWhiteSpace( tbPhoneFilter.Text ) )
+                                        string numericPhone = tbMobilePhoneFilter.Text.AsNumeric();
+
+                                        if ( !string.IsNullOrEmpty( numericPhone ) )
                                         {
-                                            string numericPhone = tbPhoneFilter.Text.AsNumeric();
+                                            var phoneNumberPersonIdQry = new PhoneNumberService( rockContext )
+                                                .Queryable()
+                                                .Where( a => a.Number.Contains( numericPhone ) )
+                                                .Select( a => a.PersonId );
 
-                                            if ( !string.IsNullOrEmpty( numericPhone ) )
-                                            {
-                                                var phoneNumberPersonIdQry = new PhoneNumberService( rockContext ).Queryable().Where( a => a.Number.Contains( numericPhone ) ).
-                                                    Select( a => a.PersonId );
-
-                                                qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
-                                            }
+                                            qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
                                         }
-
-                                        break;
                                     }
+
+                                    break;
+
+                                case RegistrationPersonFieldType.HomePhone:
+                                    var tbWaitlistHomePhoneFilter = phWaitListFormFieldFilters.FindControl( "tbWaitlistHomePhoneFilter" ) as RockTextBox;
+                                    if ( tbWaitlistHomePhoneFilter != null && !string.IsNullOrWhiteSpace( tbWaitlistHomePhoneFilter.Text ) )
+                                    {
+                                        string numericPhone = tbWaitlistHomePhoneFilter.Text.AsNumeric();
+
+                                        if ( !string.IsNullOrEmpty( numericPhone ) )
+                                        {
+                                            var phoneNumberPersonIdQry = new PhoneNumberService( rockContext )
+                                                .Queryable()
+                                                .Where( a => a.Number.Contains( numericPhone ) )
+                                                .Select( a => a.PersonId );
+
+                                            qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
+                                        }
+                                    }
+
+                                    break;
                             }
                         }
 
@@ -4868,25 +5343,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // Filter query by any configured registrant attribute filters
                         if ( registrantAttributes != null && registrantAttributes.Any() )
                         {
-                            var attributeValueService = new AttributeValueService( rockContext );
-                            var parameterExpression = attributeValueService.ParameterExpression;
                             foreach ( var attribute in registrantAttributes )
                             {
                                 var filterControl = phWaitListFormFieldFilters.FindControl( "filterWaitlist_" + attribute.Id.ToString() );
-                                if ( filterControl != null )
-                                {
-                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                    if ( expression != null )
-                                    {
-                                        var attributeValues = attributeValueService
-                                            .Queryable()
-                                            .Where( v => v.Attribute.Id == attribute.Id );
-                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
-                                        qry = qry
-                                            .Where( r => attributeValues.Select( v => v.EntityId ).Contains( r.Id ) );
-                                    }
-                                }
+                                qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, registrationRegistrantService, Rock.Reporting.FilterMode.SimpleFilter );
                             }
                         }
 
@@ -4902,26 +5362,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // Filter query by any configured person attribute filters
                         if ( personAttributes != null && personAttributes.Any() )
                         {
-                            var attributeValueService = new AttributeValueService( rockContext );
-                            var parameterExpression = attributeValueService.ParameterExpression;
+                            var personService = new PersonService( rockContext );
+                            var personQry = personService.Queryable().AsNoTracking();
                             foreach ( var attribute in personAttributes )
                             {
                                 var filterControl = phWaitListFormFieldFilters.FindControl( "filterWaitlist_" + attribute.Id.ToString() );
-                                if ( filterControl != null )
-                                {
-                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                    if ( expression != null )
-                                    {
-                                        var attributeValues = attributeValueService
-                                            .Queryable()
-                                            .Where( v => v.Attribute.Id == attribute.Id );
-                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
-                                        qry = qry
-                                            .Where( r => attributeValues.Select( v => v.EntityId ).Contains( r.PersonAlias.PersonId ) );
-                                    }
-                                }
+                                personQry = attribute.FieldType.Field.ApplyAttributeQueryFilter( personQry, filterControl, attribute, personService, Rock.Reporting.FilterMode.SimpleFilter );
                             }
+
+                            qry = qry.Where( r => personQry.Any( p => p.Id == r.PersonAlias.PersonId ) );
                         }
 
                         // Get all the group member attributes selected to be on grid
@@ -4936,27 +5385,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // Filter query by any configured person attribute filters
                         if ( groupMemberAttributes != null && groupMemberAttributes.Any() )
                         {
-                            var attributeValueService = new AttributeValueService( rockContext );
-                            var parameterExpression = attributeValueService.ParameterExpression;
+                            var groupMemberService = new GroupMemberService( rockContext );
+                            var groupMemberQry = groupMemberService.Queryable().AsNoTracking();
                             foreach ( var attribute in groupMemberAttributes )
                             {
                                 var filterControl = phWaitListFormFieldFilters.FindControl( "filterWaitlist_" + attribute.Id.ToString() );
-                                if ( filterControl != null )
-                                {
-                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                    if ( expression != null )
-                                    {
-                                        var attributeValues = attributeValueService
-                                            .Queryable()
-                                            .Where( v => v.Attribute.Id == attribute.Id );
-                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
-                                        qry = qry
-                                            .Where( r => r.GroupMemberId.HasValue &&
-                                            attributeValues.Select( v => v.EntityId ).Contains( r.GroupMemberId.Value ) );
-                                    }
-                                }
+                                groupMemberQry = attribute.FieldType.Field.ApplyAttributeQueryFilter( groupMemberQry, filterControl, attribute, groupMemberService, Rock.Reporting.FilterMode.SimpleFilter );
                             }
+
+                            qry = qry.Where( r => groupMemberQry.Any( g => g.Id == r.GroupMemberId ) );
                         }
                     }
 
@@ -4992,7 +5429,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 .ToList();
 
                             // Get all the person ids in current page of query results
-                            var personIds = currentPageRegistrants
+                            var currentPagePersonIds = currentPageRegistrants
                                 .Select( r => r.PersonAlias.PersonId )
                                 .Distinct()
                                 .ToList();
@@ -5025,7 +5462,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     .Queryable().AsNoTracking()
                                     .Where( m =>
                                         m.Group.GroupType.Guid == familyGroupTypeGuid &&
-                                        personIds.Contains( m.PersonId ) )
+                                        currentPagePersonIds.Contains( m.PersonId ) )
                                     .GroupBy( m => m.PersonId )
                                     .Select( m => new
                                     {
@@ -5054,7 +5491,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         (
                                             (
                                                 personAttributesIds.Contains( v.AttributeId ) &&
-                                                personIds.Contains( v.EntityId.Value )
+                                                currentPagePersonIds.Contains( v.EntityId.Value )
                                             ) ||
                                             (
                                                 groupMemberAttributesIds.Contains( v.AttributeId ) &&
@@ -5141,6 +5578,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         private void BindLinkagesFilter()
         {
+            fLinkages.UserPreferenceKeyPrefix = string.Format( "{0}-", hfRegistrationTemplateId.Value );
             cblCampus.DataSource = CampusCache.All();
             cblCampus.DataBind();
             var campusValue = fLinkages.GetUserPreference( "Campus" );
@@ -5207,6 +5645,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         private void BindGroupPlacementGrid( bool isExporting = false )
         {
+            _isExporting = isExporting;
             var parentGroupId = gpGroupPlacementParentGroup.SelectedValueAsInt();
             var instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
             if ( instanceId.HasValue )
@@ -5214,7 +5653,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 using ( var rockContext = new RockContext() )
                 {
                     // Start query for registrants
-                    var qry = new RegistrationRegistrantService( rockContext )
+                    var registrationRegistrantService = new RegistrationRegistrantService( rockContext );
+                    var qry = registrationRegistrantService
                         .Queryable( "PersonAlias.Person.PhoneNumbers.NumberTypeValue,Fees.RegistrationTemplateFee,GroupMember.Group" ).AsNoTracking()
                         .Where( r =>
                             r.Registration.RegistrationInstanceId == instanceId.Value &&
@@ -5270,6 +5710,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                         qry = qry.Where( r =>
                             r.PersonAlias.Person.LastName.StartsWith( rlname ) );
                     }
+
+                    var personIds = qry.Select( r => r.PersonAlias.PersonId ).Distinct().ToList();
+                    if ( isExporting || RegistrantFields != null && RegistrantFields.Any( f => f.PersonFieldType == RegistrationPersonFieldType.Address ) )
+                    {
+                        _homeAddresses = Person.GetHomeLocations( personIds );
+                    }
+                    SetPhoneDictionary( rockContext, personIds );
 
                     var preloadCampusValues = false;
                     var registrantAttributeIds = new List<int>();
@@ -5392,23 +5839,42 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         break;
                                     }
                                 case RegistrationPersonFieldType.MobilePhone:
+                                    var tbMobilePhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsMobilePhoneFilter" ) as RockTextBox;
+                                    if ( tbMobilePhoneFilter != null && !string.IsNullOrWhiteSpace( tbMobilePhoneFilter.Text ) )
                                     {
-                                        var tbPhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsPhoneFilter" ) as RockTextBox;
-                                        if ( tbPhoneFilter != null && !string.IsNullOrWhiteSpace( tbPhoneFilter.Text ) )
+                                        string numericPhone = tbMobilePhoneFilter.Text.AsNumeric();
+
+                                        if ( !string.IsNullOrEmpty( numericPhone ) )
                                         {
-                                            string numericPhone = tbPhoneFilter.Text.AsNumeric();
+                                            var phoneNumberPersonIdQry = new PhoneNumberService( rockContext )
+                                                .Queryable()
+                                                .Where( a => a.Number.Contains( numericPhone ) )
+                                                .Select( a => a.PersonId );
 
-                                            if ( !string.IsNullOrEmpty( numericPhone ) )
-                                            {
-                                                var phoneNumberPersonIdQry = new PhoneNumberService( rockContext ).Queryable().Where( a => a.Number.Contains( numericPhone ) ).
-                                                    Select( a => a.PersonId );
-
-                                                qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
-                                            }
+                                            qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
                                         }
-
-                                        break;
                                     }
+
+                                    break;
+
+                                case RegistrationPersonFieldType.HomePhone:
+                                    var tbGroupPlacementsHomePhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsHomePhoneFilter" ) as RockTextBox;
+                                    if ( tbGroupPlacementsHomePhoneFilter != null && !string.IsNullOrWhiteSpace( tbGroupPlacementsHomePhoneFilter.Text ) )
+                                    {
+                                        string numericPhone = tbGroupPlacementsHomePhoneFilter.Text.AsNumeric();
+
+                                        if ( !string.IsNullOrEmpty( numericPhone ) )
+                                        {
+                                            var phoneNumberPersonIdQry = new PhoneNumberService( rockContext )
+                                                .Queryable()
+                                                .Where( a => a.Number.Contains( numericPhone ) )
+                                                .Select( a => a.PersonId );
+
+                                            qry = qry.Where( r => phoneNumberPersonIdQry.Contains( r.PersonAlias.PersonId ) );
+                                        }
+                                    }
+
+                                    break;
                             }
                         }
 
@@ -5424,25 +5890,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // Filter query by any configured registrant attribute filters
                         if ( registrantAttributes != null && registrantAttributes.Any() )
                         {
-                            var attributeValueService = new AttributeValueService( rockContext );
-                            var parameterExpression = attributeValueService.ParameterExpression;
                             foreach ( var attribute in registrantAttributes )
                             {
                                 var filterControl = phGroupPlacementsFormFieldFilters.FindControl( "filterGroupPlacements_" + attribute.Id.ToString() );
-                                if ( filterControl != null )
-                                {
-                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                    if ( expression != null )
-                                    {
-                                        var attributeValues = attributeValueService
-                                            .Queryable()
-                                            .Where( v => v.Attribute.Id == attribute.Id );
-                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
-                                        qry = qry
-                                            .Where( r => attributeValues.Select( v => v.EntityId ).Contains( r.Id ) );
-                                    }
-                                }
+                                qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, registrationRegistrantService, Rock.Reporting.FilterMode.SimpleFilter );
                             }
                         }
 
@@ -5458,25 +5909,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // Filter query by any configured person attribute filters
                         if ( personAttributes != null && personAttributes.Any() )
                         {
-                            var attributeValueService = new AttributeValueService( rockContext );
-                            var parameterExpression = attributeValueService.ParameterExpression;
+                            var personService = new PersonService( rockContext );
+                            var personQry = personService.Queryable().AsNoTracking();
                             foreach ( var attribute in personAttributes )
                             {
                                 var filterControl = phGroupPlacementsFormFieldFilters.FindControl( "filterGroupPlacements_" + attribute.Id.ToString() );
-                                if ( filterControl != null )
-                                {
-                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                    if ( expression != null )
-                                    {
-                                        var attributeValues = attributeValueService.Queryable()
-                                            .Where( v => v.Attribute.Id == attribute.Id );
-                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
-                                        qry = qry
-                                            .Where( r => attributeValues.Select( v => v.EntityId ).Contains( r.PersonAlias.PersonId ) );
-                                    }
-                                }
+                                personQry = attribute.FieldType.Field.ApplyAttributeQueryFilter( personQry, filterControl, attribute, personService, Rock.Reporting.FilterMode.SimpleFilter );
                             }
+
+                            qry = qry.Where( r => personQry.Any( p => p.Id == r.PersonAlias.PersonId ) );
                         }
 
                         // Get all the group member attributes selected to be on grid
@@ -5491,25 +5932,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // Filter query by any configured person attribute filters
                         if ( groupMemberAttributes != null && groupMemberAttributes.Any() )
                         {
-                            var attributeValueService = new AttributeValueService( rockContext );
-                            var parameterExpression = attributeValueService.ParameterExpression;
+                            var groupMemberService = new GroupMemberService( rockContext );
+                            var groupMemberQry = groupMemberService.Queryable().AsNoTracking();
                             foreach ( var attribute in groupMemberAttributes )
                             {
                                 var filterControl = phGroupPlacementsFormFieldFilters.FindControl( "filterGroupPlacements_" + attribute.Id.ToString() );
-                                if ( filterControl != null )
-                                {
-                                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                    if ( expression != null )
-                                    {
-                                        var attributeValues = attributeValueService.Queryable()
-                                            .Where( v => v.Attribute.Id == attribute.Id );
-                                        attributeValues = attributeValues.Where( parameterExpression, expression, null );
-                                        qry = qry
-                                            .Where( r => r.GroupMemberId.HasValue && attributeValues.Select( v => v.EntityId ).Contains( r.GroupMemberId.Value ) );
-                                    }
-                                }
+                                groupMemberQry = attribute.FieldType.Field.ApplyAttributeQueryFilter( groupMemberQry, filterControl, attribute, groupMemberService, Rock.Reporting.FilterMode.SimpleFilter );
                             }
+
+                            qry = qry.Where( r => groupMemberQry.Any( g => g.Id == r.GroupMemberId ) );
                         }
                     }
 
@@ -5543,7 +5974,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 .ToList();
 
                             // Get all the person ids in current page of query results
-                            var personIds = currentPageRegistrants
+                            var currentPagePersonIds = currentPageRegistrants
                                 .Select( r => r.PersonAlias.PersonId )
                                 .Distinct()
                                 .ToList();
@@ -5576,7 +6007,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     .Queryable().AsNoTracking()
                                     .Where( m =>
                                         m.Group.GroupType.Guid == familyGroupTypeGuid &&
-                                        personIds.Contains( m.PersonId ) )
+                                        currentPagePersonIds.Contains( m.PersonId ) )
                                     .GroupBy( m => m.PersonId )
                                     .Select( m => new
                                     {
@@ -5605,7 +6036,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         (
                                             (
                                                 personAttributesIds.Contains( v.AttributeId ) &&
-                                                personIds.Contains( v.EntityId.Value )
+                                                currentPagePersonIds.Contains( v.EntityId.Value )
                                             ) ||
                                             (
                                                 groupMemberAttributesIds.Contains( v.AttributeId ) &&
@@ -5770,15 +6201,22 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     break;
                                 }
                             case RegistrationPersonFieldType.MobilePhone:
+                                var tbMobilePhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsMobilePhoneFilter" ) as RockTextBox;
+                                if ( tbMobilePhoneFilter != null )
                                 {
-                                    var tbPhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsPhoneFilter" ) as RockTextBox;
-                                    if ( tbPhoneFilter != null )
-                                    {
-                                        fGroupPlacements.SaveUserPreference( "GroupPlacements-Phone", "Phone", tbPhoneFilter.Text );
-                                    }
-
-                                    break;
+                                    fGroupPlacements.SaveUserPreference( "GroupPlacements-Phone", "Cell Phone", tbMobilePhoneFilter.Text );
                                 }
+
+                                break;
+
+                            case RegistrationPersonFieldType.HomePhone:
+                                var tbGroupPlacementsHomePhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsHomePhoneFilter" ) as RockTextBox;
+                                if ( tbGroupPlacementsHomePhoneFilter != null )
+                                {
+                                    fGroupPlacements.SaveUserPreference( "GroupPlacements-HomePhone", "Home Phone", tbGroupPlacementsHomePhoneFilter.Text );
+                                }
+
+                                break;
                         }
                     }
 
@@ -5895,15 +6333,22 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     break;
                                 }
                             case RegistrationPersonFieldType.MobilePhone:
+                                var tbMobilePhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsMobilePhoneFilter" ) as RockTextBox;
+                                if ( tbMobilePhoneFilter != null )
                                 {
-                                    var tbPhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsPhoneFilter" ) as RockTextBox;
-                                    if ( tbPhoneFilter != null )
-                                    {
-                                        tbPhoneFilter.Text = string.Empty;
-                                    }
-
-                                    break;
+                                    tbMobilePhoneFilter.Text = string.Empty;
                                 }
+
+                                break;
+
+                            case RegistrationPersonFieldType.HomePhone:
+                                var tbGroupPlacementsHomePhoneFilter = phGroupPlacementsFormFieldFilters.FindControl( "tbGroupPlacementsHomePhoneFilter" ) as RockTextBox;
+                                if ( tbGroupPlacementsHomePhoneFilter != null )
+                                {
+                                    tbGroupPlacementsHomePhoneFilter.Text = string.Empty;
+                                }
+
+                                break;
                         }
                     }
                 }
@@ -5967,7 +6412,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     case "First Name":
                     case "Last Name":
                     case "Email":
-                    case "Phone":
+                    case "Mobile Phone":
+                    case "Home Phone":
                     case "Signed Document":
                         {
                             break;
@@ -6030,6 +6476,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="instance">The instance.</param>
         private void BindGroupPlacementsFilter( RegistrationInstance instance )
         {
+            fGroupPlacements.UserPreferenceKeyPrefix = string.Format( "{0}-", hfRegistrationTemplateId.Value );
             sdrpGroupPlacementsDateRange.DelimitedValues = fGroupPlacements.GetUserPreference( "GroupPlacements-Date Range" );
             tbGroupPlacementsFirstName.Text = fGroupPlacements.GetUserPreference( "GroupPlacements-First Name" );
             tbGroupPlacementsLastName.Text = fGroupPlacements.GetUserPreference( "GroupPlacements-Last Name" );
@@ -6063,7 +6510,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         checkinGroup = new Group();
                         checkinGroup.Guid = Guid.NewGuid();
-                        checkinGroup.Name = parentArea.Name;
+                        checkinGroup.Name = parentArea.Name.Pluralize();
                         checkinGroup.IsActive = true;
                         checkinGroup.IsPublic = true;
                         checkinGroup.IsSystem = false;
@@ -6072,7 +6519,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         parentArea.Groups.Add( checkinGroup );
                         rockContext.SaveChanges();
 
-                        GroupTypeCache.Flush( parentArea.Id );
+                        GroupTypeCache.Remove( parentArea.Id );
                     }
 
                     SelectGroup( checkinGroup.Guid );
@@ -6097,10 +6544,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     Guid newGuid = Guid.NewGuid();
 
+                    var activityName = parentGroup.Name.Singularize();
                     var checkinGroup = new Group();
                     checkinGroup.Guid = newGuid;
                     checkinGroup.GroupTypeId = parentGroup.GroupTypeId;
-                    checkinGroup.Name = "New Group";
+                    checkinGroup.Name = "New " + activityName;
                     checkinGroup.IsActive = true;
                     checkinGroup.IsPublic = true;
                     checkinGroup.IsSystem = false;
@@ -6182,7 +6630,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                             rockContext.SaveChanges();
 
-                            GroupTypeCache.Flush( groupType.Id );
+                            GroupTypeCache.Remove( groupType.Id );
                             nbSaveSuccess.Visible = true;
                         }
                         else
@@ -6201,20 +6649,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         group.LoadAttributes( rockContext );
                         resourceGroupPanel.GetGroupValues( group );
-
-                        // add requirements to child groups
-                        if ( group.ParentGroup != null )
-                        {
-                            foreach ( var requirement in group.ParentGroup.GroupRequirements )
-                            {
-                                group.GroupRequirements.Add( new GroupRequirement
-                                {
-                                    GroupId = group.Id,
-                                    GroupRoleId = group.GroupType.DefaultGroupRoleId,
-                                    GroupRequirementTypeId = requirement.GroupRequirementTypeId
-                                } );
-                            }
-                        }
 
                         // make sure child groups can be created
                         if ( !group.GroupType.ChildGroupTypes.Contains( group.GroupType ) )
@@ -6277,8 +6711,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         groupType.ChildGroupTypes.Clear();
                         groupTypeService.Delete( groupType );
                         rockContext.SaveChanges();
-                        GroupTypeCache.Flush( oldGroupTypeId );
-                        Rock.CheckIn.KioskDevice.FlushAll();
+                        GroupTypeCache.Remove( oldGroupTypeId );
+                        KioskDevice.Clear();
                     }
                     SelectArea( null );
                 }
@@ -6440,12 +6874,14 @@ namespace RockWeb.Plugins.com_kfs.Event
                             foreach ( var groupLocation in group.GroupLocations.OrderBy( gl => gl.Order ).ThenBy( gl => gl.Location.Name ) )
                             {
                                 var location = groupLocation.Location;
-                                var gridItem = new ResourceGroup.LocationGridItem();
-                                gridItem.LocationId = location.Id;
-                                gridItem.Name = location.Name;
-                                gridItem.FullNamePath = location.Name;
-                                gridItem.ParentLocationId = location.ParentLocationId;
-                                gridItem.Order = groupLocation.Order;
+                                var gridItem = new ResourceGroup.LocationGridItem
+                                {
+                                    LocationId = location.Id,
+                                    Name = location.Name,
+                                    FullNamePath = location.Name,
+                                    ParentLocationId = location.ParentLocationId,
+                                    Order = groupLocation.Order
+                                };
 
                                 var parentLocationId = location.ParentLocationId;
                                 while ( parentLocationId != null )
@@ -6561,16 +6997,18 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( categoryGroup != null )
                 {
                     // save the related groups as attributes on the registration
-                    CreateAttribute( rockContext, instance, attributeKey, categoryGroup.Guid );
-                    parentGroupId = categoryGroup.Id;
+                    CreateInstanceGroupAttribute( rockContext, instance, attributeKey, categoryGroup.Guid );
                     currentCategory = currentCategory.ParentCategory;
                 }
-                
+
+                // save the category group to set as a parent on the template
+                parentGroupId = categoryGroup.Id;
+
                 // walk up the category tree to create group placeholders
                 while ( currentCategory != null )
                 {
                     var parentCategoryGroup = CreateGroup( rockContext, string.Empty, templateGroupType.Id, null, currentCategory.Name );
-                    if ( categoryGroup.ParentGroup == null && categoryGroup != parentCategoryGroup )
+                    if ( categoryGroup.ParentGroup != parentCategoryGroup && categoryGroup != parentCategoryGroup )
                     {
                         categoryGroup.ParentGroup = parentCategoryGroup;
                     }
@@ -6585,7 +7023,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var templateGroup = CreateGroup( rockContext, instance.GetAttributeValue( attributeKey ), templateGroupType.Id, parentGroupId, instance.RegistrationTemplate.Name );
                 if ( templateGroup != null )
                 {
-                    CreateAttribute( rockContext, instance, attributeKey, templateGroup.Guid );
+                    CreateInstanceGroupAttribute( rockContext, instance, attributeKey, templateGroup.Guid );
                 }
                 parentGroupId = templateGroup.Id;
 
@@ -6594,7 +7032,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var instanceGroup = CreateGroup( rockContext, instance.GetAttributeValue( attributeKey ), templateGroupType.Id, parentGroupId, instance.Name );
                 if ( instanceGroup != null )
                 {
-                    CreateAttribute( rockContext, instance, attributeKey, instanceGroup.Guid );
+                    CreateInstanceGroupAttribute( rockContext, instance, attributeKey, instanceGroup.Guid );
                 }
 
                 // resource groups
@@ -6620,11 +7058,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                             {
                                 // verify group structure
                                 groupTypeGroupUI.ParentGroupId = parentGroupId ?? groupTypeGroupUI.ParentGroupId;
-                                CreateAttribute( rockContext, instance, groupType.Name, groupTypeGroupUI.Guid );
+                                CreateInstanceGroupAttribute( rockContext, instance, groupType.Name, groupTypeGroupUI.Guid );
                             }
                             else
                             {
                                 instance.AttributeValues[groupType.Name].Value = Guid.Empty.ToString();
+                                ResourceGroups[groupType.Name].Value = Guid.Empty.ToString();
                             }
                         }
                     }
@@ -6770,14 +7209,14 @@ namespace RockWeb.Plugins.com_kfs.Event
         #region Group Association Tabs
 
         /// <summary>
-        /// Handles the ItemDataBound event of the rpGroupPanels control.
+        /// Handles the ItemDataBound event of the rpTabResources control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
-        protected void rpResourcePanels_ItemDataBound( object sender, RepeaterItemEventArgs e )
+        protected void rpTabResources_ItemDataBound( object sender, RepeaterItemEventArgs e )
         {
             var groupType = (GroupTypeCache)e.Item.DataItem;
-            var pnlAssociatedGroup = (Panel)e.Item.FindControl( "pnlAssociatedGroup" );
+            var pnlAssociatedGroup = (UpdatePanel)e.Item.FindControl( "pnlAssociatedGroup" );
             var pnlGroupBody = (Panel)e.Item.FindControl( "pnlGroupBody" );
             var pnlGroupHeading = (Panel)e.Item.FindControl( "pnlGroupHeading" );
             var phGroupHeading = (PlaceHolder)e.Item.FindControl( "phGroupHeading" );
@@ -6856,18 +7295,10 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 var groupPanel = (GroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx");
                 groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
+                groupPanel.Expanded = _expandedPanels.Any( c => c.Contains( groupPanel.ID ) );
 
-                foreach ( string control in _expandedGroupPanels )
-                {
-                    if ( control.Contains( groupPanel.ID ) )
-                    {
-                        groupPanel.Expanded = true;
-                        break;
-                    }
-                }
                 groupPanel.AddButtonClick += AddGroupMember_Click;
                 groupPanel.EditButtonClick += EditGroupMember_Click;
-
                 groupPanel.GroupRowCommand += GroupRowCommand;
                 groupPanel.GroupRowDataBound += GroupRowDataBound;
                 //groupPanel.GroupRowSelected += GroupRowSelected;
@@ -6878,16 +7309,16 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Handles the ItemCommand event of the RpGroupPanels control.
+        /// Handles the ItemCommand event of the rpTabResources control.
         /// </summary>
         /// <param name="source">The source of the event.</param>
         /// <param name="e">The <see cref="RepeaterCommandEventArgs"/> instance containing the event data.</param>
-        private void rpResourcePanels_ItemCommand( object source, RepeaterCommandEventArgs e )
+        private void rpTabResources_ItemCommand( object source, RepeaterCommandEventArgs e )
         {
             if ( e.CommandName == "EditSubGroup" )
             {
                 var group = new GroupService( new RockContext() ).Get( int.Parse( e.CommandArgument.ToString() ) );
-                hfEditGroup.Value = group.Guid.ToString();
+                //hfEditGroup.Value = group.Guid.ToString();
 
                 BindResourcePanels( group.GroupTypeId );
 
@@ -6895,8 +7326,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 qryParams.Add( "t", string.Format( "Edit {0}", group.Name ) );
                 qryParams.Add( "GroupId", group.Id.ToString() );
 
-                string script = "Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupModalPage", qryParams ) + "');";
-                ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + e.CommandArgument.ToString(), script, true );
+                var script = "Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupModalPage", qryParams ) + "');";
+                ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + e.CommandArgument, script, true );
             }
             if ( e.CommandName == "DeleteSubGroup" )
             {
@@ -6904,7 +7335,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var groupService = new GroupService( rockContext );
                 var authService = new AuthService( rockContext );
                 var group = groupService.Get( e.CommandArgument.ToString().AsInteger() );
-                hfEditGroup.Value = string.Empty;
+                //hfEditGroup.Value = string.Empty;
 
                 int? parentGroupId = null;
 
@@ -6927,7 +7358,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var isSecurityRoleGroup = group.IsActive && ( group.IsSecurityRole || group.GroupType.Guid.Equals( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid() ) );
                     if ( isSecurityRoleGroup )
                     {
-                        Rock.Security.Role.Flush( group.Id );
                         foreach ( var auth in authService.Queryable().Where( a => a.GroupId == group.Id ).ToList() )
                         {
                             authService.Delete( auth );
@@ -6951,7 +7381,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     if ( isSecurityRoleGroup )
                     {
-                        Rock.Security.Authorization.Flush();
+                        Authorization.Clear();
                     }
 
                     BindResourcePanels( group.GroupTypeId );
@@ -6960,14 +7390,14 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Binds the reousrce panels.
+        /// Binds the resource panels.
         /// </summary>
         /// <param name="groupTypeId">The group type identifier.</param>
         private void BindResourcePanels( int? groupTypeId = null )
         {
-            rpResourcePanels.Visible = true;
-            rpResourcePanels.DataSource = ResourceGroupTypes.Where( gt => groupTypeId == null || gt.Id == groupTypeId.Value ).OrderBy( g => g.Name );
-            rpResourcePanels.DataBind();
+            rpTabResources.Visible = true;
+            rpTabResources.DataSource = ResourceGroupTypes.Where( gt => groupTypeId == null || gt.Id == groupTypeId.Value ).OrderBy( g => g.Name );
+            rpTabResources.DataBind();
         }
 
         /// <summary>
@@ -7027,22 +7457,24 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             using ( var rockContext = new RockContext() )
             {
-                int? personId = null;
+                Person currentPerson = null;
                 if ( e.Row.DataItem is RegistrationRegistrant )
                 {
-                    personId = ( (RegistrationRegistrant)e.Row.DataItem ).PersonId;
+                    currentPerson = ( (RegistrationRegistrant)e.Row.DataItem ).Person;
                 }
                 else if ( e.Row.DataItem is GroupMember )
                 {
-                    personId = ( (GroupMember)e.Row.DataItem ).PersonId;
+                    currentPerson = ( (GroupMember)e.Row.DataItem ).Person;
                 }
 
+                var groupService = new GroupService( rockContext );
                 foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
                 {
                     var resourceGroupGuid = ResourceGroups.ContainsKey( groupType.Name ) ? ResourceGroups[groupType.Name] : null;
                     if ( resourceGroupGuid != null && !Guid.Empty.Equals( resourceGroupGuid.Value.AsGuid() ) )
                     {
-                        var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuid.Value.AsGuid() );
+                        var actualGroupGuid = resourceGroupGuid.Value.AsGuid();
+                        var parentGroup = groupService.Queryable().AsNoTracking().FirstOrDefault( g => g.Guid.Equals( actualGroupGuid ) );
                         if ( parentGroup != null )
                         {
                             // Use a name match to find the column since there are multiple dynamic columns
@@ -7061,19 +7493,16 @@ namespace RockWeb.Plugins.com_kfs.Event
                             var lGroupExport = e.Row.FindControl( string.Format( "lAssignments_{0}", groupType.Id ) ) as Literal;
                             if ( btnGroupAssignment != null )
                             {
-                                if ( parentGroup.Groups.Any() )
+                                var subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
+                                if ( subGroupIds.Any() )
                                 {
-                                    if ( parentGroup.GroupType.Attributes == null || !parentGroup.GroupType.Attributes.Any() )
-                                    {
-                                        parentGroup.GroupType.LoadAttributes( rockContext );
-                                    }
-
-                                    var subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
-                                    var groupMemberships = new GroupMemberService( rockContext ).Queryable().AsNoTracking()
-                                        .Where( m => m.PersonId == personId && subGroupIds.Contains( m.GroupId ) ).ToList();
+                                    var typeAllowsMultipleRegistrations = ResourceGroupTypes.FirstOrDefault( gt => gt.Id == parentGroup.GroupTypeId )
+                                        .GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean();
+                                    // this depends on the groupMemberList being bound to full GroupMember object
+                                    var groupMemberships = currentPerson.Members.Where( m => subGroupIds.Contains( m.GroupId ) ).ToList();
                                     if ( !groupMemberships.Any() )
                                     {
-                                        btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
+                                        btnGroupAssignment.CssClass = "btn btn-default btn-sd";
 
                                         using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
                                         {
@@ -7085,9 +7514,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         }
 
                                         btnGroupAssignment.CommandName = "AssignSubGroup";
-                                        btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id, personId );
+                                        btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id, currentPerson.Id );
                                     }
-                                    else if ( parentGroup.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
+                                    else if ( typeAllowsMultipleRegistrations )
                                     {
                                         var subGroupControls = e.Row.Cells[columnIndex].Controls;
                                         var groupExportText = new List<string>();
@@ -7114,16 +7543,19 @@ namespace RockWeb.Plugins.com_kfs.Event
                                             lGroupExport.Text = string.Join( ",", groupExportText );
                                         }
 
-                                        using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                        if ( subGroupIds.Count > groupMemberships.Count )
                                         {
-                                            btnGroupAssignment.Controls.Add( literalControl );
-                                        }
+                                            using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                            {
+                                                btnGroupAssignment.Controls.Add( literalControl );
+                                            }
 
-                                        // TODO: figure out why command args aren't passing
-                                        btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, personId );
-                                        btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
-                                        //btnGroupAssignment.CommandName = "AssignSubGroup";
-                                        //btnGroupAssignment.CommandArgument = string.Format( "subgroup_{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
+                                            // TODO: figure out why command args aren't passing
+                                            btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, currentPerson.Id );
+                                            btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
+                                            //btnGroupAssignment.CommandName = "AssignSubGroup";
+                                            //btnGroupAssignment.CommandArgument = string.Format( "subgroup_{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
+                                        }
                                     }
                                     else
                                     {
@@ -7241,16 +7673,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 BindRegistrantsFilter( new RegistrationInstanceService( new RockContext() ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
             }
-
-            //if ( e.CommandName == "RowSelected" )
-            //{
-            //    int rowIndex = int.MinValue;
-            //    if ( int.TryParse( e.CommandArgument.ToString(), out rowIndex ) )
-            //    {
-            //        RowEventArgs a = new RowEventArgs( sender.Rows[rowIndex] );
-            //        GroupRowSelected( a );
-            //    }
-            //}
         }
 
         /// <summary>
@@ -7263,7 +7685,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             var rockContext = new RockContext();
             var panel = (GroupPanel)sender;
             RenderGroupMemberModal( rockContext, panel.Group.ParentGroup, panel.Group, null );
-            //BuildGroupAssignmentGrid( e as GridViewRowEventArgs, panel.Grid.Rows[0] );
         }
 
         /// <summary>
@@ -7328,7 +7749,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
             if ( ResourceGroups != null && ResourceGroups.Any() )
             {
-                registrationGroupGuids = ResourceGroups.Values.Where( v => !string.IsNullOrWhiteSpace( v.Value ) )
+                registrationGroupGuids = ResourceGroups.Values.Where( v => !string.IsNullOrWhiteSpace( v.Value ) && !Guid.Empty.Equals( v.Value ) )
                     .Select( v => v.Value.AsGuid() ).ToList();
                 hfRegistrationGroupGuid.Value = string.Join( ",", registrationGroupGuids );
             }
@@ -7364,20 +7785,21 @@ namespace RockWeb.Plugins.com_kfs.Event
                 ddlRegistrantList.Enabled = true;
                 if ( group == null && person != null )
                 {
+                    var availableGroups = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count ).ToList();
                     ddlRegistrantList.Help = null;
                     ddlRegistrantList.Items.Add( new ListItem( person.FullNameReversed, person.Guid.ToString() ) );
-                    ddlRegistrantList.Enabled = false;
+                    //ddlRegistrantList.Enabled = false;
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0}", groupMemberTerm );
                     ddlSubGroup.Visible = true;
-                    ddlSubGroup.DataSource = parentGroup.Groups;
+                    ddlSubGroup.DataSource = availableGroups;
                     ddlSubGroup.DataTextField = "Name";
                     ddlSubGroup.DataValueField = "Id";
                     ddlSubGroup.DataBind();
                     ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
                     // for consistency with delete member functionality, don't autoselect the first group in the list
-                    ddlSubGroup.SelectedIndex = 0; // parentGroup.Groups.Any() ? 1 : 0;
+                    ddlSubGroup.SelectedIndex = 0; // availableGroups.Any() ? 1 : 0;
                     ddlSubGroup.Label = !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupTerm ) ? parentGroup.GroupType.GroupTerm : parentGroup.Name;
-                    group = parentGroup.Groups.Any() ? parentGroup.Groups.FirstOrDefault() : null;
+                    group = availableGroups.Any() ? availableGroups.FirstOrDefault() : null;
                 }
                 else if ( group != null )
                 {
@@ -7481,7 +7903,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 mdlAddSubGroupMember.Title = string.Format( "Edit {0} in {1}", groupMemberTerm, group.Name );
                 ddlSubGroup.Visible = true;
 
-                ddlSubGroup.DataSource = group.ParentGroup.Groups;
+                ddlSubGroup.DataSource = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count ).ToList();
                 ddlSubGroup.DataTextField = "Name";
                 ddlSubGroup.DataValueField = "Id";
                 ddlSubGroup.DataBind();
@@ -7492,12 +7914,13 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             groupMember.LoadAttributes();
             phAttributes.Controls.Clear();
-            Rock.Attribute.Helper.AddEditControls( groupMember, phAttributes, true, string.Empty, true );
-
+            Helper.AddEditControls( groupMember, phAttributes, true, string.Empty, true );
+            
             mdlAddSubGroupMember.Show();
+            upnlContent.Update();
 
             // render dynamic group controls beneath modal
-            ShowTab();
+            //ShowTab();
         }
 
         /// <summary>
@@ -7566,7 +7989,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupMember.Note = tbNote.Text;
                     groupMember.GroupMemberStatus = rblStatus.SelectedValueAsEnum<GroupMemberStatus>();
                     groupMember.LoadAttributes();
-                    Rock.Attribute.Helper.GetEditValues( phAttributes, groupMember );
+                    Helper.GetEditValues( phAttributes, groupMember );
 
                     // check for valid group membership
                     if ( groupMember.GroupId != 0 && !groupMember.IsValid )
@@ -7577,6 +8000,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
 
                         nbErrorMessage.Visible = true;
+                        ShowTab();
                         return;
                     }
 
@@ -7670,6 +8094,16 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
+        /// <summary>
+        /// Handles the Click event of the mdlSubGroupMemberCancel control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void mdlSubGroupMemberCancel_Click( object sender, EventArgs e )
+        {
+            ShowTab();
+        }
+
         #endregion
 
         #endregion
@@ -7687,13 +8121,13 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Creates the attribute for this registration instance.
+        /// Creates the instance group attribute.
         /// </summary>
         /// <param name="rockContext">The rock context.</param>
         /// <param name="instance">The instance.</param>
         /// <param name="attributeKey">The attribute key.</param>
         /// <param name="groupGuid">The group unique identifier.</param>
-        private void CreateAttribute( RockContext rockContext, RegistrationInstance instance, string attributeKey, Guid groupGuid )
+        private void CreateInstanceGroupAttribute( RockContext rockContext, RegistrationInstance instance, string attributeKey, Guid groupGuid )
         {
             if ( instance.Attributes == null || !instance.Attributes.Any() )
             {
@@ -7712,13 +8146,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                 };
 
                 newAttribute = Helper.SaveAttributeEdits( newAttribute, instance.TypeId, string.Empty, string.Empty, rockContext );
-                AttributeCache.FlushEntityAttributes();
+                AttributeCache.RemoveEntityAttributes();
                 instance.LoadAttributes();
-                ResourceGroups = instance.AttributeValues;  // TODO this should refresh on delete too not just save
             }
 
             instance.AttributeValues[attributeKey].Value = groupGuid.ToString();
             instance.SaveAttributeValues();
+            ResourceGroups = instance.AttributeValues;
         }
 
         /// <summary>
@@ -7738,16 +8172,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                 return null;
             }
 
-
             // try first by attribute link
             var groupService = new GroupService( rockContext );
             var registrationGroup = groupService.Get( existingGroupGuid.AsGuid() );
             // next look for the group by name and parent
-            registrationGroup = registrationGroup ?? groupService.GetByGroupTypeId( groupTypeId ).FirstOrDefault( g => g.Name.Equals( groupName ) && 
-                ( g.ParentGroupId == null || g.ParentGroupId == parentGroupId || g.ParentGroup.Name.Equals( parentGroupName ) ) 
+            registrationGroup = registrationGroup ?? groupService.GetByGroupTypeId( groupTypeId ).FirstOrDefault( g => g.Name.Equals( groupName ) &&
+                ( g.ParentGroupId == parentGroupId || g.ParentGroup.Name.Equals( parentGroupName ) || parentGroupId == null )
             );
             if ( registrationGroup == null )
-            {         
+            {
                 registrationGroup = new Group
                 {
                     Name = groupName,
@@ -7755,9 +8188,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                     GroupTypeId = groupTypeId
                 };
                 groupService.Add( registrationGroup );
-                rockContext.SaveChanges(); 
+                rockContext.SaveChanges();
             }
-            else 
+            else
             {
                 // verify group structure
                 registrationGroup.Name = groupName;
@@ -7878,6 +8311,17 @@ namespace RockWeb.Plugins.com_kfs.Event
             /// The attribute.
             /// </value>
             public AttributeCache Attribute { get; set; }
+        }
+
+        public static class PanelHelper
+        {
+            public static GroupPanel Load( Control control, string ID, bool isExpanded )
+            {
+                var panel = (GroupPanel)control.LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
+                panel.ID = ID;
+                panel.Expanded = isExpanded;
+                return panel;
+            }
         }
 
         #endregion
