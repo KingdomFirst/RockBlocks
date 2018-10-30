@@ -138,6 +138,8 @@
                 <asp:ValidationSummary ID="valSummaryTop" runat="server" HeaderText="Please Correct the Following" CssClass="alert alert-danger" ValidationGroup="MoveLocation" />
 
                 <Rock:LocationPicker ID="lpNewLocation" runat="server" ValidationGroup="MoveLocation" Required="true" Label="Selected Location" AllowedPickerModes="Named" />
+
+                <Rock:RockDropDownList ID="rdlNewGroup" runat="server" ValidationGroup="MoveLocation" Label="Selected Group" Visible="false" />
             </Content>
         </Rock:ModalDialog>
 
