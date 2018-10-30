@@ -2258,7 +2258,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                     using ( var rockContext = new RockContext() )
                     {
-                        var rockPerson = new Person();
+                        var rockPerson = new Rock.Model.Person();
                         var code = string.Empty;
                         var schedules = new List<Schedule>();
 
