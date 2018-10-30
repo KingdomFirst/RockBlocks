@@ -27,8 +27,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     /// <summary>
     /// Block used to view current check-in counts and locations
     /// </summary>
-    [DisplayName( "KFS > Locations" )]
-    [Category( "Check-in > Manager" )]
+    [DisplayName( "Locations" )]
+    [Category( "KFS > Check-in > Manager" )]
     [Description( "Block used to view current check-in counts and locations." )]
     [CustomRadioListField( "Navigation Mode", "Navigation and attendance counts can be grouped and displayed either by 'Group Type > Group Type (etc) > Group > Location' or by 'location > location (etc).'  Select the navigation hierarchy that is most appropriate for your organization.", "T^Group Type,L^Location,", true, "T", "", 0, "Mode" )]
     [GroupTypeField( "Check-in Type", "The Check-in Area to display.  This value can also be overridden through the URL query string key (e.g. when navigated to from the Check-in Type selection block).", false, "", "", 1, "GroupTypeTemplate", Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_TEMPLATE )]
