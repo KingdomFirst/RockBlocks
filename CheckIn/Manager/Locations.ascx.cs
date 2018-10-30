@@ -42,7 +42,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [BooleanField( "Show Delete", "A flag indicating if the Delete button should be displayed.", true, "Attendee Actions", 0 )]
     [BooleanField( "Show Checkout", "A flag indicating if the Checkout button should be displayed.", true, "Attendee Actions", 1 )]
     [BooleanField( "Show Move", "A flag indicating if the Move Attendee buttons should be displayed.", true, "Attendee Actions", 2 )]
-    [BooleanField( "Show Print Label", "A flag indicating if the Print Label button should be displayed.", true, "Attendee Actions", 3 )]
+    [BooleanField( "Include Group Move", "A flag indicating if the Groups should be presented when Move Attendee modal is displayed.", false, "Attendee Actions", 3 )]
+    [BooleanField( "Show Print Label", "A flag indicating if the Print Label button should be displayed.", true, "Attendee Actions", 4 )]
     [BooleanField( "Show Advanced Print Options", "A flag indicating if the Advanced Print Options should be displayed.", false, "Print Actions", 0 )]
     [CustomDropdownListField( "Print Density", "The default print density for reprint.", "6^6 dpmm (152 dpi),8^8 dpmm (203 dpi),12^12 dpmm (300 dpi),24^24 dpmm (600 dpi)", true, "8", "Print Actions", 1 )]
     [TextField( "Label Width", "The default width of label for reprint.", true, "4", "Print Actions", 2 )]
@@ -1034,6 +1035,11 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         {
             var newLocationId = lpNewLocation.Location.Id;
             lpNewLocation.Location = null;
+            int? newGroupId = null;
+            if ( GetAttributeValue( "IncludeGroupMove" ).AsBoolean() )
+            {
+                newGroupId = rdlNewGroup.SelectedValueAsInt();
+            }
 
             var personIds = hfPersonId.Value;
             var locationId = hfLocationId.Value.AsInteger();
@@ -1066,7 +1072,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                 ActiveScheduleIds.Contains( a.Occurrence.ScheduleId.Value ) ) )
                         {
                             var newAttendance = new Attendance();
-                            newAttendance = attendanceService.AddOrUpdate( attendance.PersonAliasId, now, attendance.Occurrence.GroupId, newLocationId, attendance.Occurrence.ScheduleId, attendance.CampusId, attendance.DeviceId, attendance.SearchTypeValueId, attendance.SearchValue, attendance.SearchResultGroupId, attendance.AttendanceCodeId );
+                            var groupId = newGroupId ?? attendance.Occurrence.GroupId;
+                            newAttendance = attendanceService.AddOrUpdate( attendance.PersonAliasId, now, groupId, newLocationId, attendance.Occurrence.ScheduleId, attendance.CampusId, attendance.DeviceId, attendance.SearchTypeValueId, attendance.SearchValue, attendance.SearchResultGroupId, attendance.AttendanceCodeId );
                             newAttendance.EndDateTime = null;
                             movedAttendance.Add( newAttendance );
                             attendance.EndDateTime = now;
@@ -1775,6 +1782,37 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                 if ( location != null )
                                 {
                                     lpNewLocation.Location = location;
+                                }
+                            }
+
+                            if ( GetAttributeValue( "IncludeGroupMove" ).AsBoolean() )
+                            {
+                                string groupTypeKey = pathParts[1];
+                                int? groupTypeId = groupTypeKey.Length > 1 ? groupTypeKey.Substring( 1 ).AsIntegerOrNull() : null;
+
+                                string groupItemKey = pathParts[numParts - 2];
+                                string groupItemType = groupItemKey.Left( 1 );
+                                int? currentGroupId = groupItemKey.Length > 1 ? groupItemKey.Substring( 1 ).AsIntegerOrNull() : null;
+
+                                if ( groupTypeId.HasValue && currentGroupId.HasValue )
+                                {
+                                    rdlNewGroup.Visible = true;
+
+                                    rdlNewGroup.SelectedValue = null;
+                                    rdlNewGroup.Items.Clear();
+
+                                    rdlNewGroup.Items.Add( new ListItem() );
+
+                                    var rockContext = new RockContext();
+                                    var groupService = new Rock.Model.GroupService( rockContext );
+                                    var groups = groupService.Queryable().Where( r => r.GroupTypeId == groupTypeId.Value ).OrderBy( a => a.Name ).ToList();
+
+                                    foreach ( var r in groups )
+                                    {
+                                        var groupListItem = new ListItem( r.Name, r.Id.ToString().ToUpper() );
+                                        groupListItem.Selected = r.Id == currentGroupId;
+                                        rdlNewGroup.Items.Add( groupListItem );
+                                    }
                                 }
                             }
 
