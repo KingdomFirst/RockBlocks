@@ -112,7 +112,7 @@
                                 <span class="pull-right margin-t-sm">
                                     <asp:Literal ID="lStatus" runat="server" />
                                     <asp:LinkButton ID="lbPrintLabel" runat="server" CssClass="js-pring-label btn btn-success"
-                                        CommandName="PrintLabel" Visible='<%# (bool)Eval("ShowPrintLabel") %>'><i class="fa fa-print"></i> Print Label</asp:LinkButton>
+                                        CommandName="PrintLabel" Visible='<%# (bool)Eval("ShowPrintLabel") %>' OnClientClick="isEdge();"><i class="fa fa-print"></i> View Labels</asp:LinkButton>
                                     <asp:LinkButton ID="lbMovePerson" runat="server" CssClass="js-move-person btn btn-info"
                                         CommandArgument='<%# Eval("Id") %>' CommandName="Move" Visible='<%# (bool)Eval("ShowMove") %>'><i class="fa fa-sign-out"></i> Move</asp:LinkButton>
                                     <asp:LinkButton ID="lbCheckOut" runat="server" CssClass="js-checkout btn btn-warning"
@@ -145,9 +145,9 @@
             <Content>
                 <div class="margin-t-md">
                     <div class="form-inline">
-                        <Rock:RockDropDownList ID="ddlLabelToPrint" runat="server" Label="Select Label" AppendDataBoundItems="false" ValidationGroup="PrintLabel" Required="true"></Rock:RockDropDownList>
+                        <Rock:RockDropDownList ID="ddlLabelToPrint" runat="server" Label="Select Label" AppendDataBoundItems="false" ValidationGroup="PrintLabel" OnSelectedIndexChanged="btnViewLabel_Click" OnClientClick="isEdge();" AutoPostBack="true"></Rock:RockDropDownList>
                         <Rock:RockControlWrapper ID="rcwPrint" runat="server" Label=" " FormGroupCssClass="margin-l-md">
-                            <asp:LinkButton ID="lbViewLabel" runat="server" Text="View Label" CssClass="btn btn-default margin-l-lg" OnClick="btnViewLabel_Click" OnClientClick="isEdge();" ValidationGroup="PrintLabel" />
+                            <asp:LinkButton ID="lbPrintLabel" runat="server" Text="Print Label" CssClass="btn btn-default margin-l-lg" OnClick="btnPrintLabel_Click" ValidationGroup="PrintLabel" />
                         </Rock:RockControlWrapper>
                         <asp:Panel runat="server" id="pnlEdgeAlert" Visible="false" class="alert alert-warning">For Microsoft Edge, right-click the label and select Print.</asp:Panel>
                     </div>

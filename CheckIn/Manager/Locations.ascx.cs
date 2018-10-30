@@ -27,8 +27,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     /// <summary>
     /// Block used to view current check-in counts and locations
     /// </summary>
-    [DisplayName( "KFS > Locations" )]
-    [Category( "Check-in > Manager" )]
+    [DisplayName( "Locations" )]
+    [Category( "KFS > Check-in > Manager" )]
     [Description( "Block used to view current check-in counts and locations." )]
     [CustomRadioListField( "Navigation Mode", "Navigation and attendance counts can be grouped and displayed either by 'Group Type > Group Type (etc) > Group > Location' or by 'location > location (etc).'  Select the navigation hierarchy that is most appropriate for your organization.", "T^Group Type,L^Location,", true, "T", "", 0, "Mode" )]
     [GroupTypeField( "Check-in Type", "The Check-in Area to display.  This value can also be overridden through the URL query string key (e.g. when navigated to from the Check-in Type selection block).", false, "", "", 1, "GroupTypeTemplate", Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_TEMPLATE )]
@@ -38,6 +38,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [BooleanField( "Search By Code", "A flag indicating if security codes should also be evaluated in the search box results.", order: 5 )]
     [IntegerField( "Lookback Minutes", "The number of minutes the chart will lookback.", true, 120, order: 6 )]
     [BooleanField( "Location Active", "A flag indicating if location should currently have a schedule assigned to it to be displayed.", order: 7 )]
+    [BooleanField( "Close Occurrence", "If KFS Load Balance Locations is being used in the check-in workflow, this will close the occurrence instead of the location.", order: 8 )]
     [BooleanField( "Show Delete", "A flag indicating if the Delete button should be displayed.", true, "Attendee Actions", 0 )]
     [BooleanField( "Show Checkout", "A flag indicating if the Checkout button should be displayed.", true, "Attendee Actions", 1 )]
     [BooleanField( "Show Move", "A flag indicating if the Move Attendee buttons should be displayed.", true, "Attendee Actions", 2 )]
@@ -46,12 +47,16 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [CustomDropdownListField( "Print Density", "The default print density for reprint.", "6^6 dpmm (152 dpi),8^8 dpmm (203 dpi),12^12 dpmm (300 dpi),24^24 dpmm (600 dpi)", true, "8", "Print Actions", 1 )]
     [TextField( "Label Width", "The default width of label for reprint.", true, "4", "Print Actions", 2 )]
     [TextField( "Label Height", "The default height of label for reprint.", true, "2", "Print Actions", 3 )]
+    [BooleanField( "Show ZPL Print Button", "A flag indicating if the ZPL Print Button should be displayed.", false, "Print Actions", 4 )]
     public partial class Locations : Rock.Web.UI.RockBlock
     {
         #region Fields
 
         private string _configuredMode = "L";
         private bool _showAdvancedPrintOptions = false;
+        private bool _showZplPrintButton = false;
+        private bool _useKFSCloseAttribute = false;
+        private int _occurrenceClosedAttributeId = 0;
 
         #endregion
 
@@ -67,6 +72,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         public static bool ShowCheckout { get; set; }
         public static bool ShowMove { get; set; }
         public static bool ShowPrintLabel { get; set; }
+        public List<int> ActiveScheduleIds { get; set; }
 
         #endregion
 
@@ -84,6 +90,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             CurrentScheduleId = ViewState["CurrentScheduleId"] as string;
             CurrentNavPath = ViewState["CurrentNavPath"] as string;
             NavData = ViewState["NavData"] as NavigationData;
+            ActiveScheduleIds = ViewState["ActiveScheduleIds"] as List<int>;
         }
 
         public override List<Rock.Web.UI.BreadCrumb> GetBreadCrumbs( Rock.Web.PageReference pageReference )
@@ -104,6 +111,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             ShowMove = GetAttributeValue( "ShowMove" ).AsBoolean();
             ShowPrintLabel = GetAttributeValue( "ShowPrintLabel" ).AsBoolean();
             _showAdvancedPrintOptions = GetAttributeValue( "ShowAdvancedPrintOptions" ).AsBoolean();
+            _showZplPrintButton = GetAttributeValue( "ShowZPLPrintButton" ).AsBoolean();
 
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.js" );
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.time.js" );
@@ -123,6 +131,13 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
             Page.Form.DefaultButton = lbSearch.UniqueID;
             Page.Form.DefaultFocus = tbSearch.UniqueID;
+
+            var occurrenceClosedAttribute = AttributeCache.Get( "B271037B-01AD-4270-B688-63DE29022915".AsGuid() );
+            if ( GetAttributeValue( "CloseOccurrence" ).AsBoolean() && occurrenceClosedAttribute.Id > 0 )
+            {
+                _useKFSCloseAttribute = true;
+                _occurrenceClosedAttributeId = occurrenceClosedAttribute.Id;
+            }
         }
 
         /// <summary>
@@ -218,6 +233,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             ViewState["CurrentNavPath"] = CurrentNavPath;
             ViewState["CurrentScheduleId"] = CurrentScheduleId;
             ViewState["CurrentCampusId"] = CurrentCampusId;
+            ViewState["ActiveScheduleIds"] = ActiveScheduleIds;
 
             return base.SaveViewState();
         }
@@ -447,8 +463,56 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     if ( loc != null )
                     {
                         tgl.Visible = loc.HasGroups;
-                        tgl.Checked = loc.IsActive;
                         tgl.Attributes["data-key"] = loc.Id.ToString();
+
+                        int? groupId = null;
+                        var pathParts = CurrentNavPath.Split( new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries );
+                        if ( pathParts.Length >= 3 && pathParts[2].StartsWith( "G" ) )
+                        {
+                            groupId = pathParts[2].Substring( 1 ).AsIntegerOrNull();
+                            tgl.Attributes["data-group"] = groupId.ToStringSafe();
+                        }
+
+                        if ( _useKFSCloseAttribute && groupId.HasValue )
+                        {
+                            using ( var rockContext = new RockContext() )
+                            {
+                                var activeScheduleIds = new List<int>();
+                                foreach ( var schedule in new ScheduleService( rockContext )
+                                    .Queryable().AsNoTracking()
+                                    .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
+                                {
+                                    if ( schedule.WasScheduleOrCheckInActive( GetCampusTime() ) )
+                                    {
+                                        activeScheduleIds.Add( schedule.Id );
+                                    }
+                                }
+
+                                var occurrences = new AttendanceOccurrenceService( rockContext )
+                                                        .Queryable()
+                                                        .Where( o =>
+                                                            o.OccurrenceDate == RockDateTime.Today &&
+                                                            o.GroupId == groupId &&
+                                                            o.LocationId == loc.Id &&
+                                                            ( o.ScheduleId.HasValue && activeScheduleIds.Contains( o.ScheduleId.Value ) ) )
+                                                        .ToList();
+
+                                if ( occurrences.Any() )
+                                {
+                                    var occurrence = occurrences.FirstOrDefault();
+                                    occurrence.LoadAttributes();
+                                    tgl.Checked = !( occurrence.GetAttributeValue( "com.kfs.OccurrenceClosed" ).AsBoolean( false ) );
+                                }
+                                else
+                                {
+                                    tgl.Checked = true;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            tgl.Checked = loc.IsActive;
+                        }
                     }
                     else
                     {
@@ -619,7 +683,70 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             if ( tgl != null )
             {
                 int? id = tgl.Attributes["data-key"].AsIntegerOrNull();
-                if ( id.HasValue )
+                int? groupId = tgl.Attributes["data-group"].AsIntegerOrNull();
+
+                if ( _useKFSCloseAttribute && groupId.HasValue )
+                {
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var occurrences = new AttendanceOccurrenceService( rockContext )
+                                                .Queryable()
+                                                .Where( o =>
+                                                    o.OccurrenceDate == RockDateTime.Today &&
+                                                    o.GroupId == groupId &&
+                                                    o.LocationId == id &&
+                                                    ( o.ScheduleId.HasValue && ActiveScheduleIds.Contains( o.ScheduleId.Value ) ) )
+                                                .ToList();
+
+                        if ( ActiveScheduleIds.Count > occurrences.Count )
+                        {
+                            var occurrenceScheduleIds = occurrences.Select( o => o.ScheduleId.Value ).ToList();
+                            foreach ( var scheduleId in ActiveScheduleIds )
+                            {
+                                if ( !occurrenceScheduleIds.Contains( scheduleId ) )
+                                {
+                                    // create occurrence
+                                    var occurrenceService = new AttendanceOccurrenceService( rockContext );
+                                    var occurrence = new AttendanceOccurrence
+                                    {
+                                        ScheduleId = scheduleId,
+                                        GroupId = groupId,
+                                        LocationId = id,
+                                        OccurrenceDate = RockDateTime.Today,
+                                        Guid = new Guid()
+                                    };
+                                    occurrenceService.Add( occurrence );
+                                    rockContext.SaveChanges();
+
+                                    // set attribute
+                                    occurrence.LoadAttributes();
+                                    {
+                                        occurrence.SetAttributeValue( "com.kfs.OccurrenceClosed", ( !tgl.Checked ).ToString() );
+                                        occurrence.SaveAttributeValue( "com.kfs.OccurrenceClosed" );
+                                        rockContext.SaveChanges();
+                                        Rock.CheckIn.KioskDevice.Clear();
+                                    }
+                                }
+                            }
+                        }
+
+                        if ( occurrences.Any() )
+                        {
+                            foreach ( var occurrence in occurrences )
+                            {
+                                occurrence.LoadAttributes();
+                                {
+                                    occurrence.SetAttributeValue( "com.kfs.OccurrenceClosed", ( !tgl.Checked ).ToString() );
+                                    occurrence.SaveAttributeValue( "com.kfs.OccurrenceClosed" );
+                                    rockContext.SaveChanges();
+                                    Rock.CheckIn.KioskDevice.Clear();
+                                }
+                            }
+                        }
+                    }
+                    NavData.Locations.Where( l => l.Id == id.Value ).ToList().ForEach( l => l.IsActive = tgl.Checked );
+                }
+                else if ( id.HasValue )
                 {
                     using ( var rockContext = new RockContext() )
                     {
@@ -759,17 +886,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                             using ( var rockContext = new RockContext() )
                             {
-                                var activeSchedules = new List<int>();
-                                foreach ( var schedule in new ScheduleService( rockContext )
-                                    .Queryable().AsNoTracking()
-                                    .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
-                                {
-                                    if ( schedule.WasScheduleOrCheckInActive( now ) )
-                                    {
-                                        activeSchedules.Add( schedule.Id );
-                                    }
-                                }
-
                                 var attendanceService = new AttendanceService( rockContext );
                                 foreach ( var attendance in attendanceService
                                     .Queryable()
@@ -784,7 +900,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                         a.DidAttend.HasValue &&
                                         a.DidAttend.Value &&
                                         a.Occurrence.ScheduleId.HasValue &&
-                                        activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) ) )
+                                        ActiveScheduleIds.Contains( a.Occurrence.ScheduleId.Value ) ) )
                                 {
                                     attendance.EndDateTime = now;
                                 }
@@ -931,17 +1047,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 {
                     foreach ( var personId in personIds.Split( ',' ).AsIntegerList() )
                     {
-                        var activeSchedules = new List<int>();
-                        foreach ( var schedule in new ScheduleService( rockContext )
-                            .Queryable().AsNoTracking()
-                            .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
-                        {
-                            if ( schedule.WasScheduleOrCheckInActive( now ) )
-                            {
-                                activeSchedules.Add( schedule.Id );
-                            }
-                        }
-
                         var movedAttendance = new List<Attendance>();
 
                         var attendanceService = new AttendanceService( rockContext );
@@ -958,13 +1063,14 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                 a.DidAttend.HasValue &&
                                 a.DidAttend.Value &&
                                 a.Occurrence.ScheduleId.HasValue &&
-                                activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) ) )
+                                ActiveScheduleIds.Contains( a.Occurrence.ScheduleId.Value ) ) )
                         {
                             var newAttendance = new Attendance();
                             newAttendance = attendanceService.AddOrUpdate( attendance.PersonAliasId, now, attendance.Occurrence.GroupId, newLocationId, attendance.Occurrence.ScheduleId, attendance.CampusId, attendance.DeviceId, attendance.SearchTypeValueId, attendance.SearchValue, attendance.SearchResultGroupId, attendance.AttendanceCodeId );
                             newAttendance.EndDateTime = null;
                             movedAttendance.Add( newAttendance );
                             attendance.EndDateTime = now;
+                            Rock.CheckIn.KioskLocationAttendance.AddAttendance( newAttendance );
                         }
 
                         attendanceService.AddRange( movedAttendance );
@@ -1115,6 +1221,10 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
         private NavigationData GetNavigationData( CampusCache campus, int? scheduleId )
         {
+            if ( ActiveScheduleIds == null )
+            {
+                ActiveScheduleIds = new List<int>();
+            }
             using ( var rockContext = new RockContext() )
             {
                 var occurrences = new List<AttendanceOccurrence>();
@@ -1136,7 +1246,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 }
 
                 var chartTimes = GetChartTimes( campus );
-                var activeSchedules = new List<int>();
                 var minDate = RockDateTime.Today.AddDays( -1 );
                 foreach ( DateTime chartTime in chartTimes )
                 {
@@ -1145,7 +1254,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     {
                         if ( schedule.WasScheduleOrCheckInActive( chartTime ) )
                         {
-                            activeSchedules.Add( schedule.Id );
+                            ActiveScheduleIds.Add( schedule.Id );
 
                             var currentAttendance = new AttendanceService( rockContext )
                                 .Queryable()
@@ -1192,7 +1301,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 {
                     validLocationIdsFiltered = new GroupLocationService( rockContext )
                         .GetActiveByLocations( validLocationids )
-                        .Where( l => l.Schedules.Any( s => s.IsActive && activeSchedules.Contains( s.Id ) ) )
+                        .Where( l => l.Schedules.Any( s => s.IsActive && ActiveScheduleIds.Contains( s.Id ) ) )
                         .Select( l => l.LocationId )
                         .ToList();
                 }
@@ -1272,7 +1381,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         // look for locations in use by this group currently and add to the childLocationIds
                         foreach ( var occurrence in occurrences )
                         {
-                            if ( occurrence.GroupId == group.Id && !childLocationIds.Contains( occurrence.LocationId.Value ) )
+                            if ( occurrence.GroupId == group.Id && !childLocationIds.Contains( occurrence.LocationId.Value ) && validLocationids.Contains( occurrence.LocationId.Value ) )
                             {
                                 childLocationIds.Add( occurrence.LocationId.Value );
                             }
@@ -1375,14 +1484,14 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     {
                         bool current = chartTime.Equals( chartTimes.Max() );
 
-                        activeSchedules.Clear();
+                        ActiveScheduleIds.Clear();
 
                         // Get the active schedules
                         foreach ( var schedule in schedules )
                         {
                             if ( schedule.WasScheduleOrCheckInActive( chartTime ) )
                             {
-                                activeSchedules.Add( schedule.Id );
+                                ActiveScheduleIds.Add( schedule.Id );
                             }
                         }
 
@@ -1390,7 +1499,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             .Where( a =>
                                 a.StartDateTime < chartTime &&
                                 a.PersonAlias != null &&
-                                activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) )
+                                ActiveScheduleIds.Contains( a.Occurrence.ScheduleId.Value ) )
                             .GroupBy( a => new
                             {
                                 ScheduleId = a.Occurrence.ScheduleId.Value,
@@ -1612,6 +1721,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         {
             if ( ShowPrintLabel )
             {
+                ddlLabelToPrint.Required = _showZplPrintButton;
+                rcwPrint.Visible = _showZplPrintButton;
                 wpAdvancedPrintOptions.Visible = _showAdvancedPrintOptions;
 
                 ddlPrintDensity.SelectedValue = GetAttributeValue( "PrintDensity" );
@@ -1770,6 +1881,11 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         tglHeadingRoom.Checked = locationItem.IsActive;
                         tglHeadingRoom.Attributes["data-key"] = locationItem.Id.ToString();
 
+                        if ( pathParts.Length >= 3 && pathParts[2].StartsWith( "G" ) )
+                        {
+                            tglHeadingRoom.Attributes["data-group"] = pathParts[2].Substring( 1 );
+                        }
+
                         pnlThreshold.Visible = locationItem.SoftThreshold.HasValue || locationItem.FirmThreshold.HasValue;
                         hfThreshold.Value = locationItem.SoftThreshold.HasValue ? locationItem.SoftThreshold.Value.ToString() : "";
                         lThreshold.Text = locationItem.SoftThreshold.HasValue ? locationItem.SoftThreshold.Value.ToString( "N0" ) : "none";
@@ -1890,6 +2006,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     break;
                 case "PRINTLABEL":
                     dlgPrintLabel.Show();
+                    ViewState["LabelJSON"] = string.Empty;
                     break;
             }
         }
@@ -1906,6 +2023,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                     break;
                 case "PRINTLABEL":
                     dlgPrintLabel.Hide();
+                    ViewState["LabelJSON"] = string.Empty;
                     break;
             }
 
@@ -2117,206 +2235,282 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
         protected void btnViewLabel_Click( object sender, EventArgs e )
         {
+            var labelJson = string.Empty;
             var ddlValues = ddlLabelToPrint.SelectedValue.Split( new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries );
-            var labelGuid = ddlValues[0].AsGuid();
-            var groupId = ddlValues[1].AsInteger();
-            var personId = hfPersonId.Value.AsInteger();
-
-            if ( personId > 0 && groupId > 0 && labelGuid != Guid.Empty )
+            if ( ddlValues.Any() )
             {
-                var dayStart = RockDateTime.Today;
-                var now = GetCampusTime();
-                var locationId = hfLocationId.Value.AsInteger();
+                var labelGuid = ddlValues[0].AsGuid();
+                var groupId = ddlValues[1].AsInteger();
+                var personId = hfPersonId.Value.AsInteger();
 
-                var schedule = new CheckInSchedule();
-                var location = new CheckInLocation();
-                var group = new CheckInGroup();
-                var groupType = new CheckInGroupType();
-                var person = new CheckInPerson();
-                var people = new List<CheckInPerson>();
-
-                using ( var rockContext = new RockContext() )
+                if ( personId > 0 && groupId > 0 && labelGuid != Guid.Empty )
                 {
-                    var activeSchedules = new List<int>();
-                    foreach ( var activeSchedule in new ScheduleService( rockContext )
-                        .Queryable().AsNoTracking()
-                        .Where( s => s.CheckInStartOffsetMinutes.HasValue ) )
+                    var dayStart = RockDateTime.Today;
+                    var now = GetCampusTime();
+                    var locationId = hfLocationId.Value.AsInteger();
+
+                    var schedule = new CheckInSchedule();
+                    var location = new CheckInLocation();
+                    var group = new CheckInGroup();
+                    var groupType = new CheckInGroupType();
+                    var person = new CheckInPerson();
+                    var people = new List<CheckInPerson>();
+
+                    using ( var rockContext = new RockContext() )
                     {
-                        if ( activeSchedule.WasScheduleOrCheckInActive( now ) )
+                        var rockPerson = new Rock.Model.Person();
+                        var code = string.Empty;
+                        var schedules = new List<Schedule>();
+
+                        var attendanceService = new AttendanceService( rockContext );
+                        var firstTime = !attendanceService
+                                .Queryable()
+                                .AsNoTracking()
+                                .Where( a =>
+                                    a.PersonAlias != null &&
+                                    a.PersonAlias.PersonId == personId &&
+                                    a.StartDateTime < dayStart
+                                    )
+                                .Any();
+
+                        foreach ( var attendance in attendanceService
+                                        .Queryable()
+                                        .AsNoTracking()
+                                        .Where( a =>
+                                            a.StartDateTime > dayStart &&
+                                            a.StartDateTime < now &&
+                                            !a.EndDateTime.HasValue &&
+                                            a.Occurrence.LocationId.HasValue &&
+                                            a.Occurrence.LocationId.Value == locationId &&
+                                            a.PersonAlias != null &&
+                                            a.PersonAlias.PersonId == personId &&
+                                            a.DidAttend.HasValue &&
+                                            a.DidAttend.Value &&
+                                            a.Occurrence.ScheduleId.HasValue &&
+                                            ActiveScheduleIds.Contains( a.Occurrence.ScheduleId.Value ) )
+                                        .OrderBy( t => t.Occurrence.Schedule.WeeklyTimeOfDay )
+                                        .ThenBy( t => t.Occurrence.Schedule.Name ) )
                         {
-                            activeSchedules.Add( activeSchedule.Id );
+                            rockPerson = attendance.PersonAlias.Person;
+                            code = attendance.AttendanceCode.ToString();
+                            if ( !schedules.Contains( attendance.Occurrence.Schedule ) )
+                            {
+                                schedules.Add( attendance.Occurrence.Schedule );
+                                var test = attendance.Occurrence.Location;
+                            }
                         }
-                    }
 
-                    var rockPerson = new Person();
-                    var code = string.Empty;
-                    var schedules = new List<Schedule>();
+                        schedule.Schedule = schedules.OrderBy( t => t.WeeklyTimeOfDay ).ThenBy( t => t.Name ).FirstOrDefault();
 
-                    var attendanceService = new AttendanceService( rockContext );
-                    var firstTime = !attendanceService
+                        var loc = new LocationService( rockContext )
                             .Queryable()
                             .AsNoTracking()
-                            .Where( a =>
-                                a.PersonAlias != null &&
-                                a.PersonAlias.PersonId == personId &&
-                                a.StartDateTime < dayStart
-                                )
-                            .Any();
+                            .Where( l => l.Id == locationId )
+                            .FirstOrDefault();
 
-                    foreach ( var attendance in attendanceService
-                                    .Queryable()
-                                    .AsNoTracking()
-                                    .Where( a =>
-                                        a.StartDateTime > dayStart &&
-                                        a.StartDateTime < now &&
-                                        !a.EndDateTime.HasValue &&
-                                        a.Occurrence.LocationId.HasValue &&
-                                        a.Occurrence.LocationId.Value == locationId &&
-                                        a.PersonAlias != null &&
-                                        a.PersonAlias.PersonId == personId &&
-                                        a.DidAttend.HasValue &&
-                                        a.DidAttend.Value &&
-                                        a.Occurrence.ScheduleId.HasValue &&
-                                        activeSchedules.Contains( a.Occurrence.ScheduleId.Value ) )
-                                    .OrderBy( t => t.Occurrence.Schedule.WeeklyTimeOfDay )
-                                    .ThenBy( t => t.Occurrence.Schedule.Name ) )
-                    {
-                        rockPerson = attendance.PersonAlias.Person;
-                        code = attendance.AttendanceCode.ToString();
-                        if ( !schedules.Contains( attendance.Occurrence.Schedule ) )
+                        foreach ( var s in schedules )
                         {
-                            schedules.Add( attendance.Occurrence.Schedule );
-                            var test = attendance.Occurrence.Location;
+                            var sch = new CheckInSchedule();
+                            sch.Schedule = s;
+                            location.Location = loc;
+                            location.Schedules.Add( sch );
+                            location.SelectedForSchedule.Add( s.Id );
+                        }
+
+                        var gr = new GroupService( rockContext )
+                            .Queryable()
+                            .AsNoTracking()
+                            .Where( g => g.Id == groupId )
+                            .FirstOrDefault();
+
+                        group.Group = gr;
+                        group.Locations.Add( location );
+                        group.SelectedForSchedule.Add( schedule.Schedule.Id );
+
+                        groupType.GroupType = GroupTypeCache.Get( gr.GroupTypeId );
+                        groupType.Groups.Add( group );
+                        groupType.SelectedForSchedule.Add( schedule.Schedule.Id );
+
+                        person.Person = rockPerson;
+                        person.SecurityCode = code;
+                        person.GroupTypes.Add( groupType );
+                        person.FirstTime = firstTime;
+                        people.Add( person );
+                    }
+
+                    var dpmm = ddlPrintDensity.SelectedValue;
+                    var width = nbLabelWidth.Text;
+                    var height = nbLabelHeight.Text;
+                    var index = nbShowLabel.Text;
+                    var zpl = string.Empty;
+
+                    var kioskLabel = KioskLabel.Get( labelGuid );
+                    if ( kioskLabel != null )
+                    {
+                        var mergeObjects = new Dictionary<string, object>();
+                        var commonMergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( null );
+                        foreach ( var keyValue in commonMergeFields )
+                        {
+                            mergeObjects.Add( keyValue.Key, keyValue.Value );
+                        }
+
+                        mergeObjects.Add( "Location", location );
+                        mergeObjects.Add( "Group", group );
+                        mergeObjects.Add( "Person", person );
+                        mergeObjects.Add( "People", people );
+                        mergeObjects.Add( "GroupType", groupType );
+
+                        var checkinLabel = new CheckInLabel( kioskLabel, mergeObjects, personId );
+                        var urlRoot = string.Format( "{0}://{1}", Request.Url.Scheme, Request.Url.Authority );
+                        checkinLabel.LabelFile = urlRoot + checkinLabel.LabelFile;
+                        checkinLabel.FileGuid = kioskLabel.Guid;
+                        checkinLabel.PrintTo = PrintTo.Kiosk;
+                        //
+                        // tbd if null for these messes anything up
+                        //
+                        //checkinLabel.PrinterDeviceId = null;
+                        //checkinLabel.PrinterAddress = null;
+                        //
+                        //
+                        var checkinLabelList = new List<CheckInLabel>();
+                        checkinLabelList.Add( checkinLabel );
+                        labelJson = checkinLabelList.ToJson();
+
+                        string printContent = kioskLabel.FileContent;
+                        foreach ( var mergeField in checkinLabel.MergeFields )
+                        {
+                            if ( !string.IsNullOrWhiteSpace( mergeField.Value ) )
+                            {
+                                printContent = Regex.Replace( printContent, string.Format( @"(?<=\^FD){0}(?=\^FS)", mergeField.Key ), ZebraFormatString( mergeField.Value ) );
+                            }
+                            else
+                            {
+                                // Remove the box preceding merge field
+                                printContent = Regex.Replace( printContent, string.Format( @"\^FO.*\^FS\s*(?=\^FT.*\^FD{0}\^FS)", mergeField.Key ), string.Empty );
+                                // Remove the merge field
+                                printContent = Regex.Replace( printContent, string.Format( @"\^FD{0}\^FS", mergeField.Key ), "^FD^FS" );
+                            }
+                        }
+                        zpl = printContent;
+                    }
+
+                    byte[] zplBytes = Encoding.UTF8.GetBytes( zpl );
+
+                    var labelaryUrl = string.Format( "http://api.labelary.com/v1/printers/{0}dpmm/labels/{1}x{2}/{3}", dpmm, width, height, ( index != string.Empty ? index + "/" : string.Empty ) );
+                    var request = ( HttpWebRequest ) WebRequest.Create( labelaryUrl );
+                    request.Method = "POST";
+                    request.Accept = "application/pdf"; // omit this line to get PNG images back
+                    request.ContentType = "application/x-www-form-urlencoded";
+                    request.ContentLength = zplBytes.Length;
+
+                    var requestStream = request.GetRequestStream();
+                    requestStream.Write( zplBytes, 0, zplBytes.Length );
+                    requestStream.Close();
+
+                    try
+                    {
+                        var response = ( HttpWebResponse ) request.GetResponse();
+                        var responseStream = response.GetResponseStream();
+                        var memoryStream = new MemoryStream();
+
+                        byte[] buffer = new byte[16 * 1024];
+                        int read;
+                        while ( ( read = responseStream.Read( buffer, 0, buffer.Length ) ) > 0 )
+                        {
+                            memoryStream.Write( buffer, 0, read );
+                        }
+
+                        var labelPath = string.Format( "~/Cache/{0}_{1}_{2}_{3}.pdf", person.Person.FullName.RemoveSpaces(), personId, locationId, labelGuid );
+
+                        byte[] bytes = memoryStream.ToArray();
+                        System.IO.Directory.CreateDirectory( Server.MapPath( "~/Cache" ) );
+                        System.IO.File.WriteAllBytes( Server.MapPath( labelPath ), bytes );
+                        var embed = "<div class=\"pdfObject\" style=\"width:100%;height:350px;\"><object toolbar=\"true\" id=\"pdfDocument\" width=\"100%\" height=\"100%\" data=\"{0}\" type=\"application/pdf\"><p>It appears you don't have a PDF plugin for this browser. <a href=\"{0}\">click here to download the PDF file.</a></p></object></div>";
+                        litLabel.Text = string.Format( embed, ResolveRockUrlIncludeRoot( labelPath ) );
+                        memoryStream.Close();
+
+                        responseStream.Close();
+
+                        if ( hfIsEdge.Value == "true" )
+                        {
+                            pnlEdgeAlert.Visible = true;
                         }
                     }
-
-                    schedule.Schedule = schedules.OrderBy( t => t.WeeklyTimeOfDay ).ThenBy( t => t.Name ).FirstOrDefault();
-
-                    var loc = new LocationService( rockContext )
-                        .Queryable()
-                        .AsNoTracking()
-                        .Where( l => l.Id == locationId )
-                        .FirstOrDefault();
-
-                    foreach ( var s in schedules )
+                    catch ( WebException ex )
                     {
-                        var sch = new CheckInSchedule();
-                        sch.Schedule = s;
-                        location.Location = loc;
-                        location.Schedules.Add( sch );
-                        location.SelectedForSchedule.Add( s.Id );
+                        Console.WriteLine( "Error: {0}", ex.Status );
                     }
-
-                    var gr = new GroupService( rockContext )
-                        .Queryable()
-                        .AsNoTracking()
-                        .Where( g => g.Id == groupId )
-                        .FirstOrDefault();
-
-                    group.Group = gr;
-                    group.Locations.Add( location );
-                    group.SelectedForSchedule.Add( schedule.Schedule.Id );
-
-                    groupType.GroupType = GroupTypeCache.Get( gr.GroupTypeId );
-                    groupType.Groups.Add( group );
-                    groupType.SelectedForSchedule.Add( schedule.Schedule.Id );
-
-                    person.Person = rockPerson;
-                    person.SecurityCode = code;
-                    person.GroupTypes.Add( groupType );
-                    person.FirstTime = firstTime;
-                    people.Add( person );
-                }
-
-                var dpmm = ddlPrintDensity.SelectedValue;
-                var width = nbLabelWidth.Text;
-                var height = nbLabelHeight.Text;
-                var index = nbShowLabel.Text;
-                var zpl = string.Empty;
-
-                var kioskLabel = KioskLabel.Get( labelGuid );
-                if ( kioskLabel != null )
-                {
-                    var mergeObjects = new Dictionary<string, object>();
-                    var commonMergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( null );
-                    foreach ( var keyValue in commonMergeFields )
-                    {
-                        mergeObjects.Add( keyValue.Key, keyValue.Value );
-                    }
-
-                    mergeObjects.Add( "Location", location );
-                    mergeObjects.Add( "Group", group );
-                    mergeObjects.Add( "Person", person );
-                    mergeObjects.Add( "People", people );
-                    mergeObjects.Add( "GroupType", groupType );
-
-                    var checkinLabel = new CheckInLabel( kioskLabel, mergeObjects, personId );
-
-                    string printContent = kioskLabel.FileContent;
-                    foreach ( var mergeField in checkinLabel.MergeFields )
-                    {
-                        if ( !string.IsNullOrWhiteSpace( mergeField.Value ) )
-                        {
-                            printContent = Regex.Replace( printContent, string.Format( @"(?<=\^FD){0}(?=\^FS)", mergeField.Key ), ZebraFormatString( mergeField.Value ) );
-                        }
-                        else
-                        {
-                            // Remove the box preceding merge field
-                            printContent = Regex.Replace( printContent, string.Format( @"\^FO.*\^FS\s*(?=\^FT.*\^FD{0}\^FS)", mergeField.Key ), string.Empty );
-                            // Remove the merge field
-                            printContent = Regex.Replace( printContent, string.Format( @"\^FD{0}\^FS", mergeField.Key ), "^FD^FS" );
-                        }
-                    }
-                    zpl = printContent;
-                }
-
-                byte[] zplBytes = Encoding.UTF8.GetBytes( zpl );
-
-                var labelaryUrl = string.Format( "http://api.labelary.com/v1/printers/{0}dpmm/labels/{1}x{2}/{3}", dpmm, width, height, ( index != string.Empty ? index + "/" : string.Empty ) );
-                var request = ( HttpWebRequest ) WebRequest.Create( labelaryUrl );
-                request.Method = "POST";
-                request.Accept = "application/pdf"; // omit this line to get PNG images back
-                request.ContentType = "application/x-www-form-urlencoded";
-                request.ContentLength = zplBytes.Length;
-
-                var requestStream = request.GetRequestStream();
-                requestStream.Write( zplBytes, 0, zplBytes.Length );
-                requestStream.Close();
-
-                try
-                {
-                    var response = ( HttpWebResponse ) request.GetResponse();
-                    var responseStream = response.GetResponseStream();
-                    var memoryStream = new MemoryStream();
-
-                    byte[] buffer = new byte[16 * 1024];
-                    int read;
-                    while ( ( read = responseStream.Read( buffer, 0, buffer.Length ) ) > 0 )
-                    {
-                        memoryStream.Write( buffer, 0, read );
-                    }
-
-                    var labelPath = string.Format( "~/Cache/{0}_{1}_{2}_{3}.pdf", person.Person.FullName.RemoveSpaces(), personId, locationId, labelGuid );
-
-                    byte[] bytes = memoryStream.ToArray();
-                    System.IO.Directory.CreateDirectory( Server.MapPath( "~/Cache" ) );
-                    System.IO.File.WriteAllBytes( Server.MapPath( labelPath ), bytes );
-                    var embed = "<div class=\"pdfObject\" style=\"width:100%;height:350px;\"><object toolbar=\"true\" id=\"pdfDocument\" width=\"100%\" height=\"100%\" data=\"{0}\" type=\"application/pdf\"><p>It appears you don't have a PDF plugin for this browser. <a href=\"{0}\">click here to download the PDF file.</a></p></object></div>";
-                    litLabel.Text = string.Format( embed, ResolveRockUrlIncludeRoot( labelPath ) );
-                    memoryStream.Close();
-
-                    responseStream.Close();
-
-                    if ( hfIsEdge.Value == "true" )
-                    {
-                        pnlEdgeAlert.Visible = true;
-                    }
-                }
-                catch ( WebException ex )
-                {
-                    Console.WriteLine( "Error: {0}", ex.Status );
                 }
             }
+            else
+            {
+                litLabel.Text = string.Empty;
+            }
+
+            ViewState["LabelJSON"] = labelJson;
+        }
+
+        protected void btnPrintLabel_Click( object sender, EventArgs e )
+        {
+            var jsonObject = ViewState["LabelJSON"] as string;
+            AddLabelScript( jsonObject );
+        }
+
+        /// <summary>
+        /// Adds the label script.
+        /// </summary>
+        /// <param name="jsonObject">The json object.</param>
+        private void AddLabelScript( string jsonObject )
+        {
+            string script = string.Format( @"
+
+        // setup deviceready event to wait for cordova
+	    if (navigator.userAgent.match(/(iPhone|iPod|iPad)/)) {{
+            document.addEventListener('deviceready', onDeviceReady, false);
+        }} else {{
+            $( document ).ready(function() {{
+                onDeviceReady();
+            }});
+        }}
+
+	    // label data
+        var labelData = {0};
+
+		function onDeviceReady() {{
+            try {{			
+                printLabels();
+            }} 
+            catch (err) {{
+                console.log('An error occurred printing labels: ' + err);
+            }}
+		}}
+		
+		function alertDismissed() {{
+		    // do something
+		}}
+		
+		function printLabels() {{
+		    ZebraPrintPlugin.printTags(
+            	JSON.stringify(labelData), 
+            	function(result) {{ 
+			        console.log('Tag printed');
+			    }},
+			    function(error) {{   
+				    // error is an array where:
+				    // error[0] is the error message
+				    // error[1] determines if a re-print is possible (in the case where the JSON is good, but the printer was not connected)
+			        console.log('An error occurred: ' + error[0]);
+                    navigator.notification.alert(
+                        'An error occurred while printing the labels.' + error[0],  // message
+                        alertDismissed,         // callback
+                        'Error',            // title
+                        'Ok'                  // buttonName
+                    );
+			    }}
+            );
+	    }}
+", jsonObject );
+            ScriptManager.RegisterStartupScript( this, this.GetType(), "addLabelScript", script, true );
         }
 
         private string ZebraFormatString( string input, bool isJson = false )
