@@ -1,20 +1,4 @@
-﻿// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
@@ -25,17 +9,21 @@ using Rock.Attribute;
 using Rock.CheckIn;
 using Rock.Model;
 
-namespace RockWeb.Blocks.CheckIn
+namespace RockWeb.Plugins.com_kfs.CheckIn
 {
     [DisplayName("Check Out Person Select")]
-    [Category("Check-in")]
+    [Category("KFS > Check-in")]
     [Description("Lists people who match the selected family and provides option of selecting multiple people to check-out.")]
 
     [TextField( "Title", "Title to display. Use {0} for family name", false, "{0} Check Out", "Text", 5 )]
     [TextField( "Caption", "", false, "Select People", "Text", 6 )]
+    [BooleanField( "Check Out disabled by attribute key", "Should check out be prevented by the following attribute key having a value.", false, "Prevent Checkout", 7, "CheckoutDisabled" )]
+    [TextField( "Attribute Key", "", false, "PagerId", "Prevent Checkout", 8 )]
+    [CodeEditorField( "Attribute Error Text", "Error message displayed when the attribute is not empty and a person attempts to check out.", defaultValue: "We're sorry, you cannot check out via this kiosk at this time, please see the info desk for more information.", category: "Prevent Checkout", order: 9 )]
     public partial class CheckOutPersonSelect : CheckInBlock
     {
         bool _hidePhotos = false;
+        bool _checkoutdisabled = false;
 
         protected override void OnInit( EventArgs e )
         {
@@ -73,6 +61,8 @@ namespace RockWeb.Blocks.CheckIn
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
+
+            _checkoutdisabled = GetAttributeValue( "CheckoutDisabled" ).AsBoolean();
 
             RockPage.AddScriptLink( "~/Scripts/CheckinClient/checkin-core.js" );
 
@@ -144,12 +134,30 @@ namespace RockWeb.Blocks.CheckIn
                 var family = CurrentCheckInState.CheckIn.CurrentFamily;
                 if ( family != null )
                 {
+                    var attributeExists = false;
                     foreach ( var person in family.CheckOutPeople )
                     {
-                        person.Selected = selectedPersonIds.Contains( person.Person.Id );
+                        var personRecord = person.Person;
+                        personRecord.LoadAttributes();
+                        var attributeVal = personRecord.GetAttributeValue( GetAttributeValue( "AttributeKey" ) );
+                        if ( _checkoutdisabled && !string.IsNullOrWhiteSpace( attributeVal ) )
+                        {
+                            attributeExists = true;
+                        }
+                        else
+                        {
+                            person.Selected = selectedPersonIds.Contains( person.Person.Id );
+                        }
                     }
-
-                    ProcessSelection( maWarning );
+                    if ( attributeExists )
+                    {
+                        string errorMsg = GetAttributeValue( "AttributeErrorText" );
+                        maWarning.Show( errorMsg, Rock.Web.UI.Controls.ModalAlertType.Warning );
+                    }
+                    else
+                    {
+                        ProcessSelection( maWarning );
+                    }
                 }
             }
         }

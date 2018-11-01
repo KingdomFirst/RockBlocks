@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CheckOutPersonSelect.ascx.cs" Inherits="RockWeb.Blocks.CheckIn.CheckOutPersonSelect" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CheckOutPersonSelect.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.CheckIn.CheckOutPersonSelect" %>
 
 <script type="text/javascript">
     Sys.Application.add_load(function () {
