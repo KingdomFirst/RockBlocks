@@ -1,0 +1,31 @@
+{% assign groupId = 'Global' | PageParameter:'GroupId' -%}
+{% assign group = groupId | GroupById -%}
+{% assign groupTypeGuid = group.GroupType.Guid | Upcase -%}
+{% assign inheritedGuid = group.GroupType.InheritedGroupType.Guid | Upcase -%}
+{% if groupTypeGuid == '1A082EFF-30DA-44B2-8E48-02385C20828E' or inheritedGuid == '1A082EFF-30DA-44B2-8E48-02385C20828E' -%}
+{% assign current = 0 -%}
+{% for member in group.Members -%}
+{% assign memberRSVP = member | Attribute:'RSVPCount' -%}
+{% assign current = current |Plus:memberRSVP -%}
+{% endfor -%}
+{% assign capacity = group | Attribute:'MaxRSVP' -%}
+{% if capacity > 0 -%}
+{% assign color = 'success' -%}
+{% assign ratio = current | DividedBy:capacity %}
+{% if ratio >= 0.9 -%}
+{% assign color = 'warning' -%}
+{% endif -%}
+{% if current >= capacity -%}
+{% assign color = 'danger' -%}
+{% endif -%}
+<div class="text-right">
+    <div class="label label-{{ color }}">{{ current }}/{{ capacity }}</div>
+</div>
+<div>&nbsp;</div>
+{% else -%}
+<div class="text-right">
+    <div class="label label-success">{{ current }}/Unlimited</div>
+</div>
+<div>&nbsp;</div>
+{% endif -%}
+{% endif -%}
