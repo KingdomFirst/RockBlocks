@@ -18,7 +18,7 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.RsvpGroups
 {
-    [DisplayName( "Group List" )]
+    [DisplayName( "Group List Lava" )]
     [Category( "KFS > Groups" )]
     [Description( "Lists Groups for lava display." )]
 
