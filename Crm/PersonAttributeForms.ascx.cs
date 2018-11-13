@@ -32,13 +32,14 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
     // Settings
     [BooleanField( "Allow Connection Opportunity", "Determines if a url parameter of 'OpportunityId' should be evaluated when complete.  Example: OpportunityId=1 or OpportunityId=1,2,3", false, "Connections", 0 )]
-    [BooleanField( "Use Connection Request As Workflow Entity", "If a url parameter of 'ConnectionRequestId' is a valid Connection Request this will be the initiating Workflow Entity instead of the Person.", false, "Connections", 1 )]
+    [BooleanField( "Use Connection Request As Workflow Entity", "If a valid Connection Request is processed it will be the initiating Workflow Entity instead of the Person.", false, "Connections", 1 )]
 
     [BooleanField( "Allow Group Membership", "Determines if a url parameter of 'GroupGuid' or 'GroupId' should be evaluated when complete.", false, "Groups", 0 )]
     [BooleanField( "Enable Passing Group Id", "If enabled, allows the ability to pass in a group's Id (GroupId=) instead of the Guid.", true, "Groups", 1 )]
     [GroupTypesField( "Allowed Group Types", "This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.", true, Rock.SystemGuid.GroupType.GROUPTYPE_SMALL_GROUP, "Groups", 2 )]
     [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "Groups", 3 )]
     [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "Groups", 4 )]
+    [BooleanField( "Use Group Member As Workflow Entity", "If a valid Group Member is created it will be the initiating Workflow Entity instead of the Person.", false, "Groups", 5 )]
 
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
@@ -497,41 +498,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                             if ( CurrentPageIndex >= FormState.Count )
                             {
-                                Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
-                                if ( workflowTypeGuid.HasValue )
-                                {
-                                    var workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
-                                    if ( workflowType != null && ( workflowType.IsActive ?? true ) )
-                                    {
-                                        try
-                                        {
-                                            var useConnectionRequest = GetAttributeValue( "UseConnectionRequestAsWorkflowEntity" ).AsBoolean( false );
-                                            var connectionRequestId = PageParameter( "ConnectionRequestId" ).AsInteger();
-                                            if ( useConnectionRequest && connectionRequestId > 0 )
-                                            {
-                                                ConnectionRequest connectionRequest = null;
-                                                connectionRequest = new ConnectionRequestService( rockContext ).Get( connectionRequestId );
-                                                if ( connectionRequest != null )
-                                                {
-                                                    var workflow = Workflow.Activate( workflowType, person.FullName );
-                                                    List<string> workflowErrors;
-                                                    new WorkflowService( rockContext ).Process( workflow, connectionRequest, out workflowErrors );
-                                                }
-                                            }
-                                            else
-                                            {
-                                                var workflow = Workflow.Activate( workflowType, person.FullName );
-                                                List<string> workflowErrors;
-                                                new WorkflowService( rockContext ).Process( workflow, person, out workflowErrors );
-                                            }
-                                        }
-                                        catch ( Exception ex )
-                                        {
-                                            ExceptionLogService.LogException( ex, this.Context );
-                                        }
-                                    }
-                                }
-
+                                int? connectionRequestId = null;
                                 if ( GetAttributeValue( "AllowConnectionOpportunity" ).AsBoolean() )
                                 {
                                     var opportunityService = new ConnectionOpportunityService( rockContext );
@@ -589,10 +556,23 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                             connectionRequestService.Add( connectionRequest );
 
                                             rockContext.SaveChanges();
+
+                                            // get id for workflow
+                                            if ( opportunities.Count == 1 )
+                                            {
+                                                connectionRequestId = connectionRequest.Id;
+                                            }
                                         }
                                     }
                                 }
 
+                                var urlConnectionRequestId = PageParameter( "ConnectionRequestId" ).AsIntegerOrNull();
+                                if ( urlConnectionRequestId.HasValue && !connectionRequestId.HasValue )
+                                {
+                                    connectionRequestId = urlConnectionRequestId;
+                                }
+
+                                int? groupMemberId = null;
                                 if ( GetAttributeValue( "AllowGroupMembership" ).AsBoolean() )
                                 {
                                     Group group = null;
@@ -653,7 +633,65 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                                 groupMember.GroupId = group.Id;
                                                 groupMemberService.Add( groupMember );
                                                 rockContext.SaveChanges();
+
+                                                // get id for workflow
+                                                groupMemberId = groupMember.Id;
                                             }
+                                            else
+                                            {
+                                                groupMemberId = group.Members
+                                                .FirstOrDefault( m =>
+                                                    m.PersonId == person.Id &&
+                                                    m.GroupRoleId == defaultGroupRole.Id )
+                                                .Id;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
+                                if ( workflowTypeGuid.HasValue )
+                                {
+                                    var workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
+                                    if ( workflowType != null && ( workflowType.IsActive ?? true ) )
+                                    {
+                                        try
+                                        {
+                                            var useConnectionRequest = GetAttributeValue( "UseConnectionRequestAsWorkflowEntity" ).AsBoolean( false );
+                                            var useGroupMember = GetAttributeValue( "UseGroupMemberAsWorkflowEntity" ).AsBoolean( false );
+
+                                            if ( useConnectionRequest && connectionRequestId.HasValue )
+                                            {
+                                                ConnectionRequest connectionRequest = null;
+                                                connectionRequest = new ConnectionRequestService( rockContext ).Get( connectionRequestId.Value );
+                                                if ( connectionRequest != null )
+                                                {
+                                                    var workflow = Workflow.Activate( workflowType, person.FullName );
+                                                    List<string> workflowErrors;
+                                                    new WorkflowService( rockContext ).Process( workflow, connectionRequest, out workflowErrors );
+                                                }
+                                            }
+                                            else if ( useGroupMember && groupMemberId.HasValue )
+                                            {
+                                                GroupMember groupMember = null;
+                                                groupMember = new GroupMemberService( rockContext ).Get( groupMemberId.Value );
+                                                if ( groupMember != null )
+                                                {
+                                                    var workflow = Workflow.Activate( workflowType, person.FullName );
+                                                    List<string> workflowErrors;
+                                                    new WorkflowService( rockContext ).Process( workflow, groupMember, out workflowErrors );
+                                                }
+                                            }
+                                            else
+                                            {
+                                                var workflow = Workflow.Activate( workflowType, person.FullName );
+                                                List<string> workflowErrors;
+                                                new WorkflowService( rockContext ).Process( workflow, person, out workflowErrors );
+                                            }
+                                        }
+                                        catch ( Exception ex )
+                                        {
+                                            ExceptionLogService.LogException( ex, this.Context );
                                         }
                                     }
                                 }
