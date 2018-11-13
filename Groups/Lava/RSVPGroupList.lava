@@ -20,7 +20,7 @@
     {% assign current = 0 -%}
     {% for member in group.Members -%}
     {% assign memberRSVP = member | Attribute:'RSVPCount' -%}
-    {% assign current = current |Plus:memberRSVP -%}
+    {% assign current = current | Plus:memberRSVP -%}
     {% endfor -%}
     {% assign capacity = group | Attribute:'MaxRSVP' -%}
     {% if capacity <= 0 -%}
