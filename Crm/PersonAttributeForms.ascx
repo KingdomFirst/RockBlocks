@@ -83,7 +83,7 @@
                             <div class="panel-body">
 
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <Rock:RockCheckBox ID="cbDisplayProgressBar" runat="server" Label="Display Progress Bar" Text="Yes"
                                             Help="Display a progress to the user that indicates how far along they are in filling out multiple forms. Not shown when there is only one form." />
                                         <Rock:RockDropDownList ID="ddlSaveValues" runat="server" Label="Save Values"
@@ -92,9 +92,17 @@
                                             <asp:ListItem Value="END" Text="At the End" />
                                         </Rock:RockDropDownList>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <Rock:WorkflowTypePicker ID="wtpWorkflow" runat="server" Label="Workflow"
                                             Help="An optional workflow to launch after the person has filled out all of the forms." />
+                                         <Rock:RockDropDownList ID="ddlWorkflowEntity" runat="server" Label="Workflow Entity"
+                                            Help="The entity that should be used to initiate the workflow.">
+                                            <asp:ListItem Value="Person" Text="Person" />
+                                            <asp:ListItem Value="ConnectionRequest" Text="Conenction Request" />
+                                            <asp:ListItem Value="GroupMember" Text="Group Member" />
+                                        </Rock:RockDropDownList>
+                                    </div>
+                                    <div class="col-md-4">
                                         <Rock:PagePicker ID="ppDonePage" runat="server" Label="Done Page"
                                             Help="An optional page to redirect user to after they have finished entering information on all the forms." />
                                     </div>

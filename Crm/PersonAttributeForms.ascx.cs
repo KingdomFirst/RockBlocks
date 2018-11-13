@@ -32,18 +32,17 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
     // Settings
     [BooleanField( "Allow Connection Opportunity", "Determines if a url parameter of 'OpportunityId' should be evaluated when complete.  Example: OpportunityId=1 or OpportunityId=1,2,3", false, "Connections", 0 )]
-    [BooleanField( "Use Connection Request As Workflow Entity", "If a valid Connection Request is processed it will be the initiating Workflow Entity instead of the Person.", false, "Connections", 1 )]
 
     [BooleanField( "Allow Group Membership", "Determines if a url parameter of 'GroupGuid' or 'GroupId' should be evaluated when complete.", false, "Groups", 0 )]
     [BooleanField( "Enable Passing Group Id", "If enabled, allows the ability to pass in a group's Id (GroupId=) instead of the Guid.", true, "Groups", 1 )]
     [GroupTypesField( "Allowed Group Types", "This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.", true, Rock.SystemGuid.GroupType.GROUPTYPE_SMALL_GROUP, "Groups", 2 )]
     [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "Groups", 3 )]
     [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "Groups", 4 )]
-    [BooleanField( "Use Group Member As Workflow Entity", "If a valid Group Member is created it will be the initiating Workflow Entity instead of the Person.", false, "Groups", 5 )]
 
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
+    [CustomDropdownListField( "Workflow Entity", "", "Person,ConnectionRequest,GroupMember", true, "Person", "CustomSetting" )]
     [LinkedPage( "Done Page", "The page to redirect to when done.", false, "", "CustomSetting" )]
     [TextField( "Forms", "The forms to show.", false, "", "CustomSetting" )]
     [CodeEditorField( "Confirmation Text", "", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "CustomSetting" )]
@@ -569,7 +568,12 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                 var urlConnectionRequestId = PageParameter( "ConnectionRequestId" ).AsIntegerOrNull();
                                 if ( urlConnectionRequestId.HasValue && !connectionRequestId.HasValue )
                                 {
-                                    connectionRequestId = urlConnectionRequestId;
+                                    var request = new ConnectionRequestService( rockContext ).Get( urlConnectionRequestId.Value );
+
+                                    if ( request != null )
+                                    {
+                                        connectionRequestId = request.Id;
+                                    }
                                 }
 
                                 int? groupMemberId = null;
@@ -657,10 +661,9 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                     {
                                         try
                                         {
-                                            var useConnectionRequest = GetAttributeValue( "UseConnectionRequestAsWorkflowEntity" ).AsBoolean( false );
-                                            var useGroupMember = GetAttributeValue( "UseGroupMemberAsWorkflowEntity" ).AsBoolean( false );
+                                            var workflowEntity = GetAttributeValue( "WorkflowEntity" );
 
-                                            if ( useConnectionRequest && connectionRequestId.HasValue )
+                                            if ( workflowEntity.Equals( "ConnectionRequest" ) && connectionRequestId.HasValue )
                                             {
                                                 ConnectionRequest connectionRequest = null;
                                                 connectionRequest = new ConnectionRequestService( rockContext ).Get( connectionRequestId.Value );
@@ -671,7 +674,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                                                     new WorkflowService( rockContext ).Process( workflow, connectionRequest, out workflowErrors );
                                                 }
                                             }
-                                            else if ( useGroupMember && groupMemberId.HasValue )
+                                            else if ( workflowEntity.Equals( "GroupMember" ) && groupMemberId.HasValue )
                                             {
                                                 GroupMember groupMember = null;
                                                 groupMember = new GroupMemberService( rockContext ).Get( groupMemberId.Value );
@@ -758,6 +761,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
             {
                 SetAttributeValue( "Workflow", "" );
             }
+            SetAttributeValue( "WorkflowEntity", ddlWorkflowEntity.SelectedValue );
 
             var ppFieldType = new PageReferenceFieldType();
             SetAttributeValue( "DonePage", ppFieldType.GetEditValue( ppDonePage, null ) );
@@ -1745,6 +1749,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
             {
                 wtpWorkflow.SetValue( null );
             }
+            ddlWorkflowEntity.SetValue( GetAttributeValue( "WorkflowEntity" ) );
 
             var ppFieldType = new PageReferenceFieldType();
             ppFieldType.SetEditValue( ppDonePage, null, GetAttributeValue( "DonePage" ) );
