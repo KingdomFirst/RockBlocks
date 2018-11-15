@@ -98,7 +98,7 @@
                                          <Rock:RockDropDownList ID="ddlWorkflowEntity" runat="server" Label="Workflow Entity"
                                             Help="The entity that should be used to initiate the workflow.">
                                             <asp:ListItem Value="Person" Text="Person" />
-                                            <asp:ListItem Value="ConnectionRequest" Text="Conenction Request" />
+                                            <asp:ListItem Value="ConnectionRequest" Text="Connection Request" />
                                             <asp:ListItem Value="GroupMember" Text="Group Member" />
                                         </Rock:RockDropDownList>
                                     </div>
