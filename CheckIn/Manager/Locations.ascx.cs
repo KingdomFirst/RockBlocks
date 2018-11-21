@@ -2346,6 +2346,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             .Where( l => l.Id == locationId )
                             .FirstOrDefault();
 
+                        loc.LoadAttributes();
+
                         foreach ( var s in schedules )
                         {
                             var sch = new CheckInSchedule();
@@ -2361,6 +2363,17 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             .Where( g => g.Id == groupId )
                             .FirstOrDefault();
 
+                        gr.LoadAttributes();
+
+                        foreach ( var gm in gr.Members )
+                        {
+                            if ( gm.PersonId == rockPerson.Id )
+                            {
+                                gm.Person = rockPerson;
+                                gm.LoadAttributes();
+                            }
+                        }
+
                         group.Group = gr;
                         group.Locations.Add( location );
                         group.SelectedForSchedule.Add( schedule.Schedule.Id );
@@ -2369,6 +2382,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         groupType.Groups.Add( group );
                         groupType.SelectedForSchedule.Add( schedule.Schedule.Id );
 
+                        rockPerson.LoadAttributes();
                         person.Person = rockPerson;
                         person.SecurityCode = code;
                         person.GroupTypes.Add( groupType );
