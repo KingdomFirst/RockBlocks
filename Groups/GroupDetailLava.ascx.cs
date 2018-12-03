@@ -229,7 +229,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 BlockSetup();
             }
 
-            // add a navigate event to cature when someone presses the back button
+            // add a navigate event to capture when someone presses the back button
             var sm = ScriptManager.GetCurrent( Page );
             sm.EnableSecureHistoryState = false;
             sm.Navigate += sm_Navigate;
@@ -400,14 +400,14 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 groupMember = new GroupMember { Id = 0 };
                 groupMember.GroupId = _groupId;
 
-                // check to see if the person is alread a member of the gorup/role
+                // check to see if the person is already a member of the group/role
                 var existingGroupMember = groupMemberService.GetByGroupIdAndPersonIdAndGroupRoleId(
                     _groupId, ppGroupMemberPerson.SelectedValue ?? 0, ddlGroupRole.SelectedValueAsId() ?? 0 );
 
                 if ( existingGroupMember != null )
                 {
                     // if so, don't add and show error message
-                    var person = new PersonService( rockContext ).Get( (int)ppGroupMemberPerson.PersonId );
+                    var person = new PersonService( rockContext ).Get( ( int ) ppGroupMemberPerson.PersonId );
 
                     nbGroupMemberErrorMessage.Title = "Person Already In Group";
                     nbGroupMemberErrorMessage.Text = string.Format(
@@ -471,12 +471,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 rockContext.SaveChanges();
                 groupMember.SaveAttributeValues( rockContext );
             } );
-
-            Group group = new GroupService( rockContext ).Get( groupMember.GroupId );
-            if ( group.IsSecurityRole || group.GroupType.Guid.Equals( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid() ) )
-            {
-                Rock.Security.Role.Flush( group.Id );
-            }
 
             pnlEditGroupMember.Visible = false;
             pnlGroupView.Visible = true;
@@ -596,7 +590,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                                 sm.AddHistoryPoint( "Action", "DeleteMember" );
                             }
                             break;
-                            
+
                         case "SendCommunication":
                             SendCommunication();
                             break;
@@ -794,7 +788,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             var rockContext = new RockContext();
             ddlMember.Items.Clear();
 
-            var groupType = GroupTypeCache.Read( group.GroupTypeId );
+            var groupType = GroupTypeCache.Get( group.GroupTypeId );
             if ( groupType != null )
             {
                 // only allow editing groups with single locations
@@ -1012,11 +1006,11 @@ namespace RockWeb.Plugins.com_kfs.Groups
             // set values
             ppGroupMemberPerson.SetValue( groupMember.Person );
             ddlGroupRole.SetValue( groupMember.GroupRoleId );
-            rblStatus.SetValue( (int)groupMember.GroupMemberStatus );
+            rblStatus.SetValue( ( int ) groupMember.GroupMemberStatus );
             bool hideGroupMemberInactiveStatus = this.GetAttributeValue( "HideInactiveGroupMemberStatus" ).AsBooleanOrNull() ?? false;
             if ( hideGroupMemberInactiveStatus )
             {
-                var inactiveItem = rblStatus.Items.FindByValue( ( (int)GroupMemberStatus.Inactive ).ToString() );
+                var inactiveItem = rblStatus.Items.FindByValue( ( ( int ) GroupMemberStatus.Inactive ).ToString() );
                 if ( inactiveItem != null )
                 {
                     rblStatus.Items.Remove( inactiveItem );
