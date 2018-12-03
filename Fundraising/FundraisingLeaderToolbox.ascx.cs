@@ -373,7 +373,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 {
                     if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
                     {
-                        AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                        AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
                     }
                 }
 
@@ -386,7 +386,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
                 if ( _group.Attributes != null )
                 {
-                    var attributeFieldTypeId = FieldTypeCache.Read( Rock.SystemGuid.FieldType.ATTRIBUTE ).Id;
+                    var attributeFieldTypeId = FieldTypeCache.Get( Rock.SystemGuid.FieldType.ATTRIBUTE ).Id;
                     var personAttributes = _group.Attributes.Values.FirstOrDefault( a => 
                                                 a.FieldTypeId == attributeFieldTypeId &&
                                                 a.QualifierValues.ContainsKey( "entitytype" ) &&
@@ -399,7 +399,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
                         foreach ( var personAttribute in personAttributeValues.Split( ',' ).AsGuidList() )
                         {
-                            AvailablePersonAttributeIds.Add( AttributeCache.Read( personAttribute ).Id );
+                            AvailablePersonAttributeIds.Add( AttributeCache.Get( personAttribute ).Id );
                         }
                     }
                 }
@@ -415,7 +415,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 {
                     if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
                     {
-                        AvailableAttributes.Add( AttributeCache.Read( attributeModel ) );
+                        AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
                     }
                 }
             }
@@ -445,7 +445,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                         boundField.HeaderText = attribute.Name;
                         boundField.Visible = false;
 
-                        var attributeCache = Rock.Web.Cache.AttributeCache.Read( attribute.Id );
+                        var attributeCache = Rock.Web.Cache.AttributeCache.Get( attribute.Id );
                         if ( attributeCache != null )
                         {
                             boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
@@ -18,7 +18,7 @@ using Rock.Web.UI.Controls;
 namespace RockWeb.Plugins.com_kfs.Fundraising
 {
     [DisplayName( "Fundraising Opportunity Participant KFS" )]
-    [Category( "Fundraising" )]
+    [Category( "KFS > Fundraising" )]
     [Description( "Public facing block that shows a fundraising opportunity participant" )]
 
     [CodeEditorField( "Profile Lava Template", "Lava template for what to display at the top of the main panel. Usually used to display information about the participant such as photo, name, etc.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false,
@@ -36,7 +36,8 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
     [BooleanField( "Show Clipboard Icon", "Show a clipboard icon which will copy the page url to the users clipboard", true, order:8)]
     [TextField( "Image CSS Class", "CSS class to apply to the image.", false, "img-thumbnail", key: "ImageCssClass", order: 9 )]
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "PersonAttributes", "The Person Attributes that the participant can edit", false, true, order: 7 )]
-    [BooleanField( "Show Amount", "Determines if the Amount column should be displayed in the Contributions List.", order: 8 )]
+    [BooleanField( "Show Amount", "Determines if the Amount column should be displayed in the Contributions List.", true, order: 8 )]
+    [BooleanField( "Show Address", "Determines if the Address column should be displayed in the Contributions List.", true, order: 8 )]
 
     public partial class FundraisingParticipant : RockBlock
     {
@@ -53,16 +54,15 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             if ( this.GetAttributeValue( "ShowClipboardIcon" ).AsBoolean() )
             {
                 // Setup for being able to copy text to clipboard
-                RockPage.AddScriptLink( this.Page, "~/Scripts/ZeroClipboard/ZeroClipboard.js" );
+                RockPage.AddScriptLink( this.Page, "~/Scripts/clipboard.js/clipboard.min.js" );
                 string script = string.Format( @"
-    var client = new ZeroClipboard( $('#{0}'));
+    new Clipboard('#{0}');
     $('#{0}').tooltip();
 ", btnCopyToClipboard.ClientID );
                 ScriptManager.RegisterStartupScript( btnCopyToClipboard, btnCopyToClipboard.GetType(), "share-copy", script, true );
-                btnCopyToClipboard.Attributes["data-clipboard-target"] = hfShareUrl.ClientID;
 
                 Uri uri = new Uri( Request.Url.ToString() );
-                hfShareUrl.Value = uri.Scheme + "://" + uri.GetComponents( UriComponents.HostAndPort, UriFormat.UriEscaped ) + CurrentPageReference.BuildUrl();
+                btnCopyToClipboard.Attributes["data-clipboard-text"] = uri.Scheme + "://" + uri.GetComponents( UriComponents.HostAndPort, UriFormat.UriEscaped ) + CurrentPageReference.BuildUrl();
                 btnCopyToClipboard.Visible = true;
             }
             else
@@ -176,7 +176,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             {
                 var person = groupMember.Person;
                 imgProfilePhoto.BinaryFileId = person.PhotoId;
-                imgProfilePhoto.NoPictureUrl = Person.GetPersonPhotoUrl( person, 200, 200 );
+                imgProfilePhoto.NoPictureUrl = Person.GetPersonNoPictureUrl( person, 200, 200 );
 
                 groupMember.LoadAttributes( rockContext );
                 groupMember.Group.LoadAttributes( rockContext );
@@ -244,29 +244,11 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             var personService = new PersonService( rockContext );
             var person = personService.Get( groupMember.PersonId );
 
-            var changes = new List<string>();
-
             int? orphanedPhotoId = null;
             if ( person.PhotoId != imgProfilePhoto.BinaryFileId )
             {
                 orphanedPhotoId = person.PhotoId;
                 person.PhotoId = imgProfilePhoto.BinaryFileId;
-
-                if ( orphanedPhotoId.HasValue )
-                {
-                    if ( person.PhotoId.HasValue )
-                    {
-                        changes.Add( "Modified the photo." );
-                    }
-                    else
-                    {
-                        changes.Add( "Deleted the photo." );
-                    }
-                }
-                else if ( person.PhotoId.HasValue )
-                {
-                    changes.Add( "Added a photo." );
-                }
 
                 // add or update the Photo Verify group to have this person as Pending since the photo was changed or deleted
                 using ( var photoRequestRockContext = new RockContext() )
@@ -304,29 +286,9 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                     Control attributeControl = phPersonAttributes.FindControl( string.Format( "attribute_field_{0}", personAttribute.Id ) );
                     if ( attributeControl != null )
                     {
-                        string originalValue = person.GetAttributeValue( personAttribute.Key );
-                        string newValue = personAttribute.FieldType.Field.GetEditValue( attributeControl, personAttribute.QualifierValues );
-
                         // Save Attribute value to the database
+                        string newValue = personAttribute.FieldType.Field.GetEditValue( attributeControl, personAttribute.QualifierValues );
                         Rock.Attribute.Helper.SaveAttributeValue( person, personAttribute, newValue, rockContext );
-
-                        // Check for changes to write to history
-                        if ( ( originalValue ?? string.Empty ).Trim() != ( newValue ?? string.Empty ).Trim() )
-                        {
-                            string formattedOriginalValue = string.Empty;
-                            if ( !string.IsNullOrWhiteSpace( originalValue ) )
-                            {
-                                formattedOriginalValue = personAttribute.FieldType.Field.FormatValue( null, originalValue, personAttribute.QualifierValues, false );
-                            }
-
-                            string formattedNewValue = string.Empty;
-                            if ( !string.IsNullOrWhiteSpace( newValue ) )
-                            {
-                                formattedNewValue = personAttribute.FieldType.Field.FormatValue( null, newValue, personAttribute.QualifierValues, false );
-                            }
-
-                            History.EvaluateChange( changes, personAttribute.Name, formattedOriginalValue, formattedNewValue, personAttribute.FieldType.Field.IsSensitive() );
-                        }
                     }
                 }
             }
@@ -336,16 +298,6 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             {
                 rockContext.SaveChanges();
                 groupMember.SaveAttributeValues( rockContext );
-
-                if ( changes.Any() )
-                {
-                    HistoryService.SaveChanges(
-                        rockContext,
-                        typeof( Person ),
-                        Rock.SystemGuid.Category.HISTORY_PERSON_DEMOGRAPHIC_CHANGES.AsGuid(),
-                        person.Id,
-                        changes );
-                }
 
                 if ( orphanedPhotoId.HasValue )
                 {
@@ -441,8 +393,6 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             var photoGuid = group.GetAttributeValue( "OpportunityPhoto" );
             imgOpportunityPhoto.ImageUrl = string.Format( "~/GetImage.ashx?Guid={0}", photoGuid );
 
-            SetActiveTab( "Updates" );
-
             // Top Main
             string profileLavaTemplate = this.GetAttributeValue( "ProfileLavaTemplate" );
             if ( groupMember.PersonId == this.CurrentPersonId )
@@ -453,7 +403,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 {
                     warningItems.Add( "photo" );
                 }
-                if ( string.IsNullOrWhiteSpace(groupMember.GetAttributeValue( "PersonalOpportunityIntroduction" ) ) )
+                if ( groupMember.GetAttributeValue( "PersonalOpportunityIntroduction" ).IsNullOrWhiteSpace())
                 {
                     warningItems.Add( "personal opportunity introduction" );
                 }
@@ -473,8 +423,9 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             bool disablePublicContributionRequests = groupMember.GetAttributeValue( "DisablePublicContributionRequests" ).AsBoolean();
 
             // only show Contribution stuff if the current person is the participant and contribution requests haven't been disabled
-            btnContributionsTab.Visible = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
-            
+            bool showContributions = !disablePublicContributionRequests && ( groupMember.PersonId == this.CurrentPersonId );
+            btnContributionsTab.Visible = showContributions;
+
             // Progress
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
 
@@ -522,12 +473,15 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
             // Tab:Updates
             btnUpdatesTab.Visible = false;
+            bool showContentChannelUpdates = false;
             var updatesContentChannelGuid = group.GetAttributeValue( "UpdateContentChannel" ).AsGuidOrNull();
             if ( updatesContentChannelGuid.HasValue )
             {
                 var contentChannel = new ContentChannelService( rockContext ).Get( updatesContentChannelGuid.Value );
                 if ( contentChannel != null )
                 {
+                    showContentChannelUpdates = true;
+
                     // only show the UpdatesTab if there is another Tab option
                     btnUpdatesTab.Visible = btnContributionsTab.Visible;
 
@@ -538,6 +492,19 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                     lUpdatesContentItemsHtml.Text = updatesLavaTemplate.ResolveMergeFields( mergeFields );
                     btnUpdatesTab.Text = string.Format( "{0} Updates ({1})", opportunityType, contentChannelItems.Count() );
                 }
+            }
+
+            if ( showContentChannelUpdates )
+            {
+                SetActiveTab( "Updates" );
+            }
+            else if (showContributions)
+            {
+                SetActiveTab( "Contributions" );
+            }
+            else
+            {
+                SetActiveTab( "" );
             }
 
             // Tab: Contributions
@@ -575,10 +542,10 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             }
 
             // if btnContributionsTab is the only visible tab, hide the tab since there is nothing else to tab to
-            if ( !btnUpdatesTab.Visible )
+            if ( !btnUpdatesTab.Visible && btnContributionsTab.Visible )
             {
+                SetActiveTab( "Contributions" );
                 btnContributionsTab.Visible = false;
-                pnlContributions.Visible = true;
             }
         }
 
@@ -589,6 +556,9 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         {
             var showAmount = GetAttributeValue( "ShowAmount" ).AsBoolean();
             gContributions.Columns[3].Visible = showAmount;
+
+            var showAddress = GetAttributeValue( "ShowAddress" ).AsBoolean();
+            gContributions.Columns[1].Visible = showAddress;
 
             var rockContext = new RockContext();
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
@@ -612,12 +582,37 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         /// <param name="e">The <see cref="GridViewRowEventArgs"/> instance containing the event data.</param>
         protected void gContributions_RowDataBound( object sender, GridViewRowEventArgs e )
         {
+            var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
+            int groupMemberId = hfGroupMemberId.Value.AsInteger();
+
             FinancialTransaction financialTransaction = e.Row.DataItem as FinancialTransaction;
-            Literal lAddress = e.Row.FindControl( "lAddress" ) as Literal;
-            if ( financialTransaction != null && lAddress != null && financialTransaction.AuthorizedPersonAliasId.HasValue )
+            if ( financialTransaction != null && 
+                financialTransaction.AuthorizedPersonAlias != null && 
+                financialTransaction.AuthorizedPersonAlias.Person != null )
             {
-                var personAddress = financialTransaction.AuthorizedPersonAlias.Person.GetHomeLocation();
-                lAddress.Text = personAddress.GetFullStreetAddress();
+	            Literal lAddress = e.Row.FindControl( "lAddress" ) as Literal;
+                if ( lAddress != null )
+                {
+                    var location = financialTransaction.AuthorizedPersonAlias.Person.GetMailingLocation();
+                    string streetAddress = location != null ? location.GetFullStreetAddress() : string.Empty;
+                    lAddress.Text = financialTransaction.ShowAsAnonymous ? string.Empty : streetAddress;
+                }
+
+                Literal lPersonName = e.Row.FindControl( "lPersonName" ) as Literal;
+	            if ( lPersonName != null )
+	            {
+	                lPersonName.Text = financialTransaction.ShowAsAnonymous ? "Anonymous" : financialTransaction.AuthorizedPersonAlias.Person.FullName;
+	            }
+
+                Literal lTransactionDetailAmount = e.Row.FindControl( "lTransactionDetailAmount" ) as Literal;
+                if ( lTransactionDetailAmount != null )
+                {
+                    var amount = financialTransaction.TransactionDetails
+                        .Where( d => d.EntityTypeId.HasValue && d.EntityTypeId == entityTypeIdGroupMember && d.EntityId == groupMemberId )
+                        .Sum( d => ( decimal? ) d.Amount )
+                        .ToString();
+                    lTransactionDetailAmount.Text = string.Format( "${0}", amount );
+                }
             }
         }
 

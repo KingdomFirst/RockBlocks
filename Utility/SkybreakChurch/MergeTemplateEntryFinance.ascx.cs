@@ -178,7 +178,7 @@ namespace RockWeb.Blocks.KFS.Utility
             }
 
             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
-			mergeFields.Add( "CurrencyTypes", DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.FINANCIAL_CURRENCY_TYPE ) ) );
+			mergeFields.Add( "CurrencyTypes", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.FINANCIAL_CURRENCY_TYPE ) ) );
 			mergeFields.Add( "Accounts", new FinancialAccountService( rockContext ).Queryable().AsNoTracking().ToList() );
 			
 			Dictionary<string, object> parameters = new Dictionary<string, object>();
@@ -288,7 +288,7 @@ namespace RockWeb.Blocks.KFS.Utility
                     qryEntity = qryEntity.Take( fetchCount.Value );
                 }
 
-                var entityTypeCache = EntityTypeCache.Read( entitySet.EntityTypeId.Value );
+                var entityTypeCache = EntityTypeCache.Get( entitySet.EntityTypeId.Value );
                 bool isPersonEntityType = entityTypeCache != null && entityTypeCache.Guid == Rock.SystemGuid.EntityType.PERSON.AsGuid();
                 bool isGroupMemberEntityType = entityTypeCache != null && entityTypeCache.Guid == Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid();
                 bool combineFamilyMembers = cbCombineFamilyMembers.Visible && cbCombineFamilyMembers.Checked;
@@ -504,7 +504,7 @@ namespace RockWeb.Blocks.KFS.Utility
             {
                 var qry = entitySetService.GetEntityQuery( entitySetId ).Take( 15 );
 
-                EntityTypeCache itemEntityType = EntityTypeCache.Read( entitySet.EntityTypeId ?? 0 );
+                EntityTypeCache itemEntityType = EntityTypeCache.Get( entitySet.EntityTypeId ?? 0 );
                 gPreview.CreatePreviewColumns( itemEntityType.GetEntityType() );
 
                 gPreview.DataSource = qry.ToList();
@@ -558,7 +558,7 @@ namespace RockWeb.Blocks.KFS.Utility
             List<object> mergeObjectsList = GetMergeObjectList( rockContext, 1 );
 
             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
-			mergeFields.Add( "CurrencyTypes", DefinedTypeCache.Read( new Guid( Rock.SystemGuid.DefinedType.FINANCIAL_CURRENCY_TYPE ) ) );
+			mergeFields.Add( "CurrencyTypes", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.FINANCIAL_CURRENCY_TYPE ) ) );
 			mergeFields.Add( "Accounts", new FinancialAccountService( rockContext ).Queryable().AsNoTracking().ToList() );
 			
 			Dictionary<string, object> parameters = new Dictionary<string, object>();

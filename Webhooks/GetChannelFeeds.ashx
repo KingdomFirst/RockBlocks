@@ -1,20 +1,4 @@
 ﻿<%@ WebHandler Language="C#" Class="RockWeb.Plugins.com_kfs.Webhooks.GetChannelFeeds" %>
-// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
 using System;
 using System.IO;
 using System.Linq;
@@ -91,11 +75,11 @@ namespace RockWeb.Plugins.com_kfs.Webhooks
 
                 if ( request.QueryString["TemplateId"] == null || !int.TryParse( request.QueryString["TemplateId"], out templateDefinedValueId ) )
                 {
-                    dvRssTemplate = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.DEFAULT_RSS_CHANNEL );
+                    dvRssTemplate = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.DEFAULT_RSS_CHANNEL );
                 }
                 else
                 {
-                    dvRssTemplate = DefinedValueCache.Read( templateDefinedValueId );
+                    dvRssTemplate = DefinedValueCache.Get( templateDefinedValueId );
                 }
 
                 rssTemplate = dvRssTemplate.GetAttributeValue( "Template" );
@@ -230,7 +214,7 @@ namespace RockWeb.Plugins.com_kfs.Webhooks
                             }
 
                             // resolve any relative links
-                            var globalAttributes = Rock.Web.Cache.GlobalAttributesCache.Read();
+                            var globalAttributes = Rock.Web.Cache.GlobalAttributesCache.Get();
                             string publicAppRoot = globalAttributes.GetValue( "PublicApplicationRoot" ).EnsureTrailingForwardslash();
                             item.Content = item.Content.Replace( @" src=""/", @" src=""" + publicAppRoot );
                             item.Content = item.Content.Replace( @" href=""/", @" href=""" + publicAppRoot );
