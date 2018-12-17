@@ -7268,7 +7268,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            pnlAssociatedGroup.Visible = ActiveTab == ( "lb" + tabName );
+            pnlAssociatedGroup.Visible = ActiveTab == ( "lb" + tabName ) || ActiveTab == ( "lb" + groupType.Name );
 
             // build group panel headers
             var header = new HtmlGenericControl( "h1" );
