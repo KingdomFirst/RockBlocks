@@ -37,6 +37,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
     {
         #region Fields
 
+        private string _vimeoIdKey = string.Empty;
         private int _vimeoId = 0;
         private int _contentItemId = 0;
         private string _accessToken = string.Empty;
@@ -58,6 +59,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
         {
             _accessToken = Encryption.DecryptString( GetAttributeValue( "AccessToken" ) );
             _contentItemId = PageParameter( "contentItemId" ).AsInteger();
+            _vimeoIdKey = GetAttributeValue( "VimeoIdKey" );
         }
 
         /// <summary>
@@ -97,6 +99,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
             if ( contentItem == null || contentItem.Id == 0 )
             {
                 pnlVimeoSync.Visible = false;
+                pnlVimeoId.Visible = false;
             }
             else
             {
@@ -104,10 +107,15 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
                 {
                     contentItem.LoadAttributes();
                 }
-                _vimeoId = contentItem.GetAttributeValue( GetAttributeValue( "VimeoIdKey" ) ).AsInteger();
+                _vimeoId = contentItem.GetAttributeValue( _vimeoIdKey ).AsInteger();
                 if ( _vimeoId == 0 )
                 {
                     pnlVimeoSync.Visible = false;
+                    var attributeKeys = contentItem.Attributes.Select( a => a.Key ).ToList();
+                    if ( !string.IsNullOrWhiteSpace( _vimeoIdKey ) && attributeKeys.Contains( _vimeoIdKey ) )
+                    {
+                        pnlVimeoId.Visible = true;
+                    }
                 }
                 else
                 {
@@ -184,13 +192,39 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
                     if ( cblSyncOptions.Items.Count > 0 )
                     {
                         pnlVimeoSync.Visible = true;
+                        pnlVimeoId.Visible = false;
                     }
                     else
                     {
                         pnlVimeoSync.Visible = false;
+                        pnlVimeoId.Visible = false;
                     }
                 }
             }
+        }
+
+        protected void btnVimeoId_Click( object sender, EventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                var contentItem = new ContentChannelItemService( rockContext )
+                    .Queryable( "ContentChannel,ContentChannelType" )
+                    .FirstOrDefault( t => t.Id == _contentItemId );
+
+                if ( contentItem.Attributes == null )
+                {
+                    contentItem.LoadAttributes();
+                }
+
+                contentItem.AttributeValues[_vimeoIdKey].Value = tbVimeoId.Text;
+
+                rockContext.WrapTransaction( () =>
+                {
+                    rockContext.SaveChanges();
+                    contentItem.SaveAttributeValues( rockContext );
+                } );
+            }
+            Response.Redirect( Request.RawUrl );
         }
 
         protected void btnVimeoSync_Click( object sender, EventArgs e )

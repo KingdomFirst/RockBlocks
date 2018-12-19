@@ -1,6 +1,22 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ContentChannelItemVimeoSync.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Vimeo.VimeoSync" %>
 <asp:UpdatePanel ID="upnlSync" runat="server">
     <ContentTemplate>
+        <asp:Panel ID="pnlVimeoId" CssClass="panel panel-block" runat="server" Visible="false">
+            <div class="panel-heading"><i class="fa fa-vimeo-square" aria-hidden="true"></i>&nbsp;Vimeo Sync</div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-2">
+                        <Rock:RockTextBox runat="server" ID="tbVimeoId" TextMode="Number" Label="Vimeo Id"></Rock:RockTextBox>
+                    </div>
+
+                </div>
+                <div class="row">
+                    <div class="col-sm-2">
+                        <Rock:BootstrapButton runat="server" ID="btnVimeoId" Text="Set Vimeo Id" OnClick="btnVimeoId_Click" CssClass="btn btn-primary" CausesValidation="false" />
+                    </div>
+                </div>
+            </div>
+        </asp:Panel>
         <asp:Panel ID="pnlVimeoSync" CssClass="panel panel-block" runat="server" Visible="false">
             <div class="panel-heading"><i class="fa fa-vimeo-square" aria-hidden="true"></i>&nbsp;Vimeo Sync</div>
             <div class="panel-body">
