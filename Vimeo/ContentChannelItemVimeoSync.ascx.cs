@@ -240,33 +240,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
                 }
             }
         }
-
-        protected void btnVimeoId_Click( object sender, EventArgs e )
-        {
-            using ( var rockContext = new RockContext() )
-            {
-                var contentItem = new ContentChannelItemService( rockContext )
-                    .Queryable( "ContentChannel,ContentChannelType" )
-                    .FirstOrDefault( t => t.Id == _contentItemId );
-
-                if ( contentItem.Attributes == null )
-                {
-                    contentItem.LoadAttributes();
-                }
-
-                contentItem.AttributeValues[_vimeoIdKey].Value = tbVimeoId.Text;
-
-                rockContext.WrapTransaction( () =>
-                {
-                    rockContext.SaveChanges();
-                    contentItem.SaveAttributeValues( rockContext );
-                } );
-
-                SyncVimeo( rockContext );
-            }
-            Response.Redirect( Request.RawUrl );
-        }
-
+        
         protected void btnVimeoSync_Click( object sender, EventArgs e )
         {
             var itemId = 0;
