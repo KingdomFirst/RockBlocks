@@ -291,8 +291,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                     decimal needsFilled = 0;
                     if ( attribute.FieldType != null )
                     {
+                        var groupMemberIds = _group.Members.Select( m => m.Id ).ToList();
                         var attributeValues = attributeValueService.GetByAttributeId( attribute.Id )
-                            .Where( v => !( v.Value == null || v.Value.Trim() == string.Empty ) )
+                            .Where( v => groupMemberIds.Contains( (int)v.EntityId )  && !( v.Value == null || v.Value.Trim() == string.Empty ) )
                             .Select( v => v.Value ).ToList();
 
                         // if the values are numeric, sum a number value

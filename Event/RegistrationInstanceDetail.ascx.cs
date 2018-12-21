@@ -7920,7 +7920,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             upnlContent.Update();
 
             // render dynamic group controls beneath modal
-            //ShowTab();
+            ShowTab();
         }
 
         /// <summary>
