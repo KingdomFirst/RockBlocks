@@ -169,6 +169,8 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
                     }
                 }
             }
+
+            dpStart.Label = contentItem.ContentChannelType.DateRangeType == ContentChannelDateType.DateRange ? "Start" : "Active";
         }
 
         protected void SetupSyncBoxes()
