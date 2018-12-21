@@ -280,10 +280,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     var boundField = new AttributeField
                     {
-                        DataField = attribute.Id + attribute.Key,
+                        DataField = attribute.Key,
                         AttributeId = attribute.Id,
                         HeaderText = attribute.Name,
-                        SortExpression = attribute.Name
+                        SortExpression = string.Format( "attribute:{0}", attribute.Id ),
                     };
 
                     boundField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;

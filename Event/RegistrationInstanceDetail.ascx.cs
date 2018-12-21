@@ -4641,7 +4641,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
                         }
 
-                        dataFieldExpression = attribute.Id + attribute.Key;
+                        //dataFieldExpression = attribute.Id + attribute.Key;
+                        dataFieldExpression = attribute.Key;
                         var columnExists = gRegistrants.Columns.OfType<AttributeField>().FirstOrDefault( a => a.DataField.Equals( dataFieldExpression ) ) != null;
                         if ( !columnExists )
                         {
