@@ -4650,7 +4650,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
                         }
 
-                        dataFieldExpression = attribute.Id + attribute.Key;
+                        //dataFieldExpression = attribute.Id + attribute.Key;
+                        dataFieldExpression = attribute.Key;
                         var columnExists = gRegistrants.Columns.OfType<AttributeField>().FirstOrDefault( a => a.DataField.Equals( dataFieldExpression ) ) != null;
                         if ( !columnExists )
                         {
@@ -7277,7 +7278,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            pnlAssociatedGroup.Visible = ActiveTab == ( "lb" + tabName );
+            pnlAssociatedGroup.Visible = ActiveTab == ( "lb" + tabName ) || ActiveTab == ( "lb" + groupType.Name );
 
             // build group panel headers
             var header = new HtmlGenericControl( "h1" );
@@ -7929,7 +7930,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             upnlContent.Update();
 
             // render dynamic group controls beneath modal
-            //ShowTab();
+            ShowTab();
         }
 
         /// <summary>
