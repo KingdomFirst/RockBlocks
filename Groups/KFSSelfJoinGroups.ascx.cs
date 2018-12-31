@@ -351,7 +351,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
         protected void SaveSelections( Control c )
         {
             CheckBox cbox;
-            int i, groupID;
+            int groupID;
             GroupTypeRole groupMemberRole = null;
             Guid personGuid = Guid.Empty;
 
