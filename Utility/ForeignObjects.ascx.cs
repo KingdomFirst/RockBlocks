@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Web.UI;
@@ -17,9 +16,13 @@ namespace RockWeb.Plugins.com_kfs.Utility
     /// <summary>
     /// Block that exposes Foreign Objects.
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Foreign Objects" )]
-    [Category( "Utility" )]
+    [Category( "KFS > Utility" )]
     [Description( "This block displays Foreign Objects (Key, Guid, & Id) and allows for a Lava formatted output. Currently Supports; Person, FinancialAccount, FinancialBatch, FinancialPledge, FinancialTransaction, FinancialScheduledTransaction, Group, GroupMember, Metric, Location, PrayerRequest, ContentChannel, ContentChannelItem" )]
+
     [BooleanField( "Show Edit Link", "Option to hide the Edit link.", order: 1 )]
     [CodeEditorField( "Lava Template", "The Lava template to use to display the foreign objects.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 500, true, @"<div>
     <span class=""label label-type"">{{ Context.Person.ForeignKey }}</span>
@@ -27,14 +30,15 @@ namespace RockWeb.Plugins.com_kfs.Utility
     <span class=""label label-type"">{{ Context.Person.ForeignId }}</span>
 </div>
 <br />", order: 2 )]
-    [BooleanField( "Enable Debug", "Shows the merge fields available for the Lava.", order: 3 )]
     [ContextAware]
+
+    #endregion
 
     public partial class ForeignObjects : RockBlock
     {
         #region Fields
 
-        IEntity contextEntity = null;
+        private IEntity contextEntity = null;
 
         #endregion
 
@@ -95,13 +99,6 @@ namespace RockWeb.Plugins.com_kfs.Utility
             var template = GetAttributeValue( "LavaTemplate" );
 
             lResults.Text = template.ResolveMergeFields( mergeFields );
-
-            // show debug info
-            if ( GetAttributeValue( "EnableDebug" ).AsBoolean() && IsUserAuthorized( Authorization.EDIT ) )
-            {
-                lDebug.Visible = true;
-                lDebug.Text = mergeFields.lavaDebugInfo();
-            }
         }
 
         #endregion
@@ -139,7 +136,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
                 if ( contextEntity is Person )
                 {
                     var personService = new PersonService( rockContext );
-                    var changes = new List<string>();
+                    var changes = new History.HistoryChangeList();
                     var _person = personService.Get( contextEntity.Id );
 
                     History.EvaluateChange( changes, "Foreign Key", _person.ForeignKey, tbForeignKey.Text );
@@ -178,7 +175,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
                 else if ( contextEntity is FinancialBatch )
                 {
                     var batchService = new FinancialBatchService( rockContext );
-                    var changes = new List<string>();
+                    var changes = new History.HistoryChangeList();
                     var _batch = batchService.Get( contextEntity.Id );
 
                     History.EvaluateChange( changes, "Foreign Key", _batch.ForeignKey, tbForeignKey.Text );
@@ -217,7 +214,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
                 else if ( contextEntity is FinancialTransaction )
                 {
                     var transactionService = new FinancialTransactionService( rockContext );
-                    var changes = new List<string>();
+                    var changes = new History.HistoryChangeList();
                     var _transaction = transactionService.Get( contextEntity.Id );
 
                     History.EvaluateChange( changes, "Foreign Key", _transaction.ForeignKey, tbForeignKey.Text );
@@ -267,7 +264,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
                 else if ( contextEntity is GroupMember )
                 {
                     var groupMemberService = new GroupMemberService( rockContext );
-                    var changes = new List<string>();
+                    var changes = new History.HistoryChangeList();
                     var _groupMember = groupMemberService.Get( contextEntity.Id );
 
                     History.EvaluateChange( changes, "Foreign Key", _groupMember.ForeignKey, tbForeignKey.Text );
@@ -380,6 +377,5 @@ namespace RockWeb.Plugins.com_kfs.Utility
         }
 
         #endregion
-
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Data.Entity;
 using System.Linq;
 using System.Web.UI.WebControls;
@@ -16,10 +17,16 @@ using Rock.Web.UI;
 
 namespace RockWeb.Plugins.com_kfs.Finance
 {
+    #region Block Attributes
+
     [DisplayName( "KFS Pledge Detail" )]
     [Category( "KFS > Finance" )]
-    [Description( "Allows the details of a given pledge to be edited." )]
+    [Description( "Allows the details of a given pledge to be edited. The KFS Version allows for url param of 'personId=1' to be supplied to pre-select the Person" )]
+
     [GroupTypeField( "Select Group Type", "Optional Group Type that if selected will display a list of groups that pledge can be associated to for selected user", false, "", "", 1 )]
+
+    #endregion
+
     public partial class PledgeDetail : RockBlock, IDetailBlock
     {
         /// <summary>
@@ -30,10 +37,24 @@ namespace RockWeb.Plugins.com_kfs.Finance
         {
             base.OnLoad( e );
 
+            nbInvalid.Visible = false;
+
+            var pledgeId = PageParameter( "pledgeId" ).AsInteger();
             if ( !IsPostBack )
             {
-                ShowDetail( PageParameter( "pledgeId" ).AsInteger() );
+                ShowDetail( pledgeId );
             }
+
+            // Add any attribute controls.
+            // This must be done here regardless of whether it is a postback so that the attribute values will get saved.
+            var pledge = new FinancialPledgeService( new RockContext() ).Get( pledgeId );
+            if ( pledge == null )
+            {
+                pledge = new FinancialPledge();
+            }
+            pledge.LoadAttributes();
+            phAttributes.Controls.Clear();
+            Helper.AddEditControls( pledge, phAttributes, true, BlockValidationGroup );
         }
 
         /// <summary>
@@ -79,13 +100,17 @@ namespace RockWeb.Plugins.com_kfs.Finance
 
             pledge.PledgeFrequencyValueId = ddlFrequencyType.SelectedValue.AsIntegerOrNull();
 
+            pledge.LoadAttributes( rockContext );
+            Rock.Attribute.Helper.GetEditValues( phAttributes, pledge );
+
             if ( !pledge.IsValid )
             {
-                // Controls will render the error messages
+                ShowInvalidResults( pledge.ValidationResults );
                 return;
             }
 
             rockContext.SaveChanges();
+            pledge.SaveAttributeValues( rockContext );
 
             NavigateToParentPage();
         }
@@ -108,7 +133,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
         {
             pnlDetails.Visible = true;
             var frequencyTypeGuid = new Guid( Rock.SystemGuid.DefinedType.FINANCIAL_FREQUENCY );
-            ddlFrequencyType.BindToDefinedType( DefinedTypeCache.Read( frequencyTypeGuid ), true );
+            ddlFrequencyType.BindToDefinedType( DefinedTypeCache.Get( frequencyTypeGuid ), true );
 
             var personId = PageParameter( "personId" ).AsIntegerOrNull();
 
@@ -135,20 +160,17 @@ namespace RockWeb.Plugins.com_kfs.Finance
                 var isNewPledge = pledge.Id == 0;
 
                 hfPledgeId.Value = pledge.Id.ToString();
-                Person person = null;
 
+                Person person = null;
                 if ( pledge.PersonAlias != null )
                 {
                     person = pledge.PersonAlias.Person;
-
                 }
                 else if ( personId.HasValue )
                 {
-                    person = new PersonService( rockContext ).Get( (int)personId );
+                    person = new PersonService( rockContext ).Get( ( int ) personId );
                 }
-
                 ppPerson.SetValue( person );
-
                 ppPerson.Enabled = !isReadOnly;
 
                 GroupType groupType = null;
@@ -199,7 +221,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
 
             int? personId = ppPerson.PersonId;
             Guid? groupTypeGuid = GetAttributeValue( "SelectGroupType" ).AsGuidOrNull();
-            if ( personId.HasValue && groupTypeGuid.HasValue  )
+            if ( personId.HasValue && groupTypeGuid.HasValue )
             {
                 using ( var rockContext = new RockContext() )
                 {
@@ -209,7 +231,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                             m.Group.GroupType.Guid == groupTypeGuid.Value &&
                             m.PersonId == personId.Value &&
                             m.GroupMemberStatus == GroupMemberStatus.Active &&
-                            m.Group.IsActive )
+                            m.Group.IsActive && !m.Group.IsArchived )
                         .Select( m => new
                         {
                             m.GroupId,
@@ -224,12 +246,21 @@ namespace RockWeb.Plugins.com_kfs.Finance
                     {
                         ddlGroup.DataSource = groups;
                         ddlGroup.DataBind();
-                        ddlGroup.Items.Insert(0, new ListItem() );
+                        ddlGroup.Items.Insert( 0, new ListItem() );
                         ddlGroup.SetValue( currentGroupId );
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// Shows the invalid results.
+        /// </summary>
+        /// <param name="validationResults">The validation results.</param>
+        private void ShowInvalidResults( List<ValidationResult> validationResults )
+        {
+            nbInvalid.Text = string.Format( "Please correct the following:<ul><li>{0}</li></ul>", validationResults.AsDelimited( "</li><li>" ) );
+            nbInvalid.Visible = true;
+        }
     }
 }

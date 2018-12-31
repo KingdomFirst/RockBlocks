@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
@@ -12,9 +11,14 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Finance
 {
+    #region Block Attributes
+
     [DisplayName( "Transaction Entity List" )]
     [Category( "KFS > Finance" )]
     [Description( "List of a transaction's related entities for management." )]
+
+    #endregion
+
     public partial class TransactionEntityList : RockBlock, ISecondaryBlock, ICustomGridColumns
     {
         /// <summary>
@@ -81,7 +85,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
             }
             else
             {
-                var changes = new List<string>();
+                var changes = new History.HistoryChangeList();
                 var typeName = detail.EntityType.FriendlyName;
                 var name = GetEntityName( detail.EntityTypeId, detail.EntityId, rockContext );
 
@@ -91,7 +95,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
                 detail.EntityTypeId = null;
                 detail.EntityId = null;
 
-                changes.Add( string.Format( "Removed transaction detail association to {0} {1}.", typeName, name ) );
+                changes.AddCustom( "Removed", "Removed", string.Format( "Removed transaction detail association to {0} {1}", typeName, name ));
 
                 HistoryService.SaveChanges(
                     rockContext,
