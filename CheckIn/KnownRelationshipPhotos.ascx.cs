@@ -3,26 +3,26 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
-using System.Web;
-using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Security;
-using Rock.Web.Cache;
 using Rock.Web.UI;
-using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.CheckIn
 {
     /// <summary>
     /// Block that adds a content channel item for person paging.
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Known Releationship Photos" )]
-    [Category( "Check-in > Manager" )]
+    [Category( "KFS > Check-in > Manager" )]
     [Description( "Block that displays a grid of person photos based on known relationships." )]
 
     [GroupRoleField( "", "Group Type/Role Filter", "The Group Type and role to display other members from.", false, "" )]
@@ -30,6 +30,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
     [IntegerField( "Max Relationships To Display", "", false, 50, "" )]
     [BooleanField( "Show Role", "Should the member's role be displayed with their name" )]
     [LinkedPage( "Person Detail Page", "Page to display person details when clicked.", true )]
+
+    #endregion
 
     public partial class KnownRelationshipPhotos : RockBlock
     {
@@ -59,10 +61,10 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
         /// </value>
         protected bool IsInverseRelationshipsOwner { get; set; }
 
-        int? personId = null;
-        Guid? personGuid = null;
-        Person person = null;
-        Boolean canCheckInOnly = false;
+        private int? personId = null;
+        private Guid? personGuid = null;
+        private Person person = null;
+        private Boolean canCheckInOnly = false;
 
         #endregion
 
@@ -107,6 +109,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
 
             getPerson();
         }
+
         #endregion
 
         #region Events

@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
+using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 using Rock;
+using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
-using Rock.Attribute;
-using System.Data.Entity;
 
 namespace RockWeb.Plugins.com_kfs.Reporting
 {
     /// <summary>
     /// Block for easily adding/editing metric values for any metric that has partitions of campus and service time.
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Advanced Service Metrics Entry" )]
     [Category( "KFS > Reporting" )]
     [Description( "Block for easily adding/editing metric values for any metric that has partitions of campus and service time." )]
@@ -27,6 +29,9 @@ namespace RockWeb.Plugins.com_kfs.Reporting
     [IntegerField( "Weeks Back", "The number of weeks back to display in the 'Week of' selection.", false, 8, "", 1 )]
     [IntegerField( "Weeks Ahead", "The number of weeks ahead to display in the 'Week of' selection.", false, 0, "", 2 )]
     [MetricCategoriesField( "Metric Categories", "Select the metric categories to display (note: only metrics in those categories with a campus and scheudle partition will displayed).", true, "", "", 3 )]
+
+    #endregion
+
     public partial class ServiceMetricsEntry : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -114,7 +119,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         {
             BindMetrics();
         }
-
 
         protected void rptrSelection_ItemCommand( object source, RepeaterCommandEventArgs e )
         {
@@ -254,7 +258,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 nbMetricsSaved.Visible = true;
 
                 BindMetrics();
-
             }
         }
 
@@ -458,7 +461,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
             if ( campusId.HasValue && scheduleId.HasValue && weekend.HasValue )
             {
-
                 SetBlockUserPreference( "CampusId", campusId.HasValue ? campusId.Value.ToString() : "" );
                 SetBlockUserPreference( "ScheduleId", scheduleId.HasValue ? scheduleId.Value.ToString() : "" );
 
@@ -515,7 +517,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                 {
                                     notes.Add( metricValue.Note );
                                 }
-
                             }
                         }
 
@@ -531,7 +532,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         }
 
         #endregion
-
     }
 
     public class ServiceMetricSelectItem
@@ -539,11 +539,12 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         public string CommandName { get; set; }
         public string CommandArg { get; set; }
         public string OptionText { get; set; }
+
         public ServiceMetricSelectItem( string commandName, string commandArg, string optionText )
         {
             CommandName = commandName;
             CommandArg = commandArg;
-            OptionText = optionText;   
+            OptionText = optionText;
         }
     }
 

@@ -1,6 +1,6 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ReportingServicesFolderTree.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Reporting.ReportingServicesFolderTree" %>
 <%--<asp:UpdatePanel ID="upMain" runat="server" UpdateMode="Conditional" ChildrenAsTriggers="false">--%>
-<asp:UpdatePanel ID="upMain" runat="server" >
+<asp:UpdatePanel ID="upMain" runat="server">
     <ContentTemplate>
         <asp:HiddenField ID="hfSelectedItem" runat="server" />
         <asp:HiddenField ID="hfSelectionType" runat="server" />
@@ -19,4 +19,3 @@
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>
-

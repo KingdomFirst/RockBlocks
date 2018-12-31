@@ -7,6 +7,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Data;
 using Rock.Model;
@@ -19,9 +20,15 @@ namespace RockWeb.Plugins.com_kfs.Event
     /// The KFS Group Panel that displays for resource subgroups
     /// </summary>
     /// <see cref="RockWeb.Blocks.Groups.GroupMemberList"/>
+
+    #region Block Attributes
+
     [DisplayName( "Advanced Registration Group Detail" )]
     [Category( "KFS > Advanced Event Registration" )]
     [Description( "The Group Panel that displays for resource subgroups." )]
+
+    #endregion
+
     public partial class GroupPanel : UserControl
     {
         #region Private Variables

@@ -1,21 +1,25 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Web.UI;
+
 using Rock.Attribute;
 using Rock.Model;
-using Rock.Web.UI;
-
 
 namespace RockWeb.Plugins.com_kingdomfirstsolutions.Utility
 {
+    #region Block Attributes
+
     [DisplayName( "Redirect Helper" )]
-    [Category( "com_kingdomfirstsolutions > Utility" )]
+    [Category( "KFS > Utility" )]
     [Description( "Helper block for orgnanizations that are in transistion from their old website to Rock. Checks an external site to see if the page exists and redirects instead of displaying 404 error." )]
 
     [BooleanField("Enabled", "A true/false flag indicating if the Redirect Helper page should be enabled. Default is false", false, "", 0, "Enabled")]
     [TextField("User Agent", "Name of the UserAgent that will verify that the page exists on the external site. Default is \"KFS Redirect Helper\".", false, "KFS Redirect Helper","", 1, "UserAgent")]
     [UrlLinkField( "External Site", "Base URL to an external site to check to see if the page exists.", true, "", "Redirect", 0, "ExternalSite" )]
     [BooleanField( "Use Permanent Redirect", "A true/false flag indicating if a permanent redirect response should supplied to the browser. Default is false.", false, "Redirect", 0, "UsePermanentRedirect" )]
+
+    #endregion
+
     public partial class RedirectHelper : Rock.Web.UI.RockBlock
     {
         protected override void OnLoad( EventArgs e )
@@ -41,14 +45,12 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Utility
 
             if ( !Page.IsPostBack )
             {
-                
                 if ( ExternalPageExists( orignalUrl )  )
                 {
                     RedirectUser( orignalUrl );
                 }
             }
         }
-
 
         private bool ExternalPageExists( string originalUrl )
         {
@@ -78,7 +80,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Utility
             catch ( Exception ex )
             {
                 pageExists = false;
-
             }
 
             return pageExists;
@@ -105,6 +106,5 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Utility
                 Response.End();
             }
         }
-
     }
 }

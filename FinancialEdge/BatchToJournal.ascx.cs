@@ -1,25 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Web.UI;
-using com.kfs.FinancialEdge;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
 using Rock.Web.UI;
+
+using com.kfs.FinancialEdge;
 
 namespace RockWeb.Plugins.com_kfs.FinancialEdge
 {
+    #region Block Attributes
+
     [DisplayName( "Financial Edge Batch to Journal" )]
-    [Category( "com_kfs > Financial Edge" )]
+    [Category( "KFS > Financial Edge" )]
     [Description( "Block used to create a CSV file that can be imported to Financial Edge from a Rock Financial Batch." )]
+
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Create FE CSV", "", 0 )]
     [TextField( "Journal Type", "The Financial Edge Journal to post in. For example: JE", true, "", "", 1 )]
     [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when a CSV file is created.", true, "", 3 )]
+
+    #endregion
+
     public partial class BatchToJournal : RockBlock
     {
         private int _batchId = 0;
@@ -126,7 +130,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                     // Set session for export file
                     //
                     feJournal.SetFinancialEdgeSessions( items, _financialBatch.Id.ToString() );
-                    
+
                     //
                     // vars we need now
                     //

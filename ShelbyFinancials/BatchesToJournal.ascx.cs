@@ -7,7 +7,7 @@ using System.Text;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using com.kfs.ShelbyBatchExport;
+
 using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
@@ -17,14 +17,21 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
+using com.kfs.ShelbyBatchExport;
+
 namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
 {
+    #region Block Attributes
+
     [DisplayName( "Shelby Financials Batches to Journal" )]
     [Category( "KFS > Shelby Financials" )]
     [Description( "Block used to create Journal Entries in Shelby Financials from multiple Rock Financial Batches." )]
+
     [LinkedPage( "Detail Page", "", true, "606BDA31-A8FE-473A-B3F8-A00ECF7E06EC", order: 0 )]
     [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
     [BooleanField( "Show Accounts Column", "Should the accounts column be displayed.", true, "", 2 )]
+
+    #endregion
 
     public partial class BatchesToJournal : RockBlock, IPostBackEventHandler, ICustomGridColumns
     {
@@ -404,7 +411,6 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
             BindGrid();
         }
 
-
         /// <summary>
         /// Handles the RowCreated event of the GBatchList control.
         /// </summary>
@@ -733,7 +739,6 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
         /// </summary>
         private void BindGrid( bool isExporting = false )
         {
-
             var txnCountCol = gBatchList.ColumnsOfType<RockBoundField>().FirstOrDefault( c => c.DataField == "TransactionCount" );
             if ( txnCountCol != null )
             {
@@ -932,6 +937,7 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
         public class BatchAccountSummary
         {
             public int AccountId { get; set; }
+
             public int AccountOrder
             {
                 get
@@ -973,6 +979,7 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
             }
 
             public decimal ControlAmount { get; set; }
+
             public List<BatchAccountSummary> AccountSummaryList
             {
                 get
@@ -1027,7 +1034,6 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
                 }
             }
 
-
             public string StatusLabelClass
             {
                 get
@@ -1081,7 +1087,7 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
         /// </summary>
         private void BindAttributes()
         {
-            // Parse the attribute filters 
+            // Parse the attribute filters
             AvailableAttributes = new List<AttributeCache>();
 
             int entityTypeId = new FinancialBatch().TypeId;
@@ -1094,7 +1100,6 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
             {
                 AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
             }
-
         }
 
         /// <summary>

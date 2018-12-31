@@ -6,21 +6,29 @@ using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Threading;
-using com.kfs.Import;
-using CsvHelper;
-using OfficeOpenXml;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Model;
 using Rock.Web.UI;
 
+using com.kfs.Import;
+using CsvHelper;
+using OfficeOpenXml;
+
 namespace RockWeb.Plugins.com_kfs.Import
 {
+    #region Block Attributes
+
     [DisplayName( "Spreadsheet Import" )]
-    [Category( "Spreadsheet Import" )]
+    [Category( "KFS > Spreadsheet Import" )]
     [Description( "Block to import spreadsheet data and optionally run a stored procedure." )]
+
     [CustomDropdownListField( "Default Stored Procedure", "Select the default stored procedure to run when importing a spreadsheet.", "SELECT ROUTINE_NAME AS Text, ROUTINE_NAME AS Value FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'", false, "", "", 0 )]
     [BooleanField( "Cleanup Table Parameter", "Select this if the SP has a @CleanupTable parameter.", true )]
+
+    #endregion
+
     public partial class Spreadsheet : RockBlock
     {
         public LogTrigger _trigger;

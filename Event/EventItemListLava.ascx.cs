@@ -6,15 +6,14 @@ using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.Caching;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
@@ -24,9 +23,13 @@ namespace RockWeb.Blocks.Event
     /// <summary>
     /// Renders a particular calendar using Lava.
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "KFS Calendar Item List Lava" )]
     [Category( "KFS > Event" )]
     [Description( "Renders calendar items using Lava and pulls audience." )]
+
     [EventCalendarField( "Event Calendar", "The event calendar to be displayed", true, "1", order: 0 )]
     [CampusesField( "Campuses", "List of which campuses to show occurrences for. This setting will be ignored in the 'Use Campus Context' is enabled.", required: false, order: 1, includeInactive: true )]
     [BooleanField( "Use Campus Context", "Determine if the campus should be read from the campus context of the page.", order: 2 )]
@@ -34,8 +37,10 @@ namespace RockWeb.Blocks.Event
     [SlidingDateRangeField( "Date Range", "Optional date range to filter the items on. (defaults to next 1000 days)", false, order: 4 )]
     [IntegerField( "Max Occurrences", "The maximum number of occurrences to show.", false, 100, order: 5 )]
     [CodeEditorField( "Lava Template", "The lava template to use for the results", CodeEditorMode.Lava, CodeEditorTheme.Rock, defaultValue: "{% include '~~/Assets/Lava/EventItemList.lava' %}", order: 6 )]
-    [BooleanField( "Enable Debug", "Show the lava merge fields.", order: 7 )]
-    [ContentChannelField( "Channel for Lava", "If set lava will generate objects for each item in the selected Content Channel", false, "", "", 1 )]
+    [ContentChannelField( "Channel for Lava", "If set lava will generate objects for each item in the selected Content Channel", false, "", "", 7 )]
+
+    #endregion
+
     public partial class EventItemListLava : RockBlock
     {
         #region Fields
@@ -134,7 +139,7 @@ namespace RockWeb.Blocks.Event
             // Filter by campus (always include the "All Campuses" events)
             if ( GetAttributeValue( "UseCampusContext" ).AsBoolean() )
             {
-                var campusEntityType = EntityTypeCache.Read<Campus>();
+                var campusEntityType = EntityTypeCache.Get<Campus>();
                 var contextCampus = RockPage.GetCurrentContext( campusEntityType ) as Campus;
 
                 if ( contextCampus != null )
@@ -371,8 +376,7 @@ namespace RockWeb.Blocks.Event
                         int? cacheDuration = GetAttributeValue( "CacheDuration" ).AsInteger();
                         if ( cacheDuration > 0 )
                         {
-                            var cacheItemPolicy = new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.Now.AddSeconds( cacheDuration.Value ) };
-                            AddCacheItem( CONTENT_CACHE_KEY, items, cacheItemPolicy );
+                            AddCacheItem( CONTENT_CACHE_KEY, items, cacheDuration.Value );
                         }
                     }
                 }
@@ -384,18 +388,6 @@ namespace RockWeb.Blocks.Event
             }
 
             lContent.Text = GetAttributeValue( "LavaTemplate" ).ResolveMergeFields( mergeFields );
-
-            // show debug info
-            if ( GetAttributeValue( "EnableDebug" ).AsBoolean() && IsUserAuthorized( Authorization.EDIT ) )
-            {
-                lDebug.Visible = true;
-                lDebug.Text = mergeFields.lavaDebugInfo();
-            }
-            else
-            {
-                lDebug.Visible = false;
-                lDebug.Text = string.Empty;
-            }
         }
 
         /// <summary>

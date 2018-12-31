@@ -15,12 +15,19 @@ namespace com.kfs.Reporting.SQLReportingServices
     /// <summary>
     /// KFS Reporting Services PDF Viewer Block
     /// </summary>
-    /// <seealso cref="Rock.Web.UI.RockBlock" />
+
+    #region Block Attributes
+
     [DisplayName( "Reporting Services PDF Viewer" )]
     [Category( "KFS > Reporting" )]
+    [Description( "Block to view a SSRS Report as a PDF." )]
+
     [TextField( "Report Path", "Relative Path to Reporting Services Report. Used in single report mode, and will overide ReportPath page parameter.", false, "", "Report Configuration", 0, "ReportPath" )]
     [KeyValueListField( "Report Parameters", "Report Parameters.", false, "", "Name", "Value", Category = "Report Configuration", Order = 1, Key = "ReportParameters" )]
     [BooleanField( "Show PDF Viewer", "A flag that determines if the full PDF Viewer block should be rendered or only return the report pdf. Default is true.", true, "Advanced", 0, "ShowReportViewer" )]
+
+    #endregion
+
     public partial class ReportingServicesPDFViewer : RockBlock
     {
         private bool mRenderPDFOnly = false;

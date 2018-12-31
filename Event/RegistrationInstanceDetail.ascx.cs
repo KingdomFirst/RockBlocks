@@ -9,8 +9,7 @@ using System.Linq;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
-using com.kfs.EventRegistration.Advanced;
-using Newtonsoft.Json;
+
 using Rock;
 using Rock.Attribute;
 using Rock.CheckIn;
@@ -24,14 +23,21 @@ using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using Attribute = Rock.Model.Attribute;
 
+using com.kfs.EventRegistration.Advanced;
+using Newtonsoft.Json;
+
 namespace RockWeb.Plugins.com_kfs.Event
 {
     /// <summary>
     /// Template block for editing an event registration instance.
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Advanced Registration Instance Detail" )]
     [Category( "KFS > Advanced Event Registration" )]
     [Description( "Template block for editing an event registration instance." )]
+
     [AccountField( "Default Account", "The default account to use for new registration instances", false, "2A6F9E5F-6859-44F1-AB0E-CE9CF6B08EE5", "", 0 )]
     [LinkedPage( "Registration Page", "The page for editing registration and registrant information", true, "", "", 1 )]
     [LinkedPage( "Linkage Page", "The page for editing registration linkages", true, "", "", 2 )]
@@ -44,6 +50,9 @@ namespace RockWeb.Plugins.com_kfs.Event
     [BooleanField( "Display Discount Codes", "Display the discount code used with a payment", false, "", 9 )]
     [LinkedPage( "Group Modal Page", "The modal page to view and edit details for a group", true, "", "", 10 )]
     [LinkedPage( "Additional Link Page", "A link to display at the top of the page for reports or additional info.", false, "", "", 11 )]
+
+    #endregion
+
     public partial class KFSRegistrationInstanceDetail : RockBlock, IDetailBlock
     {
         #region Fields
@@ -1493,7 +1502,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
         }
-        
+
         /// <summary>
         /// Handles the Delete event of the gRegistrants control.
         /// </summary>
@@ -7915,7 +7924,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             groupMember.LoadAttributes();
             phAttributes.Controls.Clear();
             Helper.AddEditControls( groupMember, phAttributes, true, string.Empty, true );
-            
+
             mdlAddSubGroupMember.Show();
             upnlContent.Update();
 

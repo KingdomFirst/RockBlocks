@@ -3,22 +3,31 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using com.kfs.Reporting.SQLReportingServices;
-using Microsoft.Reporting.WebForms;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Web.UI;
+
+using com.kfs.Reporting.SQLReportingServices;
+using Microsoft.Reporting.WebForms;
 
 namespace RockWeb.Plugins.com_kfs.Reporting
 {
     /// <summary>
     /// KFS Reporting Services Viewer Block
     /// </summary>
-    /// <seealso cref="Rock.Web.UI.RockBlock" />
+
+    #region Block Attributes
+
     [DisplayName( "Reporting Services Viewer" )]
     [Category( "KFS > Reporting" )]
+    [Description( "Block to view SSRS Report." )]
+
     [TextField( "Report Path", "Relative Path to Reporting Services Report. Used in single report mode, and will overide ReportPath page parameter.", false, "", "Report Configuration", 0, "ReportPath" )]
     [KeyValueListField( "Report Parameters", "Report Parameters.", false, "", "Name", "Value", Category = "Report Configuration", Order = 1, Key = "ReportParameters" )]
+
+    #endregion
+
     public partial class ReportingServicesViewer : RockBlock
     {
         /// <summary>

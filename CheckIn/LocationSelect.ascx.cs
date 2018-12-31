@@ -13,18 +13,21 @@ using Rock.Model;
 
 namespace RockWeb.Plugins.com_kfs.CheckIn
 {
+    #region Block Attributes
+
     [DisplayName("Location Select")]
-    [Category("Check-in")]
-    [Description("Displays a list of locations a person is able to check into.")]
+    [Category("KFS > Check-in")]
+    [Description("Displays a list of locations a person is able to check into. This is currently slated to be releated in v9 and can be deleted once in core.")]
 
     [TextField( "Title", "Title to display. Use {0} for person/schedule.", false, "{0}", "Text", 8 )]
     [TextField( "Sub Title", "Sub-Title to display. Use {0} for selected group name.", false, "{0}", "Text", 9 )]
     [TextField( "Caption", "", false, "Select Location", "Text", 10 )]
-
     [TextField( "No Option Message", "Message to display when there are not any options available. Use {0} for person's name, and {1} for schedule name.", false,
         "Sorry, there are currently not any available locations that {0} can check into at {1}.", "Text", 11 )]
     [TextField( "No Option After Select Message", "Message to display when there are not any options available after location is selected. Use {0} for person's name", false,
         "Sorry, based on your selection, there are currently not any available times that {0} can check into.", "Text", 12 )]
+
+    #endregion
 
     public partial class LocationSelect : CheckInBlockMultiPerson
     {
@@ -111,7 +114,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
                     }
                 }
             }
-
         }
 
         /// <summary>
@@ -216,7 +218,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
                         {
                             pnlNoOptions.Visible = true;
                             rSelection.Visible = false;
-                            lNoOptions.Text = string.Format( GetAttributeValue( "NoOptionMessage" ), 
+                            lNoOptions.Text = string.Format( GetAttributeValue( "NoOptionMessage" ),
                                 person.Person.NickName,
                                 person.CurrentSchedule != null ? person.CurrentSchedule.ToString() : "this time" );
                         }
@@ -249,7 +251,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
                 }
             }
         }
-        
+
         /// <summary>
         /// Handles the ItemCommand event of the rSelection control.
         /// </summary>
@@ -338,7 +340,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
         protected string FormatCount( int locationId )
         {
             if ( CurrentCheckInType != null && CurrentCheckInType.DisplayLocationCount )
-            { 
+            {
                 return string.Format( " <span class='checkin-sub-title'> Count: {0}</span>", KioskLocationAttendance.Get( locationId ).CurrentCount );
             }
 

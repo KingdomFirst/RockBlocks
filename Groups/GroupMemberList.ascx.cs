@@ -6,8 +6,8 @@ using System.Linq;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
-using Newtonsoft.Json;
 
+using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -19,9 +19,11 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Groups
 {
+    #region Block Attributes
+
     [DisplayName( "Group Member List KFS" )]
-    [Category( "Groups" )]
-    [Description( "Lists all the members of the given group." )]
+    [Category( "KFS > Groups" )]
+    [Description( "Lists all the members of the given group. This version allows for Person Attributes to be displayed as additional columns via a Group Attribute." )]
 
     [GroupField( "Group", "Either pick a specific group or choose <none> to have group be determined by the groupId page parameter", false )]
     [LinkedPage( "Detail Page" )]
@@ -31,6 +33,8 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [BooleanField( "Show First/Last Attendance", "If the group allows attendance, should the first and last attendance date be displayed for each group member?", false, "", 5, "ShowAttendance" )]
     [BooleanField( "Include All Group Member Attributes In Export", "Determines if all group member attributes should be exported. False will only the attributes set to 'Show in Grid'.", order: 8 )]
     [BooleanField( "Bypass Attribute Security", "Determines if the field level security on each attribute should be ignored.", order: 9 )]
+
+    #endregion
 
     public partial class GroupMemberList : RockBlock, ISecondaryBlock, ICustomGridColumns
     {
@@ -59,6 +63,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
         // cache the DeleteField and ColumnIndex since it could get called many times in GridRowDataBound
         private DeleteField _deleteField = null;
+
         private int? _deleteFieldColumnIndex = null;
 
         #endregion
@@ -664,7 +669,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         {
             var bypassSecurity = GetAttributeValue( "BypassAttributeSecurity" ).AsBoolean();
 
-            // Parse the attribute filters 
+            // Parse the attribute filters
             AvailableAttributes = new List<AttributeCache>();
             if ( _group != null )
             {
@@ -891,7 +896,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
             _deleteField = new DeleteField();
             _deleteField.Click += DeleteOrArchiveGroupMember_Click;
             gGroupMembers.Columns.Add( _deleteField );
-
         }
 
         /// <summary>

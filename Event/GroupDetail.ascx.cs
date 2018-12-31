@@ -5,10 +5,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
-using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using Humanizer;
+
 using Newtonsoft.Json;
 
 using Rock;
@@ -29,11 +28,15 @@ namespace RockWeb.Plugins.com_kfs.Event
     /// Displays the details of the given group.
     /// </summary>
     /// <see cref="RockWeb.Blocks.Groups.GroupDetail"/>
-    /// <seealso cref="Rock.Web.UI.RockBlock" />       
-    /// <seealso cref="Rock.Web.UI.IDetailBlock" />    
+    /// <seealso cref="Rock.Web.UI.RockBlock" />
+    /// <seealso cref="Rock.Web.UI.IDetailBlock" />
+
+    #region Block Attributes
+
     [DisplayName( "Advanced Registration Group Detail" )]
     [Category( "KFS > Advanced Event Registration" )]
     [Description( "Displays the details of the given group." )]
+
     [GroupTypesField( "Group Types Include", "Select group types to show in this block.  Leave all unchecked to show all but the excluded group types.", false, key: "GroupTypes", order: 0 )]
     [GroupTypesField( "Group Types Exclude", "Select group types to exclude from this block.", false, key: "GroupTypesExclude", order: 1 )]
     [BooleanField( "Limit to Security Role Groups", "", false, "", 3 )]
@@ -52,6 +55,9 @@ namespace RockWeb.Plugins.com_kfs.Event
     [LinkedPage( "Group History Page", "The page to display group history.", false, "", "", 15 )]
     [BooleanField( "Enable Dialog Mode", "When enabled, the Save and Cancel buttons will be associated with the buttons of the Modal.", false, "", 16 )]
     [BooleanField( "Show Edit", "", true, "", 17 )]
+
+    #endregion
+
     public partial class GroupDetail : RockBlock, IDetailBlock
     {
         #region Constants
@@ -454,7 +460,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var scheduleService = new ScheduleService( rockContext );
                     var schedule = scheduleService.Get( group.ScheduleId.Value );
                     if ( schedule != null && schedule.ScheduleType != ScheduleType.Named )
-                    {                                               
+                    {
                         // Make sure this is the only group trying to use this schedule.
                         if ( !groupService.Queryable().Where( g => g.ScheduleId == schedule.Id && g.Id != group.Id ).Any() )
                         {
@@ -481,7 +487,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             qryParams["ExpandedIds"] = PageParameter( "ExpandedIds" );
-
 
             if ( GetAttributeValue( "GroupListPage" ).AsGuid() != Guid.Empty )
             {
@@ -801,7 +806,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( adding )
                 {
-                    // add ADMINISTRATE to the person who added the group 
+                    // add ADMINISTRATE to the person who added the group
                     Rock.Security.Authorization.AllowPerson( group, Authorization.ADMINISTRATE, this.CurrentPerson, rockContext );
                 }
 
@@ -810,7 +815,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupRequirementsToInsert.ForEach( a => a.GroupId = group.Id );
                     groupRequirementService.AddRange( groupRequirementsToInsert );
                 }
-                
+
                 group.SaveAttributeValues( rockContext );
 
                 /* Take care of Group Member Attributes */
@@ -870,7 +875,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     Authorization.Clear();
                 }
             }
-            
+
             if ( triggersUpdated )
             {
                 GroupMemberWorkflowTriggerService.RemoveCachedTriggers();
@@ -1009,10 +1014,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
 
                         attributeService.Add( newAttribute );
-
                     }
                     rockContext.SaveChanges();
-
 
                     foreach ( var auth in auths )
                     {
@@ -1031,7 +1034,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                     rockContext.SaveChanges();
                     Authorization.Clear();
-
                 } );
 
                 NavigateToCurrentPage( new Dictionary<string, string> { { "GroupId", newGroup.Id.ToString() } } );
@@ -1221,7 +1223,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         // get all the allowed GroupTypes as defined by the parent group type
                         var allowedChildGroupTypesOfParentGroup = GetAllowedGroupTypes( parentGroup, rockContext ).ToList();
 
-                        // narrow it down to group types that the current user is allowed to edit 
+                        // narrow it down to group types that the current user is allowed to edit
                         var authorizedGroupTypes = new List<GroupType>();
                         foreach ( var allowedGroupType in allowedChildGroupTypesOfParentGroup )
                         {
@@ -1453,7 +1455,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 dvpGroupStatus.Visible = groupTypeCache.GroupStatusDefinedTypeId.HasValue;
                 dvpGroupStatus.SetValue( group.StatusValueId );
             }
-            
+
             // if this block's attribute limit group to SecurityRoleGroups, don't let them edit the SecurityRole checkbox value
             if ( GetAttributeValue( "LimittoSecurityRoleGroups" ).AsBoolean() )
             {
@@ -1472,7 +1474,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             BindGroupMemberAttributesGrid();
 
             BindInheritedAttributes( group.GroupTypeId, attributeService );
-            
+
             BindGroupRequirementsGrid();
 
             MemberWorkflowTriggersState = new List<GroupMemberWorkflowTrigger>();
@@ -1647,7 +1649,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             SetHighlightLabelVisibility( group, true );
             SetEditMode( false );
-            
+
             string groupIconHtml = string.Empty;
             if ( groupType != null )
             {
@@ -1661,7 +1663,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             lReadOnlyTitle.Text = group.Name.FormatAsHtmlTitle();
 
             pdAuditDetails.SetEntity( group, ResolveRockUrl( "~" ) );
-            
+
             if ( group.Campus != null )
             {
                 hlCampus.Visible = true;
@@ -1671,7 +1673,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 hlCampus.Visible = false;
             }
-            
+
             var pageParams = new Dictionary<string, string>();
             pageParams.Add( "GroupId", group.Id.ToString() );
 

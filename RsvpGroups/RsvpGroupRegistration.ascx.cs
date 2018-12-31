@@ -4,23 +4,20 @@ using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Communication;
-using Rock.Constants;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
-using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.RsvpGroups
 {
-    /// <summary>
-    /// 
-    /// </summary>
+    #region Block Attributes
+
     [DisplayName( "RSVP Group Registration" )]
     [Category( "KFS > RSVP Groups" )]
     [Description( "Allows a person to register for an RSVP Group." )]
@@ -42,26 +39,29 @@ namespace RockWeb.Plugins.com_kfs.RsvpGroups
     [BooleanField( "Require Email", "Should email be required for registration?", true, key: REQUIRE_EMAIL_KEY )]
     [BooleanField( "Require Mobile Phone", "Should mobile phone numbers be required for registration?", false, key: REQUIRE_MOBILE_KEY )]
 
+    #endregion
+
     public partial class RsvpGroupRegistration : RockBlock
     {
         #region Fields
+
         private const string REQUIRE_EMAIL_KEY = "IsRequireEmail";
         private const string REQUIRE_MOBILE_KEY = "IsRequiredMobile";
 
-        RockContext _rockContext = null;
-        string _mode = "Simple";
-        Group _group = null;
-        GroupTypeRole _defaultGroupRole = null;
-        DefinedValueCache _dvcConnectionStatus = null;
-        DefinedValueCache _dvcRecordStatus = null;
-        DefinedValueCache _married = null;
-        DefinedValueCache _homeAddressType = null;
-        GroupTypeCache _familyType = null;
-        GroupTypeRoleCache _adultRole = null;
-        bool _autoFill = true;
-        bool _isValidSettings = true;
-        bool _isEditing = false;
-        int _currentRSVP = 1;
+        private RockContext _rockContext = null;
+        private string _mode = "Simple";
+        private Group _group = null;
+        private GroupTypeRole _defaultGroupRole = null;
+        private DefinedValueCache _dvcConnectionStatus = null;
+        private DefinedValueCache _dvcRecordStatus = null;
+        private DefinedValueCache _married = null;
+        private DefinedValueCache _homeAddressType = null;
+        private GroupTypeCache _familyType = null;
+        private GroupTypeRoleCache _adultRole = null;
+        private bool _autoFill = true;
+        private bool _isValidSettings = true;
+        private bool _isEditing = false;
+        private int _currentRSVP = 1;
 
         #endregion
 
@@ -178,7 +178,7 @@ namespace RockWeb.Plugins.com_kfs.RsvpGroups
                     }
                 }
 
-                // Try to find person by name/email 
+                // Try to find person by name/email
                 if ( person == null )
                 {
                     var personQuery = new PersonService.PersonMatchQuery( tbFirstName.Text.Trim(), tbLastName.Text.Trim(), tbEmail.Text.Trim(), pnCell.Text.Trim() );
@@ -285,7 +285,7 @@ namespace RockWeb.Plugins.com_kfs.RsvpGroups
                     }
                 }
 
-                // Save the person and change history 
+                // Save the person and change history
                 rockContext.SaveChanges();
 
                 // Check to see if a workflow should be launched for each person
@@ -539,7 +539,6 @@ namespace RockWeb.Plugins.com_kfs.RsvpGroups
                         groupMember.GroupMemberStatus = status;
                         rockContext.SaveChanges();
                     }
-
                 }
 
                 if ( groupMember != null )

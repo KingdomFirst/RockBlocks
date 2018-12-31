@@ -1,20 +1,4 @@
-﻿// <copyright>
-// Copyright by the Spark Development Network
-//
-// Licensed under the Rock Community License (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.rockrms.com/license
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// </copyright>
-//
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
@@ -32,12 +16,11 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Groups
 {
-    /// <summary>
-    /// Template block for developers to use to start a new block.
-    /// </summary>
+    #region Block Attributes
+
     [DisplayName( "Group Detail Lava" )]
     [Category( "KFS > Groups" )]
-    [Description( "Presents the details of a group using Lava" )]
+    [Description( "Presents the details of a group using Lava.  This version allows for the Group Capacity to be edited.  Once that feature is accepted to core, we can delete this as a custom block." )]
 
     [LinkedPage( "Person Detail Page", "Page to link to for more information on a group member.", false, "", "", 0 )]
     [LinkedPage( "Group Member Add Page", "Page to use for adding a new group member. If no page is provided the built in group member edit panel will be used. This panel allows the individual to search the database.", false, "", "", 1 )]
@@ -58,12 +41,16 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [CodeEditorField( "Edit Group Post-HTML", "HTML to display after the edit group panel.", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "HTML Wrappers", 16 )]
     [CodeEditorField( "Edit Group Member Pre-HTML", "HTML to display before the edit group member panel.", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "HTML Wrappers", 17 )]
     [CodeEditorField( "Edit Group Member Post-HTML", "HTML to display after the edit group member panel.", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "HTML Wrappers", 18 )]
+
+    #endregion
+
     public partial class GroupDetailLava : Rock.Web.UI.RockBlock
     {
         #region Fields
 
         // used for private variables
         private int _groupId = 0;
+
         private const string MEMBER_LOCATION_TAB_TITLE = "Member Location";
         private const string OTHER_LOCATION_TAB_TITLE = "Other Location";
 

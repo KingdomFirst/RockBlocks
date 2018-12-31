@@ -5,6 +5,7 @@ using System.Linq;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -16,11 +17,10 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Connection
 {
-    /// <summary>
-    /// 
-    /// </summary>
+    #region Block Attributes
+
     [DisplayName( "Connection Opportunities Signup" )]
-    [Category( "com_kfs > Connection" )]
+    [Category( "KFS > Connection" )]
     [Description( "Block used to sign up for connection opportunities." )]
 
     [BooleanField( "Display Home Phone", "Whether to display home phone", true, "", 0 )]
@@ -39,13 +39,15 @@ namespace RockWeb.Plugins.com_kfs.Connection
     [BooleanField( "Show Opportunity Summary", "Optioanl flag indicating if the Summary should be displayed.", false, "", 13 )]
     [TextField( "Connect Button Text", "The text to use for the Connect button. Default: Connect.", false, "Connect", "", 14 )]
 
+    #endregion
+
     public partial class ConnectionOpportuntiesSignup : RockBlock
     {
         #region Fields
 
-        DefinedValueCache _homePhone = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
-        DefinedValueCache _cellPhone = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
-        List<ConnectionType> _connectionTypes = new List<ConnectionType>();
+        private DefinedValueCache _homePhone = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
+        private DefinedValueCache _cellPhone = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
+        private List<ConnectionType> _connectionTypes = new List<ConnectionType>();
 
         #endregion
 
@@ -78,7 +80,6 @@ namespace RockWeb.Plugins.com_kfs.Connection
 
             nbErrorMessage.Visible = false;
         }
-
 
         /// <summary>
         /// Handles the BlockUpdated event of the control.
@@ -133,7 +134,6 @@ namespace RockWeb.Plugins.com_kfs.Connection
                     // If the name and email entered are the same as current person (wasn't changed), use the current person
                     person = personService.Get( CurrentPerson.Id );
                 }
-
                 else
                 {
                     // Try to find matching person
@@ -171,7 +171,6 @@ namespace RockWeb.Plugins.com_kfs.Connection
                 // If there is a valid person with a primary alias, continue
                 if ( person != null && person.PrimaryAliasId.HasValue )
                 {
-
                     if ( pnHome.Visible )
                     {
                         SavePhone( pnHome, person, _homePhone.Guid );
@@ -457,7 +456,6 @@ namespace RockWeb.Plugins.com_kfs.Connection
                     phone.CountryCode = PhoneNumber.CleanNumber( phoneNumberBox.CountryCode );
                     phone.Number = newPhoneNumber;
                 }
-
             }
         }
 

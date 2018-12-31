@@ -1,26 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Web.UI;
-using OfficeOpenXml;
-using com.kfs.ShelbyBatchExport;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
-using Rock.Utility;
 using Rock.Web.UI;
+
+using com.kfs.ShelbyBatchExport;
 
 namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
 {
+    #region Block Attributes
+
     [DisplayName( "Shelby Financials Batch to Journal" )]
-    [Category( "com_kfs > Shelby Financials" )]
-    [Description( "Block used to create Journal Entries in Intacct from a Rock Financial Batch." )]
+    [Category( "KFS > Shelby Financials" )]
+    [Description( "Block used to create Journal Entries in Shelby Financials from a Rock Financial Batch." )]
+
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Create Shelby Export", "", 0 )]
     [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.", true, "", 3 )]
+
+    #endregion
+
     public partial class BatchToJournal : RockBlock
     {
         private int _batchId = 0;
@@ -46,7 +48,6 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
             {
                 tbAccountingPeriod.Text = accountingPeriod.ToString();
             }
-
         }
 
         /// <summary>
@@ -136,7 +137,7 @@ namespace RockWeb.Plugins.com_kfs.ShelbyFinancials
             if ( _financialBatch != null )
             {
                 var rockContext = new RockContext();
-                
+
                 var sfJournal = new SFJournal();
                 var journalCode = ddlJournalType.SelectedValue;
                 var period = tbAccountingPeriod.Text.AsInteger();

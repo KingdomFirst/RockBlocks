@@ -1,25 +1,33 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Web.UI;
-using com.kfs.Reporting.SQLReportingServices;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
+
+using com.kfs.Reporting.SQLReportingServices;
 
 namespace RockWeb.Plugins.com_kfs.Reporting
 {
     /// <summary>
     /// KFS Reporting Services Configuration Block
     /// </summary>
-    /// <seealso cref="Rock.Web.UI.RockBlock" />
+
+    #region Block Attributes
+
     [DisplayName( "Reporting Services Configuration" )]
     [Category( "KFS > Reporting" )]
-    [BooleanField( "Use Separate Content Manager User", "Use separate Content Manager user and Browser user.", false, "", 0, "UseCMUser" )]
     [Description( "SQL Server Reporting Services Setup and Configuration." )]
+
+    [BooleanField( "Use Separate Content Manager User", "Use separate Content Manager user and Browser user.", false, "", 0, "UseCMUser" )]
+
+    #endregion
+
     public partial class ReportingServicesConfiguration : RockBlock
     {
-        #region fields
+        #region Fields
 
         private bool useCMUser = false;
 

@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
+using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 using Rock;
+using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
-using Rock.Attribute;
-using System.Data.Entity;
 
 namespace RockWeb.Plugins.com_kfs.Reporting
 {
     /// <summary>
     /// Block for easily adding/editing metric values for any metric that has partitions of group.
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Group Toolbox Metrics Entry" )]
     [Category( "KFS > Reporting" )]
     [Description( "Block for easily adding/editing metric values for any metric that has partitions of group." )]
@@ -26,6 +28,9 @@ namespace RockWeb.Plugins.com_kfs.Reporting
     [MetricCategoriesField( "Metric Categories", "Select the metric categories to display (note: only metrics in those categories with a group partition will displayed).", true, "", "", 3 )]
     [BooleanField( "Show Note Field", "Allow the user to input note along with metric entry.", false )]
     [BooleanField( "Admin Mode", "Enable the block to be used for any group with a group selector.", false )]
+
+    #endregion
+
     public partial class GroupMetricsEntry : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -33,6 +38,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         private int _groupId = 0;
         private int? _selectedGroupId { get; set; }
         private DateTime? _selectedDate { get; set; }
+
         #endregion
 
         #region Base Control Methods
@@ -223,7 +229,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                         campusValuePartition.EntityId = campusId.Value;
                                         metricValue.MetricValuePartitions.Add( campusValuePartition );
                                     }
-
                                 }
 
                                 metricValue.YValue = nbMetricValue.Text.AsDecimalOrNull();
@@ -239,7 +244,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 nbMetricsSaved.Visible = true;
 
                 BindMetrics();
-
             }
         }
 
@@ -256,6 +260,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         #endregion
 
         #region Methods
+
         /// <summary>
         /// Binds the metrics.
         /// </summary>
@@ -273,7 +278,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
 
             if ( groupId.HasValue && weekend.HasValue )
             {
-
                 SetBlockUserPreference( "GroupId", groupId.HasValue ? groupId.Value.ToString() : "" );
 
                 var metricCategories = MetricCategoriesFieldAttribute.GetValueAsGuidPairs( GetAttributeValue( "MetricCategories" ) );
@@ -294,7 +298,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                             CampusPartitionId = m.MetricPartitions.Where( p => p.EntityTypeId.HasValue && p.EntityTypeId.Value == campusEntityTypeId ).Select( p => p.Id ).FirstOrDefault()
                         } ) )
                     {
-
                         var groupMetric = new GroupMetric( metric.Id, metric.Title );
 
                         if ( groupId.HasValue && weekend.HasValue )
@@ -329,7 +332,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                                 {
                                     notes.Add( metricValue.Note );
                                 }
-
                             }
                         }
 
@@ -345,7 +347,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         }
 
         #endregion
-
     }
 
     public class GroupMetric

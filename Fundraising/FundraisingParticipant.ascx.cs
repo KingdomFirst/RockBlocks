@@ -17,27 +17,28 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Fundraising
 {
+    #region Block Attributes
+
     [DisplayName( "Fundraising Opportunity Participant KFS" )]
     [Category( "KFS > Fundraising" )]
-    [Description( "Public facing block that shows a fundraising opportunity participant" )]
+    [Description( "Public facing block that shows a fundraising opportunity participant.  This modification allows hiding of the Amount and Address Columns" )]
 
     [CodeEditorField( "Profile Lava Template", "Lava template for what to display at the top of the main panel. Usually used to display information about the participant such as photo, name, etc.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false,
         @"{% include '~~/Assets/Lava/FundraisingParticipantProfile.lava' %}", order: 1 )]
-
     [CodeEditorField( "Progress Lava Template", "Lava template for how the progress bar should be displayed ", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false,
-        @"{% include '~~/Assets/Lava/FundraisingParticipantProgress.lava' %}", order: 2)]
-
+        @"{% include '~~/Assets/Lava/FundraisingParticipantProgress.lava' %}", order: 2 )]
     [CodeEditorField( "Updates Lava Template", "Lava template for the Updates (Content Channel Items)", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false,
         @"{% include '~~/Assets/Lava/FundraisingOpportunityUpdates.lava' %}", order: 3 )]
-
     [NoteTypeField( "Note Type", "Note Type to use for participant comments", false, "Rock.Model.GroupMember", defaultValue: "FFFC3644-60CD-4D14-A714-E8DCC202A0E1", order: 5 )]
     [LinkedPage( "Donation Page", "The page where a person can donate to the fundraising opportunity", required: false, order: 6 )]
     [LinkedPage( "Main Page", "The main page for the fundraising opportunity", required: false, order: 7 )]
-    [BooleanField( "Show Clipboard Icon", "Show a clipboard icon which will copy the page url to the users clipboard", true, order:8)]
+    [BooleanField( "Show Clipboard Icon", "Show a clipboard icon which will copy the page url to the users clipboard", true, order: 8 )]
     [TextField( "Image CSS Class", "CSS class to apply to the image.", false, "img-thumbnail", key: "ImageCssClass", order: 9 )]
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "PersonAttributes", "The Person Attributes that the participant can edit", false, true, order: 7 )]
-    [BooleanField( "Show Amount", "Determines if the Amount column should be displayed in the Contributions List.", true, order: 8 )]
     [BooleanField( "Show Address", "Determines if the Address column should be displayed in the Contributions List.", true, order: 8 )]
+    [BooleanField( "Show Amount", "Determines if the Amount column should be displayed in the Contributions List.", true, order: 9 )]
+
+    #endregion
 
     public partial class FundraisingParticipant : RockBlock
     {
@@ -180,7 +181,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
                 groupMember.LoadAttributes( rockContext );
                 groupMember.Group.LoadAttributes( rockContext );
-                var opportunityType = DefinedValueCache.Read( groupMember.Group.GetAttributeValue( "OpportunityType" ).AsGuid() );
+                var opportunityType = DefinedValueCache.Get( groupMember.Group.GetAttributeValue( "OpportunityType" ).AsGuid() );
 
                 lProfileTitle.Text = string.Format(
                     "{0} Profile for {1}",
@@ -220,7 +221,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             // Person Attributes (the ones they picked in the Block Settings)
             phPersonAttributes.Controls.Clear();
 
-            var personAttributes = this.GetAttributeValue( "PersonAttributes" ).SplitDelimitedValues().AsGuidList().Select( a => AttributeCache.Read( a ) );
+            var personAttributes = this.GetAttributeValue( "PersonAttributes" ).SplitDelimitedValues().AsGuidList().Select( a => AttributeCache.Get( a ) );
             if ( personAttributes.Any() )
             {
                 var person = groupMember.Person;
@@ -277,7 +278,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             Rock.Attribute.Helper.GetEditValues( phGroupMemberAttributes, groupMember );
 
             // Save selected Person Attributes (The ones picked in Block Settings)
-            var personAttributes = this.GetAttributeValue( "PersonAttributes" ).SplitDelimitedValues().AsGuidList().Select( a => AttributeCache.Read( a ) );
+            var personAttributes = this.GetAttributeValue( "PersonAttributes" ).SplitDelimitedValues().AsGuidList().Select( a => AttributeCache.Get( a ) );
             if ( personAttributes.Any() )
             {
                 person.LoadAttributes( rockContext );
@@ -403,7 +404,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 {
                     warningItems.Add( "photo" );
                 }
-                if ( groupMember.GetAttributeValue( "PersonalOpportunityIntroduction" ).IsNullOrWhiteSpace())
+                if ( groupMember.GetAttributeValue( "PersonalOpportunityIntroduction" ).IsNullOrWhiteSpace() )
                 {
                     warningItems.Add( "personal opportunity introduction" );
                 }
@@ -432,7 +433,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             var contributionTotal = new FinancialTransactionDetailService( rockContext ).Queryable()
                         .Where( d => d.EntityTypeId == entityTypeIdGroupMember
                                 && d.EntityId == groupMemberId )
-                        .Sum( a => (decimal?)a.Amount ) ?? 0.00M;
+                        .Sum( a => ( decimal? ) a.Amount ) ?? 0.00M;
 
             var individualFundraisingGoal = groupMember.GetAttributeValue( "IndividualFundraisingGoal" ).AsDecimalOrNull();
             if ( !individualFundraisingGoal.HasValue )
@@ -445,13 +446,13 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
             mergeFields.Add( "AmountLeft", amountLeft );
             mergeFields.Add( "PercentMet", percentMet );
-         
+
             var queryParams = new Dictionary<string, string>();
             queryParams.Add( "GroupId", hfGroupId.Value );
             queryParams.Add( "GroupMemberId", hfGroupMemberId.Value );
-            mergeFields.Add( "MakeDonationUrl", LinkedPageUrl( "DonationPage", queryParams ));
+            mergeFields.Add( "MakeDonationUrl", LinkedPageUrl( "DonationPage", queryParams ) );
 
-            var opportunityType = DefinedValueCache.Read( group.GetAttributeValue( "OpportunityType" ).AsGuid() );
+            var opportunityType = DefinedValueCache.Get( group.GetAttributeValue( "OpportunityType" ).AsGuid() );
 
             string makeDonationButtonText = null;
             if ( groupMember.PersonId == this.CurrentPersonId )
@@ -498,7 +499,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             {
                 SetActiveTab( "Updates" );
             }
-            else if (showContributions)
+            else if ( showContributions )
             {
                 SetActiveTab( "Contributions" );
             }
@@ -511,18 +512,16 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             BindContributionsGrid();
 
             // Tab:Comments
-            var noteType = NoteTypeCache.Read( this.GetAttributeValue( "NoteType" ).AsGuid() );
+            var noteType = NoteTypeCache.Get( this.GetAttributeValue( "NoteType" ).AsGuid() );
             if ( noteType != null )
             {
-                notesCommentsTimeline.NoteTypes = new List<NoteTypeCache> { noteType };
+                notesCommentsTimeline.NoteOptions.SetNoteTypes( new List<NoteTypeCache> { noteType } );
             }
 
-            notesCommentsTimeline.EntityId = groupMember.Id;
+            notesCommentsTimeline.NoteOptions.EntityId = groupMember.Id;
 
             // show the Add button on comments for any logged in person
             notesCommentsTimeline.AddAllowed = true;
-
-            notesCommentsTimeline.RebuildNotes( true );
 
             var enableCommenting = group.GetAttributeValue( "EnableCommenting" ).AsBoolean();
 
@@ -554,11 +553,11 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         /// </summary>
         protected void BindContributionsGrid()
         {
-            var showAmount = GetAttributeValue( "ShowAmount" ).AsBoolean();
-            gContributions.Columns[3].Visible = showAmount;
-
             var showAddress = GetAttributeValue( "ShowAddress" ).AsBoolean();
             gContributions.Columns[1].Visible = showAddress;
+
+            var showAmount = GetAttributeValue( "ShowAmount" ).AsBoolean();
+            gContributions.Columns[3].Visible = showAmount;
 
             var rockContext = new RockContext();
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
@@ -582,15 +581,12 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         /// <param name="e">The <see cref="GridViewRowEventArgs"/> instance containing the event data.</param>
         protected void gContributions_RowDataBound( object sender, GridViewRowEventArgs e )
         {
-            var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
-            int groupMemberId = hfGroupMemberId.Value.AsInteger();
-
             FinancialTransaction financialTransaction = e.Row.DataItem as FinancialTransaction;
-            if ( financialTransaction != null && 
-                financialTransaction.AuthorizedPersonAlias != null && 
+            if ( financialTransaction != null &&
+                financialTransaction.AuthorizedPersonAlias != null &&
                 financialTransaction.AuthorizedPersonAlias.Person != null )
             {
-	            Literal lAddress = e.Row.FindControl( "lAddress" ) as Literal;
+                Literal lAddress = e.Row.FindControl( "lAddress" ) as Literal;
                 if ( lAddress != null )
                 {
                     var location = financialTransaction.AuthorizedPersonAlias.Person.GetMailingLocation();
@@ -599,14 +595,17 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 }
 
                 Literal lPersonName = e.Row.FindControl( "lPersonName" ) as Literal;
-	            if ( lPersonName != null )
-	            {
-	                lPersonName.Text = financialTransaction.ShowAsAnonymous ? "Anonymous" : financialTransaction.AuthorizedPersonAlias.Person.FullName;
-	            }
+                if ( lPersonName != null )
+                {
+                    lPersonName.Text = financialTransaction.ShowAsAnonymous ? "Anonymous" : financialTransaction.AuthorizedPersonAlias.Person.FullName;
+                }
 
                 Literal lTransactionDetailAmount = e.Row.FindControl( "lTransactionDetailAmount" ) as Literal;
                 if ( lTransactionDetailAmount != null )
                 {
+                    var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
+                    int groupMemberId = hfGroupMemberId.Value.AsInteger();
+
                     var amount = financialTransaction.TransactionDetails
                         .Where( d => d.EntityTypeId.HasValue && d.EntityTypeId == entityTypeIdGroupMember && d.EntityId == groupMemberId )
                         .Sum( d => ( decimal? ) d.Amount )
@@ -625,12 +624,12 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             hfActiveTab.Value = tabName;
             pnlUpdatesComments.Visible = tabName == "Updates";
             pnlContributions.Visible = tabName == "Contributions";
-            if (tabName == "Updates")
+            if ( tabName == "Updates" )
             {
                 liUpdatesTab.AddCssClass( "active" );
                 liContributionsTab.RemoveCssClass( "active" );
             }
-            else if (tabName == "Contributions")
+            else if ( tabName == "Contributions" )
             {
                 liUpdatesTab.RemoveCssClass( "active" );
                 liContributionsTab.AddCssClass( "active" );
