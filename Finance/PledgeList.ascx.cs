@@ -16,7 +16,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
 {
     #region Block Attributes
 
-    [DisplayName( "KFS Pledge List" )]
+    [DisplayName( "Pledge List KFS" )]
     [Category( "KFS > Finance" )]
     [Description( "Generic list of all pledges in the system. This version passes the conext person Id in the Url to the details page." )]
 

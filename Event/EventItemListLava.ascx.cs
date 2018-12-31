@@ -26,7 +26,7 @@ namespace RockWeb.Blocks.Event
 
     #region Block Attributes
 
-    [DisplayName( "KFS Calendar Item List Lava" )]
+    [DisplayName( "Calendar Item List Lava KFS" )]
     [Category( "KFS > Event" )]
     [Description( "Renders calendar items using Lava and pulls audience." )]
 

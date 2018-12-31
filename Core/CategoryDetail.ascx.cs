@@ -19,7 +19,7 @@ namespace RockWeb.Plugins.com_kfs.Core
 {
     #region Block Attributes
 
-    [DisplayName( "KFS Category Detail" )]
+    [DisplayName( "Category Detail KFS" )]
     [Category( "KFS > Core" )]
     [Description( "Displays the details of a given category." )]
 

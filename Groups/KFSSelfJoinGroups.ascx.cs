@@ -20,7 +20,7 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
 
     #region Block Attributes
 
-    [DisplayName( "KFS Self Join Groups" )]
+    [DisplayName( "Self Join Groups KFS" )]
     [Category( "KFS > Groups" )]
     [Description( "Can Add/Remove a person from a group based on inputs from the URL query string (GroupId, PersonGuid) or let them manage their group membership." )]
 

@@ -19,7 +19,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
 {
     #region Block Attributes
 
-    [DisplayName( "KFS Pledge Detail" )]
+    [DisplayName( "Pledge Detail KFS" )]
     [Category( "KFS > Finance" )]
     [Description( "Allows the details of a given pledge to be edited. The KFS Version allows for url param of 'personId=1' to be supplied to pre-select the Person" )]
 
