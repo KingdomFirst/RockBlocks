@@ -633,11 +633,12 @@
                                     </div>
                                 </asp:Panel>
                                 <asp:Panel ID="pnlGroupBody" runat="server" CssClass="panel-body">
-                                    <a id="lbAddSubGroup" runat="server" class="btn btn-action btn-xs">
-                                        <i class="fa fa-plus-circle"></i>
-                                    </a>
-                                    <br />
-                                    <br />
+                                    <div class="panel margin-b-md">
+                                        <a id="lbAddSubGroup" runat="server" class="btn btn-action btn-xs">
+                                            <i class="fa fa-plus-circle"></i>
+                                        </a>
+                                    </div>
+                                    
                                     <asp:HiddenField ID="hfParentGroupId" runat="server" />
                                     <asp:PlaceHolder ID="phGroupControl" runat="server"></asp:PlaceHolder>
                                 </asp:Panel>

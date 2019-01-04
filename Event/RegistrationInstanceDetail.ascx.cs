@@ -1493,7 +1493,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
         }
-        
+
         /// <summary>
         /// Handles the Delete event of the gRegistrants control.
         /// </summary>
@@ -3425,6 +3425,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         private void BindRegistrantsGrid( bool isExporting = false )
         {
+            _isExporting = isExporting;
             var instanceId = hfRegistrationInstanceId.Value.AsIntegerOrNull();
             if ( instanceId.HasValue )
             {
@@ -4679,45 +4680,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            //// Add dynamic columns for sub groups
-            if ( ResourceGroups != null )
-            {
-                using ( var rockContext = new RockContext() )
-                {
-                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
-                    {
-                        if ( ResourceGroups.ContainsKey( groupType.Name ) )
-                        {
-                            var resourceGroupGuid = ResourceGroups[groupType.Name];
-                            if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) )
-                            {
-                                var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuid.Value.AsGuid() );
-                                if ( parentGroup != null )
-                                {
-                                    // create a column for quick assignments
-                                    var groupAssignment = new LinkButtonField();
-                                    groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                                    groupAssignment.ItemStyle.CssClass = "col-sm-2 col-md-2";
-                                    groupAssignment.HeaderStyle.CssClass = "col-sm-2 col-md-2";
-                                    groupAssignment.HeaderText = parentGroup.Name;
-                                    gRegistrants.Columns.Add( groupAssignment );
-
-                                    if ( _isExporting )
-                                    {
-                                        // create a text column for assignment export
-                                        var assignmentExport = new RockLiteralField();
-                                        assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
-                                        assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
-                                        assignmentExport.HeaderText = parentGroup.Name;
-                                        assignmentExport.Visible = false;
-                                        gRegistrants.Columns.Add( assignmentExport );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Add dynamic columns for sub groups
+            AddQuickAssignmentGrid( gRegistrants );
 
             // Add fee column
             var feeField = new RockLiteralField();
@@ -4733,6 +4697,55 @@ namespace RockWeb.Plugins.com_kfs.Event
             groupPickerField.HeaderText = "Group";
             groupPickerField.RootGroupId = gpGroupPlacementParentGroup.SelectedValueAsInt();
             gGroupPlacements.Columns.Add( groupPickerField );
+        }
+
+        /// <summary>
+        /// Adds the quick assignment grid.
+        /// </summary>
+        /// <param name="resourceGrid">The resource grid.</param>
+        private void AddQuickAssignmentGrid( Grid resourceGrid )
+        {
+            if ( ResourceGroups != null )
+            {
+                using ( var rockContext = new RockContext() )
+                {
+                    var groupService = new GroupService( rockContext);
+                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
+                    {
+                        if ( ResourceGroups.ContainsKey( groupType.Name ) )
+                        {
+                            var resourceGroupGuid = ResourceGroups[groupType.Name].ToStringSafe().AsGuidOrNull();
+                            //if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) )
+                            if ( resourceGroupGuid.HasValue && resourceGroupGuid != Guid.Empty )
+                            {
+                                var parentGroup = groupService.Get( (Guid)resourceGroupGuid );
+                                if ( parentGroup != null )
+                                {
+                                    // create a column for quick assignments
+                                    var groupAssignment = new LinkButtonField();
+                                    groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                                    groupAssignment.ItemStyle.CssClass = "col-sm-2 col-md-2";
+                                    groupAssignment.HeaderStyle.CssClass = "col-sm-2 col-md-2";
+                                    //groupAssignment.SortExpression = parentGroup.Name;
+                                    groupAssignment.HeaderText = parentGroup.Name;
+                                    resourceGrid.Columns.Add( groupAssignment );
+
+                                    if ( _isExporting )
+                                    {
+                                        // create a text column for assignment export
+                                        var assignmentExport = new RockLiteralField();
+                                        assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
+                                        assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
+                                        assignmentExport.HeaderText = parentGroup.Name;
+                                        assignmentExport.Visible = false;
+                                        resourceGrid.Columns.Add( assignmentExport );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         #endregion
@@ -7247,6 +7260,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         if ( parentGroup != null )
                         {
                             tabName = parentGroup.Name;
+                            parentGroup.GroupType.LoadAttributes();
                         }
                     }
 
@@ -7257,7 +7271,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         hfParentGroupId.Value = parentGroup.Guid.ToString();
                         phGroupControl.Controls.Clear();
 
-                        BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList() );
+                        var combineMembers = parentGroup.GroupType.GetAttributeValue( "DisplayCombinedMemberships" ).AsBoolean();
+                        BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList(), combineMembers );
 
                         var qryParams = new Dictionary<string, string>();
                         qryParams.Add( "t", string.Format( "Add {0}", groupTypeGroupTerm ) );
@@ -7290,23 +7305,72 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="phGroupControl">The ph group control.</param>
         /// <param name="subGroups">The sub groups.</param>
-        private void BuildSubGroupPanels( PlaceHolder phGroupControl, List<Group> subGroups )
+        /// <param name="combineMembers">if set to <c>true</c> [combine members].</param>
+        private void BuildSubGroupPanels( PlaceHolder phGroupControl, List<Group> subGroups, bool combineMembers )
         {
-            foreach ( Group group in subGroups )
-            {
-                var groupPanel = (GroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx");
-                groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
-                groupPanel.Expanded = _expandedPanels.Any( c => c.Contains( groupPanel.ID ) );
+            //if ( !combineMembers )
+            //{
+                foreach ( Group group in subGroups )
+                {
+                    var groupPanel = (GroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
+                    groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
+                    groupPanel.Expanded = _expandedPanels.Any( c => c.Contains( groupPanel.ID ) );
 
-                groupPanel.AddButtonClick += AddGroupMember_Click;
-                groupPanel.EditButtonClick += EditGroupMember_Click;
-                groupPanel.GroupRowCommand += GroupRowCommand;
-                groupPanel.GroupRowDataBound += GroupRowDataBound;
-                //groupPanel.GroupRowSelected += GroupRowSelected;
-                //groupPanel.GridRebind += GroupRowRebind;
-                groupPanel.BuildControl( group, ResourceGroupTypes, ResourceGroups );
-                phGroupControl.Controls.Add( groupPanel );
-            }
+                    groupPanel.AddButtonClick += AddGroupMember_Click;
+                    groupPanel.EditButtonClick += EditGroupMember_Click;
+                    groupPanel.GroupRowCommand += GroupRowCommand;
+                    groupPanel.GroupRowDataBound += GroupRowDataBound;
+                    groupPanel.GridRebind += GroupGridRebind;
+                    //groupPanel.GroupRowSelected += GroupRowSelected;
+                    //groupPanel.GridRebind += GroupRowRebind;
+                    groupPanel.BuildControl( group, ResourceGroupTypes, ResourceGroups );
+                    phGroupControl.Controls.Add( groupPanel );
+                }
+            //}
+            //else
+            //{
+                var groupMemberList = subGroups.SelectMany( g => g.Members ).ToList();
+                var combinedMemberGrid = new Grid() {
+                    DisplayType = GridDisplayType.Full,
+                    IsDeleteEnabled = true,
+                    AllowSorting = true,
+                    AllowPaging = false,
+                    RowItemText = "Volunteer",
+                    ExportSource = ExcelExportSource.ColumnOutput,
+                    ExportFilename = "Volunteers",
+                    PersonIdField = "PersonId",
+                    
+                };
+
+                var bfName = new RockBoundField
+                {
+                    HeaderText = "Name",
+                    DataField = "Person.FullName",
+                    SortExpression = "Person.LastName,Person.NickName",
+                    HtmlEncode = false
+                };
+
+                var bfGroupName = new RockBoundField
+                {
+                    HeaderText = "Group",
+                    DataField = "Group.Name",
+                    SortExpression = "Group.Name",
+                    HtmlEncode = false
+                };
+
+                combinedMemberGrid.Columns.Add( bfName );
+                combinedMemberGrid.Columns.Add( bfGroupName );
+                combinedMemberGrid.Actions.ShowAdd = true;
+                combinedMemberGrid.Actions.AddClick += AddGroupMember_Click;
+                //combinedMemberGrid.GridRebind += GroupGridRebind;
+                combinedMemberGrid.RowDataBound += GroupRowDataBound;
+                combinedMemberGrid.RowCommand += GroupRowCommand;
+
+                phGroupControl.Controls.Add( combinedMemberGrid );
+                AddQuickAssignmentGrid( combinedMemberGrid );
+                combinedMemberGrid.DataSource = groupMemberList;
+                combinedMemberGrid.DataBind();
+            //}
         }
 
         /// <summary>
@@ -7402,13 +7466,22 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
+        /// Groups the grid rebind.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        private void GroupGridRebind( object sender, EventArgs e )
+        {
+
+        }
+
+        /// <summary>
         /// Rows the data bound.
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="e">The <see cref="GridViewRowEventArgs"/> instance containing the event data.</param>
         private void GroupRowDataBound( object sender, EventArgs e )
         {
-            var panel = (GroupPanel)sender;
             var rowEvent = e as GridViewRowEventArgs;
             if ( rowEvent != null )
             {
@@ -7629,6 +7702,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 RenderEditGroupMemberModal( groupMemberId.ToString() );
             }
         }
+
+
 
         /// <summary>
         /// Handles the Group row command.
@@ -7916,7 +7991,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             groupMember.LoadAttributes();
             phAttributes.Controls.Clear();
             Helper.AddEditControls( groupMember, phAttributes, true, string.Empty, true );
-            
+
             mdlAddSubGroupMember.Show();
             upnlContent.Update();
 
@@ -8312,17 +8387,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             /// The attribute.
             /// </value>
             public AttributeCache Attribute { get; set; }
-        }
-
-        public static class PanelHelper
-        {
-            public static GroupPanel Load( Control control, string ID, bool isExpanded )
-            {
-                var panel = (GroupPanel)control.LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
-                panel.ID = ID;
-                panel.Expanded = isExpanded;
-                return panel;
-            }
         }
 
         #endregion
