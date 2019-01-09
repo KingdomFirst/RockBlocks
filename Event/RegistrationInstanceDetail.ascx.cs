@@ -274,7 +274,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlContent );
 
-            RegisterScript();
+            RegisterScripts();
         }
 
         /// <summary>
@@ -8301,7 +8301,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <summary>
         /// Registers the page script.
         /// </summary>
-        private void RegisterScript()
+        private void RegisterScripts()
         {
             var script = @"
     $('a.js-delete-instance').click(function( e ){
@@ -8374,6 +8374,7 @@ namespace RockWeb.Plugins.com_kfs.Event
     }}
 ";
             ScriptManager.RegisterStartupScript( upnlContent, this.GetType(), "deleteInstanceScript", script, true );
+            RockPage.AddScriptLink( ResolveRockUrl( "~/Scripts/jquery.lazyload.min.js" ) );
         }
 
         #endregion

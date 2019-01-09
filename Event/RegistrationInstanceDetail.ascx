@@ -2,12 +2,6 @@
 <%@ Register TagPrefix="KFS" Namespace="com.kfs.EventRegistration.Advanced" Assembly="com.kfs.EventRegistration.Advanced" %>
 <%@ Register TagPrefix="KFS" TagName="GroupPanel" Src="~/Plugins/com_kfs/Event/GroupPanel.ascx" %>
 
-<script type="text/javascript">
-    Sys.Application.add_load(function () {
-        $('.js-follow-status').tooltip();
-    });
-</script>
-
 <style>
     .resource-item {
         padding: 12px;
@@ -712,14 +706,13 @@
     Sys.WebForms.PageRequestManager.getInstance().add_endRequest(AfterPostBack);
 
     Sys.Application.add_load(function () {
+        $("div.photo-icon").lazyload({
+            effect: "fadeIn"
+        });
 
-        var fixHelper = function (e, ui) {
-            ui.children().each(function () {
-                $(this).width($(this).width());
-            });
-            return ui;
-        };
-
+        $('.js-follow-status').tooltip();
+        
+        // handle new resource items
         $('section.resource-item').click(function () {
             var $li = $(this).closest('li');
             if ($(this).hasClass('resource-area')) {
@@ -727,6 +720,44 @@
             } else if ($(this).hasClass('resource-item')) {
                 __doPostBack('<%=upnlContent.ClientID %>', 'select-group:' + $li.attr('data-key'));
             }
+        });
+
+        // person-link-popover
+        $('.js-person-popover').popover({
+            placement: 'right',
+            trigger: 'manual',
+            delay: 500,
+            html: true,
+            content: function () {
+                //alert('ehy');
+                var dataUrl = Rock.settings.get('baseUrl') + 'api/People/PopupHtml/' + $(this).attr('personid') + '/false';
+
+                var result = $.ajax({
+                    type: 'GET',
+                    url: dataUrl,
+                    dataType: 'json',
+                    contentType: 'application/json; charset=utf-8',
+                    async: false
+                }).responseText;
+
+                var resultObject = jQuery.parseJSON(result);
+
+                return resultObject.PickerItemDetailsHtml;
+
+            }
+        }).on('mouseenter', function () {
+            var _this = this;
+            $(this).popover('show');
+            $(this).siblings('.popover').on('mouseleave', function () {
+                $(_this).popover('hide');
+            });
+        }).on('mouseleave', function () {
+            var _this = this;
+            setTimeout(function () {
+                if (!$('.popover:hover').length) {
+                    $(_this).popover('hide')
+                }
+            }, 100);
         });
     });
 </script>
