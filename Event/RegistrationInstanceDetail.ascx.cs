@@ -2,10 +2,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Data.Entity;
 using System.Linq;
+using System.Reflection;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
@@ -116,6 +118,8 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         private Guid? _currentGroupTypeGuid = null;
         private Guid? _currentGroupGuid = null;
+
+        private const string PhotoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
 
         #endregion
 
@@ -4642,8 +4646,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                             }
                         }
 
-                        //dataFieldExpression = attribute.Id + attribute.Key;
-                        dataFieldExpression = attribute.Key;
+                        dataFieldExpression = attribute.Id + attribute.Key;
+                        //dataFieldExpression = attribute.Key;
                         var columnExists = gRegistrants.Columns.OfType<AttributeField>().FirstOrDefault( a => a.DataField.Equals( dataFieldExpression ) ) != null;
                         if ( !columnExists )
                         {
@@ -7488,6 +7492,22 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var groupMember = rowEvent.Row.DataItem as GroupMember;
                 if ( groupMember != null )
                 {
+                    bool lacksRequirements = groupMember.Group.GroupRequirements.Any() && groupMember.Group.PersonMeetsGroupRequirements( groupMember.PersonId, groupMember.GroupRoleId )
+                        .Any( r => r.MeetsGroupRequirement != MeetsGroupRequirement.Meets );
+                    
+                    foreach ( DataControlFieldCell cell in rowEvent.Row.Cells )
+                    {
+                        if ( cell.ContainingField.HeaderText == "Name" )
+                        {
+                            // output name only if exporting, otherwise add photo and tooltips
+                            cell.Text = _isExporting ? groupMember.Person.LastName + ", " + groupMember.Person.NickName
+                            : string.Format( PhotoFormat, groupMember.PersonId, groupMember.Person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) )
+                                + groupMember.Person.NickName + " " + groupMember.Person.LastName
+                                + ( !string.IsNullOrWhiteSpace( groupMember.Person.TopSignalColor ) ? " " + groupMember.Person.GetSignalMarkup() : string.Empty )
+                                + ( lacksRequirements ? " <i class='fa fa-exclamation-triangle text-warning'>Test</i>" : string.Empty );
+                        }
+                    }
+
                     var campus = groupMember.Person.GetCampus();
                     var lCampus = rowEvent.Row.FindControl( "lFamilyCampus" ) as Literal;
                     if ( lCampus != null && campus != null )
@@ -7582,7 +7602,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         {
                                             btnGroupAssignment.Controls.Add( literalControl );
                                         }
-                                        using ( var literalControl = new LiteralControl( "<span class='grid-btn-assign-text'> Assign</span>" ) )
+                                        using ( var literalControl = new LiteralControl( "<span class='grid-btn-assign-text'></span>" ) )
                                         {
                                             btnGroupAssignment.Controls.Add( literalControl );
                                         }
@@ -7947,7 +7967,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                         foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
                         {
                             var volunteerItem = new ListItem( volunteer.Person.FullNameReversed, volunteer.Person.Guid.ToString() );
-                            volunteerItem.Attributes["optiongroup"] = group.GroupType.GroupMemberTerm; //"Volunteers";
+                            volunteerItem.Attributes["optiongroup"] = "Volunteers";
                             ddlRegistrantList.Items.Add( volunteerItem );
                         }
                     }
