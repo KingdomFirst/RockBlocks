@@ -7834,10 +7834,11 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             // Clear modal controls
             nbErrorMessage.Visible = false;
+            ddlRegistrantList.Visible = true;
+            ppVolunteer.Visible = false;
             ddlRegistrantList.Items.Clear();
             ddlSubGroup.Items.Clear();
             ddlGroupRole.Items.Clear();
-            ppVolunteer.Visible = false;
             tbNote.Text = string.Empty;
 
             // TODO refactor this
