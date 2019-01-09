@@ -8000,7 +8000,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 mdlAddSubGroupMember.Title = string.Format( "Edit {0} in {1}", groupMemberTerm, group.Name );
                 ddlSubGroup.Visible = true;
 
-                ddlSubGroup.DataSource = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count ).ToList();
+                // allow selections to non-full groups or currently assigned full group
+                ddlSubGroup.DataSource = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count || g.Id == groupMember.GroupId ).ToList();
                 ddlSubGroup.DataTextField = "Name";
                 ddlSubGroup.DataValueField = "Id";
                 ddlSubGroup.DataBind();
