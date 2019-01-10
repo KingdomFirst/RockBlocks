@@ -96,6 +96,11 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         public event EventHandler GroupRowDataBound;
 
+        /// <summary>
+        /// Occurs when [group grid rebind].
+        /// </summary>
+        public event GridRebindEventHandler GroupGridRebind;
+
         #endregion
 
         #region Internal Methods
@@ -136,7 +141,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             // Set up group panel
             SetGroupHeader( group );
 
-            //rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
             pnlGroupMembers.DataKeyNames = new string[] { "Id" };
             pnlGroupMembers.PersonIdField = "PersonId";
             pnlGroupMembers.RowDataBound += pnlGroupMembers_RowDataBound;
@@ -327,38 +331,38 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             // Add dynamic assignment columns for volunteer groups
-            //if ( _resources != null && _group.GroupType.GroupTypePurposeValue != null && _group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
-            //{
-            //    foreach ( var groupType in _resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
-            //    {
-            //        if ( _resources.ContainsKey( groupType.Name ) )
-            //        {
-            //            var resourceGroupGuid = _resources[groupType.Name];
-            //            if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) )
-            //            {
-            //                var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuid.Value.AsGuid() );
-            //                if ( parentGroup != null && parentGroup.GroupTypeId != _group.GroupTypeId )
-            //                {
-            //                    var groupAssignment = new LinkButtonField();
-            //                    groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-            //                    groupAssignment.ExcelExportBehavior = ExcelExportBehavior.NeverInclude;
-            //                    groupAssignment.HeaderText = parentGroup.Name;
-            //                    groupAssignment.HeaderStyle.CssClass = "";
-            //                    pnlGroupMembers.Columns.Add( groupAssignment );
+            if ( _resources != null && _group.GroupType.GroupTypePurposeValue != null && _group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
+            {
+                foreach ( var groupType in _resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
+                {
+                    if ( _resources.ContainsKey( groupType.Name ) )
+                    {
+                        var resourceGroupGuid = _resources[groupType.Name];
+                        if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) )
+                        {
+                            var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuid.Value.AsGuid() );
+                            if ( parentGroup != null && parentGroup.GroupTypeId != _group.GroupTypeId )
+                            {
+                                var groupAssignment = new LinkButtonField();
+                                groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                                groupAssignment.ExcelExportBehavior = ExcelExportBehavior.NeverInclude;
+                                groupAssignment.HeaderText = parentGroup.Name;
+                                groupAssignment.HeaderStyle.CssClass = "";
+                                pnlGroupMembers.Columns.Add( groupAssignment );
 
-            //                    var assignmentExport = new RockLiteralField();
-            //                    assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
-            //                    assignmentExport.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-            //                    assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
-            //                    assignmentExport.HeaderStyle.CssClass = "";
-            //                    assignmentExport.HeaderText = parentGroup.Name;
-            //                    assignmentExport.Visible = false;
-            //                    pnlGroupMembers.Columns.Add( assignmentExport );
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
+                                var assignmentExport = new RockLiteralField();
+                                assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
+                                assignmentExport.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                                assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
+                                assignmentExport.HeaderStyle.CssClass = "";
+                                assignmentExport.HeaderText = parentGroup.Name;
+                                assignmentExport.Visible = false;
+                                pnlGroupMembers.Columns.Add( assignmentExport );
+                            }
+                        }
+                    }
+                }
+            }
 
             // Add edit column
             var editField = new EditField();
@@ -629,7 +633,12 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <exception cref="System.NotImplementedException"></exception>
         protected void pnlGroupMembers_GridRebind( object sender, GridRebindEventArgs e )
         {
-            BindGroupMembersGrid( e.IsExporting );
+            if ( GroupGridRebind != null )
+            {
+                GroupGridRebind( this, e );
+            }
+
+            //BindGroupMembersGrid( e.IsExporting );
         }
 
         /// <summary>

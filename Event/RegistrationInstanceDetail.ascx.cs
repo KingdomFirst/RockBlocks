@@ -1461,7 +1461,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
 
                 // Build custom assignment grid
-                BuildGroupAssignmentGrid( e );
+                BuildQuickAssignmentGrid( e );
             }
         }
 
@@ -3761,7 +3761,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var resourceType = ResourceGroupTypes.FirstOrDefault( gt => gRegistrants.SortProperty != null && gt.Name == gRegistrants.SortProperty.Property );
                     if ( resourceType != null )
                     {
-                        // Note: BindResourceMembersGrid uses this same query to sort custom assignment columns
+                        // Note: the combined grid uses this same query to sort custom assignment columns
                         var groupGuid = ResourceGroups[resourceType.Name].Value.AsGuid();
                         var sourceIds = qry.Select( r => r.PersonAlias.PersonId ).ToList();
                         
@@ -4707,7 +4707,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            AddQuickAssignmentGrid( gRegistrants );
+            AddQuickAssignmentColumns( gRegistrants );
 
             //Add fee column
             var feeField = new RockLiteralField();
@@ -4729,7 +4729,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// Adds the quick assignment grid.
         /// </summary>
         /// <param name="resourceGrid">The resource grid.</param>
-        private void AddQuickAssignmentGrid( Grid resourceGrid )
+        private void AddQuickAssignmentColumns( Grid resourceGrid )
         {
             if ( ResourceGroups != null )
             {
@@ -7344,9 +7344,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupPanel.EditButtonClick += EditGroupMember_Click;
                     groupPanel.GroupRowCommand += GroupRowCommand;
                     groupPanel.GroupRowDataBound += gMembers_RowDataBound;
-                    //groupPanel.GridRebind += GroupGridRebind;
+                    groupPanel.GroupGridRebind += gMembers_GridRebind;
+                    
                     //groupPanel.GroupRowSelected += GroupRowSelected;
-                    //groupPanel.GridRebind += GroupRowRebind;
+                    
                     groupPanel.BuildControl( group, ResourceGroupTypes, ResourceGroups );
                     phGroupControl.Controls.Add( groupPanel );
                 }
@@ -7354,7 +7355,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             else
             {   
                 var parentGroup = subGroups.FirstOrDefault().ParentGroup;
-                var groupMemberList = subGroups.SelectMany( g => g.Members ).ToList();
+                var groupMemberList = subGroups.SelectMany( g => g.Members )
+                    .ToList().AsQueryable();
                 var combinedMemberGrid = new Grid() {
                     ID = string.Format( "groupList_{0}", parentGroup.Id ),
                     DataKeyNames = new string[] { "Id" },
@@ -7412,15 +7414,15 @@ namespace RockWeb.Plugins.com_kfs.Event
     
                 combinedMemberGrid.Actions.ShowAdd = true;
                 combinedMemberGrid.Actions.ShowMergePerson = false;
-                combinedMemberGrid.Actions.AddClick += AddGroupMember_Click;
+                combinedMemberGrid.Actions.AddClick += AddCombinedMember_Click;
                 combinedMemberGrid.GridRebind += gMembers_GridRebind;
                 combinedMemberGrid.RowDataBound += gMembers_RowDataBound;
                 combinedMemberGrid.RowCommand += GroupRowCommand;
 
                 phGroupControl.Controls.Add( combinedMemberGrid );
-                combinedMemberGrid.DataSource = groupMemberList;
-                AddQuickAssignmentGrid( combinedMemberGrid );
-                BindResourceMembersGrid( combinedMemberGrid, groupMemberList.AsQueryable() );
+                combinedMemberGrid.SetLinqDataSource( groupMemberList );
+                AddQuickAssignmentColumns( combinedMemberGrid );
+                BindResourceMembersGrid( combinedMemberGrid, groupMemberList );
             }
         }
 
@@ -7477,7 +7479,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // Build subgroup button grid for Volunteers
                     if ( groupMember.Group.GroupType.GroupTypePurposeValue != null && groupMember.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
                     {
-                        BuildGroupAssignmentGrid( rowEvent );
+                        BuildQuickAssignmentGrid( rowEvent );
                     }
                 }
             }
@@ -7536,7 +7538,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="orderedQry">The ordered qry.</param>
         protected void BindResourceMembersGrid( Grid resourceGrid, IQueryable<GroupMember> orderedQry = null )
         {
-            orderedQry = orderedQry ?? resourceGrid.DataSource as IQueryable<GroupMember>;
+            orderedQry = orderedQry ?? (IQueryable<GroupMember>)resourceGrid.DataSourceAsList.AsQueryable();
             var resourceType = ResourceGroupTypes.FirstOrDefault( gt => resourceGrid.SortProperty != null && gt.Name == resourceGrid.SortProperty.Property );
             if ( resourceType != null )
             {
@@ -7658,15 +7660,13 @@ namespace RockWeb.Plugins.com_kfs.Event
             rpTabResources.DataSource = ResourceGroupTypes.Where( gt => groupTypeId == null || gt.Id == groupTypeId.Value ).OrderBy( g => g.Name );
             rpTabResources.DataBind();
         }
-        
-        
 
         /// <summary>
-        /// Builds the group assignment grid.
+        /// Builds the quick assignment grid.
         /// </summary>
         /// <param name="e">The <see cref="GridViewRowEventArgs" /> instance containing the event data.</param>
         /// <param name="columnIndex">Index of the column.</param>
-        private void BuildGroupAssignmentGrid( GridViewRowEventArgs e )
+        private void BuildQuickAssignmentGrid( GridViewRowEventArgs e )
         {
             using ( var rockContext = new RockContext() )
             {
@@ -7802,6 +7802,16 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
+        private void AddCombinedMember_Click( object sender, EventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                var combinedGroupType = ResourceGroupTypes.FirstOrDefault( t => t.GetAttributeValue( "DisplayCombinedMemberships").AsBoolean() );
+                var parentGroup = new GroupService( rockContext ).Get( ResourceGroups[combinedGroupType.Name].Value.AsGuid() );
+                RenderGroupMemberModal( rockContext, parentGroup, null, null );
+            };
+        }
+
         /// <summary>
         /// Handles the Click event of the AddGroupMember control.
         /// </summary>
@@ -7809,9 +7819,14 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         private void AddGroupMember_Click( object sender, EventArgs e )
         {
-            var rockContext = new RockContext();
-            var panel = (GroupPanel)sender;
-            RenderGroupMemberModal( rockContext, panel.Group.ParentGroup, panel.Group, null );
+            using ( var rockContext = new RockContext() )
+            {
+                if ( sender is GroupPanel )
+                {
+                    var panel = (GroupPanel)sender;
+                    RenderGroupMemberModal( rockContext, panel.Group.ParentGroup, panel.Group, null );
+                }
+            };
         }
 
         /// <summary>
