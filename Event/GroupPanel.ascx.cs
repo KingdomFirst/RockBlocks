@@ -154,9 +154,6 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             pnlGroupMembers.RowCommand += pnlGroupMembers_RowCommand;
             //pnlGroupMembers.RowSelected += pnlGroupMembers_RowSelected;
-
-            // v7: make sure they have Auth to edit the block OR edit to the Group
-            //bool canEditBlock = IsUserAuthorized( Authorization.EDIT ) || _group.IsAuthorized( Authorization.EDIT, this.CurrentPerson ) || _group.IsAuthorized( Authorization.MANAGE_MEMBERS, this.CurrentPerson );
             pnlGroupMembers.Actions.ShowAdd = true;
             pnlGroupMembers.IsDeleteEnabled = true;
 
@@ -265,7 +262,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 ID = "lFamilyCampus",
                 HeaderText = "Family Campus",
-                SortExpression = "FamilyCampus"
+                //SortExpression = "FamilyCampus"
             };
             pnlGroupMembers.Columns.Add( lFamilyCampus );
 
@@ -280,7 +277,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     var boundField = new AttributeField
                     {
-                        DataField = attribute.Key,
+                        DataField = attribute.Id + attribute.Key,
                         AttributeId = attribute.Id,
                         HeaderText = attribute.Name,
                         SortExpression = string.Format( "attribute:{0}", attribute.Id ),
@@ -330,38 +327,38 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
 
             // Add dynamic assignment columns for volunteer groups
-            if ( _resources != null && _group.GroupType.GroupTypePurposeValue != null && _group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
-            {
-                foreach ( var groupType in _resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
-                {
-                    if ( _resources.ContainsKey( groupType.Name ) )
-                    {
-                        var resourceGroupGuid = _resources[groupType.Name];
-                        if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) )
-                        {
-                            var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuid.Value.AsGuid() );
-                            if ( parentGroup != null && parentGroup.GroupTypeId != _group.GroupTypeId )
-                            {
-                                var groupAssignment = new LinkButtonField();
-                                groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                                groupAssignment.ExcelExportBehavior = ExcelExportBehavior.NeverInclude;
-                                groupAssignment.HeaderText = parentGroup.Name;
-                                groupAssignment.HeaderStyle.CssClass = "";
-                                pnlGroupMembers.Columns.Add( groupAssignment );
+            //if ( _resources != null && _group.GroupType.GroupTypePurposeValue != null && _group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
+            //{
+            //    foreach ( var groupType in _resourceTypes.Where( gt => gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) )
+            //    {
+            //        if ( _resources.ContainsKey( groupType.Name ) )
+            //        {
+            //            var resourceGroupGuid = _resources[groupType.Name];
+            //            if ( resourceGroupGuid != null && !string.IsNullOrWhiteSpace( resourceGroupGuid.Value ) )
+            //            {
+            //                var parentGroup = new GroupService( rockContext ).Get( resourceGroupGuid.Value.AsGuid() );
+            //                if ( parentGroup != null && parentGroup.GroupTypeId != _group.GroupTypeId )
+            //                {
+            //                    var groupAssignment = new LinkButtonField();
+            //                    groupAssignment.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+            //                    groupAssignment.ExcelExportBehavior = ExcelExportBehavior.NeverInclude;
+            //                    groupAssignment.HeaderText = parentGroup.Name;
+            //                    groupAssignment.HeaderStyle.CssClass = "";
+            //                    pnlGroupMembers.Columns.Add( groupAssignment );
 
-                                var assignmentExport = new RockLiteralField();
-                                assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
-                                assignmentExport.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                                assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
-                                assignmentExport.HeaderStyle.CssClass = "";
-                                assignmentExport.HeaderText = parentGroup.Name;
-                                assignmentExport.Visible = false;
-                                pnlGroupMembers.Columns.Add( assignmentExport );
-                            }
-                        }
-                    }
-                }
-            }
+            //                    var assignmentExport = new RockLiteralField();
+            //                    assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
+            //                    assignmentExport.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+            //                    assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
+            //                    assignmentExport.HeaderStyle.CssClass = "";
+            //                    assignmentExport.HeaderText = parentGroup.Name;
+            //                    assignmentExport.Visible = false;
+            //                    pnlGroupMembers.Columns.Add( assignmentExport );
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
 
             // Add edit column
             var editField = new EditField();
@@ -418,110 +415,122 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <summary>
         /// Binds the group members grid.
         /// </summary>
+        /// <remarks>Multiple methods depend on the GroupMember object type</remarks>
         /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         protected void BindGroupMembersGrid( bool isExporting = false )
         {
             if ( _group != null && _group.GroupType.Roles.Any() )
             {
-                int groupId = _group.Id;
                 pnlGroupMembers.Visible = true;
 
-                var rockContext = new RockContext();
-                var groupMemberService = new GroupMemberService( rockContext );
-                var qry = groupMemberService.Queryable( "Person,GroupRole", true ).AsNoTracking()
-                    .Where( m => m.GroupId == _group.Id );
-
-                var photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
-                var hasGroupRequirements = new GroupRequirementService( rockContext ).Queryable().Any( a => ( a.GroupId.HasValue && a.GroupId == _group.Id ) || ( a.GroupTypeId.HasValue && a.GroupTypeId == _group.GroupTypeId ) );
-
-                // If there are group requirements that that member doesn't meet, show an icon in the grid
-                var includeWarnings = false;
-                var groupMemberIdsThatLackGroupRequirements = new GroupService( rockContext ).GroupMembersNotMeetingRequirements( _group, includeWarnings ).Select( a => a.Key.Id );
-
-                List<GroupMember> groupMembersList = null;
-                if ( pnlGroupMembers.SortProperty != null )
+                using ( var rockContext = new RockContext() )
                 {
-                    groupMembersList = qry.Sort( pnlGroupMembers.SortProperty ).ToList();
-                }
-                else
-                {
-                    groupMembersList = qry.OrderBy( a => a.GroupRole.Order ).ThenBy( a => a.Person.LastName ).ThenBy( a => a.Person.FirstName ).ToList();
-                }
+                    // Start query for group members
+                    var qry = new GroupMemberService( rockContext )
+                        .Queryable( "Person,GroupRole", true )
+                        .Where( m => m.GroupId == _group.Id && m.Person != null );
 
-                // Since we're not binding to actual group member list, but are using AttributeField columns,
-                // we need to save the group members into the grid's object list
-                pnlGroupMembers.ObjectList = new Dictionary<string, object>();
-                groupMembersList.ForEach( m => pnlGroupMembers.ObjectList.Add( m.Id.ToString(), m ) );
-                pnlGroupMembers.EntityTypeId = EntityTypeCache.Get( Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid() ).Id;
-
-                var homePhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
-                var cellPhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
-
-                // If exporting to Excel, the selectAll option will be true, and home location should be calculated
-                var homeLocations = new Dictionary<int, Location>();
-                if ( isExporting )
-                {
-                    foreach ( var m in groupMembersList )
+                    // Sort the query
+                    IOrderedQueryable<GroupMember> orderedQry = null;
+                    var sortProperty = pnlGroupMembers.SortProperty;
+                    if ( sortProperty != null )
                     {
-                        homeLocations.Add( m.Id, m.Person.GetHomeLocation( rockContext ) );
+                        orderedQry = qry.Sort( sortProperty );
                     }
+                    else
+                    {
+                        orderedQry = qry
+                            .OrderBy( r => r.Person.LastName )
+                            .ThenBy( r => r.Person.NickName );
+                    }
+
+                    // increase the timeout just in case. A complex filter on the grid might slow things down
+                    rockContext.Database.CommandTimeout = 180;
+
+                    // Set the grids LinqDataSource which will run query and set results for current page
+                    pnlGroupMembers.SetLinqDataSource( orderedQry );
+
+                    var homePhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
+                    var cellPhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
+
+                    var groupAttributes = GetGroupAttributes();
+                    if ( groupAttributes.Any() )
+                    {
+                        // Get the query results for the current page
+                        var currentGroupMembers = pnlGroupMembers.DataSource as List<GroupMember>;
+                        if ( currentGroupMembers != null )
+                        {
+                            // Get all the person ids in current page of query results
+                            var personIds = currentGroupMembers
+                                .Select( r => r.PersonId )
+                                .Distinct()
+                                .ToList();
+
+                            var groupMemberIds = currentGroupMembers
+                                .Select( r => r.Id )
+                                .Distinct()
+                                .ToList();
+
+                            var groupMemberAttributesIds = groupAttributes.Select( a => a.Id ).Distinct().ToList();
+
+                            // If there are any attributes that were selected to be displayed, we're going
+                            // to try and read all attribute values in one query and then put them into a
+                            // custom grid ObjectList property so that the AttributeField columns don't need
+                            // to do the LoadAttributes and querying of values for each row/column
+                            if ( groupMemberAttributesIds.Any() )
+                            {
+                                // Query the attribute values for all rows and attributes
+                                var attributeValues = new AttributeValueService( rockContext )
+                                    .Queryable( "Attribute" ).AsNoTracking()
+                                    .Where( v =>
+                                        v.EntityId.HasValue &&
+                                        groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                                        groupMemberIds.Contains( v.EntityId.Value )
+                                    )
+                                    .ToList();
+
+                                // Get the attributes to add to each row's object
+                                var attributes = new Dictionary<string, AttributeCache>();
+                                groupAttributes.ForEach( a =>
+                                    attributes.Add( a.Id + a.Key, a ) );
+
+                                // Initialize the grid's object list
+                                pnlGroupMembers.ObjectList = new Dictionary<string, object>();
+                                pnlGroupMembers.EntityTypeId = EntityTypeCache.Get( Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid() ).Id;
+
+                                // Loop through each of the current group's members and build an attribute
+                                // field object for storing attributes and the values for each of the members
+                                foreach ( var groupMember in currentGroupMembers )
+                                {
+                                    // Create a row attribute object
+                                    var attributeFieldObject = new AttributeFieldObject
+                                    {
+                                        // Add the attributes to the attribute object
+                                        Attributes = attributes
+                                    };
+
+                                    // Add any group member attribute values to object
+                                    if ( groupMember.Id > 0 )
+                                    {
+                                        attributeValues
+                                            .Where( v =>
+                                                groupMemberAttributesIds.Contains( v.AttributeId ) &&
+                                                v.EntityId.Value == groupMember.Id )
+                                            .ToList()
+                                            .ForEach( v => attributeFieldObject.AttributeValues
+                                                .Add( v.AttributeId + v.Attribute.Key, new AttributeValueCache( v ) ) );
+                                    }
+
+                                    // Add row attribute object to grid's object list
+                                    pnlGroupMembers.ObjectList.Add( groupMember.Id.ToString(), attributeFieldObject );
+                                }
+                            }
+                        }
+                    }
+
+                    pnlGroupMembers.DataBind();
                 }
-
-                var groupMemberIds = groupMembersList.Select( m => m.Id ).ToList();
-                var dataSource = groupMembersList.Select( m => new GroupMemberDataRow
-                {
-                    Id = m.Id,
-                    Guid = m.Guid,
-                    PersonId = m.PersonId,
-                    NickName = m.Person.NickName,
-                    LastName = m.Person.LastName,
-                    Name =
-                    isExporting ? m.Person.LastName + ", " + m.Person.NickName : string.Format( photoFormat, m.PersonId, m.Person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) )
-                                + m.Person.NickName + " " + m.Person.LastName
-                        + ( !string.IsNullOrWhiteSpace( m.Person.TopSignalColor ) ? " " + m.Person.GetSignalMarkup() : string.Empty )
-                        + ( ( hasGroupRequirements && groupMemberIdsThatLackGroupRequirements.Contains( m.Id ) )
-                            ? " <i class='fa fa-exclamation-triangle text-warning'></i>"
-                            : string.Empty ),
-                    BirthDate = m.Person.BirthDate,
-                    Age = m.Person.Age,
-                    Email = m.Person.Email,
-                    Gender = isExporting ? m.Person.Gender.ToString() : string.Empty,
-                    HomePhone = isExporting && homePhoneType != null ?
-                        m.Person.PhoneNumbers
-                            .Where( p => p.NumberTypeValueId.HasValue && p.NumberTypeValueId.Value == homePhoneType.Id )
-                            .Select( p => p.NumberFormatted )
-                            .FirstOrDefault() : string.Empty,
-                    CellPhone = isExporting && cellPhoneType != null ?
-                        m.Person.PhoneNumbers
-                            .Where( p => p.NumberTypeValueId.HasValue && p.NumberTypeValueId.Value == cellPhoneType.Id )
-                            .Select( p => p.NumberFormatted )
-                            .FirstOrDefault() : string.Empty,
-                    HomeAddress = homeLocations.ContainsKey( m.Id ) && homeLocations[m.Id] != null ?
-                        homeLocations[m.Id].FormattedAddress : string.Empty,
-                    GroupRole = m.GroupRole.Name,
-                    GroupMemberStatus = m.GroupMemberStatus,
-                    GroupRoleId = m.GroupRoleId,
-                    IsArchived = m.IsArchived
-                } ).ToList();
-
-                pnlGroupMembers.DataSource = dataSource;
-                pnlGroupMembers.DataBind();
             }
-            else
-            {
-                pnlGroupMembers.Visible = false;
-            }
-        }
-
-        /// <summary>
-        /// Handles the GridRebind event of the pnlGroupMembers control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="GridRebindEventArgs" /> instance containing the event data.</param>
-        /// <exception cref="System.NotImplementedException"></exception>
-        protected void pnlGroupMembers_GridRebind( object sender, GridRebindEventArgs e )
-        {
-            BindGroupMembersGrid( e.IsExporting );
         }
 
         /// <summary>
@@ -610,7 +619,18 @@ namespace RockWeb.Plugins.com_kfs.Event
 
         #endregion
 
-        #region Click Methods
+        #region Event Methods
+
+        /// <summary>
+        /// Handles the GridRebind event of the pnlGroupMembers control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="GridRebindEventArgs" /> instance containing the event data.</param>
+        /// <exception cref="System.NotImplementedException"></exception>
+        protected void pnlGroupMembers_GridRebind( object sender, GridRebindEventArgs e )
+        {
+            BindGroupMembersGrid( e.IsExporting );
+        }
 
         /// <summary>
         /// Handles the AddClick event of the Actions control.
@@ -701,66 +721,5 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         #endregion
-    }
-
-    /// <summary>
-    ///
-    /// </summary>
-    /// <seealso cref="DotLiquid.Drop" />
-    public class GroupMemberDataRow : DotLiquid.Drop
-    {
-        public int Id { get; set; }
-
-        public Guid Guid { get; set; }
-
-        public int PersonId { get; set; }
-
-        public string NickName { get; set; }
-
-        public string LastName { get; set; }
-
-        public string Name { get; set; }
-
-        public DateTime? BirthDate { get; set; }
-
-        public int? Age { get; set; }
-
-        public int? ConnectionStatusValueId { get; set; }
-
-        public DateTime? DateTimeAdded { get; set; }
-
-        public string Note { get; set; }
-
-        public DateTime? FirstAttended { get; set; }
-
-        public DateTime? LastAttended { get; set; }
-
-        public string Email { get; set; }
-
-        public string Gender { get; set; }
-
-        public string HomePhone { get; set; }
-
-        public string CellPhone { get; set; }
-
-        public string HomeAddress { get; set; }
-
-        public double? Latitude { get; set; }
-
-        public double? Longitude { get; set; }
-
-        public string GroupRole { get; set; }
-
-        public GroupMemberStatus GroupMemberStatus { get; set; }
-
-        public int? RecordStatusValueId { get; set; }
-
-        public bool IsDeceased { get; set; }
-
-        public int? MaritalStatusValueId { get; set; }
-
-        public int GroupRoleId { get; set; }
-
-        public bool IsArchived { get; set; }
     }
 }
