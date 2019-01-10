@@ -8005,6 +8005,18 @@ namespace RockWeb.Plugins.com_kfs.Event
                             qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroupGuids.Contains( g.Group.Guid ) || registrationGroupGuids.Contains( g.Group.ParentGroup.Guid ) )
                                 .DistinctBy( v => v.PersonId ).AsQueryable();
                         }
+
+                        if ( !ppVolunteer.Visible && group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
+                        {
+                            // display active volunteers not already in this group
+                            foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
+                            {
+                                var volunteerItem = new ListItem( volunteer.Person.FullNameReversed, volunteer.Person.Guid.ToString() );
+                                // hard code the name because the group allowing assignment won't have the correct MemberTerm
+                                volunteerItem.Attributes["optiongroup"] = "Volunteers";
+                                ddlRegistrantList.Items.Add( volunteerItem );
+                            }
+                        }
                     }
                     // adding a volunteer instead of registrants, show the person picker instead of a dropdown
                     else
@@ -8019,18 +8031,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             ppVolunteer.SelectedValue = person.Id;
                         }
                     }
-
-                    if ( !ppVolunteer.Visible && group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
-                    {
-                        // display active volunteers not already in this group
-                        foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
-                        {
-                            var volunteerItem = new ListItem( volunteer.Person.FullNameReversed, volunteer.Person.Guid.ToString() );
-                            volunteerItem.Attributes["optiongroup"] = "Volunteers";
-                            ddlRegistrantList.Items.Add( volunteerItem );
-                        }
-                    }
-
+                    
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0} to {1}", groupMemberTerm, group.Name );
                 }
 
