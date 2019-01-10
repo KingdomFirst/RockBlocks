@@ -6,8 +6,8 @@ using System.Linq;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
-
 using Newtonsoft.Json;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -29,8 +29,12 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [LinkedPage( "Detail Page" )]
     [LinkedPage( "Person Profile Page", "Page used for viewing a person's profile. If set a view profile button will show for each group member.", false, "", "", 2, "PersonProfilePage" )]
     [LinkedPage( "Registration Page", "Page used for viewing the registration(s) associated with a particular group member", false, "", "", 3 )]
-    [BooleanField("Show Campus Filter", "Setting to show/hide campus filter.", true, order: 4)]
-    [BooleanField( "Show First/Last Attendance", "If the group allows attendance, should the first and last attendance date be displayed for each group member?", false, "", 5, "ShowAttendance" )]
+    [LinkedPage( "Data View Detail Page", "Page used to view data views that are used with the group member sync.", false, order: 3 )]
+    [BooleanField( "Show Campus Filter", "Setting to show/hide campus filter.", true, order: 4 )]
+    [BooleanField( "Show First/Last Attendance", "If the group allows attendance, should the first and last attendance date be displayed for each group member?", false, "", 5, SHOW_FIRST_LAST_ATTENDANCE_KEY )]
+    [BooleanField( "Show Date Added", "Should the date that person was added to the group be displayed for each group member?", false, "", 6, SHOW_DATE_ADDED_KEY )]
+    [BooleanField( "Show Note Column", "Should the note be displayed as a separate grid column (instead of displaying a note icon under person's name)?", false, "", 7 )]
+
     [BooleanField( "Include All Group Member Attributes In Export", "Determines if all group member attributes should be exported. False will only the attributes set to 'Show in Grid'.", order: 8 )]
     [BooleanField( "Bypass Attribute Security", "Determines if the field level security on each attribute should be ignored.", order: 9 )]
 
@@ -63,7 +67,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
         // cache the DeleteField and ColumnIndex since it could get called many times in GridRowDataBound
         private DeleteField _deleteField = null;
-
         private int? _deleteFieldColumnIndex = null;
 
         #endregion
@@ -779,7 +782,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             // Clear dynamic controls so we can re-add them
             RemoveAttributeAndButtonColumns();
-
+            
             if ( AvailableAttributes != null )
             {
                 foreach ( var attribute in AvailableAttributes )
@@ -896,6 +899,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             _deleteField = new DeleteField();
             _deleteField.Click += DeleteOrArchiveGroupMember_Click;
             gGroupMembers.Columns.Add( _deleteField );
+            
         }
 
         /// <summary>
@@ -1297,10 +1301,11 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     // Since we're not binding to actual group member list, but are using AttributeField columns,
                     // we need to save the group members into the grid's object list
                     gGroupMembers.ObjectList = new Dictionary<string, object>();
+                    //groupMembersList.ForEach( m => gGroupMembers.ObjectList.Add( m.Id.ToString(), m ) );
                     //
                     // KFS don't add the group members here, wait until the attributes are bound below
                     //
-                    //groupMembersList.ForEach( m => gGroupMembers.ObjectList.Add( m.Id.ToString(), m ) );
+                   
                     gGroupMembers.EntityTypeId = EntityTypeCache.Get( Rock.SystemGuid.EntityType.GROUP_MEMBER.AsGuid() ).Id;
 
                     var homePhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
