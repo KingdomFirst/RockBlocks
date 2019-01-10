@@ -3016,7 +3016,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 case "lbRegistrants":
                     liRegistrants.AddCssClass( "active" );
                     pnlRegistrants.Visible = true;
-                    AddRegistrantFields();
                     BindRegistrantsGrid();
                     break;
 
@@ -4078,8 +4077,14 @@ namespace RockWeb.Plugins.com_kfs.Event
             ClearGrid( gGroupPlacements );
             ClearGrid( gRegistrants );
             ClearGrid( gWaitList );
+            
+            AddRegistrantFields( setValues );
         }
 
+        /// <summary>
+        /// Adds the registrant fields.
+        /// </summary>
+        /// <param name="setValues">if set to <c>true</c> [set values].</param>
         private void AddRegistrantFields( bool setValues = false )
         {
             if ( RegistrantFields != null )
@@ -4751,16 +4756,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     groupAssignment.SortExpression = parentGroup.GroupType.Name;
                                     resourceGrid.Columns.Add( groupAssignment );
 
-                                    if ( _isExporting )
-                                    {
-                                        // create a text column for assignment export
-                                        var assignmentExport = new RockLiteralField();
-                                        assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
-                                        assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
-                                        assignmentExport.HeaderText = parentGroup.Name;
-                                        assignmentExport.Visible = false;
-                                        resourceGrid.Columns.Add( assignmentExport );
-                                    }
+                                    // create a text column for assignment export
+                                    var assignmentExport = new RockLiteralField();
+                                    assignmentExport.ID = string.Format( "lAssignments_{0}", groupType.Id );
+                                    assignmentExport.ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude;
+                                    assignmentExport.HeaderText = parentGroup.Name;
+                                    assignmentExport.Visible = false;
+                                    resourceGrid.Columns.Add( assignmentExport );
                                 }
                             }
                         }
@@ -7419,7 +7421,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                 combinedMemberGrid.DataSource = groupMemberList;
                 AddQuickAssignmentGrid( combinedMemberGrid );
                 BindResourceMembersGrid( combinedMemberGrid, groupMemberList.AsQueryable() );
-                
             }
         }
 
@@ -7535,7 +7536,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="orderedQry">The ordered qry.</param>
         protected void BindResourceMembersGrid( Grid resourceGrid, IQueryable<GroupMember> orderedQry = null )
         {
-            orderedQry = orderedQry ?? resourceGrid.DataSource as IOrderedQueryable<GroupMember>;
+            orderedQry = orderedQry ?? resourceGrid.DataSource as IQueryable<GroupMember>;
             var resourceType = ResourceGroupTypes.FirstOrDefault( gt => resourceGrid.SortProperty != null && gt.Name == resourceGrid.SortProperty.Property );
             if ( resourceType != null )
             {
@@ -7552,19 +7553,17 @@ namespace RockWeb.Plugins.com_kfs.Event
                         .Select( gm => gm.PersonId ).ToList();
                     if ( resourceGrid.SortProperty.Direction == SortDirection.Descending )
                     {
-                        resourceGrid.DataSource = orderedQry.OrderByDescending( m => members.IndexOf( m.PersonId ) );
+                        resourceGrid.SetLinqDataSource( orderedQry.OrderByDescending( m => members.IndexOf( m.PersonId ) ) );
                     }
                     else
                     {
-                        resourceGrid.DataSource =  orderedQry.OrderBy( m => members.IndexOf( m.PersonId ) );
+                        resourceGrid.SetLinqDataSource( orderedQry.OrderBy( m => members.IndexOf( m.PersonId ) ) );
                     }
                 } 
             }
-            else
+            else if ( resourceGrid.SortProperty != null )
             {
-                resourceGrid.DataSource = resourceGrid.SortProperty != null
-                            ? orderedQry.Sort( resourceGrid.SortProperty )
-                            : orderedQry.OrderBy( gm => gm.Person.LastName ).ThenBy( gm => gm.Person.NickName );
+                resourceGrid.SetLinqDataSource( orderedQry.Sort( resourceGrid.SortProperty ) );
             }
 
             resourceGrid.DataBind();
@@ -7843,22 +7842,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
-
-
-        
-
-        /// <summary>
-        /// Handles the Click event of the AddMemberButton control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void GroupAssignment_Click( object sender, EventArgs e )
-        {
-            var rockContext = new RockContext();
-            var panel = (GroupPanel)sender;
-            RenderGroupMemberModal( rockContext, panel.Group.ParentGroup, panel.Group, null );
-        }
-
         /// <summary>
         /// Renders the edit group member modal.
         /// </summary>
@@ -7917,7 +7900,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             ddlGroupRole.Items.Clear();
             tbNote.Text = string.Empty;
 
-            // TODO refactor this
+            // cache available groups to use when saving memberships
             var registrationGroupGuids = new List<Guid>();
             var registrationInstanceId = PageParameter( "RegistrationInstanceId" ).AsInteger();
             if ( ResourceGroups != null && ResourceGroups.Any() )
@@ -7961,7 +7944,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var availableGroups = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count ).ToList();
                     ddlRegistrantList.Help = null;
                     ddlRegistrantList.Items.Add( new ListItem( person.FullNameReversed, person.Guid.ToString() ) );
-                    //ddlRegistrantList.Enabled = false;
                     mdlAddSubGroupMember.Title = string.Format( "Add New {0}", groupMemberTerm );
                     ddlSubGroup.Visible = true;
                     ddlSubGroup.DataSource = availableGroups;
@@ -7969,8 +7951,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     ddlSubGroup.DataValueField = "Id";
                     ddlSubGroup.DataBind();
                     ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
-                    // for consistency with delete member functionality, don't autoselect the first group in the list
-                    ddlSubGroup.SelectedIndex = 0; // availableGroups.Any() ? 1 : 0;
+                    //ddlSubGroup.SelectedIndex = 0;
                     ddlSubGroup.Label = !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupTerm ) ? parentGroup.GroupType.GroupTerm : parentGroup.Name;
                     group = availableGroups.Any() ? availableGroups.FirstOrDefault() : null;
                 }
@@ -7982,7 +7963,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
 
                     // start a list of available volunteers, will be filtered below
-                    var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable().Where( g => g.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" );
+                    var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable()
+                        .Where( g => g.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" );
 
                     // dropdown is limited to registrants or non-serving areas
                     if ( group.GroupType.GroupTypePurposeValue == null || group.GroupType.GroupTypePurposeValue.Value != "Serving Area" )
@@ -8094,7 +8076,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             upnlContent.Update();
 
             // render dynamic group controls beneath modal
-            ShowTab();
+            //ShowTab();
         }
 
         /// <summary>
