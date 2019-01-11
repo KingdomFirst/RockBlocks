@@ -397,7 +397,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     else
                     {
                         // no filter control, so clear out the user preference
-                        rFilter.SaveUserPreference( attribute.Key, attribute.Name, null );
+                        rFilter.SaveUserPreference( MakeKeyUniqueToGroup( attribute.Id.ToString() + attribute.Key ), attribute.Name, null );
                     }
                 }
             }
@@ -812,7 +812,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                             phAttributeFilters.Controls.Add( wrapper );
                         }
 
-                        string savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Key ) );
+                        string savedValue = rFilter.GetUserPreference( MakeKeyUniqueToGroup( attribute.Id.ToString() + attribute.Key ) );
                         if ( !string.IsNullOrWhiteSpace( savedValue ) )
                         {
                             try
