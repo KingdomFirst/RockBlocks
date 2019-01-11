@@ -12,6 +12,7 @@ using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
+using Rock.Reporting;
 using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
@@ -754,19 +755,20 @@ namespace RockWeb.Plugins.com_kfs.Groups
                             AvailablePersonAttributeIds.Add( AttributeCache.Get( personAttribute ).Id );
                         }
                     }
-                }
-                foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
-                    .Where( a =>
-                        a.EntityTypeId == _pEntityTypeId &&
-                        AvailablePersonAttributeIds.Contains( a.Id )
-                        )
-                    .OrderByDescending( a => a.EntityTypeQualifierColumn )
-                    .OrderBy( a => a.Order )
-                    .ThenBy( a => a.Name ) )
-                {
-                    if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
+
+                    foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
+                        .Where( a =>
+                            a.EntityTypeId == _pEntityTypeId &&
+                            AvailablePersonAttributeIds.Contains( a.Id )
+                            )
+                        .OrderByDescending( a => a.EntityTypeQualifierColumn )
+                        .OrderBy( a => a.Order )
+                        .ThenBy( a => a.Name ) )
                     {
-                        AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
+                        if ( attributeModel.IsAuthorized( Authorization.VIEW, CurrentPerson ) || bypassSecurity )
+                        {
+                            AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
+                        }
                     }
                 }
             }
@@ -1242,29 +1244,36 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     }
 
                     // Filter query by any configured attribute filters
+                    var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
+                    var entityTypeIdPerson = EntityTypeCache.GetId<Rock.Model.Person>();
+                   
                     if ( AvailableAttributes != null && AvailableAttributes.Any() )
                     {
-                        var attributeValueService = new AttributeValueService( rockContext );
-                        var parameterExpression = attributeValueService.ParameterExpression;
-
-                        foreach ( var attribute in AvailableAttributes )
+                        //Group Member Attribute
+                        foreach ( var attribute in AvailableAttributes.Where( a => a.EntityTypeId == entityTypeIdGroupMember ) )
                         {
+                            var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                            qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, groupMemberService, Rock.Reporting.FilterMode.SimpleFilter );
+                        }
+
+                        // Person Attributes
+                        var personService = new PersonService( rockContext );
+                        foreach ( var attribute in AvailableAttributes.Where( a => a.EntityTypeId == entityTypeIdPerson ) )
+                        {
+                            var attributeValueService = new AttributeValueService( rockContext );
+                            var parameterExpression = personService.ParameterExpression;
                             var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
                             if ( filterControl != null )
                             {
                                 var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                                var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                                if ( expression != null )
+
+                                if ( filterValues.Any() && !string.IsNullOrWhiteSpace( filterValues[0] ) )
                                 {
-                                    var attributeValues = attributeValueService
-                                        .Queryable()
-                                        .Where( v => v.Attribute.Id == attribute.Id );
+                                    var entityField = EntityHelper.GetEntityFieldForAttribute( attribute, false );
+                                    var expression = Rock.Utility.ExpressionHelper.GetAttributeExpression( personService, parameterExpression, entityField, filterValues );
+                                    var attributeValuePersonIds = personService.Queryable().AsNoTracking().Where( parameterExpression, expression ).Select(p => p.Id).ToList();
 
-                                    attributeValues = attributeValues.Where( parameterExpression, expression, null );
-
-                                    qry = qry.Where( w =>
-                                                    ( attributeValues.Where( t => t.Attribute.EntityTypeId == _gmEntityTypeId ).Select( v => v.EntityId ).Contains( w.Id ) ) ||
-                                                    ( attributeValues.Where( y => y.Attribute.EntityTypeId == _pEntityTypeId ).Select( v => v.EntityId ).Contains( w.PersonId ) ) );
+                                    qry = qry.Where( m => attributeValuePersonIds.Contains( m.PersonId ) );
                                 }
                             }
                         }
@@ -1488,9 +1497,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         .Select( m => m.PersonId )
                         .Distinct()
                         .ToList();
-
-                    var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
-                    var entityTypeIdPerson = EntityTypeCache.GetId<Rock.Model.Person>();
 
                     var groupMemberAttributesIds = new List<int>();
                     foreach ( var gma in AvailableAttributes.Where( a => a.EntityTypeId == entityTypeIdGroupMember ) )
