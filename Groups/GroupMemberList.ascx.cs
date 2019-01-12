@@ -1258,7 +1258,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                         // Person Attributes
                         var personService = new PersonService( rockContext );
-                        foreach ( var attribute in AvailableAttributes.Where( a => a.EntityTypeId == entityTypeIdPerson ) )
+                        foreach ( var attribute in AvailableAttributes.Where( a => a.IsGridColumn && a.EntityTypeId == entityTypeIdPerson ) )
                         {
                             var attributeValueService = new AttributeValueService( rockContext );
                             var parameterExpression = personService.ParameterExpression;
@@ -1271,7 +1271,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                                 {
                                     var entityField = EntityHelper.GetEntityFieldForAttribute( attribute, false );
                                     var expression = Rock.Utility.ExpressionHelper.GetAttributeExpression( personService, parameterExpression, entityField, filterValues );
-                                    var attributeValuePersonIds = personService.Queryable().AsNoTracking().Where( parameterExpression, expression ).Select(p => p.Id).ToList();
+                                    var attributeValuePersonIds = personService.Queryable().AsNoTracking().Where( parameterExpression, expression ).Select( p => p.Id ).ToList();
 
                                     qry = qry.Where( m => attributeValuePersonIds.Contains( m.PersonId ) );
                                 }
