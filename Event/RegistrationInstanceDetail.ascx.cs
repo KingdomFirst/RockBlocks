@@ -6887,65 +6887,55 @@ namespace RockWeb.Plugins.com_kfs.Event
             btnResourceSave.Visible = false;
             nbSaveSuccess.Visible = false;
             nbInvalid.Visible = false;
-
-            if ( groupGuid.HasValue )
+            
+            using ( var rockContext = new RockContext() )
             {
-                using ( var rockContext = new RockContext() )
+                var group = groupGuid.HasValue ? new GroupService( rockContext ).Get( groupGuid.Value ) : null;
+                if ( group == null )
                 {
-                    var groupService = new GroupService( rockContext );
-                    var group = groupService.Get( groupGuid.Value );
-                    if ( group != null )
+                    _currentGroupGuid = null;
+                    resourceGroupPanel.CreateGroupAttributeControls( null, null );
+                    return;
+                }
+                    
+                _currentGroupGuid = group.Guid;
+                resourceGroupPanel.SetGroup( group, rockContext );
+                resourceGroupPanel.Visible = true;
+
+                if ( resourceGroupPanel.EnableAddLocations )
+                {
+                    var locationQry = new LocationService( rockContext ).Queryable().Select( a => new { a.Id, a.ParentLocationId, a.Name } );
+
+                    resourceGroupPanel.Locations = new List<ResourceGroup.LocationGridItem>();
+                    foreach ( var groupLocation in group.GroupLocations.OrderBy( gl => gl.Order ).ThenBy( gl => gl.Location.Name ) )
                     {
-                        _currentGroupGuid = group.Guid;
-                        resourceGroupPanel.SetGroup( group, rockContext );
-                        resourceGroupPanel.Visible = true;
-
-                        if ( resourceGroupPanel.EnableAddLocations )
+                        var location = groupLocation.Location;
+                        var gridItem = new ResourceGroup.LocationGridItem
                         {
-                            var locationService = new LocationService( rockContext );
-                            var locationQry = locationService.Queryable().Select( a => new { a.Id, a.ParentLocationId, a.Name } );
+                            LocationId = location.Id,
+                            Name = location.Name,
+                            FullNamePath = location.Name,
+                            ParentLocationId = location.ParentLocationId,
+                            Order = groupLocation.Order
+                        };
 
-                            resourceGroupPanel.Locations = new List<ResourceGroup.LocationGridItem>();
-                            foreach ( var groupLocation in group.GroupLocations.OrderBy( gl => gl.Order ).ThenBy( gl => gl.Location.Name ) )
-                            {
-                                var location = groupLocation.Location;
-                                var gridItem = new ResourceGroup.LocationGridItem
-                                {
-                                    LocationId = location.Id,
-                                    Name = location.Name,
-                                    FullNamePath = location.Name,
-                                    ParentLocationId = location.ParentLocationId,
-                                    Order = groupLocation.Order
-                                };
-
-                                var parentLocationId = location.ParentLocationId;
-                                while ( parentLocationId != null )
-                                {
-                                    var parentLocation = locationQry.FirstOrDefault( a => a.Id == parentLocationId );
-                                    gridItem.FullNamePath = parentLocation.Name + " > " + gridItem.FullNamePath;
-                                    parentLocationId = parentLocation.ParentLocationId;
-                                }
-
-                                resourceGroupPanel.Locations.Add( gridItem );
-                            }
+                        var parentLocationId = location.ParentLocationId;
+                        while ( parentLocationId != null )
+                        {
+                            var parentLocation = locationQry.FirstOrDefault( a => a.Id == parentLocationId );
+                            gridItem.FullNamePath = parentLocation.Name + " > " + gridItem.FullNamePath;
+                            parentLocationId = parentLocation.ParentLocationId;
                         }
 
-                        btnResourceSave.Text = "Save Group";
-                        btnResourceSave.Visible = true;
-                        btnResourceDelete.Visible = true;
-                        btnResourceDelete.Attributes["onclick"] = string.Format( "javascript: return Rock.dialogs.confirmDelete(event, '{0}', '{1}');", "resource area", "This action cannot be undone." );
-                    }
-                    else
-                    {
-                        _currentGroupGuid = null;
+                        resourceGroupPanel.Locations.Add( gridItem );
                     }
                 }
-            }
-            else
-            {
-                _currentGroupGuid = null;
-                resourceGroupPanel.CreateGroupAttributeControls( null, null );
-            }
+
+                btnResourceSave.Text = "Save Group";
+                btnResourceSave.Visible = true;
+                btnResourceDelete.Visible = true;
+                btnResourceDelete.Attributes["onclick"] = string.Format( "javascript: return Rock.dialogs.confirmDelete(event, '{0}', '{1}');", "resource area", "This action cannot be undone." );
+            }    
         }
 
         /// <summary>
@@ -7368,6 +7358,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     PersonIdField = "PersonId",
                 };
 
+                phGroupControl.Controls.Add( combinedMemberGrid );
                 combinedMemberGrid.Columns.Add( new SelectField() );
                 combinedMemberGrid.Columns.Add( new RockBoundField
                 {
@@ -7375,7 +7366,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     DataField = "Person.FullName",
                     SortExpression = "Person.LastName,Person.NickName",
                     HtmlEncode = false
-                });
+                } );
 
                 combinedMemberGrid.Columns.Add( new RockBoundField
                 {
@@ -7383,8 +7374,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     DataField = "Group.Name",
                     SortExpression = "Group.Name",
                     HtmlEncode = false
-                });
-                
+                } );
+
                 combinedMemberGrid.Columns.Add( new RockBoundField
                 {
                     HeaderText = "Role",
@@ -7392,7 +7383,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     SortExpression = "GroupRole",
                     HtmlEncode = false,
                     Visible = false,
-                });
+                } );
 
                 combinedMemberGrid.Columns.Add( new RockBoundField
                 {
@@ -7401,25 +7392,28 @@ namespace RockWeb.Plugins.com_kfs.Event
                     SortExpression = "Status",
                     HtmlEncode = false,
                     Visible = false,
-                });
+                } );
 
                 combinedMemberGrid.Columns.Add( new RockLiteralField
                 {
                     ID = "lFamilyCampus",
                     HeaderText = "Family Campus",
                     SortExpression = "FamilyCampus"
-                });
-    
+                } );
+
+                AddQuickAssignmentColumns( combinedMemberGrid );
+                var deleteField = new DeleteField();
+                deleteField.Click += DeleteGroupMember_Click;
+                combinedMemberGrid.Columns.Add( deleteField );
+
                 combinedMemberGrid.Actions.ShowAdd = true;
                 combinedMemberGrid.Actions.ShowMergePerson = false;
-                combinedMemberGrid.Actions.AddClick += AddCombinedMember_Click;
+                combinedMemberGrid.Actions.AddButton.CommandName = "AssignSubGroup";
+                combinedMemberGrid.Actions.AddButton.CommandArgument = parentGroup.Id.ToString();
                 combinedMemberGrid.GridRebind += gMembers_GridRebind;
                 combinedMemberGrid.RowDataBound += gMembers_RowDataBound;
                 combinedMemberGrid.RowCommand += GroupRowCommand;
-
-                phGroupControl.Controls.Add( combinedMemberGrid );
                 combinedMemberGrid.SetLinqDataSource( groupMemberList );
-                AddQuickAssignmentColumns( combinedMemberGrid );
                 BindResourceMembersGrid( combinedMemberGrid, groupMemberList );
             }
         }
@@ -7463,7 +7457,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             : string.Format( PhotoFormat, groupMember.PersonId, groupMember.Person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) )
                                 + groupMember.Person.NickName + " " + groupMember.Person.LastName
                                 + ( !string.IsNullOrWhiteSpace( groupMember.Person.TopSignalColor ) ? " " + groupMember.Person.GetSignalMarkup() : string.Empty )
-                                + ( lacksRequirements ? " <i class='fa fa-exclamation-triangle text-warning'>Test</i>" : string.Empty );
+                                + ( lacksRequirements ? " <i class='fa fa-exclamation-triangle text-warning'></i>" : string.Empty );
                         }
                     }
 
@@ -7492,32 +7486,33 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             if ( e.CommandName == "AssignSubGroup" )
             {
-                var argument = e.CommandArgument.ToString().Split( '|' ).ToList();
-                var parentGroupId = argument[0].AsInteger();
-                var personId = argument[1].AsInteger();
-                if ( parentGroupId > 0 && personId > 0 )
+                var argument = e.CommandArgument.ToString().Split( '|' ).AsIntegerList();
+                using ( var rockContext = new RockContext() )
                 {
-                    using ( var rockContext = new RockContext() )
+                    Group parentGroup = null;
+                    Person person = null;
+                    if ( argument[0] > 0 )
                     {
-                        var parentGroup = new GroupService( rockContext ).Get( parentGroupId );
-                        var person = new PersonService( rockContext ).Get( personId );
-                        if ( person != null )
-                        {
-                            RenderGroupMemberModal( rockContext, parentGroup, null, null, person );
-                        }
+                        parentGroup = new GroupService( rockContext ).Get( argument[0] );
                     }
+                    if ( argument.Count > 1 && argument[1] > 1 )
+                    {
+                        person = new PersonService( rockContext ).Get( argument[1] );
+                    }
+                    
+                    
+                    RenderGroupMemberModal( rockContext, parentGroup, null, null, person );
                 }
             }
 
             if ( e.CommandName == "ChangeSubGroup" )
             {
-                var subGroupMemberId = 0;
-                if ( int.TryParse( e.CommandArgument.ToString(), out subGroupMemberId ) && subGroupMemberId > 0 )
+                var subGroupMemberId = e.CommandArgument.ToString().AsInteger();
+                if ( subGroupMemberId > 0 )
                 {
                     using ( var rockContext = new RockContext() )
                     {
-                        var groupMemberService = new GroupMemberService( rockContext );
-                        var groupMember = groupMemberService.Get( subGroupMemberId );
+                        var groupMember = new GroupMemberService( rockContext ).Get( subGroupMemberId );
                         RenderGroupMemberModal( rockContext, groupMember.Group.ParentGroup, groupMember.Group, groupMember );
                     }
                 }
@@ -7921,14 +7916,21 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="person">The person.</param>
         protected void RenderGroupMemberModal( RockContext rockContext, Group parentGroup, Group group, GroupMember groupMember, Person person = null )
         {
-            // Clear modal controls
+            // reset modal controls
             nbErrorMessage.Visible = false;
             ddlRegistrantList.Visible = true;
+            ddlRegistrantList.Enabled = true;
             ppVolunteer.Visible = false;
+
             ddlRegistrantList.Items.Clear();
             ddlSubGroup.Items.Clear();
             ddlGroupRole.Items.Clear();
+
             tbNote.Text = string.Empty;
+            hfSubGroupId.Value = string.Empty;
+            hfSubGroupMemberId.Value = string.Empty;
+            rblStatus.BindToEnum<GroupMemberStatus>();
+            rblMoveRegistrants.SelectedValue = "N";
 
             // cache available groups to use when saving memberships
             var registrationGroupGuids = new List<Guid>();
@@ -7940,168 +7942,153 @@ namespace RockWeb.Plugins.com_kfs.Event
                 hfRegistrationGroupGuid.Value = string.Join( ",", registrationGroupGuids );
             }
 
-            rblStatus.BindToEnum<GroupMemberStatus>();
-            rblMoveRegistrants.SelectedValue = "N";
-            var groupMemberTerm = "Member";
-            if ( group != null )
-            {
-                hfSubGroupId.Value = group.Id.ToString();
-                if ( !string.IsNullOrWhiteSpace( group.GroupType.GroupMemberTerm ) )
-                {
-                    groupMemberTerm = group.GroupType.GroupMemberTerm;
-                }
-                parentGroup = group.ParentGroup;
-            }
-            else if ( parentGroup != null )
-            {
-                hfSubGroupId.Value = string.Empty;
-                if ( !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupMemberTerm ) )
-                {
-                    groupMemberTerm = parentGroup.GroupType.GroupMemberTerm;
-                }
-            }
+            // get global objects to use below
+            var selectedPerson = groupMember != null ? groupMember.Person : person;
+            var selectedGroup = group != null ? group : null;
+            var selectedParent = group != null ? group.ParentGroup : parentGroup;
+            var selectedStatus = groupMember != null ? (int)groupMember.GroupMemberStatus : 1;
+            var selectedRoleId = groupMember != null ? groupMember.GroupRoleId : selectedParent.GroupType.DefaultGroupRoleId;
+            var selectedTerm = selectedParent.GroupType.GroupMemberTerm;
+            var selectedGroupTerm = selectedParent.GroupType.GroupTerm;
+            var selectedAction = selectedGroup != null ? "Edit" : "Add";
+            var selectedAssignment = selectedGroup != null ? selectedGroup.Name : string.Empty;
 
-            ddlGroupRole.DataSource = parentGroup.GroupType.Roles.OrderBy( a => a.Order ).ToList();
+            // get global options on grouptype
+            if ( selectedParent.GroupType.Attributes == null || !selectedParent.GroupType.Attributes.Any() )
+            {
+                selectedParent.GroupType.LoadAttributes();
+            }
+            var showRegistrants = selectedParent.GroupType.GroupTypePurposeValue == null || selectedParent.GroupType.GroupTypePurposeValue.Value != "Serving Area";
+            var allowVolunteers = selectedParent.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean();
+            var allowMultiples = selectedParent.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean();
+            
+            mdlAddSubGroupMember.Title = string.Format( "{0} {1} in {2}", selectedAction, selectedTerm, selectedAssignment );
+            ddlGroupRole.DataSource = selectedParent.GroupType.Roles.OrderBy( a => a.Order ).ToList();
             ddlGroupRole.DataBind();
+            ddlGroupRole.SelectedValue = selectedRoleId.ToString();
+            rblStatus.SelectedIndex = selectedStatus;
 
-            hfSubGroupMemberId.Value = groupMember != null ? groupMember.Id.ToString() : "0";
+            // check for available groups
+            var availableGroups = selectedParent.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count
+                || ( groupMember != null && g.Id == groupMember.GroupId ) ).ToList();
+            if ( !availableGroups.Any() )
+            {
+                nbErrorMessage.Text = "No groups are available for this person to be assigned to.";
+                mdlAddSubGroupMember.Show();
+                upnlContent.Update();
+                return;
+            }
+
+            // set default if not set
+            group = group ?? availableGroups.FirstOrDefault();
+            ddlSubGroup.DataSource = availableGroups;
+            ddlSubGroup.DataTextField = "Name";
+            ddlSubGroup.DataValueField = "Id";
+            ddlSubGroup.DataBind();
+            ddlSubGroup.Items.Insert( 0, None.ListItem );
+            ddlSubGroup.Label = !string.IsNullOrWhiteSpace( selectedGroupTerm ) ? selectedGroupTerm : selectedParent.Name;
+            ddlSubGroup.SelectedValue = groupMember != null ? groupMember.GroupId.ToString() : group.Id.ToString();
+            
             if ( groupMember == null )
             {
-                ddlSubGroup.Visible = false;
-                ddlRegistrantList.Enabled = true;
-                if ( group == null && person != null )
+                // this is a new group member, initialize the model
+                groupMember = new GroupMember
                 {
-                    var availableGroups = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count ).ToList();
-                    ddlRegistrantList.Help = null;
-                    ddlRegistrantList.Items.Add( new ListItem( person.FullNameReversed, person.Guid.ToString() ) );
-                    mdlAddSubGroupMember.Title = string.Format( "Add New {0}", groupMemberTerm );
-                    ddlSubGroup.Visible = true;
-                    ddlSubGroup.DataSource = availableGroups;
-                    ddlSubGroup.DataTextField = "Name";
-                    ddlSubGroup.DataValueField = "Id";
-                    ddlSubGroup.DataBind();
-                    ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
-                    //ddlSubGroup.SelectedIndex = 0;
-                    ddlSubGroup.Label = !string.IsNullOrWhiteSpace( parentGroup.GroupType.GroupTerm ) ? parentGroup.GroupType.GroupTerm : parentGroup.Name;
-                    group = availableGroups.Any() ? availableGroups.FirstOrDefault() : null;
-                }
-                else if ( group != null )
-                {
-                    if ( group.GroupType.Attributes == null || !group.GroupType.Attributes.Any() )
-                    {
-                        group.GroupType.LoadAttributes();
-                    }
-
-                    // start a list of available volunteers, will be filtered below
-                    var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable()
-                        .Where( g => g.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" );
-
-                    // dropdown is limited to registrants or non-serving areas
-                    if ( group.GroupType.GroupTypePurposeValue == null || group.GroupType.GroupTypePurposeValue.Value != "Serving Area" )
-                    {
-                        // check if registrants can be assigned to multiple groups
-                        var placedMembers = new List<int>();
-                        if ( !group.GroupType.GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean() )
-                        {
-                            ddlRegistrantList.Help = string.Format( "Choose from a list of Registrants who have not yet been assigned to a {0} {1}", group.ParentGroup.Name, group.GroupType.GroupTerm );
-                            foreach ( Group g in group.ParentGroup.Groups )
-                            {
-                                placedMembers.AddRange(
-                                    g.Members.Select( m => m.Person.Id )
-                                    .Where( m => !placedMembers.Contains( m ) )
-                                );
-                            }
-                        }
-                        else
-                        {
-                            ddlRegistrantList.Label = groupMemberTerm;
-                            ddlRegistrantList.Help = null;
-                        }
-
-                        // add registrants who haven't already been placed
-                        var allowedRegistrations = new RegistrationRegistrantService( rockContext ).Queryable().AsNoTracking()
-                            .Where( r => r.Registration.RegistrationInstanceId == registrationInstanceId && r.PersonAlias != null && r.PersonAlias.Person != null
-                                && !placedMembers.Contains( r.PersonAlias.Person.Id ) );
-                        foreach ( var allowedRegistrant in allowedRegistrations )
-                        {
-                            var registrantItem = new ListItem( allowedRegistrant.PersonAlias.Person.FullNameReversed, allowedRegistrant.PersonAlias.Person.Guid.ToString() );
-                            registrantItem.Attributes["optiongroup"] = "Registrants";
-                            ddlRegistrantList.Items.Add( registrantItem );
-                        }
-
-                        // restrict any volunteer lists to this registration's resources
-                        if ( ResourceGroups.Any() )
-                        {
-                            qryAvailableVolunteers = qryAvailableVolunteers.Where( g => registrationGroupGuids.Contains( g.Group.Guid ) || registrationGroupGuids.Contains( g.Group.ParentGroup.Guid ) )
-                                .DistinctBy( v => v.PersonId ).AsQueryable();
-                        }
-
-                        if ( !ppVolunteer.Visible && group.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() && registrationInstanceId > 0 )
-                        {
-                            // display active volunteers not already in this group
-                            foreach ( var volunteer in qryAvailableVolunteers.Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id ) )
-                            {
-                                var volunteerItem = new ListItem( volunteer.Person.FullNameReversed, volunteer.Person.Guid.ToString() );
-                                // hard code the name because the group allowing assignment won't have the correct MemberTerm
-                                volunteerItem.Attributes["optiongroup"] = "Volunteers";
-                                ddlRegistrantList.Items.Add( volunteerItem );
-                            }
-                        }
-                    }
-                    // adding a volunteer instead of registrants, show the person picker instead of a dropdown
-                    else
-                    {
-                        ddlRegistrantList.Visible = false;
-                        ddlRegistrantList.Required = false;
-                        ppVolunteer.Visible = true;
-                        ppVolunteer.Required = true;
-
-                        if ( person != null )
-                        {
-                            ppVolunteer.SelectedValue = person.Id;
-                        }
-                    }
-                    
-                    mdlAddSubGroupMember.Title = string.Format( "Add New {0} to {1}", groupMemberTerm, group.Name );
-                }
-
-                if ( group != null )
-                {
-                    // this is a new group member, initialize the model
-                    groupMember = new GroupMember { Id = 0 };
-                    groupMember.GroupId = group.Id;
-                    groupMember.Group = group;
-                    groupMember.GroupRoleId = groupMember.Group.GroupType.DefaultGroupRoleId ?? 0;
-                    groupMember.GroupMemberStatus = GroupMemberStatus.Active;
-                    groupMember.DateTimeAdded = RockDateTime.Now;
-                }
-
-                rblStatus.SelectedIndex = 1;
+                    Id = 0,
+                    GroupId = group.Id,
+                    Group = group,
+                    GroupRoleId = (int)selectedRoleId,
+                    GroupMemberStatus = GroupMemberStatus.Active,
+                    DateTimeAdded = RockDateTime.Now
+                };
             }
             else
             {
-                ddlRegistrantList.Help = null;
-                ddlRegistrantList.Items.Add( new ListItem( groupMember.Person.FullNameReversed, groupMember.Person.Guid.ToString() ) );
-                ddlRegistrantList.Enabled = false;
-                ddlGroupRole.SelectedValue = groupMember.GroupRoleId.ToString();
-                rblStatus.SelectedValue = ( (int)groupMember.GroupMemberStatus ).ToString();
                 tbNote.Text = groupMember.Note;
-                mdlAddSubGroupMember.Title = string.Format( "Edit {0} in {1}", groupMemberTerm, group.Name );
-                ddlSubGroup.Visible = true;
-
-                // allow selections to non-full groups or currently assigned full group
-                ddlSubGroup.DataSource = parentGroup.Groups.Where( g => g.GroupCapacity == null || g.GroupCapacity > g.Members.Count || g.Id == groupMember.GroupId ).ToList();
-                ddlSubGroup.DataTextField = "Name";
-                ddlSubGroup.DataValueField = "Id";
-                ddlSubGroup.DataBind();
-                ddlSubGroup.Items.Insert( 0, Rock.Constants.None.ListItem );
-                ddlSubGroup.Label = !string.IsNullOrWhiteSpace( group.GroupType.GroupTerm ) ? group.GroupType.GroupTerm : group.ParentGroup.Name;
-                ddlSubGroup.SelectedValue = group.Id.ToString();
             }
 
-            groupMember.LoadAttributes();
-            phAttributes.Controls.Clear();
-            Helper.AddEditControls( groupMember, phAttributes, true, string.Empty, true );
+            // edit existing group membership
+            if ( selectedPerson != null )
+            {
+                // bind people
+                ddlRegistrantList.Help = null;
+                ddlRegistrantList.Items.Add( new ListItem( selectedPerson.FullNameReversed, selectedPerson.Guid.ToString() ) );
+                ddlRegistrantList.Enabled = false;
+            }
+            // add new membership via dropdown
+            else if ( showRegistrants ) 
+            {
+                // check if registrants can be assigned to multiple groups
+                var placedMembers = new List<int>();
+                if ( !allowMultiples )
+                {
+                    ddlRegistrantList.Help = string.Format( "Choose from a list of Registrants who have not yet been assigned to a {0} {1}", selectedParent.Name, selectedTerm );
+                    foreach ( Group g in group.ParentGroup.Groups )
+                    {
+                        placedMembers.AddRange(
+                            g.Members.Select( m => m.Person.Id )
+                            .Where( m => !placedMembers.Contains( m ) )
+                        );
+                    }
+                }
+                else
+                {
+                    ddlRegistrantList.Label = selectedTerm;
+                    ddlRegistrantList.Help = null;
+                }
+
+                // add current registrants, minus any placements if not allowed
+                var allowedRegistrations = new RegistrationRegistrantService( rockContext ).Queryable().AsNoTracking()
+                    .Where( r => r.Registration.RegistrationInstanceId == registrationInstanceId && r.PersonAlias != null && r.PersonAlias.Person != null
+                        && !placedMembers.Contains( r.PersonAlias.Person.Id ) );
+                foreach ( var allowedRegistrant in allowedRegistrations )
+                {
+                    var registrantItem = new ListItem( allowedRegistrant.PersonAlias.Person.FullNameReversed, allowedRegistrant.PersonAlias.Person.Guid.ToString() );
+                    registrantItem.Attributes["optiongroup"] = "Registrants";
+                    ddlRegistrantList.Items.Add( registrantItem );
+                }
+
+                if ( allowVolunteers )
+                {
+                    // get available volunteers from the current resource serving areas
+                    var qryAvailableVolunteers = new GroupMemberService( rockContext ).Queryable().Where( g => g.Group.GroupType.GroupTypePurposeValue.Value == "Serving Area" )
+                        .Where( g => registrationGroupGuids.Contains( g.Group.Guid ) || registrationGroupGuids.Contains( g.Group.ParentGroup.Guid ) )
+                        .Where( v => v.GroupMemberStatus == GroupMemberStatus.Active && v.GroupId != group.Id )
+                        .DistinctBy( v => v.PersonId ).AsQueryable();
+
+                    // display active volunteers not already in this group
+                    foreach ( var volunteer in qryAvailableVolunteers )
+                    {
+                        var volunteerItem = new ListItem( volunteer.Person.FullNameReversed, volunteer.Person.Guid.ToString() );
+                        // hard code the name because the group allowing assignment won't have the correct MemberTerm
+                        volunteerItem.Attributes["optiongroup"] = "Volunteers";
+                        ddlRegistrantList.Items.Add( volunteerItem );
+                    }
+                }
+            }
+            // add new membership via picker
+            else if ( allowVolunteers )
+            {
+                ddlRegistrantList.Visible = false;
+                ddlRegistrantList.Required = false;
+                ppVolunteer.Visible = true;
+                ppVolunteer.Required = true;
+
+                if ( person != null )
+                {
+                    ppVolunteer.SelectedValue = person.Id;
+                }
+            }
+
+            hfSubGroupMemberId.Value = groupMember.Id.ToString();
+            hfSubGroupId.Value = selectedGroup != null ? selectedGroup.Id.ToString() : "0";
+
+            if ( groupMember.GroupId > 0 )
+            {
+                groupMember.LoadAttributes();
+                phAttributes.Controls.Clear();
+                Helper.AddEditControls( groupMember, phAttributes, true, string.Empty, true );
+            }
 
             mdlAddSubGroupMember.Show();
             upnlContent.Update();
