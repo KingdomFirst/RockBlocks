@@ -7326,14 +7326,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
                     groupPanel.Expanded = _expandedPanels.Any( c => c.Contains( groupPanel.ID ) );
 
-                    // Note: multiple methods depend on a GroupMember object type
+                    // Note: multiple methods require a bindable GroupMember object type
                     groupPanel.AddButtonClick += AddGroupMember_Click;
                     groupPanel.EditButtonClick += EditGroupMember_Click;
                     groupPanel.DeleteButtonClick += DeleteGroupMember_Click;
+                    // this never fires from GroupPanel, hence manual Edit Button
+                    //groupPanel.GroupRowSelected += EditGroupMember_Click;
                     groupPanel.GroupRowCommand += GroupRowCommand;
                     groupPanel.GroupRowDataBound += gMembers_RowDataBound;
                     groupPanel.GroupGridRebind += gMembers_GridRebind;
-                    //groupPanel.GroupRowSelected += GroupRowSelected;
                     
                     groupPanel.BuildControl( group, ResourceGroupTypes, ResourceGroups );
                     phGroupControl.Controls.Add( groupPanel );
@@ -7411,6 +7412,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 combinedMemberGrid.Actions.AddButton.CommandArgument = parentGroup.Id.ToString();
                 combinedMemberGrid.GridRebind += gMembers_GridRebind;
                 combinedMemberGrid.RowDataBound += gMembers_RowDataBound;
+                combinedMemberGrid.RowSelected += EditGroupMember_Click;
                 combinedMemberGrid.RowCommand += GroupRowCommand;
                 combinedMemberGrid.SetLinqDataSource( groupMemberList );
                 BindResourceMembersGrid( combinedMemberGrid, groupMemberList );
@@ -7849,20 +7851,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                         ShowTab();
                     }
                 }
-            }
-        }
-
-        /// <summary>
-        /// Handles the Click event of the EditGroupMember control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        private void GroupRowSelected( object sender, EventArgs e )
-        {
-            var groupMemberId = ( (RowEventArgs)e ).RowKeyId;
-            if ( groupMemberId > 0 )
-            {
-                RenderEditGroupMemberModal( groupMemberId.ToString() );
             }
         }
 

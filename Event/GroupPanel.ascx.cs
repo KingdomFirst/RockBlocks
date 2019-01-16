@@ -87,11 +87,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         public event EventHandler DeleteButtonClick;
 
         /// <summary>
-        /// Occurs when [group row selected].
-        /// </summary>
-        public event EventHandler GroupRowSelected;
-
-        /// <summary>
         /// Occurs when [assign group click].
         /// </summary>
         public event GridViewCommandEventHandler GroupRowCommand;
@@ -109,6 +104,8 @@ namespace RockWeb.Plugins.com_kfs.Event
         #endregion
 
         #region Internal Methods
+
+        
 
         /// <summary>
         /// Restores the view-state information from a previous user control request that was saved by the <see cref="M:System.Web.UI.UserControl.SaveViewState" /> method.
@@ -148,21 +145,20 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             pnlGroupMembers.DataKeyNames = new string[] { "Id" };
             pnlGroupMembers.PersonIdField = "PersonId";
+            pnlGroupMembers.RowSelected += pnlGroupMembers_EditClick; 
             pnlGroupMembers.RowDataBound += pnlGroupMembers_RowDataBound;
-            pnlGroupMembers.GetRecipientMergeFields += pnlGroupMembers_GetRecipientMergeFields;
-            pnlGroupMembers.Actions.AddClick += pnlGroupMembers_AddClick;
             pnlGroupMembers.GridRebind += pnlGroupMembers_GridRebind;
+            pnlGroupMembers.Actions.AddClick += pnlGroupMembers_AddClick;
+            pnlGroupMembers.GetRecipientMergeFields += pnlGroupMembers_GetRecipientMergeFields;
             pnlGroupMembers.RowItemText = _group.GroupType.GroupTerm + " " + _group.GroupType.GroupMemberTerm;
             pnlGroupMembers.ExportFilename = _group.Name;
             pnlGroupMembers.ExportSource = ExcelExportSource.ColumnOutput;
             pnlGroupMembers.AllowPaging = false;
 
-            // we'll have custom javascript (see GroupMemberList.ascx ) do this instead
+            // custom javascript (see GroupMemberList.ascx ) handles deletes instead
             pnlGroupMembers.ShowConfirmDeleteDialog = false;
             pnlGroupMembers.Actions.ShowMergePerson = false;
-
-            pnlGroupMembers.RowCommand += pnlGroupMembers_RowCommand;
-            //pnlGroupMembers.RowSelected += pnlGroupMembers_RowSelected;
+            
             pnlGroupMembers.Actions.ShowAdd = true;
             pnlGroupMembers.IsDeleteEnabled = true;
 
@@ -655,32 +651,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 DeleteButtonClick( this, e );
                 BindGroupMembersGrid();
-            }
-        }
-
-        /// <summary>
-        /// Handles the RowSelected event of the pnlGroupMembers control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        protected void pnlGroupMembers_RowSelected( object sender, RowEventArgs e )
-        {
-            if ( GroupRowSelected != null )
-            {
-                GroupRowSelected( this, e );
-            }
-        }
-
-        /// <summary>
-        /// Handles the EditClick event of the Actions control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void pnlGroupMembers_RowCommand( object sender, GridViewCommandEventArgs e )
-        {
-            if ( GroupRowCommand != null )
-            {
-                GroupRowCommand( this, e );
+                SetGroupHeader( _group );
             }
         }
 
