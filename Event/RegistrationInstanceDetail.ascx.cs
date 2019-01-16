@@ -7401,6 +7401,51 @@ namespace RockWeb.Plugins.com_kfs.Event
                     SortExpression = "FamilyCampus"
                 } );
 
+                combinedMemberGrid.Columns.Add( new RockBoundField
+                {
+                    HeaderText = "Email",
+                    DataField = "Person.Email",
+                    SortExpression = "Person.Email",
+                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                    Visible = false,
+                } );
+
+                combinedMemberGrid.Columns.Add( new RockBoundField
+                {
+                    HeaderText = "Gender",
+                    DataField = "Person.Gender",
+                    SortExpression = "Person.Gender",
+                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                    Visible = false,
+                } );
+
+                combinedMemberGrid.Columns.Add( new DefinedValueField
+                {
+                    HeaderText = "Marital Status",
+                    DataField="Person.MaritalStatusValueId",
+                    SortExpression="Person.MaritalStatusValue.Value",
+                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                    Visible = false,
+                } );
+
+                combinedMemberGrid.Columns.Add( new DefinedValueField
+                {
+                    HeaderText = "Connection Status",
+                    DataField="Person.ConnectionStatusValueId",
+                    SortExpression="Person.ConnectionStatusValue.Value",
+                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                    Visible = false,
+                } );
+
+                combinedMemberGrid.Columns.Add( new RockBoundField
+                {
+                    HeaderText = "Note",
+                    DataField="Note",
+                    SortExpression="Note",
+                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                    Visible = false,
+                } );
+
                 AddQuickAssignmentColumns( combinedMemberGrid );
                 var deleteField = new DeleteField();
                 deleteField.Click += DeleteGroupMember_Click;
