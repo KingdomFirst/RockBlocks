@@ -7343,8 +7343,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             else
             {   
                 var parentGroup = subGroups.FirstOrDefault().ParentGroup;
-                var groupMemberList = subGroups.SelectMany( g => g.Members )
-                    .ToList().AsQueryable();
+                var groupMemberList = subGroups.SelectMany( g => g.Members ).AsQueryable();
                 var combinedMemberGrid = new Grid() {
                     ID = string.Format( "groupList_{0}", parentGroup.Id ),
                     DataKeyNames = new string[] { "Id" },
