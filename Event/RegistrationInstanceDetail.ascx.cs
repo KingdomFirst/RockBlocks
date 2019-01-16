@@ -7109,21 +7109,20 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             _resourceGroupTypes = new List<Guid>();
             _resourceGroups = new List<Guid>();
-            _expandedRows = new List<Guid>();
 
             foreach ( var groupTypeRow in phRows.ControlsOfTypeRecursive<ResourceAreaRow>() )
             {
-                if ( groupTypeRow.Expanded )
+                if ( groupTypeRow.Selected )
                 {
-                    _expandedRows.Add( groupTypeRow.GroupTypeGuid );
+                    _currentGroupTypeGuid = groupTypeRow.GroupTypeGuid;
                 }
             }
 
             foreach ( var groupRow in phRows.ControlsOfTypeRecursive<ResourceGroupRow>() )
             {
-                if ( groupRow.Expanded )
+                if ( groupRow.Selected )
                 {
-                    _expandedRows.Add( groupRow.GroupGuid );
+                    _currentGroupGuid = groupRow.GroupGuid;
                 }
             }
 
@@ -7166,7 +7165,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( setValues )
                 {
-                    resourceAreaRow.Expanded = true; //_expandedRows.Contains( groupType.Guid );
+                    resourceAreaRow.Expanded = true;
                     resourceAreaRow.Selected = _currentGroupTypeGuid.HasValue && groupType.Guid.Equals( _currentGroupTypeGuid.Value );
                 }
 
@@ -7215,7 +7214,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 if ( setValues )
                 {
-                    resourceGroupRow.Expanded = true; // _expandedRows.Contains( group.Guid );
+                    resourceGroupRow.Expanded = true;
                     resourceGroupRow.Selected = resourceGroupPanel.Visible && _currentGroupGuid.HasValue && group.Guid.Equals( _currentGroupGuid.Value );
                 }
 
