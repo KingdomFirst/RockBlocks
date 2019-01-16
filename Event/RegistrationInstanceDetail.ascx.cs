@@ -114,8 +114,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         private List<string> _expandedPanels = new List<string>();
         private List<Guid> _resourceGroupTypes = new List<Guid>();
         private List<Guid> _resourceGroups = new List<Guid>();
-        private List<Guid> _expandedRows = new List<Guid>();
-
         private Guid? _currentGroupTypeGuid = null;
         private Guid? _currentGroupGuid = null;
 
@@ -7342,10 +7340,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // Note: multiple methods depend on a GroupMember object type
                     groupPanel.AddButtonClick += AddGroupMember_Click;
                     groupPanel.EditButtonClick += EditGroupMember_Click;
+                    groupPanel.DeleteButtonClick += DeleteGroupMember_Click;
                     groupPanel.GroupRowCommand += GroupRowCommand;
                     groupPanel.GroupRowDataBound += gMembers_RowDataBound;
                     groupPanel.GroupGridRebind += gMembers_GridRebind;
-                    
                     //groupPanel.GroupRowSelected += GroupRowSelected;
                     
                     groupPanel.BuildControl( group, ResourceGroupTypes, ResourceGroups );
@@ -7802,16 +7800,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
-        private void AddCombinedMember_Click( object sender, EventArgs e )
-        {
-            using ( var rockContext = new RockContext() )
-            {
-                var combinedGroupType = ResourceGroupTypes.FirstOrDefault( t => t.GetAttributeValue( "DisplayCombinedMemberships").AsBoolean() );
-                var parentGroup = new GroupService( rockContext ).Get( ResourceGroups[combinedGroupType.Name].Value.AsGuid() );
-                RenderGroupMemberModal( rockContext, parentGroup, null, null );
-            };
-        }
-
+       
         /// <summary>
         /// Handles the Click event of the AddGroupMember control.
         /// </summary>
@@ -7840,6 +7829,32 @@ namespace RockWeb.Plugins.com_kfs.Event
             if ( groupMemberId > 0 )
             {
                 RenderEditGroupMemberModal( groupMemberId.ToString() );
+            }
+        }
+
+        /// <summary>
+        /// Handles the Click event of the DeleteGroupMember control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        private void DeleteGroupMember_Click( object sender, EventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {   
+                var groupMemberId = ( (RowEventArgs)e ).RowKeyId;
+                if ( groupMemberId > 0 )
+                {
+                    var groupMemberService = new GroupMemberService( rockContext );
+                    var groupMember = groupMemberService.Get( groupMemberId );
+                    if ( groupMember != null )
+                    {
+                        groupMemberService.Delete( groupMember );
+                        rockContext.SaveChanges();
+
+                        // refresh the grid display
+                        ShowTab();
+                    }
+                }
             }
         }
 

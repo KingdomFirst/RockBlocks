@@ -82,6 +82,11 @@ namespace RockWeb.Plugins.com_kfs.Event
         public event EventHandler EditButtonClick;
 
         /// <summary>
+        /// Occurs when [delete button click].
+        /// </summary>
+        public event EventHandler DeleteButtonClick;
+
+        /// <summary>
         /// Occurs when [group row selected].
         /// </summary>
         public event EventHandler GroupRowSelected;
@@ -592,35 +597,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             AvailableAttributes = updatedAttributes;
             return updatedAttributes;
         }
-
-        /// <summary>
-        /// Registers the script.
-        /// Not used; this is already triggered in RegistrationInstanceDetail
-        /// </summary>
-        private void RegisterScript()
-        {
-            var deleteScript = @"
-    $('table.js-grid-group-members a.grid-delete-button').click(function( e ){
-        var $btn = $(this);
-        e.preventDefault();
-        Rock.dialogs.confirm('Are you sure you want to delete this group member?', function (result) {
-            if (result) {
-                if ( $btn.closest('tr').hasClass('js-has-registration') ) {
-                    Rock.dialogs.confirm('This group member was added through a registration. Are you sure that you want to delete this group member and remove the link from the registration? ', function (result) {
-                        if (result) {
-                            window.location = e.target.href ? e.target.href : e.target.parentElement.href;
-                        }
-                    });
-                } else {
-                    window.location = e.target.href ? e.target.href : e.target.parentElement.href;
-                }
-            }
-        });
-    });
-";
-            ScriptManager.RegisterStartupScript( pnlGroupMembers, pnlGroupMembers.GetType(), "deleteInstanceScript", deleteScript, true );
-        }
-
+        
         #endregion
 
         #region Event Methods
@@ -668,25 +645,16 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Handles the Click event of the DeleteGroupMember control.
+        /// Handles the DeleteClick event of the pnlGroupMembers control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        protected void pnlGroupMembers_DeleteClick( object sender, RowEventArgs e )
+        private void pnlGroupMembers_DeleteClick( object sender, RowEventArgs e )
         {
-            // TODO: enforce counselor delete support
-            var rockContext = new RockContext();
-            var groupMemberService = new GroupMemberService( rockContext );
-            var groupMember = groupMemberService.Get( e.RowKeyId );
-            if ( groupMember != null && groupMember.GroupId == _group.Id )
+            if ( DeleteButtonClick != null )
             {
-                groupMemberService.Delete( groupMember );
-
-                rockContext.SaveChanges();
-                var group = new GroupService( rockContext ).Get( groupMember.GroupId );
-                pnlGroupMembers.DataSource = group.Members;
-                pnlGroupMembers.DataBind();
-                SetGroupHeader( group );
+                DeleteButtonClick( this, e );
+                BindGroupMembersGrid();
             }
         }
 
