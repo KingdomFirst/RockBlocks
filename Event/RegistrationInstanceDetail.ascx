@@ -729,7 +729,6 @@
             delay: 500,
             html: true,
             content: function () {
-                //alert('ehy');
                 var dataUrl = Rock.settings.get('baseUrl') + 'api/People/PopupHtml/' + $(this).attr('personid') + '/false';
 
                 var result = $.ajax({
