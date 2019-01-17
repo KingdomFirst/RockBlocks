@@ -82,9 +82,9 @@ namespace RockWeb.Plugins.com_kfs.Event
         public event EventHandler EditButtonClick;
 
         /// <summary>
-        /// Occurs when [group row selected].
+        /// Occurs when [delete button click].
         /// </summary>
-        public event EventHandler GroupRowSelected;
+        public event EventHandler DeleteButtonClick;
 
         /// <summary>
         /// Occurs when [assign group click].
@@ -96,9 +96,16 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         public event EventHandler GroupRowDataBound;
 
+        /// <summary>
+        /// Occurs when [group grid rebind].
+        /// </summary>
+        public event GridRebindEventHandler GroupGridRebind;
+
         #endregion
 
         #region Internal Methods
+
+        
 
         /// <summary>
         /// Restores the view-state information from a previous user control request that was saved by the <see cref="M:System.Web.UI.UserControl.SaveViewState" /> method.
@@ -136,27 +143,22 @@ namespace RockWeb.Plugins.com_kfs.Event
             // Set up group panel
             SetGroupHeader( group );
 
-            //rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
             pnlGroupMembers.DataKeyNames = new string[] { "Id" };
             pnlGroupMembers.PersonIdField = "PersonId";
+            pnlGroupMembers.RowSelected += pnlGroupMembers_EditClick; 
             pnlGroupMembers.RowDataBound += pnlGroupMembers_RowDataBound;
-            pnlGroupMembers.GetRecipientMergeFields += pnlGroupMembers_GetRecipientMergeFields;
-            pnlGroupMembers.Actions.AddClick += pnlGroupMembers_AddClick;
             pnlGroupMembers.GridRebind += pnlGroupMembers_GridRebind;
+            pnlGroupMembers.Actions.AddClick += pnlGroupMembers_AddClick;
+            pnlGroupMembers.GetRecipientMergeFields += pnlGroupMembers_GetRecipientMergeFields;
             pnlGroupMembers.RowItemText = _group.GroupType.GroupTerm + " " + _group.GroupType.GroupMemberTerm;
             pnlGroupMembers.ExportFilename = _group.Name;
             pnlGroupMembers.ExportSource = ExcelExportSource.ColumnOutput;
             pnlGroupMembers.AllowPaging = false;
 
-            // we'll have custom javascript (see GroupMemberList.ascx ) do this instead
+            // custom javascript (see GroupMemberList.ascx ) handles deletes instead
             pnlGroupMembers.ShowConfirmDeleteDialog = false;
             pnlGroupMembers.Actions.ShowMergePerson = false;
-
-            pnlGroupMembers.RowCommand += pnlGroupMembers_RowCommand;
-            //pnlGroupMembers.RowSelected += pnlGroupMembers_RowSelected;
-
-            // v7: make sure they have Auth to edit the block OR edit to the Group
-            //bool canEditBlock = IsUserAuthorized( Authorization.EDIT ) || _group.IsAuthorized( Authorization.EDIT, this.CurrentPerson ) || _group.IsAuthorized( Authorization.MANAGE_MEMBERS, this.CurrentPerson );
+            
             pnlGroupMembers.Actions.ShowAdd = true;
             pnlGroupMembers.IsDeleteEnabled = true;
 
@@ -264,7 +266,8 @@ namespace RockWeb.Plugins.com_kfs.Event
             var lFamilyCampus = new RockLiteralField
             {
                 ID = "lFamilyCampus",
-                HeaderText = "Family Campus"
+                HeaderText = "Family Campus",
+                //SortExpression = "FamilyCampus"
             };
             pnlGroupMembers.Columns.Add( lFamilyCampus );
 
@@ -281,7 +284,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         DataField = attribute.Id + attribute.Key,
                         AttributeId = attribute.Id,
-                        HeaderText = attribute.Name
+                        HeaderText = attribute.Name,
+                        SortExpression = string.Format( "attribute:{0}", attribute.Id ),
                     };
 
                     boundField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
@@ -289,8 +293,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                     decimal needsFilled = 0;
                     if ( attribute.FieldType != null )
                     {
+                        var groupMemberIds = _group.Members.Select( m => m.Id ).ToList();
                         var attributeValues = attributeValueService.GetByAttributeId( attribute.Id )
-                            .Where( v => !( v.Value == null || v.Value.Trim() == string.Empty ) )
+                            .Where( v => groupMemberIds.Contains( (int)v.EntityId )  && !( v.Value == null || v.Value.Trim() == string.Empty ) )
                             .Select( v => v.Value ).ToList();
 
                         // if the values are numeric, sum a number value
@@ -415,12 +420,12 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <summary>
         /// Binds the group members grid.
         /// </summary>
+        /// <remarks>Multiple methods depend on the GroupMember object type</remarks>
         /// <param name="isExporting">if set to <c>true</c> [is exporting].</param>
         protected void BindGroupMembersGrid( bool isExporting = false )
         {
             if ( _group != null && _group.GroupType.Roles.Any() )
             {
-                //rFilter.Visible = true;
                 pnlGroupMembers.Visible = true;
 
                 using ( var rockContext = new RockContext() )
@@ -428,9 +433,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     // Start query for group members
                     var qry = new GroupMemberService( rockContext )
                         .Queryable( "Person,GroupRole", true )
-                        .Where( m =>
-                            m.GroupId == _group.Id &&
-                            m.Person != null );
+                        .Where( m => m.GroupId == _group.Id && m.Person != null );
 
                     // Sort the query
                     IOrderedQueryable<GroupMember> orderedQry = null;
@@ -520,7 +523,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                                 v.EntityId.Value == groupMember.Id )
                                             .ToList()
                                             .ForEach( v => attributeFieldObject.AttributeValues
-                                                .Add( v.AttributeId.ToString() + v.Attribute.Key, new AttributeValueCache( v ) ) );
+                                                .Add( v.AttributeId + v.Attribute.Key, new AttributeValueCache( v ) ) );
                                     }
 
                                     // Add row attribute object to grid's object list
@@ -533,17 +536,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     pnlGroupMembers.DataBind();
                 }
             }
-        }
-
-        /// <summary>
-        /// Handles the GridRebind event of the pnlGroupMembers control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="GridRebindEventArgs" /> instance containing the event data.</param>
-        /// <exception cref="System.NotImplementedException"></exception>
-        protected void pnlGroupMembers_GridRebind( object sender, GridRebindEventArgs e )
-        {
-            BindGroupMembersGrid( e.IsExporting );
         }
 
         /// <summary>
@@ -601,38 +593,26 @@ namespace RockWeb.Plugins.com_kfs.Event
             AvailableAttributes = updatedAttributes;
             return updatedAttributes;
         }
-
-        /// <summary>
-        /// Registers the script.
-        /// Not used; this is already triggered in RegistrationInstanceDetail
-        /// </summary>
-        private void RegisterScript()
-        {
-            var deleteScript = @"
-    $('table.js-grid-group-members a.grid-delete-button').click(function( e ){
-        var $btn = $(this);
-        e.preventDefault();
-        Rock.dialogs.confirm('Are you sure you want to delete this group member?', function (result) {
-            if (result) {
-                if ( $btn.closest('tr').hasClass('js-has-registration') ) {
-                    Rock.dialogs.confirm('This group member was added through a registration. Are you sure that you want to delete this group member and remove the link from the registration? ', function (result) {
-                        if (result) {
-                            window.location = e.target.href ? e.target.href : e.target.parentElement.href;
-                        }
-                    });
-                } else {
-                    window.location = e.target.href ? e.target.href : e.target.parentElement.href;
-                }
-            }
-        });
-    });
-";
-            ScriptManager.RegisterStartupScript( pnlGroupMembers, pnlGroupMembers.GetType(), "deleteInstanceScript", deleteScript, true );
-        }
-
+        
         #endregion
 
-        #region Click Methods
+        #region Event Methods
+
+        /// <summary>
+        /// Handles the GridRebind event of the pnlGroupMembers control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="GridRebindEventArgs" /> instance containing the event data.</param>
+        /// <exception cref="System.NotImplementedException"></exception>
+        protected void pnlGroupMembers_GridRebind( object sender, GridRebindEventArgs e )
+        {
+            if ( GroupGridRebind != null )
+            {
+                GroupGridRebind( this, e );
+            }
+
+            //BindGroupMembersGrid( e.IsExporting );
+        }
 
         /// <summary>
         /// Handles the AddClick event of the Actions control.
@@ -661,51 +641,17 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Handles the Click event of the DeleteGroupMember control.
+        /// Handles the DeleteClick event of the pnlGroupMembers control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        protected void pnlGroupMembers_DeleteClick( object sender, RowEventArgs e )
+        private void pnlGroupMembers_DeleteClick( object sender, RowEventArgs e )
         {
-            // TODO: enforce counselor delete support
-            var rockContext = new RockContext();
-            var groupMemberService = new GroupMemberService( rockContext );
-            var groupMember = groupMemberService.Get( e.RowKeyId );
-            if ( groupMember != null && groupMember.GroupId == _group.Id )
+            if ( DeleteButtonClick != null )
             {
-                groupMemberService.Delete( groupMember );
-
-                rockContext.SaveChanges();
-                var group = new GroupService( rockContext ).Get( groupMember.GroupId );
-                pnlGroupMembers.DataSource = group.Members;
-                pnlGroupMembers.DataBind();
-                SetGroupHeader( group );
-            }
-        }
-
-        /// <summary>
-        /// Handles the RowSelected event of the pnlGroupMembers control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        protected void pnlGroupMembers_RowSelected( object sender, RowEventArgs e )
-        {
-            if ( GroupRowSelected != null )
-            {
-                GroupRowSelected( this, e );
-            }
-        }
-
-        /// <summary>
-        /// Handles the EditClick event of the Actions control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void pnlGroupMembers_RowCommand( object sender, GridViewCommandEventArgs e )
-        {
-            if ( GroupRowCommand != null )
-            {
-                GroupRowCommand( this, e );
+                DeleteButtonClick( this, e );
+                BindGroupMembersGrid();
+                SetGroupHeader( _group );
             }
         }
 
@@ -723,66 +669,5 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         #endregion
-    }
-
-    /// <summary>
-    ///
-    /// </summary>
-    /// <seealso cref="DotLiquid.Drop" />
-    public class GroupMemberDataRow : DotLiquid.Drop
-    {
-        public int Id { get; set; }
-
-        public Guid Guid { get; set; }
-
-        public int PersonId { get; set; }
-
-        public string NickName { get; set; }
-
-        public string LastName { get; set; }
-
-        public string Name { get; set; }
-
-        public DateTime? BirthDate { get; set; }
-
-        public int? Age { get; set; }
-
-        public int? ConnectionStatusValueId { get; set; }
-
-        public DateTime? DateTimeAdded { get; set; }
-
-        public string Note { get; set; }
-
-        public DateTime? FirstAttended { get; set; }
-
-        public DateTime? LastAttended { get; set; }
-
-        public string Email { get; set; }
-
-        public string Gender { get; set; }
-
-        public string HomePhone { get; set; }
-
-        public string CellPhone { get; set; }
-
-        public string HomeAddress { get; set; }
-
-        public double? Latitude { get; set; }
-
-        public double? Longitude { get; set; }
-
-        public string GroupRole { get; set; }
-
-        public GroupMemberStatus GroupMemberStatus { get; set; }
-
-        public int? RecordStatusValueId { get; set; }
-
-        public bool IsDeceased { get; set; }
-
-        public int? MaritalStatusValueId { get; set; }
-
-        public int GroupRoleId { get; set; }
-
-        public bool IsArchived { get; set; }
     }
 }
