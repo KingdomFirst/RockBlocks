@@ -1,28 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data.Entity;
-using System.IO;
 using System.Linq;
+using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 using Rock;
+using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Web;
 using Rock.Web.Cache;
-using Rock.Web.UI.Controls;
-using Rock.Attribute;
-using Rock.Store;
-using System.Text;
-using Rock.Security;
 using Rock.Web.UI;
+using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Connection
 {
+    #region Block Attributes
+
     [DisplayName( "Connection Opportunity Search" )]
-    [Category( "com_kfs > Connection" )]
+    [Category( "KFS > Connection" )]
     [Description( "Allows users to search for an opportunity to join.  Attribute keys need to be for drop down list attriute types." )]
 
     [CodeEditorField( "Lava Template", "Lava template to use to display the list of opportunities.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, true, @"{% include '~~/Assets/Lava/OpportunitySearch.lava' %}", "", 0 )]
@@ -32,6 +30,8 @@ namespace RockWeb.Plugins.com_kfs.Connection
     [IntegerField( "Connection Type Id", "The Id of the connection type whose opportunities are displayed.", true, 1, order: 8 )]
     [TextField( "Attribute One Key", "", false, "", order: 10 )]
     [TextField( "Attribute Two Key", "", false, "", order: 11 )]
+
+    #endregion
 
     public partial class OpportunitySearch : Rock.Web.UI.RockBlock
     {
@@ -44,6 +44,7 @@ namespace RockWeb.Plugins.com_kfs.Connection
         /// The available attributes.
         /// </value>
         public AttributeCache AttributeOne { get; set; }
+
         public AttributeCache AttributeTwo { get; set; }
 
         #endregion
@@ -129,7 +130,6 @@ namespace RockWeb.Plugins.com_kfs.Connection
             UpdateList();
         }
 
-
         #endregion
 
         #region Internal Methods
@@ -151,9 +151,9 @@ namespace RockWeb.Plugins.com_kfs.Connection
 
                 if ( GetAttributeValue( "EnableCampusContext" ).AsBoolean() && !GetAttributeValue( "DisplayCampusFilter" ).AsBoolean() )
                 {
-                    var campusEntityType = EntityTypeCache.Read( "Rock.Model.Campus" );
+                    var campusEntityType = EntityTypeCache.Get( "Rock.Model.Campus" );
                     var contextCampus = RockPage.GetCurrentContext( campusEntityType ) as Campus;
-                    
+
                     if ( contextCampus != null )
                     {
                         var campusId = contextCampus.Id;
@@ -250,7 +250,7 @@ namespace RockWeb.Plugins.com_kfs.Connection
 
                 var mergeFields = new Dictionary<string, object>();
                 mergeFields.Add( "CurrentPerson", CurrentPerson );
-                mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Read( "Rock.Model.Campus" ) ) as Campus );
+                mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Get( "Rock.Model.Campus" ) ) as Campus );
                 var pageReference = new PageReference( GetAttributeValue( "DetailPage" ), null );
                 mergeFields.Add( "DetailPage", BuildDetailPageUrl( pageReference.BuildUrl() ) );
 
@@ -332,7 +332,7 @@ namespace RockWeb.Plugins.com_kfs.Connection
                             pnlAttributeOne.CssClass = "col-sm-12";
                         }
 
-                        AttributeOne = AttributeCache.Read( new AttributeService( new RockContext() ).Queryable()
+                        AttributeOne = AttributeCache.Get( new AttributeService( new RockContext() ).Queryable()
                             .FirstOrDefault( a =>
                                 a.EntityTypeId == entityTypeId &&
                                 a.EntityTypeQualifierColumn.Equals( "ConnectionTypeId", StringComparison.OrdinalIgnoreCase ) &&
@@ -351,7 +351,7 @@ namespace RockWeb.Plugins.com_kfs.Connection
                             pnlAttributeTwo.CssClass = "col-sm-12";
                         }
 
-                        AttributeTwo = AttributeCache.Read( new AttributeService( new RockContext() ).Queryable()
+                        AttributeTwo = AttributeCache.Get( new AttributeService( new RockContext() ).Queryable()
                             .FirstOrDefault( a =>
                                 a.EntityTypeId == entityTypeId &&
                                 a.EntityTypeQualifierColumn.Equals( "ConnectionTypeId", StringComparison.OrdinalIgnoreCase ) &&
@@ -405,7 +405,6 @@ namespace RockWeb.Plugins.com_kfs.Connection
                         newDdl.EnableViewState = true;
                         newDdl.AutoPostBack = true;
                         newDdl.SelectedIndexChanged += new EventHandler( ddlAttributeOne_SelectedIndexChanged );
-
                     }
                 }
 
@@ -454,15 +453,12 @@ namespace RockWeb.Plugins.com_kfs.Connection
                         newDdl.EnableViewState = true;
                         newDdl.AutoPostBack = true;
                         newDdl.SelectedIndexChanged += new EventHandler( ddlAttributeTwo_SelectedIndexChanged );
-
                     }
                 }
-
             }
         }
-        
-        #endregion
 
+        #endregion
 
         protected void ddlAttributeOne_SelectedIndexChanged( object sender, EventArgs e )
         {
@@ -478,7 +474,6 @@ namespace RockWeb.Plugins.com_kfs.Connection
                     control = phAttributeTwo.Controls[2] as DropDownList;
                     control.SelectedIndex = 0;
                 }
-                
             }
             UpdateList();
         }

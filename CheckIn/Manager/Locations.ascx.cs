@@ -27,9 +27,13 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     /// <summary>
     /// Block used to view current check-in counts and locations
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Locations" )]
     [Category( "KFS > Check-in > Manager" )]
     [Description( "Block used to view current check-in counts and locations." )]
+
     [CustomRadioListField( "Navigation Mode", "Navigation and attendance counts can be grouped and displayed either by 'Group Type > Group Type (etc) > Group > Location' or by 'location > location (etc).'  Select the navigation hierarchy that is most appropriate for your organization.", "T^Group Type,L^Location,", true, "T", "", 0, "Mode" )]
     [GroupTypeField( "Check-in Type", "The Check-in Area to display.  This value can also be overridden through the URL query string key (e.g. when navigated to from the Check-in Type selection block).", false, "", "", 1, "GroupTypeTemplate", Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_TEMPLATE )]
     [LinkedPage( "Person Page", "The page used to display a selected person's details.", order: 2 )]
@@ -49,6 +53,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
     [TextField( "Label Width", "The default width of label for reprint.", true, "4", "Print Actions", 2 )]
     [TextField( "Label Height", "The default height of label for reprint.", true, "2", "Print Actions", 3 )]
     [BooleanField( "Show ZPL Print Button", "A flag indicating if the ZPL Print Button should be displayed.", false, "Print Actions", 4 )]
+
+    #endregion
+
     public partial class Locations : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -2529,25 +2536,25 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
         var labelData = {0};
 
 		function onDeviceReady() {{
-            try {{			
+            try {{
                 printLabels();
-            }} 
+            }}
             catch (err) {{
                 console.log('An error occurred printing labels: ' + err);
             }}
 		}}
-		
+
 		function alertDismissed() {{
 		    // do something
 		}}
-		
+
 		function printLabels() {{
 		    ZebraPrintPlugin.printTags(
-            	JSON.stringify(labelData), 
-            	function(result) {{ 
+            	JSON.stringify(labelData),
+            	function(result) {{
 			        console.log('Tag printed');
 			    }},
-			    function(error) {{   
+			    function(error) {{
 				    // error is an array where:
 				    // error[0] is the error message
 				    // error[1] determines if a re-print is possible (in the case where the JSON is good, but the printer was not connected)

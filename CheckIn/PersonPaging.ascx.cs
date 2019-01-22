@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
-using System.Web.UI;
 
 using Rock;
 using Rock.Attribute;
@@ -19,21 +17,27 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
     /// <summary>
     /// Block that adds a content channel item for person paging.
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Person Paging" )]
-    [Category( "Check-in > Manager" )]
+    [Category( "KFS > Check-in > Manager" )]
     [Description( "Block that adds a content channel item for person paging." )]
+
     [ContentChannelField( "Person Paging Content Channel", "The Content Channel that where new Content Channel Items will be created.", category: "Content Channel", order: 0 )]
     [TextField( "Person Attribute Key", "The Attribute Key of the Content Channel Item where the person is stored. Default: Person", true, "Person", category: "Content Channel", order: 1 )]
     [TextField( "Button Text", "The button text to display for adding new Content Channel Items.", false, "Page Person", "Text Options", order: 0 )]
     [CampusField( "Context Campus", "The campus context that this button should be displayed for. If no context is set, the button will alway appear.", false, "", "Context", 0 )]
     [ContextAware]
 
+    #endregion
+
     public partial class PersonPaging : RockBlock
     {
         #region Fields
 
         // used for public / protected properties
-        Guid? personGuid = null;
+        private Guid? personGuid = null;
 
         #endregion
 
@@ -99,7 +103,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
-
         }
 
         protected void lbPersonPaging_Click( object sender, EventArgs e )

@@ -6,8 +6,6 @@
         <div id="pnlViewDetails" runat="server">
             <asp:Literal ID="lResults" runat="server" />
 
-            <asp:Literal ID="lDebug" runat="server" />
-
             <div class="actions">
                 <asp:LinkButton ID="lbEdit" runat="server" Text="Edit" CssClass="btn btn-link" CausesValidation="false" OnClick="lbEdit_Click" />
             </div>

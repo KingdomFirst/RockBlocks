@@ -11,19 +11,24 @@ using Rock.Model;
 
 namespace RockWeb.Plugins.com_kfs.CheckIn
 {
+    #region Block Attributes
+
     [DisplayName("Check Out Person Select")]
     [Category("KFS > Check-in")]
-    [Description("Lists people who match the selected family and provides option of selecting multiple people to check-out.")]
+    [Description("Lists people who match the selected family and provides option of selecting multiple people to check-out. The KFS Version will not allow Checkout if a specific Person Attribute has a value.")]
 
     [TextField( "Title", "Title to display. Use {0} for family name", false, "{0} Check Out", "Text", 5 )]
     [TextField( "Caption", "", false, "Select People", "Text", 6 )]
     [BooleanField( "Check Out disabled by attribute key", "Should check out be prevented by the following attribute key having a value.", false, "Prevent Checkout", 7, "CheckoutDisabled" )]
     [TextField( "Attribute Key", "", false, "PagerId", "Prevent Checkout", 8 )]
     [CodeEditorField( "Attribute Error Text", "Error message displayed when the attribute is not empty and a person attempts to check out.", defaultValue: "We're sorry, you cannot check out via this kiosk at this time, please see the info desk for more information.", category: "Prevent Checkout", order: 9 )]
+
+    #endregion
+
     public partial class CheckOutPersonSelect : CheckInBlock
     {
-        bool _hidePhotos = false;
-        bool _checkoutdisabled = false;
+        private bool _hidePhotos = false;
+        private bool _checkoutdisabled = false;
 
         protected override void OnInit( EventArgs e )
         {
@@ -74,7 +79,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn
 
             if ( CurrentWorkflow == null || CurrentCheckInState == null )
             {
-                NavigateToHomePage(); 
+                NavigateToHomePage();
             }
             else
             {

@@ -4,20 +4,21 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Data.Entity;
 using System.Linq;
-using System.Text;
 using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Communication;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Finance
 {
+    #region Block Attributes
+
     [DisplayName( "Pledge Entry RVC" )]
     [Category( "KFS > Finance" )]
     [Description( "Allows a website visitor to create pledge for the configured accounts, start and end date. This block also creates a new person record if a matching person could not be found." )]
@@ -26,13 +27,10 @@ namespace RockWeb.Plugins.com_kfs.Finance
     [AccountField( "Account", "The account that new pledges will be allocated toward", true, Rock.SystemGuid.FinancialAccount.GENERAL_FUND, "", Order = 2 )]
     [DefinedValueField( Rock.SystemGuid.DefinedType.PERSON_CONNECTION_STATUS, "New Connection Status", "Person connection status to assign to a new user.", true, false, Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_PARTICIPANT, Order = 3 )]
     [DateRangeField( "Pledge Date Range", "Date range of the pledge.", false, Order = 4 )]
-
     [BooleanField( "Show Pledge Frequency", "Show the pledge frequency option to the user.", DefaultValue = "false", Order = 5 )]
     [BooleanField( "Require Pledge Frequency", "Require that a user select a specific pledge frequency (when pledge frequency is shown)", DefaultValue = "false", Order = 6 )]
-
     [TextField( "Save Button Text", "The Text to shown on the Save button", true, "Save", Order = 7 )]
     [TextField( "Note Message", "Message to show at the bottom of the create pledge block.", false, "Note: This commitment is a statement of intent and may be changed as your circumstances change.", Order = 8 )]
-
     [CodeEditorField( "Receipt Text", "The text (or html) to display as the pledge receipt. <span class='tip tip-lava'></span> <span class='tip tip-html'>", CodeEditorMode.Lava, CodeEditorTheme.Rock, 200, Order = 9, DefaultValue =
         @"
 <h1>Thank You!</h1>
@@ -43,11 +41,13 @@ namespace RockWeb.Plugins.com_kfs.Finance
     <a href='~/page/186?PledgeId={{ FinancialPledge.Id  }}' class='btn btn-default' >Setup a Giving Profile</a>
 </p>
 " )]
-
     [SystemEmailField( "Confirmation Email Template", "Email template to use after submitting a new pledge. Leave blank to not send an email.", false, "", Order = 10 )]
     [BooleanField( "Enable Debug", "Outputs the object graph to help create your liquid syntax.", false, Order = 11 )]
     [GroupTypeField( "Select Group Type", "Optional Group Type that if selected will display a selection of groups that current user belongs to that can then be associated with the pledge", false, "", "", 12 )]
     [BooleanField( "Use Campus Context", "If true, then child funds will be evaluated and the first fund encountered with current campus context will be targeted.  Useful for annual campaigns where pledging needs to be campus specific.", DefaultValue = "false", Order = 13 )]
+
+    #endregion
+
     public partial class PledgeEntry : RockBlock
     {
         /// <summary>

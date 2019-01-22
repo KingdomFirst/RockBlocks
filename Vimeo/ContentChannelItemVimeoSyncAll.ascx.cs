@@ -1,15 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Security;
+
 using com.kfs.Vimeo;
 using VimeoDotNet;
-using System.Web.UI.WebControls;
-using System.Collections.Generic;
 
 namespace RockWeb.Plugins.com_kfs.Vimeo
 {
@@ -184,7 +186,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
             var lookupContext = new RockContext();
             var contentChannelItems = new List<ContentChannelItem>();
             var completed = 0;
-            
+
             var client = new VimeoClient( _accessToken );
             var vimeo = new Video();
             var width = GetAttributeValue( "ImageWidth" ).AsInteger();
@@ -266,7 +268,6 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
                 SaveContentChannelItems( contentChannelItems );
                 contentChannelItems.Clear();
             }
-            
         }
 
         private void SaveContentChannelItems( List<ContentChannelItem> contentChannelItems  )
@@ -283,6 +284,5 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
         }
 
         #endregion
-
     }
 }

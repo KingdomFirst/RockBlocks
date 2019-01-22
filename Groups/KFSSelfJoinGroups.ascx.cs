@@ -1,27 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 using Rock;
+using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
-using Rock.Web.Cache;
-using Rock.Web.UI.Controls;
-using Rock.Attribute;
 using Rock.Security;
+using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
 {
     /// <summary>
     /// Template block for developers to use to start a new block.
     /// </summary>
-    [DisplayName( "KFS Self Join Groups" )]
+
+    #region Block Attributes
+
+    [DisplayName( "Self Join Groups KFS" )]
     [Category( "KFS > Groups" )]
     [Description( "Can Add/Remove a person from a group based on inputs from the URL query string (GroupId, PersonGuid) or let them manage their group membership." )]
+
     [GroupField( "Parent Group", "This is the parent group whose first level descendents will be used to populate the list.", true, order: 0 )]
     [CodeEditorField( "Success Message", "Lava template to display when person saves their selections.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, true, @"<div class='alert alert-success'>
     {{ Person.NickName }}, your selections have been successfully submitted.
@@ -45,8 +47,10 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
     [BooleanField( "Show Details", "Display detail information about the group beneath its checkbox when clicked.", order: 9 )]
     [BooleanField( "Expand Description", "Flag to determine whether to expand the description panel by default.", order: 10 )]
     [BooleanField( "None of the above", "Include a none of the above option when creating choices.", order: 11 )]
-
     [BooleanField( "Enable Debug", "Shows the Lava variables available for this block", order: 13 )]
+
+    #endregion
+
     public partial class KFSSelfJoinGroups : Rock.Web.UI.RockBlock
     {
         #region Fields
@@ -120,10 +124,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                 this.Page.Header.Controls.Add( expandDescriptions );
             }
 
-
             if ( !Page.IsPostBack )
             {
-
                 Group group = null;
                 Guid personGuid = Guid.Empty;
                 GroupTypeRole groupMemberRole = null;
@@ -161,7 +163,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                 }
 
                     _action = Request.QueryString["action"] != string.Empty && Request.QueryString["action"] != null ? Request.QueryString["action"] : string.Empty;
-
 
                 // get status
                 var groupMemberStatus = this.GetAttributeValue( "GroupMemberStatus" ).ConvertToEnum<GroupMemberStatus>( GroupMemberStatus.Active );
@@ -264,7 +265,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                                 return;
                             }
                         }
-
                     }
                     else
                     {
@@ -288,7 +288,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
 
                     string templateSuccess = GetAttributeValue( "AddSuccessMessage" );
                     lContent.Text = templateSuccess.ResolveMergeFields( mergeFields );
-
                 }
                 // hide alert
                 divAlert.Visible = false;
@@ -300,7 +299,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                     lDebug.Visible = true;
                     lDebug.Text = mergeFields.lavaDebugInfo();
                 }
-
             }
             if (_action != "unsubscribe" && _action != "subscribe")
             {
@@ -322,8 +320,8 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
-
         }
+
         protected void btnSave_Click( object sender, EventArgs e )
         {
             //
@@ -349,10 +347,11 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
         #endregion
 
         #region Methods
+
         protected void SaveSelections( Control c )
         {
             CheckBox cbox;
-            int i, groupID;
+            int groupID;
             GroupTypeRole groupMemberRole = null;
             Guid personGuid = Guid.Empty;
 
@@ -417,7 +416,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
 
                 if ( cbox.Checked == true )
                 {
-
                     // get group role id from url
                     Guid groupMemberRoleGuid = Guid.Empty;
                     if ( Guid.TryParse( GetAttributeValue( "DefaultGroupMemberRole" ), out groupMemberRoleGuid ) )
@@ -455,7 +453,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
                                 divAlert.Visible = false;
                             }
                         }
-
                     }
                     else
                     {
@@ -537,7 +534,6 @@ namespace RockWeb.Plugins.com_kingdomfirstsolutions.Groups
 
             foreach ( var g in groups )
             {
-
                 //
                 // Create a div to add each profile check box into.
                 // This is gives us a place to add additional content when checked.

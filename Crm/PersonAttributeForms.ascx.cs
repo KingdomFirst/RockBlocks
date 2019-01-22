@@ -24,21 +24,21 @@ namespace RockWeb.Plugins.com_kfs.Crm
     /// <summary>
     /// Block to capture person data from currently logged in user.
     /// </summary>
+
+    #region Block Attributes
+
+    // Block Properties
     [DisplayName( "Person Attribute Forms Advanced" )]
     [Category( "KFS > CRM" )]
     [Description( "Block to capture person data from currently logged in user." )]
 
-    // Block Properties
-
     // Settings
     [BooleanField( "Allow Connection Opportunity", "Determines if a url parameter of 'OpportunityId' should be evaluated when complete.  Example: OpportunityId=1 or OpportunityId=1,2,3", false, "Connections", 0 )]
-
     [BooleanField( "Allow Group Membership", "Determines if a url parameter of 'GroupGuid' or 'GroupId' should be evaluated when complete.", false, "Groups", 0 )]
     [BooleanField( "Enable Passing Group Id", "If enabled, allows the ability to pass in a group's Id (GroupId=) instead of the Guid.", true, "Groups", 1 )]
     [GroupTypesField( "Allowed Group Types", "This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.", true, Rock.SystemGuid.GroupType.GROUPTYPE_SMALL_GROUP, "Groups", 2 )]
     [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "Groups", 3 )]
     [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "Groups", 4 )]
-
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
@@ -46,6 +46,8 @@ namespace RockWeb.Plugins.com_kfs.Crm
     [LinkedPage( "Done Page", "The page to redirect to when done.", false, "", "CustomSetting" )]
     [TextField( "Forms", "The forms to show.", false, "", "CustomSetting" )]
     [CodeEditorField( "Confirmation Text", "", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "CustomSetting" )]
+
+    #endregion
 
     public partial class PersonAttributeForms : RockBlockCustomSettings
     {
@@ -290,7 +292,6 @@ namespace RockWeb.Plugins.com_kfs.Crm
                         var person = new PersonService( rockContext ).Get( CurrentPersonId.Value );
                         if ( person != null )
                         {
-
                             var pagePersonFields = new List<PersonFieldType>();
                             if ( saveEachPage && CurrentPageIndex > 0 && CurrentPageIndex <= FormState.Count )
                             {

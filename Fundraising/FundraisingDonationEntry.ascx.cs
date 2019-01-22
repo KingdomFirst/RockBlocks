@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -17,15 +16,19 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Fundraising
 {
+    #region Block Attributes
+
     [DisplayName( "Fundraising Donation Entry KFS" )]
-    [Category( "Fundraising" )]
-    [Description( "Block that starts out a Fundraising Donation by prompting for information prior to going to a TransactionEntry block" )]
+    [Category( "KFS > Fundraising" )]
+    [Description( "Block that starts out a Fundraising Donation by prompting for information prior to going to a TransactionEntry block.  The only thing this block does not in core is evaluate Group Types that Inherit Fundraising Group Types." )]
 
     [LinkedPage( "Transaction Entry Page", "The Transaction Entry page to navigate to after prompting for the Fundraising Specific inputs", required: true, order: 1 )]
     [BooleanField( "Show First Name Only", "Only show the First Name of each participant instead of Full Name", defaultValue: false, order: 2 )]
     [BooleanField( "Allow Automatic Selection", "If enabled and there is only one participant and registrations are not enabled then that participant will automatically be selected and this page will get bypassed.", defaultValue: false, order: 3 )]
     [GroupField( "Root Group", "Select the group that will be used as the base of the list.", required: false, order: 4 )]
-   
+
+    #endregion
+
     public partial class FundraisingDonationEntry : RockBlock
     {
         #region Base Control Methods
@@ -127,7 +130,6 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 
         private IEnumerable<int> GetChildGroupIds( Guid? rootGroupGuid, RockContext context )
         {
-
             var service = new GroupService( context );
             var groupIds = new List<int>();
 
@@ -140,7 +142,6 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             }
 
             return groupIds;
-
         }
 
         /// <summary>

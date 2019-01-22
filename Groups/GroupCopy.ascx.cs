@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data.Entity;
 using System.Linq;
 
 using Rock;
@@ -13,10 +12,15 @@ using Rock.Web.UI;
 
 namespace RockWeb.Plugins.com_kfs.Groups
 {
+    #region Block Attributes
+
     [DisplayName( "Group Copy Button" )]
     [Category( "KFS > Groups" )]
     [Description( "Allows a copy button to be placed on any group aware page to be able to copy the group to a new one, such as group leader toolbox." )]
+
     [BooleanField( "Copy Location", "Copies the location of the existing group to the new group as well.", true, "" )]
+
+    #endregion
 
     public partial class GroupCopy : Rock.Web.UI.RockBlock, ISecondaryBlock
     {
@@ -30,7 +34,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlGroupCopy );
-
         }
 
         /// <summary>
@@ -113,7 +116,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     .FirstOrDefault();
                 RockPage.SaveSharedItem( key, group );
             }
-            
+
             foreach ( var member in group.Members )
             {
                 if ( member.PersonId.Equals( CurrentPersonId ) && member.GroupRole.IsLeader )
@@ -271,6 +274,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 NavigateToCurrentPage( new Dictionary<string, string> { { "GroupId", newGroup.Id.ToString() } } );
             }
         }
+
         /// <summary>
         /// Hook so that other blocks can set the visibility of all ISecondaryBlocks on it's page
         /// </summary>

@@ -5,20 +5,26 @@ using System.Linq;
 using System.Text;
 using System.Web;
 using System.Web.UI;
-using com.kfs.Reporting.SQLReportingServices;
+
+
 using Rock;
 using Rock.Attribute;
 using Rock.Web.UI;
+
+using com.kfs.Reporting.SQLReportingServices;
 
 namespace RockWeb.Plugins.com_kfs.Reporting
 {
     /// <summary>
     /// KFS Reporting Services Tree View
     /// </summary>
-    /// <seealso cref="Rock.Web.UI.RockBlock" />
+
+    #region Block Attributes
+
     [DisplayName( "Reporting Services Tree" )]
     [Category( "KFS > Reporting" )]
     [Description( "SQL Server Reporting Services Tree View" )]
+
     [BooleanField( "Show Hidden Items", "Determines if hidden items should be displayed. Default is false.", false, "Configuration", 3, "ShowHiddenItems" )]
     [BooleanField( "Show Child Items", "Determines if child items should be displayed. Default is true", true, "Configuration", 0, "ShowChildItems" )]
     [TextField( "Root Folder", "Root/Base Folder", false, "/", "Configuration", 2, "RootFolder" )]
@@ -26,6 +32,9 @@ namespace RockWeb.Plugins.com_kfs.Reporting
     [CustomRadioListField( "Selection Mode", "Reporting Services Tree selection mode.", "Report,Folder", true, "Report", "Configuration", 2, "SelectionMode" )]
     [LinkedPage( "Report Viewer Page", "The page that contains the Reporting Services Report Viewer. If populated all report nodes will be clickable.", false, "", "Configuration", 4, "ReportViewerPage" )]
     [BooleanField( "Standalone Mode", "A flag indicating if this block is on a shared page with a report viewer or if it is on it's own page.", false, "Configuration", 4, "StandaloneMode" )]
+
+    #endregion
+
     public partial class ReportingServicesFolderTree : RockBlock
     {
         private bool showHiddenItems = false;
@@ -69,8 +78,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             ShowError( string.Empty, string.Empty );
             if ( !Page.IsPostBack )
             {
-                
-
                 if ( standaloneMode )
                 {
                     pnlFolders.CssClass += " panel panel-block";
@@ -95,8 +102,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             {
                 ShowError( "Configuration Error", "Reporting Services has not been configured." );
             }
-
-            
         }
 
         /// <summary>
@@ -108,7 +113,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             {
                 var expandedItems = new List<string>();
                 var selectedItemPath = PageParameter( "ReportPath" );
-                
+
                 if ( !string.IsNullOrWhiteSpace( selectedItemPath ) )
                 {
                     selectedItemPath = HttpUtility.UrlDecode( selectedItemPath );
@@ -133,7 +138,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 {
                     reportItem = ReportingServiceItem.GetReportTree( rootFolder, showChildItems, showHiddenItems );
                 }
-                
+
                 // also get any additional expanded nodes
                 var expandedItemParams = PageParameter( "ExpandedItems" );
                 if ( !string.IsNullOrWhiteSpace( expandedItemParams ) )
@@ -154,7 +159,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
                 treeBuilder.AppendLine( "<ul id=\"treeview\">" );
 
                 BuildTreeNode( reportItem, expandedItems.Select( s => s.Substring( 2 ) ).ToList(), ref treeBuilder );
-                
+
                 treeBuilder.AppendLine( "</ul>" );
                 lFolders.Text = treeBuilder.ToString();
             }
@@ -186,7 +191,7 @@ namespace RockWeb.Plugins.com_kfs.Reporting
             string iconClass;
             string nodeIdPrefix;
             string viewerUrl = null;
-            
+
             switch ( item.Type )
             {
                 case ItemType.Folder:
@@ -267,7 +272,6 @@ namespace RockWeb.Plugins.com_kfs.Reporting
         {
             var script = string.Format( @"
 Sys.Application.add_load(function () {{
-    
     var $selectedItem = $('#{0}'), $expandedItems = $('#{2}');
     if ( $expandedItems.val() )
     {{
@@ -276,7 +280,7 @@ Sys.Application.add_load(function () {{
             for ( var i=0, l=arr.length; i < l; i++ )
             {{
                 // fixes report viewer postback destroying the expanded state
-                $('li[data-id=""' + arr[i] + '""]' ).find( '.rocktree-children' ).first().css('display', 'block');  
+                $('li[data-id=""' + arr[i] + '""]' ).find( '.rocktree-children' ).first().css('display', 'block');
             }}
         }});
     }}
@@ -326,10 +330,9 @@ Sys.Application.add_load(function () {{
     }});
 
     $( '#folders' ).show();
-}});    
+}});
 ", hfSelectedItem.ClientID, hfSelectionType.ClientID, hfExpandedItems.ClientID );
             ScriptManager.RegisterStartupScript( upMain, this.GetType(), "treeViewScript", script, true );
-            
         }
     }
 }

@@ -8,7 +8,9 @@ using System.Linq;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
+
 using Newtonsoft.Json;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -19,25 +21,76 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
+
+
+using System.Text;
+using Rock.Constants;
+using Rock.Financial;
+using Rock.Web;
+using Attribute = Rock.Model.Attribute;
+
+
+
 namespace RockWeb.Plugins.com_kfs.Event
 {
     /// <summary>
     /// Displays interface for editing the registration attribute values and fees for a given registrant.
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Advanced Registrant Detail" )]
     [Category( "KFS > Advanced Event Registration" )]
     [Description( "Displays interface for editing the registration attribute values and fees for a given registrant." )]
+
     [LinkedPage( "Add Family Link", "Select the page where a new family can be added. If specified, a link will be shown which will open in a new window when clicked", false, "6a11a13d-05ab-4982-a4c2-67a8b1950c74,af36e4c2-78c6-4737-a983-e7a78137ddc7", "", 2 )]
     [SecurityAction( "AddFamilies", "The roles and/or users that can add new families to the system." )]
+
+    #endregion
+
     public partial class RegistrantDetail : RockBlock
     {
         #region Properties
 
+        /// <summary>
+        /// Gets or sets the TemplateState
+        /// </summary>
+        /// <value>
+        /// The state of the template.
+        /// </value>
         private RegistrationTemplate TemplateState { get; set; }
+
+        /// <summary>
+        /// Gets or sets the RegistrantSate
+        /// </summary>
+        /// <value>
+        /// The state of the registrant.
+        /// </value>
         private RegistrantInfo RegistrantState { get; set; }
-        private Group RegistrationGroup { get; set; }
-        private bool RegistrantPlacedInGroup { get; set; } // all other registration fields stored as FieldValue objects
+
+        /// <summary>
+        /// Gets or sets the registration instance identifier.
+        /// </summary>
+        /// <value>
+        /// The registration instance identifier.
+        /// </value>
         private int RegistrationInstanceId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the registration group.
+        /// </summary>
+        /// <value>
+        /// The registration group.
+        /// </value>
+        private Group RegistrationGroup { get; set; }
+
+        /// <summary>
+        /// Gets or sets the bool if the registrant has been placed in group.
+        /// </summary>
+        /// <value>
+        /// Gets or sets the bool if the registrant has been placed in group.
+        /// </value>
+        private bool RegistrantPlacedInGroup { get; set; } // all other registration fields stored as FieldValue objects
 
         #endregion
 

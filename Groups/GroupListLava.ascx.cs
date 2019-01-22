@@ -1,23 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
-using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
-using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.RsvpGroups
 {
+    #region Block Attributes
+
     [DisplayName( "Group List Lava" )]
     [Category( "KFS > Groups" )]
     [Description( "Lists Groups for lava display." )]
@@ -29,6 +27,8 @@ namespace RockWeb.Plugins.com_kfs.RsvpGroups
     [BooleanField( "Display Inactive Groups", "Include inactive groups in the lava results", false, order: 4 )]
     [CustomDropdownListField( "Initial Active Setting", "Select whether to initially show all or just active groups in the lava", "0^All,1^Active", false, "1", "", 5 )]
     [TextField( "Inactive Parameter Name", "The page parameter name to toggle inactive groups", false, "showinactivegroups", order: 6 )]
+
+    #endregion
 
     public partial class RsvpGroupList : RockBlock
     {
@@ -101,7 +101,6 @@ namespace RockWeb.Plugins.com_kfs.RsvpGroups
 
             if ( includeGroupTypeGuids.Any() )
             {
-
                 RockContext rockContext = new RockContext();
 
                 var qry = new GroupService( rockContext ).Queryable().Where( g => g.IsPublic == true );
@@ -179,6 +178,5 @@ namespace RockWeb.Plugins.com_kfs.RsvpGroups
         }
 
         #endregion
-
     }
 }

@@ -20,6 +20,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
     [DisplayName( "Content Channel Item Vimeo Sync" )]
     [Category( "KFS > Vimeo" )]
     [Description( "Syncs Vimeo data into Content Channel Item Attributes." )]
+
     [TextField( "Vimeo Id Key", "The attribute key containing the Vimeo Id", true, "", "", 0 )]
     [EncryptedTextField( "Access Token", "The authentication token for Vimeo.", true, "", "", 1 )]
     [BooleanField( "Preview", "Flag indicating if a preview of the Vimeo video should displayed.", true, "", 2 )]
@@ -242,7 +243,7 @@ namespace RockWeb.Plugins.com_kfs.Vimeo
                 }
             }
         }
-        
+
         protected void btnVimeoSync_Click( object sender, EventArgs e )
         {
             var itemId = 0;

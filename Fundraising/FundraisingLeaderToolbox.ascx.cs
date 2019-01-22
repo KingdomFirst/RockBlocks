@@ -18,9 +18,11 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Fundraising
 {
+    #region Block Attributes
+
     [DisplayName( "Fundraising Leader Toolbox KFS" )]
-    [Category( "Fundraising" )]
-    [Description( "The Leader Toolbox for a fundraising opportunity" )]
+    [Category( "KFS > Fundraising" )]
+    [Description( "The Leader Toolbox for a fundraising opportunity.  This version adds additional Lava Objects for the summary area as well as support for the KFS Group Member Person Attributes." )]
 
     [CodeEditorField( "Summary Lava Template", "Lava template for what to display at the top of the main panel. Usually used to display title and other details about the fundraising opportunity.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false,
          @"
@@ -29,7 +31,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 {% assign dateRangePartsSize = dateRangeParts | Size %}
 {% if dateRangePartsSize == 2 %}
     {{ dateRangeParts[0] | Date:'MMMM dd, yyyy' }} to {{ dateRangeParts[1] | Date:'MMMM dd, yyyy' }}<br/>
-{% elsif dateRangePartsSize == 1  %}      
+{% elseif dateRangePartsSize == 1  %}
     {{ dateRangeParts[0] | Date:'MMMM dd, yyyy' }}
 {% endif %}
 {{ Group | Attribute:'OpportunityLocation' }}
@@ -41,13 +43,15 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
 </p>
 ", order: 1 )]
 
-    [LinkedPage( "Participant Page", "The partipant page for a participant of this fundraising opportunity", required: false, order: 2 )]
+    [LinkedPage( "Participant Page", "The participant page for a participant of this fundraising opportunity", required: false, order: 2 )]
     [LinkedPage( "Main Page", "The main page for the fundraising opportunity", required: false, order: 3 )]
     [BooleanField( "Show Member Funding Goal", "Determines if the Funding Goal of the Group Member should be displayed.", order: 4 )]
     [BooleanField( "Show Member Total Funding", "Determines if the Total Funding of the Group Member should be displayed.", order: 5 )]
     [BooleanField( "Show Member Funding Remaining", "Determines if the Funding Remaining of the Group Member should be displayed.", true, order: 6 )]
     [CustomDropdownListField( "Export Group Member Attributes", "Determines which Group Members Attributes should be included in the Excel export.", "0^None,1^All,2^Display In List", defaultValue: "-1", order: 7 )]
     [BooleanField( "Bypass Attribute Security", "Determines if the field level security on each attribute should be ignored.", order: 8 )]
+
+    #endregion
 
     public partial class FundraisingLeaderToolbox : RockBlock
     {
@@ -244,7 +248,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
             _groupTotals.Add( "TotalFundraisingGoal", totalFundraisingGoal );
             _groupTotals.Add( "TotalContribution", totalContribution );
             _groupTotals.Add( "TotalFundingRemaining", totalFundingRemaining );
-            
+
             //
             // Attributes
             //
@@ -341,7 +345,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 // Add row attribute object to grid's object list
                 gGroupMembers.ObjectList.Add( gm.Id.ToString(), attributeFieldObject );
             }
-            
+
             gGroupMembers.DataSource = groupMemberList;
             gGroupMembers.DataBind();
         }
@@ -353,7 +357,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
         {
             var bypassSecurity = GetAttributeValue( "BypassAttributeSecurity" ).AsBoolean();
 
-            // Parse the attribute filters 
+            // Parse the attribute filters
             AvailableAttributes = new List<AttributeCache>();
             if ( _group != null && _gmAttributeExport > 0 )
             {
@@ -387,7 +391,7 @@ namespace RockWeb.Plugins.com_kfs.Fundraising
                 if ( _group.Attributes != null )
                 {
                     var attributeFieldTypeId = FieldTypeCache.Get( Rock.SystemGuid.FieldType.ATTRIBUTE ).Id;
-                    var personAttributes = _group.Attributes.Values.FirstOrDefault( a => 
+                    var personAttributes = _group.Attributes.Values.FirstOrDefault( a =>
                                                 a.FieldTypeId == attributeFieldTypeId &&
                                                 a.QualifierValues.ContainsKey( "entitytype" ) &&
                                                 a.QualifierValues.Values.Any( v => v.Value.Equals( Rock.SystemGuid.EntityType.PERSON, StringComparison.CurrentCultureIgnoreCase ) )

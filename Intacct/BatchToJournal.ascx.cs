@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using com.kfs.Intacct;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -10,11 +9,16 @@ using Rock.Model;
 using Rock.Security;
 using Rock.Web.UI;
 
+using com.kfs.Intacct;
+
 namespace RockWeb.Plugins.com_kfs.Intacct
 {
+    #region Block Attributes
+
     [DisplayName( "Intacct Batch to Journal" )]
-    [Category( "com_kfs > Intacct" )]
+    [Category( "KFS > Intacct" )]
     [Description( "Block used to create Journal Entries in Intacct from a Rock Financial Batch." )]
+
     [TextField( "Journal Id", "The Intacct Symbol of the Journal that the Entry should be posted to. For example: GJ", true, "", "", 0 )]
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Export to Intacct", "", 1 )]
     [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.", true, "", 2 )]
@@ -25,6 +29,9 @@ namespace RockWeb.Plugins.com_kfs.Intacct
     [EncryptedTextField( "User Id", "The Intacct User Id. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 3 )]
     [EncryptedTextField( "User Password", "The Intacct User Password. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 4 )]
     [EncryptedTextField( "Location Id", "The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.", false, "", "Configuration", 5 )]
+
+    #endregion
+
     public partial class BatchToJournal : RockBlock
     {
         private int _batchId = 0;
@@ -216,7 +223,7 @@ namespace RockWeb.Plugins.com_kfs.Intacct
                 var oldDate = financialBatch.GetAttributeValue( "com.kfs.Intacct.DateExported" ).AsDateTime().ToString();
                 var newDate = string.Empty;
                 History.EvaluateChange( changes, "Date Exported", oldDate, newDate );
-                
+
                 //
                 // Save the changes
                 //

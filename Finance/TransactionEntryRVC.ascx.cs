@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Communication;
@@ -19,14 +20,16 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.rvc.Finance
 {
-    #region Block Attributes
-
     /// <summary>
     /// Add a new one-time or scheduled transaction
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Transaction Entry RVC" )]
     [Category( "KFS > Finance" )]
     [Description( "Creates a new financial transaction or scheduled transaction." )]
+
     [FinancialGatewayField( "Credit Card Gateway", "The payment gateway to use for Credit Card transactions", false, "", "", 0, "CCGateway" )]
     [FinancialGatewayField( "ACH Gateway", "The payment gateway to use for ACH (bank account) transactions", false, "", "", 1, "ACHGateway" )]
     [TextField( "Batch Name Prefix", "The batch prefix name to use when creating a new batch", false, "Online Giving", "", 2 )]

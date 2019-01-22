@@ -13,21 +13,24 @@ using Rock.Web.UI;
 
 namespace RockWeb.Plugins.com_kfs.Utility
 {
-    /// <summary>
-    /// Block that exposes Foreign Objects.
-    /// </summary>
+    #region Block Attributes
+
     [DisplayName( "XSL Transform" )]
     [Category( "KFS > Utility" )]
     [Description( "This block applies a provided XSL Transform to a source XML File." )]
+
     [TextField( "XML File Path", "The path of the XML file. Example: ~/Plugins/com_kfs/XslTransform/sample/books.xml", true )]
     [TextField( "XSLT File Path", "The path of the XSLT file. Example: ~/Plugins/com_kfs/XslTransform/sample/output.xsl", true )]
     [BooleanField("Raw XML","Flag indicating if the output should be only the result of the XSL Transform.")]
+
+    #endregion
+
     public partial class XsltFromXml : RockBlock
     {
         #region Fields
 
-        string _xml = string.Empty;
-        string _xslt = string.Empty;
+        private string _xml = string.Empty;
+        private string _xslt = string.Empty;
 
         #endregion
 
@@ -97,7 +100,7 @@ namespace RockWeb.Plugins.com_kfs.Utility
                     // Load the file to transform.
                     XPathDocument doc = new XPathDocument( _xml );
 
-                    // Create the writer.             
+                    // Create the writer.
                     StringBuilder sb = new StringBuilder();
                     XmlWriter writer = XmlWriter.Create( sb, xslt.OutputSettings );
 

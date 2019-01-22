@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using com.kfs.FinancialEdge;
+
 using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
@@ -16,15 +16,22 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
+using com.kfs.FinancialEdge;
+
 namespace RockWeb.Plugins.com_kfs.FinancialEdge
 {
+    #region Block Attributes
+
     [DisplayName( "Financial Edge Batches to Journal" )]
-    [Category( "com_kfs > Financial Edge" )]
+    [Category( "KFS > Financial Edge" )]
     [Description( "Block used to create Journal Entries in Financial Edge from multiple Rock Financial Batches." )]
+
     [LinkedPage( "Detail Page","",true,"606BDA31-A8FE-473A-B3F8-A00ECF7E06EC", order: 0 )]
     [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
     [BooleanField( "Show Accounts Column", "Should the accounts column be displayed.", true, "", 2 )]
     [TextField( "Journal Type", "The Financial Edge Journal to post in. For example: JE", true, "", "", 3 )]
+
+    #endregion
 
     public partial class BatchesToJournal : RockBlock, IPostBackEventHandler, ICustomGridColumns
     {
@@ -177,8 +184,8 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                     }}
                 }});";
 
-            string script = string.Format( 
-                scriptFormat, 
+            string script = string.Format(
+                scriptFormat,
                 ddlAction.ClientID, // {0}
                 gBatchList.ClientID,  // {1}
                 Page.ClientScript.GetPostBackEventReference( this, "StatusUpdate" ),  // {2}
@@ -385,7 +392,6 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
             BindGrid();
         }
 
-
         /// <summary>
         /// Handles the RowCreated event of the GBatchList control.
         /// </summary>
@@ -425,7 +431,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                 }
             }
         }
-        
+
         /// <summary>
         /// Handles the RowDataBound event of the gBatchList control.
         /// </summary>
@@ -546,7 +552,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                             errorMessage = string.Format( "{0} is an automated batch and the status can not be modified when the status is pending. The system will automatically set this batch to OPEN when all transactions have been downloaded.", batch.Name );
                             maWarningDialog.Show( errorMessage, ModalAlertType.Warning );
                             return;
-                        } 
+                        }
 
                         batch.Status = newStatus;
 
@@ -696,7 +702,6 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
         /// </summary>
         private void BindGrid( bool isExporting = false )
         {
-
             var txnCountCol = gBatchList.ColumnsOfType<RockBoundField>().FirstOrDefault( c => c.DataField == "TransactionCount" );
             if ( txnCountCol != null )
             {
@@ -895,6 +900,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
         public class BatchAccountSummary
         {
             public int AccountId { get; set; }
+
             public int AccountOrder
             {
                 get
@@ -936,6 +942,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
             }
 
             public decimal ControlAmount { get; set; }
+
             public List<BatchAccountSummary> AccountSummaryList
             {
                 get
@@ -990,7 +997,6 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
                 }
             }
 
-
             public string StatusLabelClass
             {
                 get
@@ -1041,7 +1047,7 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
         /// </summary>
         private void BindAttributes()
         {
-            // Parse the attribute filters 
+            // Parse the attribute filters
             AvailableAttributes = new List<AttributeCache>();
 
             int entityTypeId = new FinancialBatch().TypeId;
@@ -1054,7 +1060,6 @@ namespace RockWeb.Plugins.com_kfs.FinancialEdge
             {
                 AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
             }
-
         }
 
         /// <summary>

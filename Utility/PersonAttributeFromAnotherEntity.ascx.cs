@@ -4,37 +4,39 @@ using System.ComponentModel;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
-using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.com_kfs.Utility
 {
     /// <summary>
     /// Block that allows person attribute value to be set from another entity attribute value.
     /// </summary>
+
+    #region Block Attributes
+
     [DisplayName( "Person Attribute From Another Entity" )]
-    [Category( "com_kfs > Utility" )]
+    [Category( "KFS > Utility" )]
     [Description( "This block displays a person attribute from another entity attribute." )]
 
     [TextField( "Source Entity Attribute Key", "The Attribute Key from the source entity that should be evaluated and presented.", order: 0 )]
     [BooleanField( "Load Attribute Value", "If the person has a current attribute value, should it be loaded?", order: 1 )]
     [LinkedPage( "Redirect Page", "Optional page the user should be sent to after saving attribute value", false, order: 2 )]
-
     [BooleanField( "Checkbox Mode", "Should the attribute be displayed as a simple checkbox?", false, "Mode", 0 )]
     [TextField( "Checkbox Text", "The text that should be placed beside the checkbox.  If left blank, the Attribute Name will be used.", false, "", "Mode", 1 )]
     [CustomDropdownListField( "Checkbox Attribute Value Mode", "The type of value that should be used when saving in Checkbox Mode.", "Date,Boolean", false, "Date", "Mode", 2 )]
     [BooleanField( "Instant Save", "Should the save happen as soon as the box is checked?", false, "Mode", 3 )]
-
     [TextField( "Panel Heading", "The heading that should be displayed above the attribute.", false, "", "Text Settings", 0 )]
     [TextField( "Save Button Text", "The text that the save button should present.", false, "Save", "Text Settings", 1 )]
-
     [ContextAware]
+
+    #endregion
+
     public partial class PersonAttributeFromAnotherEntity : RockBlock, ISecondaryBlock
     {
         #region Base Method Overrides
@@ -235,7 +237,6 @@ namespace RockWeb.Plugins.com_kfs.Utility
                             formattedNewValue = attribute.FieldType.Field.FormatValue( null, newValue, attribute.QualifierValues, false );
                         }
 
-
                         History.EvaluateChange( changes, attribute.Name, formattedOriginalValue, formattedNewValue, attribute.FieldType.Field.IsSensitive() );
                     }
                 }
@@ -290,10 +291,11 @@ namespace RockWeb.Plugins.com_kfs.Utility
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        void Check_Change( Object sender, EventArgs e )
+        private void Check_Change( Object sender, EventArgs e )
         {
             SaveDetails();
         }
+
         #endregion
     }
 }
