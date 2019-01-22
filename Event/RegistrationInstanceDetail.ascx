@@ -659,7 +659,7 @@
                                 <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" TextMode="MultiLine" Rows="4" ValidationGroup="vgAddGroupMember" />
                             </div>
                             <div class="col-md-6">
-                                <Rock:RockDropDownList ID="ddlSubGroup" runat="server" ValidationGroup="vgAddGroupMember" Visible="false" />
+                                <Rock:RockDropDownList ID="ddlSubGroup" runat="server" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockRadioButtonList ID="rblStatus" runat="server" Label="Status" RepeatDirection="Horizontal" Required="true" ValidationGroup="vgAddGroupMember" />
                                 <Rock:RockRadioButtonList ID="rblMoveRegistrants" runat="server" Label="Move Other Registrants" Help="Should registrants led by this person be moved as well?"
@@ -729,7 +729,6 @@
             delay: 500,
             html: true,
             content: function () {
-                //alert('ehy');
                 var dataUrl = Rock.settings.get('baseUrl') + 'api/People/PopupHtml/' + $(this).attr('personid') + '/false';
 
                 var result = $.ajax({
