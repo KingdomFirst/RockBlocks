@@ -13,7 +13,7 @@
                 <asp:Label ID="lblGroupDescription" runat="server"></asp:Label>
             </asp:Panel>
             
-            <Rock:Grid ID="pnlGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="pnlGroupMembers_RowSelected" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
+            <Rock:Grid ID="pnlGroupMembers" runat="server" DisplayType="Full" AllowSorting="true" CssClass="js-grid-group-members" PagerSettings-Visible="false" FooterStyle-HorizontalAlign="Center" >
                 <Columns>
                     <Rock:SelectField></Rock:SelectField>
                     <Rock:RockBoundField DataField="Person.FullName" HeaderText="Name" SortExpression="Person.LastName,Person.NickName" HtmlEncode="false" />
