@@ -182,9 +182,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                 if ( campus.Id.ToString() != CurrentCampusId || scheduleId != CurrentScheduleId || NavData == null )
                 {
+                    CurrentScheduleId = scheduleId;
                     CurrentCampusId = campus.Id.ToString();
                     NavData = GetNavigationData( campus, scheduleId.AsIntegerOrNull() );
-                    CurrentScheduleId = scheduleId;
 
                     if ( Page.IsPostBack )
                     {
@@ -1592,27 +1592,52 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
         private List<DateTime> GetChartTimes( CampusCache campus )
         {
-            // Get the current minute
             var rockNow = campus != null ? campus.CurrentDateTime : RockDateTime.Now;
-            var now = new DateTime( rockNow.Year, rockNow.Month, rockNow.Day, rockNow.Hour, rockNow.Minute, 0 );
+            var times = new List<DateTime>();
+            var scheduleId = CurrentScheduleId.AsInteger();
+            var schedule = new ScheduleService( new RockContext() ).Queryable().AsNoTracking().FirstOrDefault( s => s.Id == scheduleId );
+            var checkInTimes = new CheckInTimes();
 
-            // Find the end mark
-            var endTime = now.AddMinutes( 1 );
-            while ( endTime.Minute % 5 != 0 )
+            if ( schedule != null )
             {
-                endTime = endTime.AddMinutes( 1 );
+                checkInTimes = schedule.GetCheckInTimes( rockNow.Date ).FirstOrDefault();
             }
 
-            // Get the start time
-            var min = GetAttributeValue( "LookbackMinutes" ).AsInteger();
-            var time = endTime.AddMinutes( -min );
-
-            // Get 5 min increments
-            var times = new List<DateTime>();
-            while ( time <= endTime )
+            if ( schedule == null || checkInTimes == null )
             {
-                times.Add( time );
-                time = time.AddMinutes( 5 );
+                // Get the current minute
+                var now = new DateTime( rockNow.Year, rockNow.Month, rockNow.Day, rockNow.Hour, rockNow.Minute, 0 );
+
+                // Find the end mark
+                var endTime = now.AddMinutes( 1 );
+                while ( endTime.Minute % 5 != 0 )
+                {
+                    endTime = endTime.AddMinutes( 1 );
+                }
+
+                // Get the start time
+                var min = GetAttributeValue( "LookbackMinutes" ).AsInteger();
+                var time = endTime.AddMinutes( -min );
+
+                // Get 5 min increments
+                while ( time <= endTime )
+                {
+                    times.Add( time );
+                    time = time.AddMinutes( 5 );
+                }
+            }
+            else
+            {
+                
+                var endTime = checkInTimes.CheckInEnd;
+                var time = checkInTimes.CheckInStart;
+
+                // Get every min of checkin window
+                while ( time <= endTime )
+                {
+                    times.Add( time );
+                    time = time.AddMinutes( 1 );
+                }
             }
 
             return times;
@@ -1798,7 +1823,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                 }
                             }
 
-                            if ( GetAttributeValue( "IncludeGroupMove" ).AsBoolean() )
+                            if ( _configuredMode == "T" && GetAttributeValue( "IncludeGroupMove" ).AsBoolean() )
                             {
                                 string groupTypeKey = pathParts[1];
                                 int? groupTypeId = groupTypeKey.Length > 1 ? groupTypeKey.Substring( 1 ).AsIntegerOrNull() : null;
