@@ -209,6 +209,8 @@ namespace RockWeb.Plugins.com_kfs.Import
                     using ( var pack = new CsvReader( new StreamReader( stream ) ) )
                     {
                         tableToUpload = pack.TransformTable();
+                        pack.Dispose();
+                        stream.Dispose();
                     }
                 }
 
@@ -217,6 +219,8 @@ namespace RockWeb.Plugins.com_kfs.Import
                     using ( ExcelPackage pack = new ExcelPackage( stream ) )
                     {
                         tableToUpload = pack.TransformTable();
+                        pack.Dispose();
+                        stream.Dispose();
                     }
                 }
 
