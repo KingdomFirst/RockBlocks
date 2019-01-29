@@ -202,21 +202,23 @@ namespace RockWeb.Plugins.com_kfs.Import
             {
                 filePath = this.Request.MapPath( filePath );
                 var fileInfo = new FileInfo( filePath );
-                var stream = File.OpenRead( filePath );
 
-                if ( fileInfo.Extension.Equals( ".csv", StringComparison.CurrentCultureIgnoreCase ) )
+                using ( var stream = File.OpenRead( filePath ) )
                 {
-                    using ( var pack = new CsvReader( new StreamReader( stream ) ) )
+                    if ( fileInfo.Extension.Equals( ".csv", StringComparison.CurrentCultureIgnoreCase ) )
                     {
-                        tableToUpload = pack.TransformTable();
+                        using ( var pack = new CsvReader( new StreamReader( stream ) ) )
+                        {
+                            tableToUpload = pack.TransformTable();
+                        }
                     }
-                }
 
-                if ( fileInfo.Extension.Equals( ".xls", StringComparison.CurrentCultureIgnoreCase ) || fileInfo.Extension.Equals( ".xlsx", StringComparison.CurrentCultureIgnoreCase ) )
-                {
-                    using ( ExcelPackage pack = new ExcelPackage( stream ) )
+                    if ( fileInfo.Extension.Equals( ".xls", StringComparison.CurrentCultureIgnoreCase ) || fileInfo.Extension.Equals( ".xlsx", StringComparison.CurrentCultureIgnoreCase ) )
                     {
-                        tableToUpload = pack.TransformTable();
+                        using ( ExcelPackage pack = new ExcelPackage( stream ) )
+                        {
+                            tableToUpload = pack.TransformTable();
+                        }
                     }
                 }
 
