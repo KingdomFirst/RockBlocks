@@ -7369,20 +7369,22 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 combinedMemberGrid.Columns.Add( new RockBoundField
                 {
+                    HeaderText = "Gender",
+                    DataField = "Person.Gender",
+                    SortExpression = "Gender",
+                    HtmlEncode = false,
+                    Visible = true,
+                } );
+
+                combinedMemberGrid.Columns.Add( new RockBoundField
+                {
                     HeaderText = "Group",
                     DataField = "Group.Name",
                     SortExpression = "Group.Name",
                     HtmlEncode = false
                 } );
 
-                combinedMemberGrid.Columns.Add( new RockBoundField
-                {
-                    HeaderText = "Role",
-                    DataField = "GroupRole",
-                    SortExpression = "GroupRole",
-                    HtmlEncode = false,
-                    Visible = false,
-                } );
+                
 
                 combinedMemberGrid.Columns.Add( new RockBoundField
                 {
@@ -7393,12 +7395,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                     Visible = false,
                 } );
 
-                combinedMemberGrid.Columns.Add( new RockLiteralField
-                {
-                    ID = "lFamilyCampus",
-                    HeaderText = "Family Campus",
-                    SortExpression = "FamilyCampus"
-                } );
+                // combinedMemberGrid.Columns.Add( new RockLiteralField
+                // {
+                //     ID = "lFamilyCampus",
+                //     HeaderText = "Family Campus",
+                //     SortExpression = "FamilyCampus"
+                // } );
 
                 combinedMemberGrid.Columns.Add( new RockBoundField
                 {
@@ -7442,7 +7444,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     DataField="Note",
                     SortExpression="Note",
                     ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
-                    Visible = false,
+                    Visible = true,
                 } );
 
                 AddQuickAssignmentColumns( combinedMemberGrid );
