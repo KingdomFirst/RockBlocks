@@ -24,7 +24,7 @@ namespace RockWeb.Plugins.com_kfs.Import
     [Category( "KFS > Spreadsheet Import" )]
     [Description( "Block to import spreadsheet data and optionally run a stored procedure." )]
 
-    [CustomDropdownListField( "Default Stored Procedure", "Select the default stored procedure to run when importing a spreadsheet.", "SELECT ROUTINE_NAME AS Text, ROUTINE_NAME AS Value FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE'", false, "", "", 0 )]
+    [CustomDropdownListField( "Default Stored Procedure", "Select the default stored procedure to run when importing a spreadsheet.", "SELECT ROUTINE_NAME AS Text, ROUTINE_NAME AS Value FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' ORDER BY ROUTINE_NAME", false, "", "", 0 )]
     [BooleanField( "Cleanup Table Parameter", "Select this if the SP has a @CleanupTable parameter.", true )]
 
     #endregion
@@ -227,7 +227,7 @@ namespace RockWeb.Plugins.com_kfs.Import
                     // generate the table creation
                     tableToUpload.TableName = fileInfo.Name.Replace( fileInfo.Extension, "" );
                     tableToUpload.TableName = tableToUpload.TableName.RemoveSpecialCharacters();
-                    tableToUpload.TableName = "_com_kfs_" + tableToUpload.TableName;
+                    tableToUpload.TableName = "_rocks_kfs_" + tableToUpload.TableName;
                     var sb = new System.Text.StringBuilder(
                         string.Format( @"IF EXISTS
                                     ( SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{0}')
