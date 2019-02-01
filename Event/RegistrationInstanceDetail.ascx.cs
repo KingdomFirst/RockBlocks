@@ -7276,7 +7276,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                         phGroupControl.Controls.Clear();
 
                         var combineMembers = parentGroup.GroupType.GetAttributeValue( "DisplayCombinedMemberships" ).AsBoolean();
-                        BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList(), combineMembers );
+                        var separateRoles = parentGroup.GroupType.GetAttributeValue( "DisplaySeparateRoles" ).AsBoolean();
+                        BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList(), combineMembers, separateRoles );
 
                         var qryParams = new Dictionary<string, string>();
                         qryParams.Add( "t", string.Format( "Add {0}", groupTypeGroupTerm ) );
@@ -7310,156 +7311,331 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="phGroupControl">The ph group control.</param>
         /// <param name="subGroups">The sub groups.</param>
         /// <param name="combineMembers">if set to <c>true</c> [combine members].</param>
-        private void BuildSubGroupPanels( PlaceHolder phGroupControl, List<Group> subGroups, bool combineMembers )
+        /// <param name="separateRoles">if set to <c>true</c> [separate roles].</param>
+        private void BuildSubGroupPanels( PlaceHolder phGroupControl, List<Group> subGroups, bool combineMembers, bool separateRoles )
         {
+            List<AttributeCache> groupAttributes = null;
             if ( !combineMembers )
             {
+                var titleFormat = "<span class='span-panel-heading'>{0}</span>{1}";
+                var capacityFormat = "&nbsp&nbsp<span class='label label-{0}'>{1}/{2}</span>";
+                var groupMemberTypeId = new GroupMember().TypeId;
+
                 foreach ( Group group in subGroups )
                 {
-                    var groupPanel = (GroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
-                    groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
-                    groupPanel.Expanded = _expandedPanels.Any( c => c.Contains( groupPanel.ID ) );
-
-                    // Note: multiple methods require a bindable GroupMember object type
-                    groupPanel.AddButtonClick += AddGroupMember_Click;
-                    groupPanel.EditButtonClick += EditGroupMember_Click;
-                    groupPanel.DeleteButtonClick += DeleteGroupMember_Click;
-                    // this never fires from GroupPanel, hence manual Edit Button
-                    //groupPanel.GroupRowSelected += EditGroupMember_Click;
-                    groupPanel.GroupRowCommand += GroupRowCommand;
-                    groupPanel.GroupRowDataBound += gMembers_RowDataBound;
-                    groupPanel.GroupGridRebind += gMembers_GridRebind;
+                    var groupMember = new GroupMember { GroupId = group.Id };
+                    groupMember.LoadAttributes();
+                    groupAttributes = groupMember.Attributes.Values.ToList();
                     
-                    groupPanel.BuildControl( group, ResourceGroupTypes, ResourceGroups );
-                    phGroupControl.Controls.Add( groupPanel );
+                    var panelId = string.Format( "pnlSubGroup_{0}", group.Id );
+                    var displayDescription = !string.IsNullOrWhiteSpace( group.Description );
+                    using ( var pnlSubGroup = new PanelWidget
+                    {
+                        ID = panelId,
+                        TitleIconCssClass = group.GroupType.IconCssClass,
+                        Title = string.Format( titleFormat, group.Name, displayDescription ? " - " + group.Description.Truncate( 50 ) : string.Empty ),
+                        Expanded = _expandedPanels.Any( c => c.Contains( panelId ) ),
+                    } )
+                    {
+                        var memberCount = group.Members.Count( m => !m.GroupRole.IsLeader && ( m.GroupMemberStatus == GroupMemberStatus.Active || m.GroupMemberStatus == GroupMemberStatus.Pending ) );
+                        if ( group.GroupCapacity.HasValue && group.GroupCapacity > 0 )
+                        {
+                            var capacityTitle = string.Empty;
+                            if ( group.GroupCapacity == memberCount )
+                            {
+                                capacityTitle = string.Format( capacityFormat, "warning", memberCount, group.GroupCapacity );
+                            }
+                            else if ( group.GroupCapacity < memberCount )
+                            {
+                                capacityTitle = string.Format( capacityFormat, "danger", memberCount, group.GroupCapacity );
+                            }
+                            else
+                            {
+                                capacityTitle = string.Format( capacityFormat, "success", memberCount, group.GroupCapacity );
+                            }
+
+                            pnlSubGroup.Title += capacityTitle;
+                        }
+                    
+                        phGroupControl.Controls.Add( pnlSubGroup );
+                        AddPanelButtons( pnlSubGroup, group );
+
+                        // start with a list of all members
+                        var membershipLists = new List<IQueryable<GroupMember>> { ( group.Members.AsQueryable() ) };
+                        if ( separateRoles )
+                        {
+                            membershipLists = group.Members.Select( l => new { Roles = l.GroupRoleId, List = l } )
+                                .GroupBy( r => r.Roles )
+                                .Select( r => r.Select( l => l.List ).AsQueryable() ).ToList();
+                        }
+
+                        // build an interface for each list
+                        foreach ( var list in membershipLists )
+                        {
+                            BuildGroupPanel( pnlSubGroup, group, list, groupAttributes, group.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean() );
+                        }
+                        
+                    }
+
+                    /* OBSOLETE - Dynamically Loaded Control */
+                    //var groupPanel = (GroupPanel)LoadControl( "~/Plugins/com_kfs/Event/GroupPanel.ascx" );
+                    //groupPanel.ID = string.Format( "groupPanel_{0}", group.Id );
+                    //groupPanel.Expanded = _expandedPanels.Any( c => c.Contains( groupPanel.ID ) );
+                    //// Note: multiple methods require a bindable GroupMember object type
+                    //groupPanel.AddButtonClick += AddGroupMember_Click;
+                    //groupPanel.EditButtonClick += EditGroupMember_Click;
+                    //groupPanel.DeleteButtonClick += DeleteGroupMember_Click;
+                    //// this never fires from GroupPanel, hence manual Edit Button
+                    ////groupPanel.GroupRowSelected += EditGroupMember_Click;
+                    //groupPanel.GroupRowCommand += GroupRowCommand;
+                    //groupPanel.GroupRowDataBound += gMembers_RowDataBound;
+                    //groupPanel.GroupGridRebind += gMembers_GridRebind;
+                    
+                    //groupPanel.BuildControl( group, ResourceGroupTypes, ResourceGroups );
+                    //phGroupControl.Controls.Add( groupPanel );
                 }
             }
             else
             {   
                 var parentGroup = subGroups.FirstOrDefault().ParentGroup;
                 var groupMemberList = subGroups.SelectMany( g => g.Members ).AsQueryable();
-                var combinedMemberGrid = new Grid() {
-                    ID = string.Format( "groupList_{0}", parentGroup.Id ),
-                    DataKeyNames = new string[] { "Id" },
-                    DisplayType = GridDisplayType.Full,
-                    IsDeleteEnabled = true,
-                    AllowSorting = true,
-                    AllowPaging = false,
-                    RowItemText = parentGroup.GroupType.GroupTerm + " " + parentGroup.GroupType.GroupMemberTerm,
-                    ExportSource = ExcelExportSource.ColumnOutput,
-                    ExportFilename = parentGroup.Name,
-                    PersonIdField = "PersonId",
-                };
 
-                phGroupControl.Controls.Add( combinedMemberGrid );
-                combinedMemberGrid.Columns.Add( new SelectField() );
-                combinedMemberGrid.Columns.Add( new RockBoundField
-                {
-                    HeaderText = "Name",
-                    DataField = "Person.FullName",
-                    SortExpression = "Person.LastName,Person.NickName",
-                    HtmlEncode = false
-                } );
+                var buildAssignments = parentGroup.GroupType.GroupTypePurposeValue.Value == "Serving Area";
+                BuildGroupPanel( phGroupControl, parentGroup, groupMemberList, groupAttributes, buildAssignments );
+            }
+        }
 
-                combinedMemberGrid.Columns.Add( new RockBoundField
-                {
-                    HeaderText = "Gender",
-                    DataField = "Person.Gender",
-                    SortExpression = "Gender",
-                    HtmlEncode = false,
-                    Visible = true,
-                } );
+        /// <summary>
+        /// Adds the Edit and Delete buttons to a panel.
+        /// </summary>
+        /// <param name="phGroupControl">The ph group control.</param>
+        /// <param name="group">The group.</param>
+        private void AddPanelButtons( Control phGroupControl, Group group )
+        {
+            var pnlActions = new Panel{ CssClass = "actions form-group", };
+            using ( var linkButton = new LinkButton
+            {
+                ID = "lbGroupEdit",
+                Text = "Edit",
+                CommandName = "EditSubGroup",
+                CommandArgument = string.Format( "{0}|{1}", group.Id.ToString(), group.Name ),
+                CssClass = "btn btn-primary btn-xs",
+            } )
+            {
+                pnlActions.Controls.Add( linkButton );
+            }
+            using ( var linkButton = new LinkButton
+            {
+                ID = "lbGroupDelete",
+                Text = "Delete",
+                CommandName = "DeleteSubGroup",
+                CommandArgument = group.Id.ToString(),
+                CssClass = "btn btn-link js-delete-subGroup btn-xs",
+                CausesValidation = false,
+            } )
+            {
+                pnlActions.Controls.Add( linkButton );
+            }
 
-                combinedMemberGrid.Columns.Add( new RockBoundField
+            phGroupControl.Controls.Add( pnlActions );
+        }
+
+        /// <summary>
+        /// Builds the dynamic group panel.
+        /// </summary>
+        /// <param name="phGroupControl">The ph group control.</param>
+        /// <param name="group">The group to bind.</param>
+        /// <param name="memberList">The group member list.</param>
+        /// <param name="groupAttributes">The group attributes.</param>
+        /// <param name="buildAssignments">if set to <c>true</c> [build assignments].</param>
+        private void BuildGroupPanel( Control phGroupControl, Group group, IQueryable<GroupMember> memberList, List<AttributeCache> groupAttributes, bool buildAssignments )
+        {
+            var memberGrid = new Grid()
+            {
+                ID = string.Format( "groupPanel_{0}", group.Id ),
+                DataKeyNames = new string[] { "Id" },
+                DisplayType = GridDisplayType.Full,
+                IsDeleteEnabled = true,
+                AllowSorting = true,
+                AllowPaging = false,
+                RowItemText = group.GroupType.GroupTerm + " " + group.GroupType.GroupMemberTerm,
+                ExportSource = ExcelExportSource.ColumnOutput,
+                ExportFilename = group.Name,
+                PersonIdField = "PersonId",
+            };
+
+            phGroupControl.Controls.Add( memberGrid );
+            memberGrid.Columns.Add( new SelectField() );
+            memberGrid.Columns.Add( new RockBoundField
+            {
+                HeaderText = "Name",
+                DataField = "Person.FullName",
+                SortExpression = "Person.LastName,Person.NickName",
+                HtmlEncode = false
+            } );
+
+            memberGrid.Columns.Add( new RockBoundField
+            {
+                HeaderText = "Gender",
+                DataField = "Person.Gender",
+                SortExpression = "Person.Gender",
+                HtmlEncode = false,
+                Visible = true,
+            } );
+
+            if ( buildAssignments )
+            {
+                memberGrid.Columns.Add( new RockBoundField
                 {
                     HeaderText = "Group",
                     DataField = "Group.Name",
                     SortExpression = "Group.Name",
                     HtmlEncode = false
                 } );
-
-                
-
-                combinedMemberGrid.Columns.Add( new RockBoundField
-                {
-                    HeaderText = "Status",
-                    DataField = "GroupMemberStatus",
-                    SortExpression = "Status",
-                    HtmlEncode = false,
-                    Visible = false,
-                } );
-
-                // combinedMemberGrid.Columns.Add( new RockLiteralField
-                // {
-                //     ID = "lFamilyCampus",
-                //     HeaderText = "Family Campus",
-                //     SortExpression = "FamilyCampus"
-                // } );
-
-                combinedMemberGrid.Columns.Add( new RockBoundField
-                {
-                    HeaderText = "Email",
-                    DataField = "Person.Email",
-                    SortExpression = "Person.Email",
-                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
-                    Visible = false,
-                } );
-
-                combinedMemberGrid.Columns.Add( new RockBoundField
-                {
-                    HeaderText = "Gender",
-                    DataField = "Person.Gender",
-                    SortExpression = "Person.Gender",
-                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
-                    Visible = false,
-                } );
-
-                combinedMemberGrid.Columns.Add( new DefinedValueField
-                {
-                    HeaderText = "Marital Status",
-                    DataField="Person.MaritalStatusValueId",
-                    SortExpression="Person.MaritalStatusValue.Value",
-                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
-                    Visible = false,
-                } );
-
-                combinedMemberGrid.Columns.Add( new DefinedValueField
-                {
-                    HeaderText = "Connection Status",
-                    DataField="Person.ConnectionStatusValueId",
-                    SortExpression="Person.ConnectionStatusValue.Value",
-                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
-                    Visible = false,
-                } );
-
-                combinedMemberGrid.Columns.Add( new RockBoundField
-                {
-                    HeaderText = "Note",
-                    DataField="Note",
-                    SortExpression="Note",
-                    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
-                    Visible = true,
-                } );
-
-                AddQuickAssignmentColumns( combinedMemberGrid );
-                var deleteField = new DeleteField();
-                deleteField.Click += DeleteGroupMember_Click;
-                combinedMemberGrid.Columns.Add( deleteField );
-
-                combinedMemberGrid.Actions.ShowAdd = true;
-                combinedMemberGrid.Actions.ShowMergePerson = false;
-                combinedMemberGrid.Actions.AddButton.CommandName = "AssignSubGroup";
-                combinedMemberGrid.Actions.AddButton.CommandArgument = parentGroup.Id.ToString();
-                combinedMemberGrid.GridRebind += gMembers_GridRebind;
-                combinedMemberGrid.RowDataBound += gMembers_RowDataBound;
-                combinedMemberGrid.RowSelected += EditGroupMember_Click;
-                combinedMemberGrid.RowCommand += GroupRowCommand;
-                combinedMemberGrid.SetLinqDataSource( groupMemberList );
-                BindResourceMembersGrid( combinedMemberGrid, groupMemberList );
             }
+
+            memberGrid.Columns.Add( new RockBoundField
+            {
+                HeaderText = "Role",
+                DataField = "GroupRole",
+                SortExpression = "GroupRole",
+                HtmlEncode = false,
+                Visible = true,
+            } );
+
+            memberGrid.Columns.Add( new RockBoundField
+            {
+                HeaderText = "Status",
+                DataField = "GroupMemberStatus",
+                SortExpression = "GroupMemberStatus",
+                HtmlEncode = false,
+                Visible = false,
+            } );
+
+            memberGrid.Columns.Add( new RockBoundField
+            {
+                HeaderText = "Email",
+                DataField = "Person.Email",
+                SortExpression = "Person.Email",
+                ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                Visible = false,
+            } );
+
+            memberGrid.Columns.Add( new RockBoundField
+            {
+                HeaderText = "Gender",
+                DataField = "Person.Gender",
+                SortExpression = "Person.Gender",
+                ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                Visible = false,
+            } );
+
+            memberGrid.Columns.Add( new DefinedValueField
+            {
+                HeaderText = "Marital Status",
+                DataField = "Person.MaritalStatusValueId",
+                SortExpression = "Person.MaritalStatusValue.Value",
+                ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                Visible = false,
+            } );
+
+            memberGrid.Columns.Add( new DefinedValueField
+            {
+                HeaderText = "Connection Status",
+                DataField = "Person.ConnectionStatusValueId",
+                SortExpression = "Person.ConnectionStatusValue.Value",
+                ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                Visible = false,
+            } );
+
+            memberGrid.Columns.Add( new RockBoundField
+            {
+                HeaderText = "Note",
+                DataField = "Note",
+                SortExpression = "Note",
+                ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+                Visible = true,
+            } );
+
+            if ( groupAttributes != null && groupAttributes.Any() )
+            {
+                var attributeValueService = new AttributeValueService( new RockContext() );
+                foreach ( var attribute in groupAttributes )
+                {
+                    // add the attribute data column
+                    var boundField = new AttributeField
+                    {
+                        DataField = attribute.Id + attribute.Key,
+                        AttributeId = attribute.Id,
+                        HeaderText = attribute.Name,
+                        SortExpression = string.Format( "attribute:{0}", attribute.Id ),
+                    };
+
+                    boundField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                    memberGrid.Columns.Add( boundField );
+
+                    decimal needsFilled = 0;
+                    if ( attribute.FieldType != null )
+                    {
+                        var groupMemberIds = group.Members.Select( m => m.Id ).ToList();
+                        var attributeValues = attributeValueService.GetByAttributeId( attribute.Id )
+                            .Where( v => groupMemberIds.Contains( (int)v.EntityId ) && !( v.Value == null || v.Value.Trim() == string.Empty ) )
+                            .Select( v => v.Value ).ToList();
+
+                        // if the values are numeric, sum a number value
+                        if ( attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.INTEGER.AsGuid() ) || attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.DECIMAL.AsGuid() ) )
+                        {
+                            needsFilled = attributeValues.Sum( v => v.AsDecimal() );
+                        }
+                        else if ( attribute.FieldType.Guid.Equals( Rock.SystemGuid.FieldType.MULTI_SELECT.AsGuid() ) )
+                        {
+                            // handles checkboxes and non-empty strings
+                            needsFilled = attributeValues.Count( v => !string.IsNullOrWhiteSpace( v ) );
+                        }
+                        else
+                        {
+                            // handles single select and boolean
+                            needsFilled = attributeValues.Count( v => v.AsBoolean() );
+                        }
+                    }
+
+                    if ( needsFilled > 0 )
+                    {
+                        memberGrid.ShowFooter = true;
+                        boundField.FooterStyle.HorizontalAlign = HorizontalAlign.Center;
+                        boundField.FooterText = needsFilled.ToString();
+                    }
+                }
+
+                if ( memberGrid.ShowFooter )
+                {
+                    memberGrid.Columns[1].FooterText = "Total";
+                    memberGrid.Columns[1].FooterStyle.HorizontalAlign = HorizontalAlign.Left;
+                }
+            }
+
+            if ( buildAssignments )
+            {
+                AddQuickAssignmentColumns( memberGrid );
+            }
+
+            var deleteField = new DeleteField();
+            deleteField.Click += DeleteGroupMember_Click;
+            memberGrid.Columns.Add( deleteField );
+
+            memberGrid.Actions.ShowAdd = true;
+            memberGrid.Actions.ShowMergePerson = false;
+            memberGrid.Actions.AddButton.CommandName = "AssignSubGroup";
+            memberGrid.Actions.AddButton.CommandArgument = group.Id.ToString(); //string.Format( "{0}|{1}", group.ParentGroupId.ToString(), group.Id.ToString() );
+            memberGrid.GridRebind += gMembers_GridRebind;
+            memberGrid.RowDataBound += gMembers_RowDataBound;
+            memberGrid.RowSelected += EditGroupMember_Click;
+            memberGrid.RowCommand += GroupRowCommand;
+            memberGrid.SetLinqDataSource( memberList );
+            BindResourceMembersGrid( memberGrid, memberList );
         }
 
-         /// <summary>
+        /// <summary>
         /// Groups the grid rebind.
         /// </summary>
         /// <param name="sender">The sender.</param>
@@ -7519,53 +7695,6 @@ namespace RockWeb.Plugins.com_kfs.Event
         }
 
         /// <summary>
-        /// Handles the Group row command.
-        /// </summary>
-        /// <param name="sender">The sender.</param>
-        /// <param name="e">The <see cref="GridViewCommandEventArgs"/> instance containing the event data.</param>
-        private void GroupRowCommand( object sender, GridViewCommandEventArgs e )
-        {
-            if ( e.CommandName == "AssignSubGroup" )
-            {
-                var argument = e.CommandArgument.ToString().Split( '|' ).AsIntegerList();
-                using ( var rockContext = new RockContext() )
-                {
-                    Group parentGroup = null;
-                    Person person = null;
-                    if ( argument[0] > 0 )
-                    {
-                        parentGroup = new GroupService( rockContext ).Get( argument[0] );
-                    }
-                    if ( argument.Count > 1 && argument[1] > 1 )
-                    {
-                        person = new PersonService( rockContext ).Get( argument[1] );
-                    }
-                    
-                    
-                    RenderGroupMemberModal( rockContext, parentGroup, null, null, person );
-                }
-            }
-
-            if ( e.CommandName == "ChangeSubGroup" )
-            {
-                var subGroupMemberId = e.CommandArgument.ToString().AsInteger();
-                if ( subGroupMemberId > 0 )
-                {
-                    using ( var rockContext = new RockContext() )
-                    {
-                        var groupMember = new GroupMemberService( rockContext ).Get( subGroupMemberId );
-                        RenderGroupMemberModal( rockContext, groupMember.Group.ParentGroup, groupMember.Group, groupMember );
-                    }
-                }
-            }
-
-            if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
-            {
-                BindRegistrantsFilter( new RegistrationInstanceService( new RockContext() ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
-            }
-        }
-
-        /// <summary>
         /// Binds the resource members grid.
         /// </summary>
         /// <param name="resourceGrid">The resource grid.</param>
@@ -7614,35 +7743,36 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             if ( e.CommandName == "EditSubGroup" )
             {
-                var group = new GroupService( new RockContext() ).Get( int.Parse( e.CommandArgument.ToString() ) );
-
-                BindResourcePanels( group.GroupTypeId );
-
-                var qryParams = new Dictionary<string, string>();
-                qryParams.Add( "t", string.Format( "Edit {0}", group.Name ) );
-                qryParams.Add( "GroupId", group.Id.ToString() );
-
-                var script = "Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupModalPage", qryParams ) + "');";
-                ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + e.CommandArgument, script, true );
-            }
-            if ( e.CommandName == "DeleteSubGroup" )
-            {
-                var rockContext = new RockContext();
-                var groupService = new GroupService( rockContext );
-                var authService = new AuthService( rockContext );
-                var group = groupService.Get( e.CommandArgument.ToString().AsInteger() );
-
-                int? parentGroupId = null;
-
-                if ( group != null )
+                var argument = e.CommandArgument.ToString().Split( '|' );
+                if ( argument != null && argument.Length > 1 )
                 {
+                    var qryParams = new Dictionary<string, string>();
+                    qryParams.Add( "GroupId", argument[0] );
+                    qryParams.Add( "t", string.Format( "Edit {0}", argument[1] ) );
+
+                    var script = "Rock.controls.modal.show($(this), '" + LinkedPageUrl( "GroupModalPage", qryParams ) + "');";
+                    ScriptManager.RegisterClientScriptBlock( Page, Page.GetType(), "editSubGroup" + argument[0], script, true );
+                }
+            }
+            else if ( e.CommandName == "DeleteSubGroup" )
+            {
+                var groupId = e.CommandArgument;
+                using ( var rockContext = new RockContext() )
+                {
+                    var groupService = new GroupService( rockContext );
+                    var group = groupService.Get( groupId.ToStringSafe().AsInteger() );
+                    if ( group == null )
+                    {
+                        mdDeleteWarning.Show( "Unable to get group reference. Please refresh this page.", ModalAlertType.Information );
+                        return;
+                    }
+
                     if ( !group.IsAuthorized( Authorization.EDIT, this.CurrentPerson ) )
                     {
                         mdDeleteWarning.Show( "You are not authorized to delete this group.", ModalAlertType.Information );
                         return;
                     }
 
-                    parentGroupId = group.ParentGroupId;
                     string errorMessage;
                     if ( !groupService.CanDelete( group, out errorMessage ) )
                     {
@@ -7653,6 +7783,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     var isSecurityRoleGroup = group.IsActive && ( group.IsSecurityRole || group.GroupType.Guid.Equals( Rock.SystemGuid.GroupType.GROUPTYPE_SECURITY_ROLE.AsGuid() ) );
                     if ( isSecurityRoleGroup )
                     {
+                        var authService = new AuthService( rockContext );
                         foreach ( var auth in authService.Queryable().Where( a => a.GroupId == group.Id ).ToList() )
                         {
                             authService.Delete( auth );
@@ -7671,7 +7802,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     }
 
                     groupService.Delete( group );
-
                     rockContext.SaveChanges();
 
                     if ( isSecurityRoleGroup )
@@ -7761,7 +7891,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         }
 
                                         btnGroupAssignment.CommandName = "AssignSubGroup";
-                                        btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}", parentGroup.Id, currentPerson.Id );
+                                        btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}|{2}", parentGroup.Id, 0, currentPerson.Id );
                                     }
                                     else if ( typeAllowsMultipleRegistrations )
                                     {
@@ -7798,10 +7928,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                                             }
 
                                             // TODO: figure out why command args aren't passing
-                                            btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}' ); return false;", parentGroup.Id, currentPerson.Id );
+                                            btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}|{2}' ); return false;", parentGroup.Id, 0, currentPerson.Id );
                                             btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
-                                            //btnGroupAssignment.CommandName = "AssignSubGroup";
-                                            //btnGroupAssignment.CommandArgument = string.Format( "subgroup_{0}|{1}", parentGroup.Id.ToString(), registrant.Id.ToString() );
                                         }
                                     }
                                     else
@@ -7836,23 +7964,74 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
         }
 
-       
+
+        /// <summary>
+        /// Handles the Group row command.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The <see cref="GridViewCommandEventArgs"/> instance containing the event data.</param>
+        private void GroupRowCommand( object sender, GridViewCommandEventArgs e )
+        {
+            if ( e.CommandName == "AssignSubGroup" )
+            {
+                var argument = e.CommandArgument.ToString().Split( '|' ).AsIntegerList();
+                using ( var rockContext = new RockContext() )
+                {
+                    Group parentGroup = null, group = null;
+                    Person person = null;
+                    if ( argument[0] > 0 )
+                    {
+                        parentGroup = new GroupService( rockContext ).Get( argument[0] );
+                    }
+                    if ( argument.Count > 1 && argument[1] > 0 )
+                    {
+                        group = new GroupService( rockContext ).Get( argument[1] );
+                    }
+                    if ( argument.Count > 2 && argument[2] > 0 )
+                    {
+                        person = new PersonService( rockContext ).Get( argument[2] );
+                    }
+                    
+                    RenderGroupMemberModal( rockContext, parentGroup, group, null, person );
+                }
+            }
+
+            if ( e.CommandName == "ChangeSubGroup" )
+            {
+                var subGroupMemberId = e.CommandArgument.ToString().AsInteger();
+                if ( subGroupMemberId > 0 )
+                {
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var groupMember = new GroupMemberService( rockContext ).Get( subGroupMemberId );
+                        RenderGroupMemberModal( rockContext, groupMember.Group.ParentGroup, groupMember.Group, groupMember );
+                    }
+                }
+            }
+
+            if ( hfRegistrationInstanceId.Value.AsInteger() > 0 )
+            {
+                BindRegistrantsFilter( new RegistrationInstanceService( new RockContext() ).Get( hfRegistrationInstanceId.Value.AsInteger() ) );
+            }
+        }
+
+        /* OBSOLETE */
         /// <summary>
         /// Handles the Click event of the AddGroupMember control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void AddGroupMember_Click( object sender, EventArgs e )
-        {
-            using ( var rockContext = new RockContext() )
-            {
-                if ( sender is GroupPanel )
-                {
-                    var panel = (GroupPanel)sender;
-                    RenderGroupMemberModal( rockContext, panel.Group.ParentGroup, panel.Group, null );
-                }
-            };
-        }
+        //private void AddGroupMember_Click( object sender, EventArgs e )
+        //{
+        //    using ( var rockContext = new RockContext() )
+        //    {
+        //        if ( sender is GroupPanel )
+        //        {
+        //            var panel = (GroupPanel)sender;
+        //            RenderGroupMemberModal( rockContext, panel.Group.ParentGroup, panel.Group, null );
+        //        }
+        //    };
+        //}
 
         /// <summary>
         /// Handles the Click event of the EditGroupMember control.
@@ -8000,6 +8179,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 || ( groupMember != null && g.Id == groupMember.GroupId ) ).ToList();
             if ( !availableGroups.Any() )
             {
+                nbErrorMessage.Visible = true;
                 nbErrorMessage.Text = "No groups are available for this person to be assigned to.";
                 mdlAddSubGroupMember.Show();
                 upnlContent.Update();
