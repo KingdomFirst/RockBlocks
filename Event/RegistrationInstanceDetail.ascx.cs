@@ -334,10 +334,11 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
             else
             {
-                // handle resource click events
+                // rebuild interface on resource clicks or final save
+                // 
                 var postbackArgs = Request.Params["__EVENTARGUMENT"];
                 var postbackTarget = Request.Params["__EVENTTARGET"];
-                if ( !string.IsNullOrWhiteSpace( postbackArgs ) || postbackTarget.Contains( "ResourceArea" ) )
+                if ( !string.IsNullOrWhiteSpace( postbackArgs ) || postbackTarget.Contains( "ResourceArea" ) || postbackTarget.EndsWith( "btnSave" ) )
                 {
                     var eventParams = postbackArgs.Split( new char[] { ':' } );
                     if ( eventParams.Length == 2 )
