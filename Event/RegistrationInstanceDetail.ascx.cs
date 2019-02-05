@@ -7514,11 +7514,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                 Visible = false,
             } );
 
-            memberGrid.Columns.Add( new RockBoundField
+            memberGrid.Columns.Add( new RockLiteralField
             {
-                HeaderText = "Gender",
-                DataField = "Person.Gender",
-                SortExpression = "Person.Gender",
+                ID = "lPhone",
+                HeaderText = "Phone",
                 ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
                 Visible = false,
             } );
@@ -7659,10 +7658,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( groupMember != null )
                 {
                     groupMember.LoadAttributes();
-                    var highlightMembership = groupMember.Attributes.Any() && groupMember.AttributeValues.All( v => string.IsNullOrWhiteSpace( v.Value.Value ) );
-                    bool lacksRequirements = groupMember.Group.GroupRequirements.Any() && groupMember.Group.PersonMeetsGroupRequirements( groupMember.PersonId, groupMember.GroupRoleId )
-                        .Any( r => r.MeetsGroupRequirement != MeetsGroupRequirement.Meets );
-                    
+                    var failedRequirement = groupMember.Group.PersonMeetsGroupRequirements( new RockContext(), groupMember.PersonId, groupMember.GroupRoleId )
+                        .Any( r => r.MeetsGroupRequirement == MeetsGroupRequirement.NotMet );
                     foreach ( DataControlFieldCell cell in rowEvent.Row.Cells )
                     {
                         if ( cell.ContainingField.HeaderText == "Name" )
@@ -7672,16 +7669,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                             : string.Format( PhotoFormat, groupMember.PersonId, groupMember.Person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) )
                                 + groupMember.Person.NickName + " " + groupMember.Person.LastName
                                 + ( !string.IsNullOrWhiteSpace( groupMember.Person.TopSignalColor ) ? " " + groupMember.Person.GetSignalMarkup() : string.Empty )
-                                + ( lacksRequirements ? " <i class='fa fa-exclamation-triangle text-warning'></i>" : string.Empty );
-                            cell.CssClass = highlightMembership ? "label-warning" : string.Empty;
+                                + ( failedRequirement ? " <i class='fa fa-exclamation-triangle text-warning'></i>" : string.Empty );
                         }
                     }
 
-                    var campus = groupMember.Person.GetCampus();
-                    var lCampus = rowEvent.Row.FindControl( "lFamilyCampus" ) as Literal;
-                    if ( lCampus != null && campus != null )
+                    var primaryPhoneNumber = groupMember.Person.PhoneNumbers.OrderBy( n => n.NumberTypeValue.Order ).FirstOrDefault();
+                    var lPhone = rowEvent.Row.FindControl( "lPhone" ) as Literal;
+                    if ( lPhone != null && primaryPhoneNumber != null )
                     {
-                        lCampus.Text = campus.Name;
+                        lPhone.Text = primaryPhoneNumber.NumberFormatted;
                     }
 
                     // Build subgroup button grid for Volunteers
