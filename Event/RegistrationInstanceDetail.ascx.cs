@@ -7839,7 +7839,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 else if ( e.Row.DataItem is GroupMember )
                 {
                     var groupMember = (GroupMember)e.Row.DataItem;
-                    highlightMembership = groupMember.Attributes.Any() && groupMember.AttributeValues.All( v => string.IsNullOrWhiteSpace( v.Value.Value ) );
+                    //highlightMembership = groupMember.Attributes.Any() && groupMember.AttributeValues.All( v => string.IsNullOrWhiteSpace( v.Value.Value ) );
                     currentPerson = groupMember.Person;
                 }
 
@@ -7870,76 +7870,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                             if ( btnGroupAssignment != null )
                             {
                                 var subGroupIds = parentGroup.Groups.Select( g => g.Id ).ToList();
-                                if ( subGroupIds.Any() )
+                                if ( !subGroupIds.Any() )
                                 {
-                                    var typeAllowsMultipleRegistrations = ResourceGroupTypes.FirstOrDefault( gt => gt.Id == parentGroup.GroupTypeId )
-                                        .GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean();
-                                    // this depends on the groupMemberList being bound to full GroupMember object
-                                    var groupMemberships = currentPerson.Members.Where( m => subGroupIds.Contains( m.GroupId ) ).ToList();
-                                    if ( !groupMemberships.Any() )
-                                    {
-                                        btnGroupAssignment.CssClass = "btn btn-default btn-sd " + (highlightMembership ? "label-info" : string.Empty);
-
-                                        using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
-                                        {
-                                            btnGroupAssignment.Controls.Add( literalControl );
-                                        }
-                                        using ( var literalControl = new LiteralControl( "<span class='grid-btn-assign-text'></span>" ) )
-                                        {
-                                            btnGroupAssignment.Controls.Add( literalControl );
-                                        }
-
-                                        btnGroupAssignment.CommandName = "AssignSubGroup";
-                                        btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}|{2}", parentGroup.Id, 0, currentPerson.Id );
-                                    }
-                                    else if ( typeAllowsMultipleRegistrations )
-                                    {
-                                        var subGroupControls = e.Row.Cells[columnIndex].Controls;
-                                        var groupExportText = new List<string>();
-
-                                        // add any group memberships
-                                        foreach ( var member in groupMemberships )
-                                        {
-                                            using ( var subGroupButton = new LinkButton() )
-                                            {
-                                                subGroupButton.OnClientClick = "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:" + member.Id + "' ); return false;";
-                                                subGroupButton.Text = " " + member.Group.Name + "  ";
-                                                subGroupControls.AddAt( 0, subGroupButton );
-                                            }
-                                            groupExportText.Add( member.Group.Name );
-                                        }
-
-                                        if ( lGroupExport != null )
-                                        {
-                                            lGroupExport.Text = string.Join( ",", groupExportText );
-                                        }
-
-                                        if ( subGroupIds.Count > groupMemberships.Count )
-                                        {
-                                            using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
-                                            {
-                                                btnGroupAssignment.Controls.Add( literalControl );
-                                            }
-
-                                            btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}|{2}' ); return false;", parentGroup.Id, 0, currentPerson.Id );
-                                            btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm";
-                                        }
-                                    }
-                                    else
-                                    {
-                                        var groupMember = groupMemberships.FirstOrDefault();
-                                        btnGroupAssignment.Text = groupMember.Group.Name;
-                                        btnGroupAssignment.CommandName = "ChangeSubGroup";
-                                        btnGroupAssignment.CommandArgument = groupMember.Id.ToString();
-
-                                        if ( lGroupExport != null )
-                                        {
-                                            lGroupExport.Text = groupMember.Group.Name;
-                                        }
-                                    }
-                                }
-                                else
-                                {
+                                    // no groups exist to assign to
                                     using ( var literalControl = new LiteralControl( "<i class='fa fa-minus-circle'></i>" ) )
                                     {
                                         btnGroupAssignment.Controls.Add( literalControl );
@@ -7949,6 +7882,72 @@ namespace RockWeb.Plugins.com_kfs.Event
                                         btnGroupAssignment.Controls.Add( literalControl );
                                     }
                                     btnGroupAssignment.Enabled = false;
+                                    continue;
+                                }
+                                
+                                
+                                // Note: this depends on the groupMemberList being bound to full GroupMember objects
+                                var typeAllowsMultipleRegistrations = ResourceGroupTypes.FirstOrDefault( gt => gt.Id == parentGroup.GroupTypeId )
+                                    .GetAttributeValue( "AllowMultipleRegistrations" ).AsBoolean();
+                                var groupMemberships = currentPerson.Members.Where( m => subGroupIds.Contains( m.GroupId ) ).ToList();
+                                if ( !groupMemberships.Any() || typeAllowsMultipleRegistrations )
+                                {
+                                    // grouptype allows 0 or more memberships
+                                    var subGroupControls = e.Row.Cells[columnIndex].Controls;
+                                    var groupExportText = new List<string>();
+
+                                    foreach ( var member in groupMemberships )
+                                    {
+                                        member.LoadAttributes( rockContext );
+                                        // get assigned group attributes to display on the grid
+                                        var filledNeeds = string.Join( ",", member.AttributeValues.Where( v => !string.IsNullOrWhiteSpace( v.Value.Value ) ).Select( v => v.Key ) );
+                                        var displayName = string.Format( "{0} {1}", member.Group.Name, filledNeeds.Any() ? "(" + filledNeeds + ")" : string.Empty );
+                                        using ( var subGroupButton = new LinkButton() )
+                                        {
+                                            subGroupButton.OnClientClick = "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:" + member.Id + "' ); return false;";
+                                            subGroupButton.Text = displayName;
+                                            subGroupControls.AddAt( 0, subGroupButton );
+                                        }
+                                        
+                                        groupExportText.Add( displayName );
+                                    }
+
+                                    if ( lGroupExport != null )
+                                    {
+                                        lGroupExport.Text = string.Join( ",", groupExportText );
+                                    }
+
+                                    if ( subGroupIds.Count > groupMemberships.Count )
+                                    {
+                                        using ( var literalControl = new LiteralControl( "<i class='fa fa-plus-circle'></i>" ) )
+                                        {
+                                            btnGroupAssignment.Controls.Add( literalControl );
+                                        }
+
+                                        highlightMembership = groupMemberships.Count == 0;
+                                        //btnGroupAssignment.CommandName = "AssignSubGroup";
+                                        //btnGroupAssignment.CommandArgument = string.Format( "{0}|{1}|{2}", parentGroup.Id, 0, currentPerson.Id );
+                                        btnGroupAssignment.OnClientClick = string.Format( "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:{0}|{1}|{2}' ); return false;", parentGroup.Id, 0, currentPerson.Id );
+                                        btnGroupAssignment.CssClass = "btn-add btn btn-default btn-sm " + (highlightMembership ? "label-info" : string.Empty);
+                                    }
+                                }
+                                else
+                                {
+                                    var member = groupMemberships.FirstOrDefault();
+                                    member.LoadAttributes( rockContext );
+
+                                    // get assigned group attributes to display on the grid
+                                    var filledNeeds = string.Join( ", ", member.AttributeValues.Where( v => !string.IsNullOrWhiteSpace( v.Value.Value ) ).Select( v => v.Value.AttributeName ) );
+                                    var displayName = string.Format( "{0} {1}", member.Group.Name, filledNeeds.Any() ? "(" + filledNeeds + ")" : string.Empty );
+
+                                    btnGroupAssignment.Text = displayName;
+                                    btnGroupAssignment.CommandName = "ChangeSubGroup";
+                                    btnGroupAssignment.CommandArgument = member.Id.ToString();
+
+                                    if ( lGroupExport != null )
+                                    {
+                                        lGroupExport.Text = displayName;
+                                    }
                                 }
                             }
                         }
