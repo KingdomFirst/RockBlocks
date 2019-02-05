@@ -7466,13 +7466,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                 HtmlEncode = false
             } );
 
-            memberGrid.Columns.Add( new RockLiteralField
-            {
-                ID = "lCampus",
-                HeaderText = "Campus",
-                SortExpression = "Campus",
-                ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
-            } );
+            //memberGrid.Columns.Add( new RockLiteralField
+            //{
+            //    ID = "lCampus",
+            //    HeaderText = "Campus",
+            //    SortExpression = "Campus",
+            //    ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
+            //} );
 
             if ( combineMemberships )
             {
@@ -7657,8 +7657,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( groupMember != null )
                 {
                     groupMember.LoadAttributes();
-                    var failedRequirement = groupMember.Group.PersonMeetsGroupRequirements( new RockContext(), groupMember.PersonId, groupMember.GroupRoleId )
-                        .Any( r => r.MeetsGroupRequirement == MeetsGroupRequirement.NotMet );
+                    var failedRequirement = false;
+                        //groupMember.Group.PersonMeetsGroupRequirements( new RockContext(), groupMember.PersonId, groupMember.GroupRoleId )
+                        //.Any( r => r.MeetsGroupRequirement == MeetsGroupRequirement.NotMet );
                     // loop through the row since we can't target an ID on BoundField
                     foreach ( DataControlFieldCell cell in rowEvent.Row.Cells )
                     {
@@ -7673,12 +7674,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
                     }
 
-                    var lCampus = rowEvent.Row.FindControl( "lCampus" ) as Literal;
-                    if ( lCampus != null  )
-                    {
-                        var primaryCampus = groupMember.Person.GetCampus();
-                        lCampus.Text = primaryCampus != null ? primaryCampus.Name : string.Empty;
-                    }
+                    //var lCampus = rowEvent.Row.FindControl( "lCampus" ) as Literal;
+                    //if ( lCampus != null  )
+                    //{
+                    //    var primaryCampus = groupMember.Person.GetCampus();
+                    //    lCampus.Text = primaryCampus != null ? primaryCampus.Name : string.Empty;
+                    //}
                     
                     var lPhone = rowEvent.Row.FindControl( "lPhone" ) as Literal;
                     if ( lPhone != null )
