@@ -7900,8 +7900,13 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     {
                                         member.LoadAttributes( rockContext );
                                         // get assigned group attributes to display on the grid
-                                        var filledNeeds = string.Join( ",", member.AttributeValues.Where( v => !string.IsNullOrWhiteSpace( v.Value.Value ) ).Select( v => v.Key ) );
-                                        var displayName = string.Format( "{0} {1}", member.Group.Name, filledNeeds.Any() ? "(" + filledNeeds + ")" : string.Empty );
+                                        var displayName = member.Group.Name + " ";
+                                        var filledNeeds = string.Join( ", ", member.AttributeValues.Where( v => !string.IsNullOrWhiteSpace( v.Value.Value ) ).Select( v => v.Value.AttributeName ) );
+                                        if ( filledNeeds.Any() )
+                                        {
+                                            displayName = string.Format( "{0} {1} - {2}", member.Group.Name, member.GroupRole.Name, filledNeeds );
+                                        }
+                                        
                                         using ( var subGroupButton = new LinkButton() )
                                         {
                                             subGroupButton.OnClientClick = "javascript: __doPostBack( 'btnMultipleRegistrations', 'select-subgroup:" + member.Id + "' ); return false;";
@@ -7914,7 +7919,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                                     if ( lGroupExport != null )
                                     {
-                                        lGroupExport.Text = string.Join( ",", groupExportText );
+                                        lGroupExport.Text = string.Join( ", ", groupExportText );
                                     }
 
                                     if ( subGroupIds.Count > groupMemberships.Count )
@@ -7937,8 +7942,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                                     member.LoadAttributes( rockContext );
 
                                     // get assigned group attributes to display on the grid
+                                    var displayName = member.Group.Name;
                                     var filledNeeds = string.Join( ", ", member.AttributeValues.Where( v => !string.IsNullOrWhiteSpace( v.Value.Value ) ).Select( v => v.Value.AttributeName ) );
-                                    var displayName = string.Format( "{0} {1}", member.Group.Name, filledNeeds.Any() ? "(" + filledNeeds + ")" : string.Empty );
+                                    if ( filledNeeds.Any() )
+                                    {
+                                        displayName = string.Format( "{0} {1} - {2}", member.Group.Name, member.GroupRole.Name, filledNeeds );
+                                    }
 
                                     btnGroupAssignment.Text = displayName;
                                     btnGroupAssignment.CommandName = "ChangeSubGroup";
