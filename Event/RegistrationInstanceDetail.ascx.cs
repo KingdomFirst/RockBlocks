@@ -7324,10 +7324,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                 {
                     var groupMember = new GroupMember { GroupId = group.Id };
                     groupMember.LoadAttributes();
-                    groupAttributes.AddRange( groupMember.Attributes.Values.ToList() );
+                    groupAttributes.AddRange( groupMember.Attributes.Values );
                 }
 
-                BuildGroupPanel( phGroupControl, parentGroup, groupMemberList, groupAttributes, combineMembers );
+                BuildGroupPanel( phGroupControl, parentGroup, groupMemberList, groupAttributes.Distinct().ToList(), combineMembers );
             }
             else
             {
@@ -7336,11 +7336,11 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var capacityFormat = "&nbsp&nbsp<span class='label label-{0}'>{1}/{2}</span>";
                 var groupMemberTypeId = new GroupMember().TypeId;
 
-                foreach ( Group group in subGroups )
+                foreach ( var group in subGroups )
                 {
                     var groupMember = new GroupMember { GroupId = group.Id };
                     groupMember.LoadAttributes();
-                    groupAttributes = groupMember.Attributes.Values.ToList();
+                    groupAttributes = groupMember.Attributes.Values.Distinct().ToList();
                     
                     var panelId = string.Format( "pnlSubGroup_{0}", group.Id );
                     var displayDescription = !string.IsNullOrWhiteSpace( group.Description );
@@ -7348,7 +7348,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         ID = panelId,
                         TitleIconCssClass = group.GroupType.IconCssClass,
-                        Title = string.Format( titleFormat, group.Name, displayDescription ? " - " + group.Description.Truncate( 50 ) : string.Empty ),
+                        Title = string.Format( titleFormat, group.Name, displayDescription ? " - " + group.Description.Truncate( 150 ) : string.Empty ),
                         Expanded = _expandedPanels.Any( c => c.Contains( panelId ) ),
                     } )
                     {
@@ -7477,7 +7477,7 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             if ( combineMemberships )
             {
-                groupIdArgument = group.Id.ToString();
+                groupIdArgument = string.Format( "{0}|{1}", group.Id.ToString(), 0 );
                 memberGrid.Columns.Add( new RockBoundField
                 {
                     HeaderText = "Group",
@@ -7595,6 +7595,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     if ( needsFilled > 0 )
                     {
                         memberGrid.ShowFooter = true;
+                        boundField.FooterStyle.Font.Bold = true;
                         boundField.FooterStyle.HorizontalAlign = HorizontalAlign.Center;
                         boundField.FooterText = needsFilled.ToString();
                     }
@@ -7603,6 +7604,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                 if ( memberGrid.ShowFooter )
                 {
                     memberGrid.Columns[1].FooterText = "Total";
+                    memberGrid.Columns[1].FooterStyle.Font.Bold = true;
                     memberGrid.Columns[1].FooterStyle.HorizontalAlign = HorizontalAlign.Left;
                 }
             }
@@ -8045,7 +8047,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         {
             if ( !groupKey.Contains( '|' ) )
             {
-                // group member id
+                // editing single group member
                 using ( var rockContext = new RockContext() )
                 {
                     var member = new GroupMemberService( rockContext ).Get( groupKey.AsInteger() );
@@ -8057,6 +8059,7 @@ namespace RockWeb.Plugins.com_kfs.Event
             }
             else
             {
+                // advanced group assignment
                 var argument = groupKey.Split( '|' ).AsIntegerList();
                 using ( var rockContext = new RockContext() )
                 {
