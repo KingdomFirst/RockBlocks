@@ -7466,13 +7466,12 @@ namespace RockWeb.Plugins.com_kfs.Event
                 HtmlEncode = false
             } );
 
-            memberGrid.Columns.Add( new RockBoundField
+            memberGrid.Columns.Add( new RockLiteralField
             {
-                HeaderText = "Gender",
-                DataField = "Person.Gender",
-                SortExpression = "Person.Gender",
-                HtmlEncode = false,
-                Visible = true,
+                ID = "lCampus",
+                HeaderText = "Campus",
+                SortExpression = "Campus",
+                ExcelExportBehavior = ExcelExportBehavior.AlwaysInclude,
             } );
 
             if ( combineMemberships )
@@ -7498,11 +7497,11 @@ namespace RockWeb.Plugins.com_kfs.Event
 
             memberGrid.Columns.Add( new RockBoundField
             {
-                HeaderText = "Status",
-                DataField = "GroupMemberStatus",
-                SortExpression = "GroupMemberStatus",
+                HeaderText = "Gender",
+                DataField = "Person.Gender",
+                SortExpression = "Person.Gender",
                 HtmlEncode = false,
-                Visible = false,
+                Visible = true,
             } );
 
             memberGrid.Columns.Add( new RockBoundField
@@ -7660,6 +7659,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     groupMember.LoadAttributes();
                     var failedRequirement = groupMember.Group.PersonMeetsGroupRequirements( new RockContext(), groupMember.PersonId, groupMember.GroupRoleId )
                         .Any( r => r.MeetsGroupRequirement == MeetsGroupRequirement.NotMet );
+                    // loop through the row since we can't target an ID on BoundField
                     foreach ( DataControlFieldCell cell in rowEvent.Row.Cells )
                     {
                         if ( cell.ContainingField.HeaderText == "Name" )
@@ -7673,11 +7673,18 @@ namespace RockWeb.Plugins.com_kfs.Event
                         }
                     }
 
-                    var primaryPhoneNumber = groupMember.Person.PhoneNumbers.OrderBy( n => n.NumberTypeValue.Order ).FirstOrDefault();
-                    var lPhone = rowEvent.Row.FindControl( "lPhone" ) as Literal;
-                    if ( lPhone != null && primaryPhoneNumber != null )
+                    var lCampus = rowEvent.Row.FindControl( "lCampus" ) as Literal;
+                    if ( lCampus != null  )
                     {
-                        lPhone.Text = primaryPhoneNumber.NumberFormatted;
+                        var primaryCampus = groupMember.Person.GetCampus();
+                        lCampus.Text = primaryCampus != null ? primaryCampus.Name : string.Empty;
+                    }
+                    
+                    var lPhone = rowEvent.Row.FindControl( "lPhone" ) as Literal;
+                    if ( lPhone != null )
+                    {
+                        var primaryPhoneNumber = groupMember.Person.PhoneNumbers.OrderBy( n => n.NumberTypeValue.Order ).FirstOrDefault();
+                        lPhone.Text = primaryPhoneNumber != null ? primaryPhoneNumber.NumberFormatted : string.Empty;
                     }
 
                     // Build subgroup button grid for Volunteers
