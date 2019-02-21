@@ -195,11 +195,12 @@ namespace RockWeb.Plugins.com_kfs.Event
             var groupIconString = string.Empty;
             if ( !string.IsNullOrWhiteSpace( group.GroupType.IconCssClass ) )
             {
-                groupIconString = string.Format( "<i class='{0}'></i> ", group.GroupType.IconCssClass );
+                pnlSubGroup.TitleIconCssClass = group.GroupType.IconCssClass;
             }
 
-            pnlSubGroup.Title = string.Format( "{0} <span class='span-panel-heading'>{1}</span>", groupIconString, group.Name );
-            var memCount = group.Members.Count( m => m.GroupMemberStatus == GroupMemberStatus.Active || m.GroupMemberStatus == GroupMemberStatus.Pending );
+            pnlSubGroup.Title = string.Format( "<span class='span-panel-heading'>{0}</span>{1}{2}", group.Name, group.Description.Length > 0 ? " - " : string.Empty, group.Description.Truncate( 50 ) );
+            var memCount = group.Members.Where( m => m.GroupMemberStatus == GroupMemberStatus.Active || m.GroupMemberStatus == GroupMemberStatus.Pending )
+                .Where( m => !m.GroupRole.IsLeader ).Count();
             if ( group.GroupCapacity.HasValue && group.GroupCapacity > 0 )
             {
                 var capacityRatio = string.Empty;
@@ -218,11 +219,8 @@ namespace RockWeb.Plugins.com_kfs.Event
                 pnlSubGroup.Title += capacityRatio;
             }
 
-            pnlGroupDescription.Visible = !string.IsNullOrWhiteSpace( group.Description );
             pnlSubGroup.Expanded = _expanded;
-
-            lblGroupDescription.Text = group.Description;
-            lbGroupEdit.CommandArgument = group.Id.ToString();
+            lbGroupEdit.CommandArgument = string.Format( "{0}|{1}", group.Id.ToString(), group.Name );
             lbGroupDelete.CommandArgument = group.Id.ToString();
             pnlSubGroup.DataBind();
         }
@@ -268,15 +266,6 @@ namespace RockWeb.Plugins.com_kfs.Event
             {
                 pnlGroupMembers.Columns.Remove( column );
             }
-
-            // Add Family Campus
-            var lFamilyCampus = new RockLiteralField
-            {
-                ID = "lFamilyCampus",
-                HeaderText = "Family Campus",
-                //SortExpression = "FamilyCampus"
-            };
-            pnlGroupMembers.Columns.Add( lFamilyCampus );
 
             // Set up group member attribute columns
             var rockContext = new RockContext();
