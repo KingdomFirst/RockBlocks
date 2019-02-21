@@ -22,9 +22,12 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [Category( "KFS > Groups" )]
     [Description( "Presents a button when combined with the group detail lava block with checkbox html inserted into the lava." )]
 
-    [LinkedPage( "Communication Page", "The communication page to use for sending emails to the group members.", true, "", "", 1 )]
-    [LinkedPage( "Alternate Communication Page", "The communication page to use for sending an alternate communication to the group members.", false, "", "", 2 )]
-
+    [LinkedPage( "Communication Page", "The communication page to use for sending emails to the group members.", true, "", "Pages", 1 )]
+    [LinkedPage( "Alternate Communication Page", "The communication page to use for sending an alternate communication to the group members.", false, "", "Pages", 2 )]
+    [TextField( "Communication Button Text", "The text to use on the button for Emailing Selected Members", true, "<i class='fa fa-envelope-o'></i> Email Selected Members", "Text", 3 )]
+    [TextField( "Alternate Communication Button Text", "The text to use on the button for Alternate Communication button for Selected Members", true, "&lt;i class='fa fa-comment-o'&gt;&lt;/i&gt; Text Selected Members", "Text", 4 )]
+    [TextField( "Communication Button CSS Class", "The css classes used on the 'Email Selected Members' button.", true, "btn btn-default btn-xs", "CSS Classes", 5 )]
+    [TextField( "Alternate Communication Button CSS Class", "The css classes used on the 'Text Selected Members' button.", true, "btn btn-default btn-xs", "CSS Classes", 6 )]
     #endregion
 
     public partial class GroupSelectedCommunication : Rock.Web.UI.RockBlock
@@ -33,6 +36,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
         // used for private variables
         private int _groupId = 0;
+        private bool _blockActive = true;
 
         #endregion
 
@@ -69,11 +73,17 @@ namespace RockWeb.Plugins.com_kfs.Groups
         {
             base.OnLoad( e );
 
-            if ( !IsPostBack )
+            if ( Request.Form["__EVENTARGUMENT"] != null )
             {
-                BlockSetup();
+                string[] eventArgs = Request.Form["__EVENTARGUMENT"].Split( '^' );
+
+                if ( eventArgs.Length == 2 )
+                {
+                    _blockActive = false;
+                }
             }
 
+            BlockSetup();
         }
 
         #endregion
@@ -121,11 +131,28 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// </summary>
         private void BlockSetup()
         {
-            btnCommunicateSelected.Visible = !string.IsNullOrWhiteSpace( GetAttributeValue( "AlternateCommunicationPage" ) );
+            btnEmailSelected.Text = GetAttributeValue( "CommunicationButtonText" );
+            btnEmailSelected.CssClass = GetAttributeValue( "CommunicationButtonCSSClass" );
+            btnEmailSelected.Visible = _blockActive;
+
+            btnCommunicateSelected.Visible = _blockActive && !string.IsNullOrWhiteSpace( GetAttributeValue( "AlternateCommunicationPage" ) );
+            btnCommunicateSelected.Text = GetAttributeValue( "AlternateCommunicationButtonText" );
+            btnCommunicateSelected.CssClass = GetAttributeValue( "AlternateCommunicationButtonCSSClass" );
         }
 
         private Dictionary<string, string> CreateCommunication()
         {
+            var selectedMembers = Request.Form["selectedmembers"];
+            var selectedIds = new List<string>();
+            if ( selectedMembers != null && !string.IsNullOrWhiteSpace( selectedMembers ) )
+            {
+                selectedIds = selectedMembers.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
+            }
+            else
+            {
+                mdAlert.Show( "Please select members to communicate to.", ModalAlertType.Warning );
+                return new Dictionary<string, string>();
+            }
             var rockContext = new RockContext();
             var service = new Rock.Model.CommunicationService( rockContext );
             var communication = new Rock.Model.Communication();
@@ -137,7 +164,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             service.Add( communication );
 
             var personAliasIds = new GroupMemberService( rockContext ).Queryable()
-                                .Where( m => m.GroupId == _groupId && m.GroupMemberStatus != GroupMemberStatus.Inactive )
+                                .Where( m => m.GroupId == _groupId && selectedIds.Contains( m.PersonId.ToString() ) )
                                 .ToList()
                                 .Select( m => m.Person.PrimaryAliasId )
                                 .ToList();
@@ -152,12 +179,12 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             rockContext.SaveChanges();
 
-            Dictionary<string, string> queryParameters = new Dictionary<string, string>();
+            var queryParameters = new Dictionary<string, string>();
             queryParameters.Add( "CommunicationId", communication.Id.ToString() );
 
             return queryParameters;
         }
-        
+
         /// <summary>
         /// Sends the communication.
         /// </summary>
@@ -167,7 +194,10 @@ namespace RockWeb.Plugins.com_kfs.Groups
             if ( this.CurrentPerson != null && _groupId != -1 && !string.IsNullOrWhiteSpace( GetAttributeValue( "CommunicationPage" ) ) )
             {
                 var queryParameters = CreateCommunication();
-                NavigateToLinkedPage( "CommunicationPage", queryParameters );
+                if ( queryParameters.Any() )
+                {
+                    NavigateToLinkedPage( "CommunicationPage", queryParameters );
+                }
             }
         }
 
@@ -180,7 +210,10 @@ namespace RockWeb.Plugins.com_kfs.Groups
             if ( this.CurrentPerson != null && _groupId != -1 && !string.IsNullOrWhiteSpace( GetAttributeValue( "AlternateCommunicationPage" ) ) )
             {
                 var queryParameters = CreateCommunication();
-                NavigateToLinkedPage( "AlternateCommunicationPage", queryParameters );
+                if ( queryParameters.Any() )
+                {
+                    NavigateToLinkedPage( "AlternateCommunicationPage", queryParameters );
+                }
             }
         }
 

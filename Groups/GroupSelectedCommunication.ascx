@@ -3,8 +3,9 @@
 <asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
 
-        <asp:Button ID="btnEmailSelected" runat="server" CssClass="btn btn-primary" Text="Email Selected Members" OnClick="btnEmailGroup_Click" />
-        <asp:Button ID="btnCommunicateSelected" runat="server" CssClass="btn btn-primary" Text="Communicate to Selected Members" OnClick="btnAlternateGroup_Click" Visible="false" />
+        <Rock:BootstrapButton ID="btnEmailSelected" runat="server" CssClass="btn btn-primary" Text="Email Selected Members" OnClick="btnEmailGroup_Click" />
+        <Rock:BootstrapButton ID="btnCommunicateSelected" runat="server" CssClass="btn btn-primary" Text="Communicate to Selected Members" OnClick="btnAlternateGroup_Click" Visible="false" />
+        <Rock:ModalAlert ID="mdAlert" runat="server" />
 
     </ContentTemplate>
 </asp:UpdatePanel>
