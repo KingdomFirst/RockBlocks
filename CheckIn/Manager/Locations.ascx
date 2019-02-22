@@ -66,6 +66,7 @@
                             <asp:Literal ID="lNavHeading" runat="server" />
                         </div>
                         <div class="pull-right margin-v-sm">
+                            <asp:Label ID="lblLocationWarningHeader" runat="server" CssClass="badge badge-danger" Text="Location Inactive" Visible="false" />
                             <Rock:Toggle ID="tglHeadingRoom" runat="server" OnText="Open" OffText="Close" ButtonSizeCssClass="btn-xs" OnCssClass="btn-success" OffCssClass="btn-danger" OnCheckedChanged="tglRoom_CheckedChanged" />
                         </div>
                         <div class="pull-right margin-v-sm">
@@ -90,6 +91,9 @@
                             <li id="liNavItem" runat="server" class="list-group-item clickable">
                                 <div class="content margin-v-sm"><%# Eval("Name") %></div>
                                 <div class="pull-right margin-v-sm">
+                                    <asp:Label ID="lblLocationWarning" runat="server" CssClass="badge badge-danger" Text="Location Inactive" Visible="false" />
+                                    &nbsp;&nbsp;
+                                    
                                     <asp:Label ID="lblCurrentCount" runat="server" CssClass="badge" />
                                     &nbsp;&nbsp;
 
