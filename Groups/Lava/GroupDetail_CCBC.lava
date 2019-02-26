@@ -138,13 +138,16 @@
 							{% if member.Person.Email and member.Person.Email != "" %}<br />
 							<a href="mailto:{{ member.Person.Email }}">{{ member.Person.Email }}</a>{% endif %}
 
-                            {% assign parents = member.Person | Parents %}{% if parents and parents != empty %}
-                            {% for parent in parents %}
+                            {% assign adults = member.Person | Parents %}{% if adults and adults != empty -%}
+                            {% assign isChild = Person | Groups: "10","All" | Where:'GroupRoleId',4 -%}
+                            {% if isChild and isChild != empty -%}
+                            {% for parent in adults %}
                                 <br><small>{{ parent.FullName }}</small>
                                 {% for phone in parent.PhoneNumbers %}
 							    {% unless phonesString contains phone.Number %}<br />{% if phone.IsUnlisted != true %}{% capture phonesString %}{{phonesString}}{{phone.Number}},{% endcapture %}<a href="tel:{{ phone.NumberFormatted }}">{{ phone.NumberFormatted }}</a>{% else %}Unlisted{% endif %}  <small>({{ phone.NumberTypeValue.Value }})</small>{% endunless %}
 							    {% endfor %}
-                                <br><a href="mailto:{{ parent.Email }}">{{ parent.Email }}</a>{% endfor %}{% endif %}
+                                <br><a href="mailto:{{ parent.Email }}">{{ parent.Email }}</a>
+                            {% endfor -%}{% endif -%}{% endif -%}
 						</div>
 
 						{% if AllowedActions.Edit == true or AllowedActions.ManageMembers == true %}
@@ -214,15 +217,17 @@
 							{% if member.Person.Email and member.Person.Email != "" %}<br />
 							<a href="mailto:{{ member.Person.Email }}">{{ member.Person.Email }}</a>{% endif %}
 
-                            {% assign parents = member.Person | Parents %}{% if parents and parents != empty %}
-                            {% for parent in parents %}
+                            {% assign adults = member.Person | Parents %}{% if adults and adults != empty -%}
+                            {% assign isChild = Person | Groups: "10","All" | Where:'GroupRoleId',4 -%}
+                            {% if isChild and isChild != empty -%}
+                            {% for parent in adults %}
                                 <br><small>{{ parent.FullName }}</small>
                                 {% for phone in parent.PhoneNumbers %}
 							    {% unless phonesString contains phone.Number %}<br />{% if phone.IsUnlisted != true %}{% capture phonesString %}{{phonesString}}{{phone.Number}},{% endcapture %}<a href="tel:{{ phone.NumberFormatted }}">{{ phone.NumberFormatted }}</a>{% else %}Unlisted{% endif %}  <small>({{ phone.NumberTypeValue.Value }})</small>{% endunless %}
 							    {% endfor %}
                                 <br><a href="mailto:{{ parent.Email }}">{{ parent.Email }}</a>
-                            {% endfor %}{% endif %}
-						</div>
+                            {% endfor -%}{% endif -%}{% endif -%}
+                        </div>
 
 
 						{% if AllowedActions.Edit == true or AllowedActions.ManageMembers == true %}
@@ -292,13 +297,16 @@
 							{% if member.Person.Email and member.Person.Email != "" %}<br />
 							<a href="mailto:{{ member.Person.Email }}">{{ member.Person.Email }}</a>{% endif %}
 
-                            {% assign adults = member.Person | Parents %}{% if adults and adults != empty %}
+                            {% assign adults = member.Person | Parents %}{% if adults and adults != empty -%}
+                            {% assign isChild = Person | Groups: "10","All" | Where:'GroupRoleId',4 -%}
+                            {% if isChild and isChild != empty -%}
                             {% for parent in adults %}
                                 <br><small>{{ parent.FullName }}</small>
                                 {% for phone in parent.PhoneNumbers %}
 							    {% unless phonesString contains phone.Number %}<br />{% if phone.IsUnlisted != true %}{% capture phonesString %}{{phonesString}}{{phone.Number}},{% endcapture %}<a href="tel:{{ phone.NumberFormatted }}">{{ phone.NumberFormatted }}</a>{% else %}Unlisted{% endif %}  <small>({{ phone.NumberTypeValue.Value }})</small>{% endunless %}
 							    {% endfor %}
-                                <br><a href="mailto:{{ parent.Email }}">{{ parent.Email }}</a>{%endfor%}{% endif %}
+                                <br><a href="mailto:{{ parent.Email }}">{{ parent.Email }}</a>
+                            {% endfor -%}{% endif -%}{% endif -%}
 						</div>
 
 						{% if AllowedActions.Edit == true or AllowedActions.ManageMembers == true %}
