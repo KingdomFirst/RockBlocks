@@ -121,10 +121,11 @@
 						{% if LinkedPages.PersonDetailPage %}
 							<a href="{{ LinkedPages.PersonDetailPage }}?PersonId={{ member.PersonId }}">
 						{% endif %}
+						<div class="pull-left margin-r-sm" style="padding-top: 21px;">
+                            <input type="checkbox" name="selectedmembers" id="groupmember_{{ member.PersonId }}" value="{{ member.PersonId }}">
+                        </div>
 						<div class="pull-left margin-r-sm text-center">
                             <img src="{{ member.Person.PhotoUrl }}&height=60&width=60&mode=crop&scale=both" height="60" class="" alt="">
-                            <br>
-                            <input type="checkbox" name="selectedmembers" id="groupmember_{{ member.PersonId }}" value="{{ member.PersonId }}">
                         </div>
 						<div class="pull-left">
 							<strong>{{ member.Person.FullName }}</strong>
@@ -196,10 +197,11 @@
 						{% if LinkedPages.PersonDetailPage %}
 							<a href="{{ LinkedPages.PersonDetailPage }}?PersonId={{ member.PersonId }}">
 						{% endif %}
+						<div class="pull-left margin-r-sm" style="padding-top: 21px;">
+                            <input type="checkbox" name="selectedmembers" id="groupmember_{{ member.PersonId }}" value="{{ member.PersonId }}">
+                        </div>
 						<div class="pull-left margin-r-sm text-center">
                             <img src="{{ member.Person.PhotoUrl }}&height=60&width=60&mode=crop&scale=both" height="60" class="" alt="">
-                            <br>
-                            <input type="checkbox" name="selectedmembers" id="groupmember_{{ member.PersonId }}" value="{{ member.PersonId }}">
                         </div>
 						<div class="pull-left">
 							<strong>{{ member.Person.FullName }}</strong>
@@ -273,10 +275,11 @@
 						{% if LinkedPages.PersonDetailPage %}
 							<a href="{{ LinkedPages.PersonDetailPage }}?PersonId={{ member.PersonId }}">
 						{% endif %}
+						<div class="pull-left margin-r-sm" style="padding-top: 21px;">
+                            <input type="checkbox" name="selectedmembers" id="groupmember_{{ member.PersonId }}" value="{{ member.PersonId }}">
+                        </div>
 						<div class="pull-left margin-r-sm text-center">
                             <img src="{{ member.Person.PhotoUrl }}&height=60&width=60&mode=crop&scale=both" height="60" class="" alt="">
-                            <br>
-                            <input type="checkbox" name="selectedmembers" id="groupmember_{{ member.PersonId }}" value="{{ member.PersonId }}">
                         </div>
 						<div class="pull-left">
 							<strong>{{ member.Person.FullName }}</strong>
@@ -289,8 +292,8 @@
 							{% if member.Person.Email and member.Person.Email != "" %}<br />
 							<a href="mailto:{{ member.Person.Email }}">{{ member.Person.Email }}</a>{% endif %}
 
-                            {% assign parents = member.Person | Parents %}{% if parents and parents != empty %}
-                            {% for parent in parents %}
+                            {% assign adults = member.Person | Parents %}{% if adults and adults != empty %}
+                            {% for parent in adults %}
                                 <br><small>{{ parent.FullName }}</small>
                                 {% for phone in parent.PhoneNumbers %}
 							    {% unless phonesString contains phone.Number %}<br />{% if phone.IsUnlisted != true %}{% capture phonesString %}{{phonesString}}{{phone.Number}},{% endcapture %}<a href="tel:{{ phone.NumberFormatted }}">{{ phone.NumberFormatted }}</a>{% else %}Unlisted{% endif %}  <small>({{ phone.NumberTypeValue.Value }})</small>{% endunless %}
