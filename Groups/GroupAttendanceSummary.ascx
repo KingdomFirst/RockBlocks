@@ -4,7 +4,7 @@
     <ContentTemplate>
 
         <div class="panel panel-block">
-                
+
             <div class="panel-heading clearfix">
                 <h1 class="panel-title pull-left">
                     <i class="fa fa-check-square-o"></i>
@@ -15,21 +15,15 @@
             <div class="panel-body">
 
                 <div class="grid grid-panel">
-                    <Rock:ModalAlert ID="mdGridWarning" runat="server" />
-                    <Rock:Grid ID="gOccurrences" runat="server" DisplayType="Full" AllowSorting="true" RowItemText="Occurrence" >
+                    <Rock:NotificationBox ID="nbAttendeesError" runat="server" NotificationBoxType="Danger" Dismissable="true" Visible="false" />
+                    <Rock:Grid ID="gAttendeesAttendance" runat="server" AllowSorting="true" RowItemText="Attendee" OnRowDataBound="gAttendeesAttendance_RowDataBound" ExportSource="ColumnOutput" ExportFilename="AttendanceAnalytics">
                         <Columns>
-                            <Rock:DateField DataField="OccurrenceDate" HeaderText="Date" ItemStyle-HorizontalAlign="Left" HeaderStyle-HorizontalAlign="Left" SortExpression="OccurrenceDate" />
-		                    <Rock:RockTemplateField HeaderText="Location" SortExpression="LocationPath,LocationName">
-		                        <ItemTemplate>
-		                            <%#Eval("LocationName")%><br />
-		                            <small><%#Eval("ParentLocationPath")%></small>
-		                        </ItemTemplate>
-		                    </Rock:RockTemplateField>
-                            <Rock:RockBoundField DataField="ScheduleName" HeaderText="Schedule" SortExpression="ScheduleName" />
-                            <Rock:BoolField DataField="AttendanceEntered" HeaderText="Attendance Entered" SortExpression="AttendanceEntered" />
-                            <Rock:BoolField DataField="DidNotOccur" HeaderText="Didn't Meet" SortExpression="DidNotOccur" />
-                            <Rock:RockBoundField DataField="DidAttendCount" HeaderText="Attendance Count" ItemStyle-HorizontalAlign="Right" DataFormatString="{0:N0}" SortExpression="DidAttendCount" HeaderStyle-HorizontalAlign="Right" />
-                            <Rock:RockBoundField DataField="AttendanceRate" HeaderText="Percent Attended" ItemStyle-HorizontalAlign="Right" DataFormatString="{0:P0}" SortExpression="AttendanceRate" HeaderStyle-HorizontalAlign="Right"/>
+                            <Rock:SelectField />
+                            <asp:HyperLinkField DataNavigateUrlFields="PersonId" DataTextField="Person" HeaderText="Name" SortExpression="Person.LastName, Person.NickName" />
+                            <Rock:RockBoundField DataField="Person" HeaderText="Person" Visible="false" ExcelExportBehavior="AlwaysInclude" />
+                            <Rock:DateField DataField="LastVisit.StartDateTime" HeaderText="Last Visit" SortExpression="LastVisit.StartDateTime" />
+                            <Rock:RockLiteralField HeaderText="Count" ID="lAttendanceCount" SortExpression="AttendanceSummary.Count" />
+                            <Rock:RockLiteralField HeaderText="%" ID="lAttendancePercent" SortExpression="AttendanceSummary.Count" />
                         </Columns>
                     </Rock:Grid>
                 </div>
