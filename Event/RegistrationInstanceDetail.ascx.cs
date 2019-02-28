@@ -4091,6 +4091,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                 grid.Columns.Remove( column );
             }
 
+            // Remove the dynamic export fields
+            foreach ( var column in grid.Columns
+                .OfType<RockLiteralField>()
+                .Where( c => c.HeaderText.StartsWith( "lAssignment" ) )
+                .ToList() )
+            {
+                grid.Columns.Remove( column );
+            }
+
             // Remove the fees field
             foreach ( var column in grid.Columns
                 .OfType<RockLiteralField>()
