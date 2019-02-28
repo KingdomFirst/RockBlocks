@@ -4784,14 +4784,16 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// Adds the quick assignment grid.
         /// </summary>
         /// <param name="resourceGrid">The resource grid.</param>
-        private void AddQuickAssignmentColumns( Grid resourceGrid )
+        /// <param name="volunteerGrid">if set to <c>true</c> [volunteer grid].</param>
+        private void AddQuickAssignmentColumns( Grid resourceGrid, bool volunteerGrid = false )
         {
             if ( ResourceGroups != null )
             {
                 using ( var rockContext = new RockContext() )
                 {
                     var groupService = new GroupService( rockContext);
-                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
+                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true )
+                        && (!volunteerGrid || gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) ) )
                     {
                         if ( ResourceGroups.ContainsKey( groupType.Name ) )
                         {
@@ -7134,7 +7136,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 groupTypeGroupUI.ParentGroupId = parentGroupId ?? groupTypeGroupUI.ParentGroupId;
                                 CreateInstanceGroupAttribute( rockContext, instance, groupType.Name, groupTypeGroupUI.Guid );
                             }
-                            else
+                            else if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
                             {
                                 instance.AttributeValues[groupType.Name].Value = Guid.Empty.ToString();
                                 ResourceGroups[groupType.Name].Value = Guid.Empty.ToString();
@@ -7329,10 +7331,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         hfParentGroupId.Value = parentGroup.Guid.ToString();
                         phGroupControl.Controls.Clear();
-                        var allowVolunteers = parentGroup.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean();
+                        //var allowVolunteers = parentGroup.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean();
                         var combineMembers = parentGroup.GroupType.GetAttributeValue( "DisplayCombinedMemberships" ).AsBoolean();
                         var separateRoles = parentGroup.GroupType.GetAttributeValue( "DisplaySeparateRoles" ).AsBoolean();
-                        BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList(), allowVolunteers, combineMembers, separateRoles );
+                        BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList(), combineMembers, separateRoles );
 
                         var qryParams = new Dictionary<string, string>();
                         qryParams.Add( "t", string.Format( "Add {0}", groupTypeGroupTerm ) );
@@ -7365,10 +7367,9 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="phGroupControl">The ph group control.</param>
         /// <param name="subGroups">The sub groups.</param>
-        /// <param name="allowVolunteers">if set to <c>true</c> [allow volunteers].</param>
         /// <param name="combineMembers">if set to <c>true</c> [combine members].</param>
         /// <param name="separateRoles">if set to <c>true</c> [separate roles].</param>
-        private void BuildSubGroupPanels( PlaceHolder phGroupControl, List<Group> subGroups, bool allowVolunteers, bool combineMembers, bool separateRoles )
+        private void BuildSubGroupPanels( PlaceHolder phGroupControl, List<Group> subGroups, bool combineMembers, bool separateRoles )
         {
             var groupAttributes = new List<AttributeCache>();
             if ( combineMembers )
@@ -7495,7 +7496,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="combineMemberships">if set to <c>true</c> [combine memberships].</param>
         private void BuildGroupPanel( Control phGroupControl, Group group, IQueryable<GroupMember> memberList, List<AttributeCache> groupAttributes, bool combineMemberships )
         {
-            var showAssignmentGrid = group.GroupType.GroupTypePurposeValue != null && group.GroupType.GroupTypePurposeValue.Value == "Serving Area";
+            var showVolunteerGrid = group.GroupType.GroupTypePurposeValue != null && group.GroupType.GroupTypePurposeValue.Value == "Serving Area";
             var groupIdArgument = string.Format( "{0}|{1}", group.ParentGroupId.ToString(), group.Id.ToString() );
             var memberGrid = new Grid()
             {
@@ -7663,9 +7664,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            if ( showAssignmentGrid )
+            if ( showVolunteerGrid )
             {
-                AddQuickAssignmentColumns( memberGrid );
+                AddQuickAssignmentColumns( memberGrid, showVolunteerGrid );
             }
 
             var deleteField = new DeleteField();
