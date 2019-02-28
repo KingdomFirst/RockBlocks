@@ -1,16 +1,6 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ReportingServicesViewer.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Reporting.ReportingServicesViewer" %>
-<%-- Commented out by Trey for build errors.  TBD if needed. --%>
-<%--<%@ Register TagPrefix="rsweb" TagName="ReportViewer" Namespace="Microsoft.Reporting.WebForms" Assembly="Microsoft.ReportViewer.WebForms"  %>--%>
-<%@ Register Assembly="Microsoft.ReportViewer.WebForms, Version=14.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91" Namespace="Microsoft.Reporting.WebForms" TagPrefix="rsweb" %>
+<%@ Register assembly="Microsoft.ReportViewer.WebForms, Version=15.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91" namespace="Microsoft.Reporting.WebForms" tagprefix="rsweb" %>
 <style>
-    .fill {
-        height: 800px;
-        min-height: 600px;
-        background-color: #ffffff;
-        display: inline-block;
-        border: 1px solid #000;
-        padding: 2px;
-    }
     .WaitControlBackground {
         display: none !important;
     }
@@ -22,10 +12,10 @@
                 <h1 class="panel-title"><i class="fa fa-file-text-o"></i>
                     <asp:Literal ID="lReportTitle" runat="server" /></h1>
             </div>
-            <div class="panel-body ">
+            <div class="panel-body">
                 <Rock:NotificationBox ID="nbError" runat="server" Visible="false" NotificationBoxType="Danger" />
-                <asp:Panel ID="pnlReportViewer" runat="server" Visible="false">
-                    <rsweb:ReportViewer ID="rsViewer" runat="server" ProcessingMode="Remote" CssClass="col-sm-12 fill kfs-ReportViewer"></rsweb:ReportViewer>
+                <asp:Panel ID="pnlReportViewer" runat="server" Visible="false" Style="height:100vh; border:1px solid #dbdbdb;">
+                    <rsweb:ReportViewer ID="rsViewer" runat="server" ProcessingMode="Remote" Height="100%" Width="100%"></rsweb:ReportViewer>
                 </asp:Panel>
             </div>
         </div>
