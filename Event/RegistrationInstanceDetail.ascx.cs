@@ -325,7 +325,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             break;
 
                         default:
-                            ActiveTab = "lb" + ResourceGroupTypes[tab.Value - 7];
+                            ActiveTab = "lb" + ResourceGroupTypes[tab.Value - 8];
                             break;
                     }
                 }
