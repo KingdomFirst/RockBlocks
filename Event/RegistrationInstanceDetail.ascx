@@ -310,11 +310,11 @@
                                         </Rock:RockTemplateField>
                                         <Rock:RockBoundField HeaderText="First Name" DataField="Person.NickName" ExcelExportBehavior="AlwaysInclude" Visible="false" />
                                         <Rock:RockBoundField HeaderText="Last Name" DataField="Person.LastName" ExcelExportBehavior="AlwaysInclude" Visible="false" />
-                                        <Rock:RockTemplateFieldUnselected HeaderText="Group">
+                                        <%--<Rock:RockTemplateFieldUnselected HeaderText="Group">
                                             <ItemTemplate>
                                                 <asp:Literal ID="lGroup" runat="server"></asp:Literal>
                                             </ItemTemplate>
-                                        </Rock:RockTemplateFieldUnselected>
+                                        </Rock:RockTemplateFieldUnselected>--%>
                                         <Rock:RockTemplateField Visible="false" HeaderText="Street 1" ExcelExportBehavior="AlwaysInclude">
                                             <ItemTemplate>
                                                 <asp:Literal ID="lStreet1" runat="server"></asp:Literal>
