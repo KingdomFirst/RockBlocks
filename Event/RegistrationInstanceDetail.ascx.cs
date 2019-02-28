@@ -7340,7 +7340,6 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         hfParentGroupId.Value = parentGroup.Guid.ToString();
                         phGroupControl.Controls.Clear();
-                        //var allowVolunteers = parentGroup.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean();
                         var combineMembers = parentGroup.GroupType.GetAttributeValue( "DisplayCombinedMemberships" ).AsBoolean();
                         var separateRoles = parentGroup.GroupType.GetAttributeValue( "DisplaySeparateRoles" ).AsBoolean();
                         BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList(), combineMembers, separateRoles );
