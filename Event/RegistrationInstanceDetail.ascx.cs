@@ -334,7 +334,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                             break;
 
                         default:
-                            ActiveTab = "lb" + ResourceGroupTypes[tab.Value - 7];
+                            ActiveTab = "lb" + ResourceGroupTypes[tab.Value - 8];
                             break;
                     }
                 }
@@ -1098,10 +1098,10 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 break;
 
                             case RegistrationPersonFieldType.HomePhone:
-                                var tbRegistrantsMobilePhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsHomePhoneFilter" ) as RockTextBox;
-                                if ( tbRegistrantsMobilePhoneFilter != null )
+                                var tbRegistrantsHomePhoneFilter = phRegistrantFormFieldFilters.FindControl( "tbRegistrantsHomePhoneFilter" ) as RockTextBox;
+                                if ( tbRegistrantsHomePhoneFilter != null )
                                 {
-                                    fRegistrants.SaveUserPreference( "Home Phone", tbRegistrantsMobilePhoneFilter.Text );
+                                    fRegistrants.SaveUserPreference( "Home Phone", tbRegistrantsHomePhoneFilter.Text );
                                 }
 
                                 break;
@@ -1381,9 +1381,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                     if ( registrant.PersonAlias != null && registrant.PersonAlias.Person != null )
                     {
                         lRegistrant.Text = registrant.PersonAlias.Person.FullNameReversed +
-                            ( Signers != null && !Signers.Contains( registrant.PersonAlias.PersonId ) ?
-                                " <i class='fa fa-pencil-square-o text-danger'></i>" :
-                                string.Empty );
+                            ( Signers != null && !Signers.Contains( registrant.PersonAlias.PersonId ) ? " <i class='fa fa-pencil-square-o text-danger'></i>" : string.Empty );
                     }
                     else
                     {
@@ -1403,6 +1401,14 @@ namespace RockWeb.Plugins.com_kfs.Event
 
                 // Set the campus
                 var lCampus = e.Row.FindControl( "lRegistrantsCampus" ) as Literal;
+                
+                // if it's null, try looking for the "lGroupPlacementsCampus" control since this RowDataBound event is shared between
+                // two different grids.
+                if ( lCampus == null )
+                {
+                    lCampus = e.Row.FindControl( "lGroupPlacementsCampus" ) as Literal;
+                }
+                
                 if ( lCampus != null && PersonCampusIds != null )
                 {
                     if ( registrant.PersonAlias != null )
@@ -1437,35 +1443,84 @@ namespace RockWeb.Plugins.com_kfs.Event
                         var feeDesc = new List<string>();
                         foreach ( var fee in registrant.Fees )
                         {
-                            feeDesc.Add( string.Format( "{0}{1} ({2})",
-                                fee.Quantity > 1 ? fee.Quantity.ToString( "N0" ) + " " : "",
+                            feeDesc.Add( string.Format(
+                                "{0}{1} ({2})",
+                                fee.Quantity > 1 ? fee.Quantity.ToString( "N0" ) + " " : string.Empty,
                                 fee.Quantity > 1 ? fee.RegistrationTemplateFee.Name.Pluralize() : fee.RegistrationTemplateFee.Name,
                                 fee.Cost.FormatAsCurrency() ) );
                         }
+
                         lFees.Text = feeDesc.AsDelimited( "<br/>" );
                     }
                 }
 
-                // add addresses if exporting
-                if ( _homeAddresses.Count > 0 && _homeAddresses.ContainsKey( registrant.PersonId.Value ) )
+                if (_homeAddresses.Any() )
                 {
-                    var lStreet1 = e.Row.FindControl( "lStreet1" ) as Literal;
-                    var lStreet2 = e.Row.FindControl( "lStreet2" ) as Literal;
-                    var lCity = e.Row.FindControl( "lCity" ) as Literal;
-                    var lState = e.Row.FindControl( "lState" ) as Literal;
-                    var lPostalCode = e.Row.FindControl( "lPostalCode" ) as Literal;
-                    var lCountry = e.Row.FindControl( "lCountry" ) as Literal;
-
                     var location = _homeAddresses[registrant.PersonId.Value];
-                    if ( location != null )
+                    // break up addresses if exporting
+                    if ( _isExporting )
                     {
-                        lStreet1.Text = location.Street1;
-                        lStreet2.Text = location.Street2;
-                        lCity.Text = location.City;
-                        lState.Text = location.State;
-                        lPostalCode.Text = location.PostalCode;
-                        lCountry.Text = location.Country;
+                        var lStreet1 = e.Row.FindControl( "lStreet1" ) as Literal;
+                        var lStreet2 = e.Row.FindControl( "lStreet2" ) as Literal;
+                        var lCity = e.Row.FindControl( "lCity" ) as Literal;
+                        var lState = e.Row.FindControl( "lState" ) as Literal;
+                        var lPostalCode = e.Row.FindControl( "lPostalCode" ) as Literal;
+                        var lCountry = e.Row.FindControl( "lCountry" ) as Literal;
+
+                        if ( location != null )
+                        {
+                            lStreet1.Text = location.Street1;
+                            lStreet2.Text = location.Street2;
+                            lCity.Text = location.City;
+                            lState.Text = location.State;
+                            lPostalCode.Text = location.PostalCode;
+                            lCountry.Text = location.Country;
+                        }
                     }
+                    else
+                    {
+                        var addressField = e.Row.FindControl( "lRegistrantsAddress" ) as Literal ?? e.Row.FindControl( "lGroupPlacementsAddress" ) as Literal;
+                        if ( addressField != null )
+                        {
+                            addressField.Text = location != null && location.FormattedAddress.IsNotNullOrWhiteSpace() ? location.FormattedAddress : string.Empty;
+                        }
+                    }
+                }
+
+                if (_mobilePhoneNumbers.Any())
+                {
+                    var mobileNumber = _mobilePhoneNumbers[registrant.PersonId.Value];
+                    var mobileField = e.Row.FindControl( "lRegistrantsMobile" ) as Literal ?? e.Row.FindControl( "lGroupPlacementsMobile" ) as Literal;
+                    if ( mobileField != null)
+                    {
+                        if (mobileNumber == null || mobileNumber.NumberFormatted.IsNullOrWhiteSpace())
+                        {
+                            mobileField.Text = string.Empty;
+                        }
+                        else
+                        {
+                            mobileField.Text = mobileNumber.IsUnlisted ? "Unlisted" : mobileNumber.NumberFormatted;
+                        }
+                    }
+                    
+                }
+
+                if ( _homePhoneNumbers.Any() )
+                {
+                    var homePhoneNumber = _homePhoneNumbers[registrant.PersonId.Value];
+                    var homePhoneField = e.Row.FindControl( "lRegistrantsHomePhone" ) as Literal ?? e.Row.FindControl( "lGroupPlacementsHomePhone" ) as Literal;
+                    if ( homePhoneField != null )
+                    {
+                        if ( homePhoneNumber == null || homePhoneNumber.NumberFormatted.IsNullOrWhiteSpace() )
+                        {
+                            homePhoneField.Text = string.Empty;
+                        }
+                        else
+                        {
+                            homePhoneField.Text = homePhoneNumber.IsUnlisted ? "Unlisted" : homePhoneNumber.NumberFormatted;
+                        }
+                    }
+
                 }
 
                 // Build custom assignment grid
@@ -2349,8 +2404,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                     case "First Name":
                     case "Last Name":
                     case "Email":
-                    case "Mobile Phone":
-                    case "Home Phone":
+                    
+                    case "HomePhone":
+                    case "Phone":
                     case "Signed Document":
                         {
                             break;
@@ -2486,14 +2542,14 @@ namespace RockWeb.Plugins.com_kfs.Event
                 var mobileField = e.Row.FindControl( "lWaitlistMobile" ) as Literal;
                 if ( mobileField != null )
                 {
-                    var homePhoneNumber = _homePhoneNumbers[registrant.PersonId.Value];
-                    if ( homePhoneNumber == null || homePhoneNumber.NumberFormatted.IsNullOrWhiteSpace() )
+                    var mobilePhoneNumber = _mobilePhoneNumbers[registrant.PersonId.Value];
+                    if ( mobilePhoneNumber == null || mobilePhoneNumber.NumberFormatted.IsNullOrWhiteSpace() )
                     {
                         mobileField.Text = string.Empty;
                     }
                     else
                     {
-                        mobileField.Text = homePhoneNumber.IsUnlisted ? "Unlisted" : homePhoneNumber.NumberFormatted;
+                        mobileField.Text = mobilePhoneNumber.IsUnlisted ? "Unlisted" : mobilePhoneNumber.NumberFormatted;
                     }
                 }
 
@@ -4044,6 +4100,15 @@ namespace RockWeb.Plugins.com_kfs.Event
                 grid.Columns.Remove( column );
             }
 
+            // Remove the dynamic export fields
+            foreach ( var column in grid.Columns
+                .OfType<RockLiteralField>()
+                .Where( c => c.HeaderText.StartsWith( "lAssignment" ) )
+                .ToList() )
+            {
+                grid.Columns.Remove( column );
+            }
+
             // Remove the fees field
             foreach ( var column in grid.Columns
                 .OfType<RockLiteralField>()
@@ -4737,14 +4802,16 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// Adds the quick assignment grid.
         /// </summary>
         /// <param name="resourceGrid">The resource grid.</param>
-        private void AddQuickAssignmentColumns( Grid resourceGrid )
+        /// <param name="volunteerGrid">if set to <c>true</c> [volunteer grid].</param>
+        private void AddQuickAssignmentColumns( Grid resourceGrid, bool volunteerGrid = false )
         {
             if ( ResourceGroups != null )
             {
                 using ( var rockContext = new RockContext() )
                 {
                     var groupService = new GroupService( rockContext);
-                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true ) ) )
+                    foreach ( var groupType in ResourceGroupTypes.Where( gt => gt.GetAttributeValue( "ShowOnGrid" ).AsBoolean( true )
+                        && (!volunteerGrid || gt.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean( true ) ) ) )
                     {
                         if ( ResourceGroups.ContainsKey( groupType.Name ) )
                         {
@@ -7087,7 +7154,7 @@ namespace RockWeb.Plugins.com_kfs.Event
                                 groupTypeGroupUI.ParentGroupId = parentGroupId ?? groupTypeGroupUI.ParentGroupId;
                                 CreateInstanceGroupAttribute( rockContext, instance, groupType.Name, groupTypeGroupUI.Guid );
                             }
-                            else
+                            else if ( instance.AttributeValues.ContainsKey( groupType.Name ) )
                             {
                                 instance.AttributeValues[groupType.Name].Value = Guid.Empty.ToString();
                                 ResourceGroups[groupType.Name].Value = Guid.Empty.ToString();
@@ -7282,10 +7349,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                     {
                         hfParentGroupId.Value = parentGroup.Guid.ToString();
                         phGroupControl.Controls.Clear();
-                        var allowVolunteers = parentGroup.GroupType.GetAttributeValue( "AllowVolunteerAssignment" ).AsBoolean();
                         var combineMembers = parentGroup.GroupType.GetAttributeValue( "DisplayCombinedMemberships" ).AsBoolean();
                         var separateRoles = parentGroup.GroupType.GetAttributeValue( "DisplaySeparateRoles" ).AsBoolean();
-                        BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList(), allowVolunteers, combineMembers, separateRoles );
+                        BuildSubGroupPanels( phGroupControl, parentGroup.Groups.OrderBy( g => g.Name ).ToList(), combineMembers, separateRoles );
 
                         var qryParams = new Dictionary<string, string>();
                         qryParams.Add( "t", string.Format( "Add {0}", groupTypeGroupTerm ) );
@@ -7318,10 +7384,9 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// </summary>
         /// <param name="phGroupControl">The ph group control.</param>
         /// <param name="subGroups">The sub groups.</param>
-        /// <param name="allowVolunteers">if set to <c>true</c> [allow volunteers].</param>
         /// <param name="combineMembers">if set to <c>true</c> [combine members].</param>
         /// <param name="separateRoles">if set to <c>true</c> [separate roles].</param>
-        private void BuildSubGroupPanels( PlaceHolder phGroupControl, List<Group> subGroups, bool allowVolunteers, bool combineMembers, bool separateRoles )
+        private void BuildSubGroupPanels( PlaceHolder phGroupControl, List<Group> subGroups, bool combineMembers, bool separateRoles )
         {
             var groupAttributes = new List<AttributeCache>();
             if ( combineMembers )
@@ -7448,7 +7513,7 @@ namespace RockWeb.Plugins.com_kfs.Event
         /// <param name="combineMemberships">if set to <c>true</c> [combine memberships].</param>
         private void BuildGroupPanel( Control phGroupControl, Group group, IQueryable<GroupMember> memberList, List<AttributeCache> groupAttributes, bool combineMemberships )
         {
-            var showAssignmentGrid = group.GroupType.GroupTypePurposeValue != null && group.GroupType.GroupTypePurposeValue.Value == "Serving Area";
+            var showVolunteerGrid = group.GroupType.GroupTypePurposeValue != null && group.GroupType.GroupTypePurposeValue.Value == "Serving Area";
             var groupIdArgument = string.Format( "{0}|{1}", group.ParentGroupId.ToString(), group.Id.ToString() );
             var memberGrid = new Grid()
             {
@@ -7616,9 +7681,9 @@ namespace RockWeb.Plugins.com_kfs.Event
                 }
             }
 
-            if ( showAssignmentGrid )
+            if ( showVolunteerGrid )
             {
-                AddQuickAssignmentColumns( memberGrid );
+                AddQuickAssignmentColumns( memberGrid, showVolunteerGrid );
             }
 
             var deleteField = new DeleteField();
