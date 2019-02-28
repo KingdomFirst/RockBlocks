@@ -561,8 +561,47 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 }
             }
 
+            var combinedResults = new List<AttendeeResult>();
+            using ( var rockContext = new RockContext() )
+            {
+                var attendanceService = new AttendanceService( rockContext );
+                var attendanceDates = attendanceService
+                    .Queryable().AsNoTracking().Where( a => a.Occurrence.GroupId == _group.Id && a.StartDateTime >= start && a.StartDateTime <= end );
+
+                var peopleService = new PersonService( rockContext );
+                var peopleInfo = peopleService.Queryable().AsNoTracking().Where( p => attendanceDates.Select( a => a.PersonAlias.PersonId ).Contains( p.Id ) );
+
+                combinedResults = peopleInfo.Select(
+                    p => new AttendeeResult
+                    {
+                        Person = new PersonInfo
+                        {
+                            NickName = p.NickName,
+                            LastName = p.LastName
+                        },
+                        PersonId = p.Id,
+                        AttendanceSummary = attendanceDates.Where( a => a.PersonAlias.PersonId == p.Id && a.DidAttend == true ).Select( a => a.StartDateTime ).ToList(),
+                        LastVisit = attendanceDates.Where( a => a.PersonAlias.PersonId == p.Id && a.DidAttend == true )
+                            .Select( a => new PersonLastAttendance
+                            {
+                                CampusId = a.CampusId,
+                                GroupId = a.Occurrence.GroupId,
+                                GroupName = a.Occurrence.Group.Name,
+                                RoleName = a.Occurrence.Group.Members.Where( gm => gm.PersonId == p.Id && gm.GroupMemberStatus != GroupMemberStatus.Inactive ).Select( gm => gm.GroupRole.Name ).FirstOrDefault(),
+                                InGroup = a.Occurrence.Group.Members.Any( gm => gm.PersonId == p.Id && gm.GroupMemberStatus != GroupMemberStatus.Inactive ),
+                                ScheduleId = a.Occurrence.ScheduleId,
+                                StartDateTime = a.StartDateTime,
+                                LocationId = a.Occurrence.LocationId,
+                                LocationName = a.Occurrence.Location.Name
+                            } ).OrderByDescending( lv => lv.StartDateTime ).FirstOrDefault()
+                    } ).ToList();
+
+                _possibleAttendances = attendanceDates.GroupBy( a => a.StartDateTime ).Select( a => a.Key ).ToList();
+            }
+
             // Begin formatting the columns
-            var qryResult = allResults.AsQueryable();
+            //var qryResult = allResults.AsQueryable();
+            var qryResult = combinedResults.AsQueryable();
 
             var personUrlFormatString = ( ( RockPage ) this.Page ).ResolveRockUrl( "~/Person/{0}" );
 
@@ -668,7 +707,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             //attendancePercentField.HeaderText = string.Format( "{0}ly Attendance %", groupBy.ConvertToString() );
 
             // Calculate all the possible attendance summary dates
-            UpdatePossibleAttendances( dateRange, groupBy );
+            //UpdatePossibleAttendances( dateRange, groupBy );
 
             // pre-load the schedule names since FriendlyScheduleText requires building the ICal object, etc
             _scheduleNameLookup = new ScheduleService( _rockContext ).Queryable()
