@@ -139,7 +139,7 @@
 							<a href="mailto:{{ member.Person.Email }}">{{ member.Person.Email }}</a>{% endif %}
 
                             {% assign adults = member.Person | Parents %}{% if adults and adults != empty -%}
-                            {% assign isChild = Person | Groups: "10","All" | Where:'GroupRoleId',4 -%}
+                            {% assign isChild = member.Person | Groups: "10","All" | Where:'GroupRoleId',4 -%}
                             {% if isChild and isChild != empty -%}
                             {% for parent in adults %}
                                 <br><small>{{ parent.FullName }}</small>
@@ -218,7 +218,7 @@
 							<a href="mailto:{{ member.Person.Email }}">{{ member.Person.Email }}</a>{% endif %}
 
                             {% assign adults = member.Person | Parents %}{% if adults and adults != empty -%}
-                            {% assign isChild = Person | Groups: "10","All" | Where:'GroupRoleId',4 -%}
+                            {% assign isChild = member.Person | Groups: "10","All" | Where:'GroupRoleId',4 -%}
                             {% if isChild and isChild != empty -%}
                             {% for parent in adults %}
                                 <br><small>{{ parent.FullName }}</small>
@@ -298,7 +298,7 @@
 							<a href="mailto:{{ member.Person.Email }}">{{ member.Person.Email }}</a>{% endif %}
 
                             {% assign adults = member.Person | Parents %}{% if adults and adults != empty -%}
-                            {% assign isChild = Person | Groups: "10","All" | Where:'GroupRoleId',4 -%}
+                            {% assign isChild = member.Person | Groups: "10","All" | Where:'GroupRoleId',4 -%}
                             {% if isChild and isChild != empty -%}
                             {% for parent in adults %}
                                 <br><small>{{ parent.FullName }}</small>
