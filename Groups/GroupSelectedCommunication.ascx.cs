@@ -24,8 +24,8 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
     [LinkedPage( "Communication Page", "The communication page to use for sending emails to the group members.", true, "", "Pages", 1 )]
     [LinkedPage( "Alternate Communication Page", "The communication page to use for sending an alternate communication to the group members.", false, "", "Pages", 2 )]
-    [TextField( "Communication Button Text", "The text to use on the button for Emailing Selected Members", true, "<i class='fa fa-envelope-o'></i> Email Selected Members", "Text", 3 )]
-    [TextField( "Alternate Communication Button Text", "The text to use on the button for Alternate Communication button for Selected Members", true, "<i class='fa fa-comment-o'></i> Text Selected Members", "Text", 4 )]
+    [CodeEditorField( "Communication Button Text", "The text to use on the button for Emailing Selected Members", CodeEditorMode.Text, CodeEditorTheme.Rock, 20, true, "<i class='fa fa-envelope-o'></i> Email Selected Members", "Text", 3 )]
+    [CodeEditorField( "Alternate Communication Button Text", "The text to use on the button for Alternate Communication button for Selected Members", CodeEditorMode.Text, CodeEditorTheme.Rock, 20, true, "<i class='fa fa-comment-o'></i> Text Selected Members", "Text", 4 )]
     [TextField( "Communication Button CSS Class", "The css classes used on the 'Email Selected Members' button.", true, "btn btn-default btn-xs", "CSS Classes", 5 )]
     [TextField( "Alternate Communication Button CSS Class", "The css classes used on the 'Text Selected Members' button.", true, "btn btn-default btn-xs", "CSS Classes", 6 )]
     #endregion
