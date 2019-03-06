@@ -191,7 +191,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             // Get the daterange filter
             var dateRange = new DateRange();
-            var weeksToDays = ( _numberOfWeeks - 1 ) * 7; // due to using startofweek calculations -1 from desired amount
+            var weeksToDays = ( _numberOfWeeks ) * 7;
             var start = DateTime.Now.AddDays( -weeksToDays );
             var end = DateTime.Now;
             dateRange.Start = start;
@@ -486,10 +486,9 @@ namespace RockWeb.Plugins.com_kfs.Groups
         public List<DateTime> GetPossibleAttendancesForDateRange( DateRange dateRange, ChartGroupBy attendanceGroupBy )
         {
             var result = new List<DateTime>();
+            result.AddRange( _possibleAttendances );
 
-            // Attendance is grouped by Sunday dates between the start/end dates.
-            // The possible dates (columns) should be calculated the same way.
-            var startDay = dateRange.Start.Value.SundayDate();
+            var startDay = dateRange.Start.Value;
             var firstAttendanceDate = startDay;
             if ( _possibleAttendances.Any() )
             {
@@ -504,14 +503,20 @@ namespace RockWeb.Plugins.com_kfs.Groups
             {
                 endDay = endDay.AddDays( -7 );
             }
+            else
+            {
+                startDay = startDay.AddDays( 7 );
+            }
 
             if ( attendanceGroupBy == ChartGroupBy.Week )
             {
                 var weekEndDate = startDay;
                 while ( weekEndDate <= endDay )
                 {
-                    // Weeks are summarized as the last day of the "Rock" week (Sunday)
-                    result.Add( weekEndDate );
+                    if ( !result.Contains( weekEndDate ) )
+                    {
+                        result.Add( weekEndDate );
+                    }
                     weekEndDate = weekEndDate.AddDays( 7 );
                 }
             }
@@ -544,7 +549,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             // only include current and previous dates
             var currentDateTime = RockDateTime.Now;
-            result = result.Where( a => a <= currentDateTime.Date ).ToList();
+            result = result.Where( a => a <= currentDateTime.Date ).OrderBy(a => a).ToList();
 
             return result;
         }
