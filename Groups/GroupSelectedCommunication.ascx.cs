@@ -163,10 +163,9 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             service.Add( communication );
 
-            var personAliasIds = new GroupMemberService( rockContext ).Queryable()
-                                .Where( m => m.GroupId == _groupId && selectedIds.Contains( m.PersonId.ToString() ) )
-                                .ToList()
-                                .Select( m => m.Person.PrimaryAliasId )
+            var personAliasIds = new PersonAliasService( rockContext ).Queryable().AsNoTracking()
+                                .Where( a => selectedIds.Contains( a.PersonId.ToString() ) )
+                                .Select( a => a.Id )
                                 .ToList();
 
             // Get the primary aliases
