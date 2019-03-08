@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupAttendanceSummary.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Groups.GroupAttendanceSummary" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupAttendanceSummary.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Groups.GroupAttendanceSummary" %>
 
 <asp:UpdatePanel ID="pnlContent" runat="server">
     <ContentTemplate>
