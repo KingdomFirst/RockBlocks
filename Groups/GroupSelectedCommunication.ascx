@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupSelectedCommunication.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Groups.GroupSelectedCommunication" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupSelectedCommunication.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Groups.GroupSelectedCommunication" %>
 
 <asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>

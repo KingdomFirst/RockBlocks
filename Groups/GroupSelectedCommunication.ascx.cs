@@ -14,7 +14,7 @@ using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Plugins.com_kfs.Groups
+namespace RockWeb.Plugins.rocks_kfs.Groups
 {
     #region Block Attributes
 
