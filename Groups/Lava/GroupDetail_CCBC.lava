@@ -95,6 +95,14 @@
 					<li role="presentation"><a href="{{ LinkedPages.AttendancePage }}?GroupId={{ Group.Id }}">Attendance</a></li>
 				{% endif %}
 			{% endif %}
+
+			{% if LinkedPages.AttendancePage != '' and Group.GroupType.TakesAttendance == 'True' %}
+				{% if "/page/3455" == CurrentPage.Path %}
+					<li role="presentation" class="active"><a href="/page/3455?GroupId={{ Group.Id }}">Attendance Summary</a></li>
+				{% else %}
+					<li role="presentation"><a href="/page/3455?GroupId={{ Group.Id }}">Attendance Summary</a></li>
+				{% endif %}
+			{% endif %}
 		</ul>
 	{% endif %}
 
