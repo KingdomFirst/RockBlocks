@@ -204,7 +204,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 var attendanceService = new AttendanceService( rockContext );
                 var attendanceDates = attendanceService
-                    .Queryable().AsNoTracking().Where( a => groupId.HasValue && a.Occurrence.GroupId == groupId && a.StartDateTime >= start && a.StartDateTime <= end );
+                    .Queryable().AsNoTracking().Where( a => groupId.HasValue && a.Occurrence.GroupId == groupId && a.Occurrence.OccurrenceDate >= start && a.Occurrence.OccurrenceDate < end );
 
                 var peopleService = new PersonService( rockContext );
                 var peopleInfo = peopleService.Queryable().AsNoTracking().Where( p => attendanceDates.Select( a => a.PersonAlias.PersonId ).Contains( p.Id ) );
@@ -223,7 +223,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             ConnectionStatusValueId = p.ConnectionStatusValueId
                         },
                         PersonId = p.Id,
-                        AttendanceSummary = attendanceDates.Where( a => a.PersonAlias.PersonId == p.Id && a.DidAttend == true ).Select( a => a.StartDateTime ).ToList(),
+                        AttendanceSummary = attendanceDates.Where( a => a.PersonAlias.PersonId == p.Id && a.DidAttend == true ).Select( a => a.Occurrence.OccurrenceDate ).ToList(),
                         LastVisit = attendanceDates.Where( a => a.PersonAlias.PersonId == p.Id && a.DidAttend == true )
                             .Select( a => new PersonLastAttendance
                             {
@@ -233,13 +233,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                 RoleName = a.Occurrence.Group.Members.Where( gm => gm.PersonId == p.Id && gm.GroupMemberStatus != GroupMemberStatus.Inactive ).Select( gm => gm.GroupRole.Name ).FirstOrDefault(),
                                 InGroup = a.Occurrence.Group.Members.Any( gm => gm.PersonId == p.Id && gm.GroupMemberStatus != GroupMemberStatus.Inactive ),
                                 ScheduleId = a.Occurrence.ScheduleId,
-                                StartDateTime = a.StartDateTime,
+                                StartDateTime = a.Occurrence.OccurrenceDate,
                                 LocationId = a.Occurrence.LocationId,
                                 LocationName = a.Occurrence.Location.Name
                             } ).OrderByDescending( lv => lv.StartDateTime ).FirstOrDefault()
                     } ).ToList();
 
-                _possibleAttendances = attendanceDates.GroupBy( a => a.StartDateTime ).Select( a => a.Key ).ToList();
+                _possibleAttendances = attendanceDates.GroupBy( a => a.Occurrence.OccurrenceDate ).Select( a => a.Key ).ToList();
             }
             if ( isExporting )
             {
@@ -494,12 +494,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 firstAttendanceDate = _possibleAttendances.FirstOrDefault();
                 startDay = dateRange.Start.Value.StartOfWeek( firstAttendanceDate.DayOfWeek );
-                startDay = new DateTime( startDay.Year, startDay.Month, startDay.Day, firstAttendanceDate.Hour, firstAttendanceDate.Minute, firstAttendanceDate.Second );
             }
             var endDate = dateRange.End.Value;
             var endDay = endDate.StartOfWeek( firstAttendanceDate.DayOfWeek );
-            endDay = new DateTime( endDay.Year, endDay.Month, endDay.Day, firstAttendanceDate.Hour, firstAttendanceDate.Minute, firstAttendanceDate.Second );
-            if ( endDay > endDate )
+            if ( endDay.Date == endDate.Date )
             {
                 endDay = endDay.AddDays( -7 );
             }
