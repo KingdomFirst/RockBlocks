@@ -112,7 +112,7 @@ namespace RockWeb.Plugins.rocks_kfs.Utility
                 var fileInfo = new FileInfo( physicalFile );
                 if ( allowedExtensions.Contains( fileInfo.Extension ) )
                 {
-                    ProcessPackage( fupPlugin.UploadedContentFilePath );
+                    ProcessPackage( physicalFile );
                 }
                 else
                 {
@@ -133,8 +133,6 @@ namespace RockWeb.Plugins.rocks_kfs.Utility
             // process zip folder
             try
             {
-                destinationFile = this.Request.MapPath( destinationFile );
-
                 using ( ZipArchive packageZip = ZipFile.OpenRead( destinationFile ) )
                 {
                     // unzip content folder and process xdts
@@ -238,15 +236,15 @@ namespace RockWeb.Plugins.rocks_kfs.Utility
                         return;
                     }
                 }
-
-                // cleanup whether we could read the file or not
-                File.Delete( destinationFile );
             }
             catch ( Exception ex )
             {
                 nbWarning.Text = string.Format( "<strong>Error Extracting Package</strong> An error occurred while extracting the contents of the package. <br><em>Error: {0}</em>", ex.Message );
                 return;
             }
+
+            // cleanup whether we could read the file or not
+            File.Delete( destinationFile );
 
             // Clear all cached items
             RockCache.ClearAllCachedItems();

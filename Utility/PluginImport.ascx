@@ -13,7 +13,7 @@
                             <div class="form-group">
                                 <asp:HiddenField ID="hfPluginFileName" runat="server" />
                                 <Rock:HiddenFieldValidator ID="hfPluginValidator" runat="server" ControlToValidate="hfPluginFileName" CssClass="danger" ErrorMessage="A Plugin file must be uploaded" Display="None" />
-                                <Rock:FileUploader ID="fupPlugin" runat="server" Label="Select Plugin File" IsBinaryFile="false" RootFolder="~/App_Data/Uploads" DisplayMode="DropZone" OnFileUploaded="fupPlugin_FileUploaded" AllowMultipleUploads="false" />
+                                <Rock:FileUploader ID="fupPlugin" runat="server" Label="Select Plugin File" IsBinaryFile="false" RootFolder="~/App_Data/Uploads" DisplayMode="DropZone" OnFileUploaded="fupPlugin_FileUploaded" AllowMultipleUploads="false" Help="Accepted file types: .plugin or .zip" />
                             </div>
                         </div>
                     </div>
