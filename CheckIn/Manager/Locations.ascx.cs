@@ -2153,11 +2153,12 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                         tglHeadingRoom.Checked = true;
                                     }
 
-                                    // show inactive is the location is inactive in db
+                                    // show inactive if the location is inactive in db
                                     var location = new LocationService( rockContextOccurrence ).Get( locationItem.Id );
                                     if ( !location.IsActive )
                                     {
                                         tglHeadingRoom.Checked = false;
+                                        lblLocationWarningHeader.Visible = true;
                                     }
                                 }
                             }
