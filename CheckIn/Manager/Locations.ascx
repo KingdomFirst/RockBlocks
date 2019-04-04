@@ -66,8 +66,8 @@
                             <asp:Literal ID="lNavHeading" runat="server" />
                         </div>
                         <div class="pull-right margin-v-sm">
-                            <asp:Label ID="lblLocationWarningHeader" runat="server" CssClass="badge badge-danger" Text="Location Inactive" Visible="false" />
                             <Rock:Toggle ID="tglHeadingRoom" runat="server" OnText="Open" OffText="Close" ButtonSizeCssClass="btn-xs" OnCssClass="btn-success" OffCssClass="btn-danger" OnCheckedChanged="tglRoom_CheckedChanged" />
+                            <asp:Label ID="lblLocationWarningHeader" runat="server" CssClass="badge badge-danger" Text="Location Inactive" Visible="false" />
                         </div>
                         <div class="pull-right margin-v-sm">
                             <asp:LinkButton CssClass="btn-sm btn-info" ID="lbMoveAll" runat="server" OnClick="lbMoveAll_Click"><i class="fa fa-sign-out"></i> Move All</asp:LinkButton>&nbsp;&nbsp;

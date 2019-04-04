@@ -481,23 +481,65 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             }
 
                             var occurrences = new AttendanceOccurrenceService( rockContext )
-                                                    .Queryable()
+                                                    .Queryable().AsNoTracking()
                                                     .Where( o =>
                                                         o.OccurrenceDate == RockDateTime.Today &&
                                                         o.GroupId == groupId &&
                                                         o.LocationId == loc.Id &&
                                                         ( o.ScheduleId.HasValue && activeScheduleIds.Contains( o.ScheduleId.Value ) ) )
+                                                    .WhereAttributeValue( rockContext, "com.kfs.OccurrenceClosed", "True" )
                                                     .ToList();
 
                             if ( occurrences.Any() )
                             {
-                                var occurrence = occurrences.FirstOrDefault();
-                                occurrence.LoadAttributes();
-                                lblWarning.Visible = ( occurrence.GetAttributeValue( "com.kfs.OccurrenceClosed" ).AsBoolean( false ) );
+                                lblWarning.Visible = true;
                             }
                         }
                     }
                 }
+                // check for an occ being closed
+                else if ( _configuredMode == "L" && lblWarning != null && loc != null )
+                {
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var activeScheduleIds = new List<int>();
+                        var schedulesWithCheckin = new ScheduleService( rockContext )
+                            .Queryable().AsNoTracking()
+                            .Where( s => s.CheckInStartOffsetMinutes.HasValue );
+                        foreach ( var schedule in schedulesWithCheckin )
+                        {
+                            if ( schedule.WasScheduleOrCheckInActive( GetCampusTime() ) )
+                            {
+                                activeScheduleIds.Add( schedule.Id );
+                            }
+                        }
+
+                        var groupIds = new AttendanceOccurrenceService( rockContext )
+                                                .Queryable().AsNoTracking()
+                                                .Where( o =>
+                                                    o.OccurrenceDate == RockDateTime.Today &&
+                                                    o.LocationId == loc.Id &&
+                                                    o.GroupId.HasValue &&
+                                                    ( o.ScheduleId.HasValue && activeScheduleIds.Contains( o.ScheduleId.Value ) ) )
+                                                .WhereAttributeValue( rockContext, "com.kfs.OccurrenceClosed", "True" )
+                                                .Select( o => o.GroupId.Value )
+                                                .Distinct()
+                                                .ToList();
+
+                        if ( groupIds.Count > 1 )
+                        {
+                            lblWarning.Text = "Multiple Group Occurrences Closed";
+                            lblWarning.Visible = true;
+                        }
+                        else if ( groupIds.Count == 1 )
+                        {
+                            var group = new GroupService( rockContext ).Get( groupIds[0] );
+                            lblWarning.Text = string.Format( "{0} Group Occurrence Closed", group.Name );
+                            lblWarning.Visible = true;
+                        }
+                    }
+                }
+
                 else if ( !( UserCanAdministrate || IsUserAuthorized( "CloseLocations" ) ) && lblWarning != null && loc != null && !loc.IsActive )
                 {
                     // shows closed when can't view toggle and not in close occurrence mode
@@ -569,19 +611,18 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                 }
 
                                 var occurrences = new AttendanceOccurrenceService( rockContext )
-                                                        .Queryable()
+                                                        .Queryable().AsNoTracking()
                                                         .Where( o =>
                                                             o.OccurrenceDate == RockDateTime.Today &&
                                                             o.GroupId == groupId &&
                                                             o.LocationId == loc.Id &&
                                                             ( o.ScheduleId.HasValue && activeScheduleIds.Contains( o.ScheduleId.Value ) ) )
+                                                        .WhereAttributeValue( rockContext, "com.kfs.OccurrenceClosed", "True" )
                                                         .ToList();
 
                                 if ( occurrences.Any() )
                                 {
-                                    var occurrence = occurrences.FirstOrDefault();
-                                    occurrence.LoadAttributes();
-                                    tgl.Checked = !( occurrence.GetAttributeValue( "com.kfs.OccurrenceClosed" ).AsBoolean( false ) );
+                                    tgl.Checked = false;
                                 }
                                 else
                                 {
@@ -1377,7 +1418,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                             ActiveScheduleIds.Add( schedule.Id );
 
                             var currentAttendance = new AttendanceService( rockContext )
-                                .Queryable()
+                                .Queryable().AsNoTracking()
                                 .Where( a =>
                                     a.StartDateTime > minDate &&
                                     !a.EndDateTime.HasValue &&
@@ -1580,7 +1621,8 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                     groupIds = NavData.Groups.Select( g => g.Id ).ToList();
 
-                    var attendanceQry = new AttendanceService( rockContext ).Queryable()
+                    var attendanceQry = new AttendanceService( rockContext )
+                        .Queryable().AsNoTracking()
                         .Where( a =>
                             a.Occurrence.ScheduleId.HasValue &&
                             a.Occurrence.GroupId.HasValue &&
@@ -1955,7 +1997,7 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
                                     var rockContext = new RockContext();
                                     var groupService = new Rock.Model.GroupService( rockContext );
-                                    var groups = groupService.Queryable().Where( r => r.GroupTypeId == groupTypeId.Value ).OrderBy( a => a.Name ).ToList();
+                                    var groups = groupService.Queryable().AsNoTracking().Where( r => r.GroupTypeId == groupTypeId.Value ).OrderBy( a => a.Name ).ToList();
 
                                     foreach ( var r in groups )
                                     {
@@ -2091,19 +2133,18 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                     }
 
                                     var occurrences = new AttendanceOccurrenceService( rockContextOccurrence )
-                                                            .Queryable()
+                                                            .Queryable().AsNoTracking()
                                                             .Where( o =>
                                                                 o.OccurrenceDate == RockDateTime.Today &&
                                                                 o.GroupId == currentGroupId &&
                                                                 o.LocationId == locationItem.Id &&
                                                                 ( o.ScheduleId.HasValue && activeScheduleIds.Contains( o.ScheduleId.Value ) ) )
+                                                            .WhereAttributeValue( rockContextOccurrence, "com.kfs.OccurrenceClosed", "True" )
                                                             .ToList();
 
                                     if ( occurrences.Any() )
                                     {
-                                        var occurrence = occurrences.FirstOrDefault();
-                                        occurrence.LoadAttributes();
-                                        tglHeadingRoom.Checked = !( occurrence.GetAttributeValue( "com.kfs.OccurrenceClosed" ).AsBoolean( false ) );
+                                        tglHeadingRoom.Checked = false;
                                     }
                                     else
                                     {
@@ -2162,19 +2203,18 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                         }
 
                                         var occurrences = new AttendanceOccurrenceService( newRockContext )
-                                                                .Queryable()
+                                                                .Queryable().AsNoTracking()
                                                                 .Where( o =>
                                                                     o.OccurrenceDate == RockDateTime.Today &&
                                                                     o.GroupId == groupId &&
                                                                     o.LocationId == locationItem.Id &&
                                                                     ( o.ScheduleId.HasValue && activeScheduleIds.Contains( o.ScheduleId.Value ) ) )
+                                                                .WhereAttributeValue( newRockContext, "com.kfs.OccurrenceClosed", "True" )
                                                                 .ToList();
 
                                         if ( occurrences.Any() )
                                         {
-                                            var occurrence = occurrences.FirstOrDefault();
-                                            occurrence.LoadAttributes();
-                                            lblLocationWarningHeader.Visible = ( occurrence.GetAttributeValue( "com.kfs.OccurrenceClosed" ).AsBoolean( false ) );
+                                            lblLocationWarningHeader.Visible = true;
                                         }
                                     }
                                 }
@@ -2183,6 +2223,49 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         else
                         {
                             lblLocationWarningHeader.Visible = !locationItem.IsActive;
+                        }
+
+                        // check for an occ being closed
+                        if ( _configuredMode == "L" && lblLocationWarningHeader != null && locationItem != null )
+                        {
+                            using ( var rockContextLocationMode = new RockContext() )
+                            {
+                                var activeScheduleIds = new List<int>();
+                                var schedulesWithCheckin = new ScheduleService( rockContextLocationMode )
+                                    .Queryable().AsNoTracking()
+                                    .Where( s => s.CheckInStartOffsetMinutes.HasValue );
+                                foreach ( var schedule in schedulesWithCheckin )
+                                {
+                                    if ( schedule.WasScheduleOrCheckInActive( GetCampusTime() ) )
+                                    {
+                                        activeScheduleIds.Add( schedule.Id );
+                                    }
+                                }
+
+                                var groupIds = new AttendanceOccurrenceService( rockContextLocationMode )
+                                                        .Queryable().AsNoTracking()
+                                                        .Where( o =>
+                                                            o.OccurrenceDate == RockDateTime.Today &&
+                                                            o.LocationId == locationItem.Id &&
+                                                            o.GroupId.HasValue &&
+                                                            ( o.ScheduleId.HasValue && activeScheduleIds.Contains( o.ScheduleId.Value ) ) )
+                                                        .WhereAttributeValue( rockContextLocationMode, "com.kfs.OccurrenceClosed", "True" )
+                                                        .Select( o => o.GroupId.Value )
+                                                        .Distinct()
+                                                        .ToList();
+
+                                if ( groupIds.Count > 1 )
+                                {
+                                    lblLocationWarningHeader.Text = "Multiple Group Occurrences Closed";
+                                    lblLocationWarningHeader.Visible = true;
+                                }
+                                else if ( groupIds.Count == 1 )
+                                {
+                                    var group = new GroupService( rockContextLocationMode ).Get( groupIds[0] );
+                                    lblLocationWarningHeader.Text = string.Format( "{0} Group Occurrence Closed", group.Name );
+                                    lblLocationWarningHeader.Visible = true;
+                                }
+                            }
                         }
 
                         pnlThreshold.Visible = locationItem.SoftThreshold.HasValue || locationItem.FirmThreshold.HasValue;
