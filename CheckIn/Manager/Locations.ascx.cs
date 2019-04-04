@@ -253,6 +253,11 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
         #region Events
 
+        /// <summary>
+        /// Handles the Click event of the lbSearch control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void lbSearch_Click( object sender, EventArgs e )
         {
             using ( var rockContext = new RockContext() )
@@ -869,6 +874,11 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             BuildNavigationControls();
         }
 
+        /// <summary>
+        /// Handles the Click event of the lbUpdateThreshold control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void lbUpdateThreshold_Click( object sender, EventArgs e )
         {
             int? id = lbUpdateThreshold.Attributes["data-key"].AsIntegerOrNull();
@@ -1858,6 +1868,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
 
         #region Rebuild Controls
 
+        /// <summary>
+        /// Sets the print controls.
+        /// </summary>
         private void SetPrintControls()
         {
             if ( ShowPrintLabel )
@@ -1872,6 +1885,9 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
             }
         }
 
+        /// <summary>
+        /// Builds the navigation controls.
+        /// </summary>
         private void BuildNavigationControls()
         {
             if ( NavData != null )
