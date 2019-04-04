@@ -192,8 +192,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             // Get the daterange filter
             var dateRange = new DateRange();
             var weeksToDays = ( _numberOfWeeks ) * 7;
-            var start = RockDateTime.Now.AddDays( -weeksToDays );
-            var end = RockDateTime.Now;
+            var start = RockDateTime.Now.AddDays( -weeksToDays ).Date;
+            var end = RockDateTime.Now.Date;
             dateRange.Start = start;
             dateRange.End = end;
 
