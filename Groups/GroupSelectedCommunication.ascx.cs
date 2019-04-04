@@ -165,7 +165,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             var personAliasIds = new PersonAliasService( rockContext ).Queryable().AsNoTracking()
                                 .Where( a => selectedIds.Contains( a.PersonId.ToString() ) )
-                                .Select( a => a.Id )
+                                .GroupBy( a => a.PersonId )
+                                .Select( a => a.Min( m => m.Id ) )
                                 .ToList();
 
             // Get the primary aliases
