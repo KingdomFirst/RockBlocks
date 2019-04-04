@@ -446,13 +446,18 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                 var loc = navItem as NavigationLocation;
 
                 var lblWarning = e.Item.FindControl( "lblLocationWarning" ) as Label;
-                if ( _useKFSCloseAttribute && lblWarning != null && loc != null && !loc.IsActive )
+                // check the db for the "force closed" look 
+                // the loc.IsActive value could be set false because of occurrence closing
+                var location = new Location();
+                if ( loc != null )
+                {
+                    location = new LocationService( new RockContext() ).Get( loc.Id );
+                }
+
+                if ( _useKFSCloseAttribute && lblWarning != null && loc != null && !location.IsActive )
                 {
                     // if in close occurrence mode and the location is not active, show warning
-                    using ( var rockContext = new RockContext() )
-                    {
-                        lblWarning.Visible = !( new LocationService( rockContext ).GetNoTracking( loc.Id ).IsActive );
-                    }
+                    lblWarning.Visible = !location.IsActive;
                 }
                 else if ( _useKFSCloseAttribute && lblWarning != null && loc != null && !( UserCanAdministrate || IsUserAuthorized( "CloseLocations" ) ) )
                 {
@@ -629,9 +634,6 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                     tgl.Checked = true;
                                 }
 
-                                // check the db for the "force closed" look 
-                                // the loc.IsActive value could be set false because of occurrence closing
-                                var location = new LocationService( rockContext ).Get( loc.Id );
                                 if ( !location.IsActive )
                                 {
                                     tgl.Checked = false;
