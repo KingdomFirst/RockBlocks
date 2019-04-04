@@ -583,7 +583,10 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                                     tgl.Checked = true;
                                 }
 
-                                if ( !loc.IsActive )
+                                // check the db for the "force closed" look 
+                                // the loc.IsActive value could be set false because of occurrence closing
+                                var location = new LocationService( rockContext ).Get( loc.Id );
+                                if ( !location.IsActive )
                                 {
                                     tgl.Checked = false;
                                 }
@@ -2049,7 +2052,57 @@ namespace RockWeb.Plugins.com_kfs.CheckIn.Manager
                         if ( UserCanAdministrate || IsUserAuthorized( "CloseLocations" ) )
                         {
                             tglHeadingRoom.Visible = true;
+                            
                             tglHeadingRoom.Checked = locationItem.IsActive;
+
+                            if ( _useKFSCloseAttribute )
+                            {
+                                string groupItemKey = pathParts[numParts - 2];
+                                int? currentGroupId = groupItemKey.Length > 1 ? groupItemKey.Substring( 1 ).AsIntegerOrNull() : null;
+                                // see if occurrence location is inactive
+                                using ( var rockContextOccurrence = new RockContext() )
+                                {
+                                    var activeScheduleIds = new List<int>();
+                                    var schedulesWithCheckin = new ScheduleService( rockContextOccurrence )
+                                        .Queryable().AsNoTracking()
+                                        .Where( s => s.CheckInStartOffsetMinutes.HasValue );
+                                    foreach ( var schedule in schedulesWithCheckin )
+                                    {
+                                        if ( schedule.WasScheduleOrCheckInActive( GetCampusTime() ) )
+                                        {
+                                            activeScheduleIds.Add( schedule.Id );
+                                        }
+                                    }
+
+                                    var occurrences = new AttendanceOccurrenceService( rockContextOccurrence )
+                                                            .Queryable()
+                                                            .Where( o =>
+                                                                o.OccurrenceDate == RockDateTime.Today &&
+                                                                o.GroupId == currentGroupId &&
+                                                                o.LocationId == locationItem.Id &&
+                                                                ( o.ScheduleId.HasValue && activeScheduleIds.Contains( o.ScheduleId.Value ) ) )
+                                                            .ToList();
+
+                                    if ( occurrences.Any() )
+                                    {
+                                        var occurrence = occurrences.FirstOrDefault();
+                                        occurrence.LoadAttributes();
+                                        tglHeadingRoom.Checked = !( occurrence.GetAttributeValue( "com.kfs.OccurrenceClosed" ).AsBoolean( false ) );
+                                    }
+                                    else
+                                    {
+                                        tglHeadingRoom.Checked = true;
+                                    }
+
+                                    // show inactive is the location is inactive in db
+                                    var location = new LocationService( rockContextOccurrence ).Get( locationItem.Id );
+                                    if ( !location.IsActive )
+                                    {
+                                        tglHeadingRoom.Checked = false;
+                                    }
+                                }
+                            }
+
                             tglHeadingRoom.Attributes["data-key"] = locationItem.Id.ToString();
 
                             if ( pathParts.Length >= 3 && pathParts[2].StartsWith( "G" ) )
