@@ -35,10 +35,10 @@ using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using Attribute = Rock.Model.Attribute;
 
-namespace RockWeb.Blocks.Event
+namespace RockWeb.Plugins.rocks_kfs.Event
 {
     [DisplayName( "Registration Template Detail" )]
-    [Category( "Event" )]
+    [Category( "KFS > Event" )]
     [Description( "Displays the details of the given registration template." )]
 
     [CodeEditorField( "Default Confirmation Email", "The default Confirmation Email Template value to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"{{ 'Global' | Attribute:'EmailHeader' }}

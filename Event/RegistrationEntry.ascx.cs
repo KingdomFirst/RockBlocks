@@ -41,13 +41,13 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Blocks.Event
+namespace RockWeb.Plugins.rocks_kfs.Event
 {
     /// <summary>
     /// Block used to register for a registration instance.
     /// </summary>
     [DisplayName( "Registration Entry" )]
-    [Category( "Event" )]
+    [Category( "KFS > Event" )]
     [Description( "Block used to register for a registration instance." )]
 
     [DefinedValueField( Rock.SystemGuid.DefinedType.PERSON_CONNECTION_STATUS, "Connection Status", "The connection status to use for new individuals (default: 'Web Prospect'.)", true, false, Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT, "", 0 )]
