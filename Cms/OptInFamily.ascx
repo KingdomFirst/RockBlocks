@@ -8,6 +8,8 @@
             });
         </script>
 
+        <asp:Literal ID="lIntroText" runat="server"></asp:Literal>
+
         <div class="panel panel-block">
             <div class="panel-body">
                 <asp:HiddenField ID="hfPersonId" runat="server" />
@@ -21,35 +23,37 @@
                             </h1>
                         </div>
                     </div>
-                    <hr />
 
-                    <h3>
-                        <asp:Literal ID="lGroupName" runat="server" />
-                    </h3>
                     <asp:Repeater ID="rptGroupMembers" runat="server" OnItemDataBound="rptGroupMembers_ItemDataBound" OnItemCommand="rptGroupMembers_ItemCommand">
                         <ItemTemplate>
                             <div class="row">
-                                <div class="col-md-1">
-                                    <div class="photo">
-                                        <asp:Literal ID="lGroupMemberImage" runat="server" />
-                                    </div>
+                                <div class="col-md-6" >
+                                    <asp:CheckBox ID="cbSelectFamilyMember" runat="server" CommandArgument='<%# Eval("PersonId") %>' />
+                                    <asp:Literal ID="lGroupMemberFamilies" runat="server" />
                                 </div>
-                                <div class="col-md-11">
+                                <div class="col-md-2">
+                                    <%--<div class="photo">
+                                        <asp:Literal ID="lGroupMemberImage" runat="server" />
+                                    </div>--%>
+                                    
+                                </div>
+                                <%--<div class="col-md-11">
                                     <div class="row">
                                         <div class="col-md-3">
                                             <b>
                                                 <asp:Literal ID="lGroupMemberName" runat="server" /></b>
                                         </div>
                                     </div>
-                                    <div class="row pull-right">
-                                        <asp:LinkButton ID="lbEditGroupMember" runat="server" CssClass="btn btn-primary btn-xs" CommandArgument='<%# Eval("PersonId") %>' CommandName="Update"> Update</asp:LinkButton>
-                                    </div>
-                                </div>
+                                </div>--%>
                             </div>
                             <br />
                         </ItemTemplate>
                     </asp:Repeater>
                 </asp:Panel>
+            </div>
+            <div class="actions">
+                <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
+                <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
             </div>
         </div>
     </ContentTemplate>

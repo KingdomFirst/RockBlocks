@@ -15,9 +15,6 @@ using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.rocks_kfs.Cms
 {
-    /// <summary>
-    /// The main Person Profile block the main information about a person
-    /// </summary>
 
     #region Block Attributes
 
@@ -26,6 +23,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     [Description( "Block for users to manage the opting in/out of family members from a certain matter based on the value of a supplied Person Attribute." )]
 
     [MemoField( "Intro Text", "The text to instruct users how and why to use this form.", false, "", "", 1, null, 3, true )]
+    //[CodeEditorField( "Intro Text", "The text to instruct users how and why to use this form.", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "", 3 )]
     [GroupRoleField( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Family Role", "The family role that has access to edit this attribute for other family members." , true, "Adult", "", 2 )]
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attribute", "The person attribute that will be set for each selected family member. If it's a datetime attribute, current datetime will be saved, otherwise \"True\" will be the value.", true, true, order: 3 )]
     [TextField( "Confirmation Text", "The text to display when information has been successfully submitted.", false, "", "", 4 )]
@@ -85,6 +83,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             {
                 _person = CurrentPerson;
             }
+
+            var introText = new HtmlContent();
+            introText.Content = GetAttributeValue( "IntroText" );
+            lIntroText.Text = introText.Content;
         }
 
         /// <summary>
@@ -153,7 +155,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         protected void rptGroupMembers_ItemCommand( object source, RepeaterCommandEventArgs e )
         {
             int personId = e.CommandArgument.ToString().AsInteger();
-            //ShowEditPersonDetails( personId );
         }
 
 
@@ -171,21 +172,40 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var groupMember = e.Item.DataItem as GroupMember;
             var person = groupMember.Person;
             var lGroupMemberImage = e.Item.FindControl( "lGroupMemberImage" ) as Literal;
-            var lGroupMemberName = e.Item.FindControl( "lGroupMemberName" ) as Literal;
+            var cbSelectFamilyMember = e.Item.FindControl( "cbSelectFamilyMember" ) as CheckBox;
 
-            // Setup Image
-            string imgTag = Rock.Model.Person.GetPersonPhotoImageTag( person, 200, 200 );
-            if ( person.PhotoId.HasValue )
+            // Get all families that this person belongs to
+            var families = person.GetFamilies().ToList();
+            var familyNames = "";
+
+            foreach ( Group fam in families )
             {
-                lGroupMemberImage.Text = string.Format( "<a href='{0}'>{1}</a>", person.PhotoUrl, imgTag );
+                if ( families.Count > 1 )
+                {
+                    if ( families.First() == fam )
+                    {
+                        familyNames += ( "(" + fam.Name );
+                    }
+                    else if ( families.Last() == fam )
+                    {
+                        familyNames += ( ", " + fam.Name + ")" );
+                    }
+                    else
+                    {
+                        familyNames += ( ", " + fam.Name + "" );
+                    }
+                }
+                else if (families.Count == 1)
+                {
+                    familyNames = ( "(" + fam.Name + ")" );
+                }
+
             }
-            else
-            {
-                lGroupMemberImage.Text = imgTag;
-            }
+
+            familyNames = "<span style='font-size: 12px;'>" + familyNames + "</span>";
 
             // Person Info
-            lGroupMemberName.Text = person.FullName;
+            cbSelectFamilyMember.Text = ( "<span style='font-weight: bold; font-size: 16px; margin-right: 10px;'>" + person.FullName + "</span><span>" + familyNames +"</span>" );
 
         }
 
@@ -198,6 +218,20 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnSave_Click( object sender, EventArgs e )
         {
+
+            //var peopleToUpdate = new List<Person>();
+
+            //foreach (Control c in pnlView.Controls )
+            //{
+            //    if ( (c is CheckBox ) && ((CheckBox) c).Checked){
+            //        //var person = new PersonService( rockContext ).Get( c.ID );
+            //        var chk = (CheckBox)c;
+            //        var personId = chk.Attributes["CommandArgument"].AsInteger();
+            //        var person = new Person( personId );       
+            //    }
+            //}
+
+
             var rockContext = new RockContext();
             if ( ddlGroup.SelectedValueAsId().HasValue )
             {
@@ -208,51 +242,70 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     {
                         var personService = new PersonService( rockContext );
 
-                        var personId = hfPersonId.Value.AsInteger();
-                        if ( personId == 0 )
+                        var peopleToUpdate = new List<int>();
+
+                        foreach ( Control c in pnlView.Controls )
                         {
-                            var groupMemberService = new GroupMemberService( rockContext );
-                            var groupMember = new GroupMember() { Person = new Person(), Group = group, GroupId = group.Id };
-
-                            var connectionStatusGuid = GetAttributeValue( "DefaultConnectionStatus" ).AsGuidOrNull();
-                            if ( connectionStatusGuid.HasValue )
+                            if ( ( c is CheckBox ) && ( (CheckBox)c ).Checked )
                             {
-                                groupMember.Person.ConnectionStatusValueId = DefinedValueCache.Get( connectionStatusGuid.Value ).Id;
+                                //var person = new PersonService( rockContext ).Get( c.ID );
+                                var chk = (CheckBox)c;
+                                var pid = chk.Attributes["CommandArgument"].AsInteger();
+                                peopleToUpdate.Add( pid );
                             }
-                            else
-                            {
-                                groupMember.Person.ConnectionStatusValueId = CurrentPerson.ConnectionStatusValueId;
-                            }
-
-                            var headOfHousehold = GroupServiceExtensions.HeadOfHousehold( group.Members.AsQueryable() );
-                            if ( headOfHousehold != null )
-                            {
-                                DefinedValueCache dvcRecordStatus = DefinedValueCache.Get( headOfHousehold.RecordStatusValueId ?? 0 );
-                                if ( dvcRecordStatus != null )
-                                {
-                                    groupMember.Person.RecordStatusValueId = dvcRecordStatus.Id;
-                                }
-                            }
-
-                            if ( groupMember.GroupRole.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() )
-                            {
-                                groupMember.Person.GivingGroupId = group.Id;
-                            }
-
-                            groupMember.Person.IsEmailActive = true;
-                            groupMember.Person.EmailPreference = EmailPreference.EmailAllowed;
-                            groupMember.Person.RecordTypeValueId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_PERSON.AsGuid() ).Id;
-
-                            groupMemberService.Add( groupMember );
-                            rockContext.SaveChanges();
-                            personId = groupMember.PersonId;
                         }
 
-                        var person = personService.Get( personId );
-                        if ( person != null )
-                        {
+                        //var personId = hfPersonId.Value.AsInteger();
+                        //if ( personId == 0 )
+                        //{
+                        //    var groupMemberService = new GroupMemberService( rockContext );
+                        //    var groupMember = new GroupMember() { Person = new Person(), Group = group, GroupId = group.Id };
 
+                        //    var headOfHousehold = GroupServiceExtensions.HeadOfHousehold( group.Members.AsQueryable() );
+                        //    if ( headOfHousehold != null )
+                        //    {
+                        //        DefinedValueCache dvcRecordStatus = DefinedValueCache.Get( headOfHousehold.RecordStatusValueId ?? 0 );
+                        //        if ( dvcRecordStatus != null )
+                        //        {
+                        //            groupMember.Person.RecordStatusValueId = dvcRecordStatus.Id;
+                        //        }
+                        //    }
+
+                        //    if ( groupMember.GroupRole.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() )
+                        //    {
+                        //        groupMember.Person.GivingGroupId = group.Id;
+                        //    }
+
+                        //    groupMember.Person.IsEmailActive = true;
+                        //    groupMember.Person.EmailPreference = EmailPreference.EmailAllowed;
+                        //    groupMember.Person.RecordTypeValueId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_PERSON.AsGuid() ).Id;
+
+                        //    groupMemberService.Add( groupMember );
+                        //    rockContext.SaveChanges();
+                        //    personId = groupMember.PersonId;
+                        //}
+
+                        foreach( int pid in peopleToUpdate )
+                        {
+                            var person = personService.Get( pid );
+                            if ( person != null )
+                            {
+                                //person.LoadAttributes();
+
+                                //var attributeToChange = GetAttributeValue( "PersonAttribute" );
+                                //if ( attributeToChange.GetType() =  )
+                                //{
+                                //    person.SetAttributeValue( attributeToChange, 
+                                //}
+                                //else
+                                //{
+                                //    person.ConnectionStatusValueId = CurrentPerson.ConnectionStatusValueId;
+                                //}
+                            }
                         }
+
+                        
+
                     } );
 
                     var queryString = new Dictionary<string, string>();
@@ -317,7 +370,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         if ( group != null )
                         {
                             // Family Name
-                            lGroupName.Text = group.Name;
+                            //lGroupName.Text = group.Name;
 
                             rptGroupMembers.DataSource = group.Members.Where( gm =>
                                 gm.Person.IsDeceased == false )
