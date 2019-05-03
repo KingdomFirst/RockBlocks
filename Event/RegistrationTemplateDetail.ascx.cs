@@ -57,13 +57,13 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 	<ul>
 	{% for registrant in registrants %}
 		<li>
-		
+
 			<strong>{{ registrant.PersonAlias.Person.FullName }}</strong>
-			
+
 			{% if registrant.Cost > 0 %}
 				- {{ currencySymbol }}{{ registrant.Cost | Format:'#,##0.00' }}
 			{% endif %}
-			
+
 			{% assign feeCount = registrant.Fees | Size %}
 			{% if feeCount > 0 %}
 				<br/>{{ RegistrationInstance.RegistrationTemplate.FeeTerm | PluralizeForQuantity:registrantCount }}:
@@ -89,7 +89,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
         The following {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | PluralizeForQuantity:registrantCount | Downcase }}
 		{% if waitListCount > 1 %}have{% else %}has{% endif %} been added to the wait list for {{ RegistrationInstance.Name }}:
    </p>
-    
+
     <ul>
     {% for registrant in waitlist %}
         <li>
@@ -98,7 +98,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
     {% endfor %}
     </ul>
 {% endif %}
-	
+
 {% if Registration.TotalCost > 0 %}
 <p>
     Total Cost: {{ currencySymbol }}{{ Registration.TotalCost | Format:'#,##0.00' }}<br/>
@@ -106,16 +106,16 @@ namespace RockWeb.Plugins.rocks_kfs.Event
         Discounted Cost: {{ currencySymbol }}{{ Registration.DiscountedCost | Format:'#,##0.00' }}<br/>
     {% endif %}
     {% for payment in Registration.Payments %}
-        Paid {{ currencySymbol }}{{ payment.Amount | Format:'#,##0.00' }} on {{ payment.Transaction.TransactionDateTime| Date:'M/d/yyyy' }} 
+        Paid {{ currencySymbol }}{{ payment.Amount | Format:'#,##0.00' }} on {{ payment.Transaction.TransactionDateTime| Date:'M/d/yyyy' }}
         <small>(Acct #: {{ payment.Transaction.FinancialPaymentDetail.AccountNumberMasked }}, Ref #: {{ payment.Transaction.TransactionCode }})</small><br/>
     {% endfor %}
-    
+
     {% assign paymentCount = Registration.Payments | Size %}
-    
+
     {% if paymentCount > 1 %}
         Total Paid: {{ currencySymbol }}{{ Registration.TotalPaid | Format:'#,##0.00' }}<br/>
     {% endif %}
-    
+
     Balance Due: {{ currencySymbol }}{{ Registration.BalanceDue | Format:'#,##0.00' }}
 </p>
 {% endif %}
@@ -129,7 +129,6 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 </p>
 
 {{ 'Global' | Attribute:'EmailFooter' }}", "", 0 )]
-
     [CodeEditorField( "Default Reminder Email", "The default Reminder Email Template value to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"{{ 'Global' | Attribute:'EmailHeader' }}
 {% capture currencySymbol %}{{ 'Global' | Attribute:'CurrencySymbol' }}{% endcapture %}
 {% capture externalSite %}{{ 'Global' | Attribute:'PublicApplicationRoot' }}{% endcapture %}
@@ -163,7 +162,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
         The following {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | PluralizeForQuantity:registrantCount | Downcase }}
 		{% if waitListCount > 1 %}are{% else %}is{% endif %} still on the waiting list:
    </p>
-    
+
     <ul>
     {% for registrant in waitlist %}
         <li>
@@ -175,7 +174,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
 {% if Registration.BalanceDue > 0 %}
 <p>
-    This {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase  }} has a remaining balance 
+    This {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase  }} has a remaining balance
     of {{ currencySymbol }}{{ Registration.BalanceDue | Format:'#,##0.00' }}.
     You can complete the payment for this {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase }}
     using our <a href='{{ externalSite }}/Registration?RegistrationId={{ Registration.Id }}&rckipid={{ Registration.PersonAlias.Person | PersonTokenCreate }}'>
@@ -188,28 +187,27 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 </p>
 
 {{ 'Global' | Attribute:'EmailFooter' }}", "", 1 )]
-
     [CodeEditorField( "Default Success Text", "The success text default to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"{% capture currencySymbol %}{{ 'Global' | Attribute:'CurrencySymbol' }}{% endcapture %}
 
 {% assign registrants = Registration.Registrants | Where:'OnWaitList', false %}
 {% assign registrantCount = registrants | Size %}
 {% if registrantCount > 0 %}
     <p>
-        You have successfully registered the following 
+        You have successfully registered the following
         {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | PluralizeForQuantity:registrantCount | Downcase }}
         for {{ RegistrationInstance.Name }}:
     </p>
-    
+
     <ul>
     {% for registrant in registrants %}
         <li>
-        
+
             <strong>{{ registrant.PersonAlias.Person.FullName }}</strong>
-            
+
             {% if registrant.Cost > 0 %}
                 - {{ currencySymbol }}{{ registrant.Cost | Format:'#,##0.00' }}
             {% endif %}
-            
+
             {% assign feeCount = registrant.Fees | Size %}
             {% if feeCount > 0 %}
                 <br/>{{ RegistrationInstance.RegistrationTemplate.FeeTerm | PluralizeForQuantity:registrantCount }}:
@@ -222,7 +220,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                 {% endfor %}
                 </ul>
             {% endif %}
-            
+
         </li>
     {% endfor %}
     </ul>
@@ -232,11 +230,11 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 {% assign waitListCount = waitlist | Size %}
 {% if waitListCount > 0 %}
     <p>
-        You have successfully added the following 
+        You have successfully added the following
         {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | PluralizeForQuantity:registrantCount | Downcase }}
         to the waiting list for {{ RegistrationInstance.Name }}:
     </p>
-    
+
     <ul>
     {% for registrant in waitlist %}
         <li>
@@ -253,7 +251,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
         Discounted Cost: {{ currencySymbol }}{{ Registration.DiscountedCost | Format:'#,##0.00' }}<br/>
     {% endif %}
     {% for payment in Registration.Payments %}
-        Paid {{ currencySymbol }}{{ payment.Amount | Format:'#,##0.00' }} on {{ payment.Transaction.TransactionDateTime| Date:'M/d/yyyy' }} 
+        Paid {{ currencySymbol }}{{ payment.Amount | Format:'#,##0.00' }} on {{ payment.Transaction.TransactionDateTime| Date:'M/d/yyyy' }}
         <small>(Acct #: {{ payment.Transaction.FinancialPaymentDetail.AccountNumberMasked }}, Ref #: {{ payment.Transaction.TransactionCode }})</small><br/>
     {% endfor %}
     {% assign paymentCount = Registration.Payments | Size %}
@@ -265,10 +263,9 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 {% endif %}
 
 <p>
-    A confirmation email has been sent to {{ Registration.ConfirmationEmail }}. If you have any questions 
+    A confirmation email has been sent to {{ Registration.ConfirmationEmail }}. If you have any questions
     please contact {{ RegistrationInstance.ContactPersonAlias.Person.FullName }} at {{ RegistrationInstance.ContactEmail }}.
 </p>", "", 2 )]
-
     [CodeEditorField( "Default Payment Reminder Email", "The default Payment Reminder Email Template value to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"{{ 'Global' | Attribute:'EmailHeader' }}
 {% capture currencySymbol %}{{ 'Global' | Attribute:'CurrencySymbol' }}{% endcapture %}
 {% capture externalSite %}{{ 'Global' | Attribute:'PublicApplicationRoot' }}{% endcapture %}
@@ -276,9 +273,9 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 <h1>{{ RegistrationInstance.RegistrationTemplate.RegistrationTerm }} Payment Reminder</h1>
 
 <p>
-    This {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase  }} for {{ RegistrationInstance.Name }} has a remaining balance 
-    of {{ currencySymbol }}{{ Registration.BalanceDue | Format:'#,##0.00' }}. The 
-    {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | Downcase | Pluralize  }} for this 
+    This {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm | Downcase  }} for {{ RegistrationInstance.Name }} has a remaining balance
+    of {{ currencySymbol }}{{ Registration.BalanceDue | Format:'#,##0.00' }}. The
+    {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | Downcase | Pluralize  }} for this
     {{ RegistrationInstance.RegistrationTemplate.RegistrationTerm }} are below.
 </p>
 
@@ -299,7 +296,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
         The following {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | PluralizeForQuantity:registrantCount | Downcase }}
 		{% if waitListCount > 1 %}are{% else %}is{% endif %} still on the wait list:
    </p>
-    
+
     <ul>
     {% for registrant in waitlist %}
         <li>
@@ -320,7 +317,6 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 </p>
 
 {{ 'Global' | Attribute:'EmailFooter' }}", "", 3 )]
-
     [CodeEditorField( "Default Wait List Transition Email", "The default Wait List Transition Email Template value to use for a new template", CodeEditorMode.Lava, CodeEditorTheme.Rock, 300, false, @"{{ 'Global' | Attribute:'EmailHeader' }}
 {% capture currencySymbol %}{{ 'Global' | Attribute:'CurrencySymbol' }}{% endcapture %}
 {% capture externalSite %}{{ 'Global' | Attribute:'PublicApplicationRoot' }}{% endcapture %}
@@ -328,8 +324,8 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 <h1>{{ RegistrationInstance.Name }} Wait List Update</h1>
 
 <p>
-    {{ Registration.FirstName }}, the following individuals have been moved from the {{ RegistrationInstance.Name }} wait list to a full 
-    {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | Downcase }}. 
+    {{ Registration.FirstName }}, the following individuals have been moved from the {{ RegistrationInstance.Name }} wait list to a full
+    {{ RegistrationInstance.RegistrationTemplate.RegistrantTerm | Downcase }}.
 </p>
 
 <ul>
@@ -340,12 +336,11 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
 {% if AdditionalFieldsNeeded %}
     <p>
-        <strong>Addition information is needed in order to process this registration. Please visit the 
+        <strong>Addition information is needed in order to process this registration. Please visit the
         <a href='{{ externalSite }}/Registration?RegistrationId={{ Registration.Id }}&rckipid={{ Registration.PersonAlias.Person | PersonTokenCreate }}&StartAtBeginning=True'>
         online registration page</a> to complete the registration.</strong>
     </p>
 {% endif %}
-
 
 {% if Registration.BalanceDue > 0 %}
     <p>
@@ -358,7 +353,6 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 <p>
     If you have any questions please contact {{ RegistrationInstance.ContactName }} at {{ RegistrationInstance.ContactEmail }}.
 </p>
-
 
 {{ 'Global' | Attribute:'EmailFooter' }}", "", 3 )]
     public partial class RegistrationTemplateDetail : RockBlock
@@ -468,7 +462,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
             gFees.Actions.AddClick += gFees_AddClick;
             gFees.GridRebind += gFees_GridRebind;
             gFees.GridReorder += gFees_GridReorder;
-            
+
             btnSecurity.EntityTypeId = EntityTypeCache.Get( typeof( Rock.Model.RegistrationTemplate ) ).Id;
 
             ddlRegistrarOption.Help = @"How should the registrar's information be collected?
@@ -538,7 +532,7 @@ The first registrant's information will be used to complete the registrar inform
                             {
                                 case "re-order-form":
                                     {
-                                        SortForms( guid, newIndex+1 );
+                                        SortForms( guid, newIndex + 1 );
                                         break;
                                     }
                             }
@@ -571,7 +565,7 @@ The first registrant's information will be used to complete the registrar inform
             breadCrumbs.Add( new BreadCrumb( this.PageCache.PageTitle, pageReference ) );
             return breadCrumbs;
         }
-        
+
         /// <summary>
         /// Saves any user control view-state changes that have occurred since the last page postback.
         /// </summary>
@@ -580,8 +574,8 @@ The first registrant's information will be used to complete the registrar inform
         /// </returns>
         protected override object SaveViewState()
         {
-            var jsonSetting = new JsonSerializerSettings 
-            { 
+            var jsonSetting = new JsonSerializerSettings
+            {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 ContractResolver = new Rock.Utility.IgnoreUrlEncodedKeyContractResolver()
             };
@@ -600,7 +594,7 @@ The first registrant's information will be used to complete the registrar inform
             if ( pnlEditDetails.Visible )
             {
                 var sameFamily = rblRegistrantsInSameFamily.SelectedValueAsEnum<RegistrantsSameFamily>();
-                divCurrentFamilyMembers.Attributes["style"] = sameFamily == RegistrantsSameFamily.Yes ? "display:block" : "display:none";
+                divCurrentFamilyMembers.Attributes["style"] = sameFamily == RegistrantsSameFamily.No ? "display:none" : "display:block";
             }
 
             base.OnPreRender( e );
@@ -898,7 +892,7 @@ The first registrant's information will be used to complete the registrar inform
             foreach ( var fieldList in FormFieldsState.Select( s => s.Value ) )
             {
                 foreach ( var formField in fieldList
-                    .Where( a => 
+                    .Where( a =>
                         a.FieldSource == RegistrationFieldSource.GroupMemberAttribute &&
                         a.AttributeId.HasValue &&
                         !validGroupMemberAttributeIds.Contains( a.AttributeId.Value ) )
@@ -1148,7 +1142,7 @@ The first registrant's information will be used to complete the registrar inform
 
                 rockContext.SaveChanges();
 
-                // If this is a new template, give the current user and the Registration Administrators role administrative 
+                // If this is a new template, give the current user and the Registration Administrators role administrative
                 // rights to this template, and staff, and staff like roles edit rights
                 if ( newTemplate )
                 {
@@ -1216,7 +1210,7 @@ The first registrant's information will be used to complete the registrar inform
             ParseControls();
 
             nbMaxRegistrants.Visible = cbMultipleRegistrants.Checked;
-            
+
             BuildControls();
         }
 
@@ -1913,7 +1907,7 @@ The first registrant's information will be used to complete the registrar inform
             {
                 fee.CostValue = kvlMultipleFees.Value.Replace("$", "");
             }
-            
+
             hfFeeGuid.Value = string.Empty;
             HideDialog();
             BuildControls();
@@ -2085,7 +2079,7 @@ The first registrant's information will be used to complete the registrar inform
 
                 // Add first name field if it doesn't exist
                 if ( !defaultForm.Fields
-                    .Any( f => 
+                    .Any( f =>
                         f.FieldSource == RegistrationFieldSource.PersonField &&
                         f.PersonFieldType == RegistrationPersonFieldType.FirstName ))
                 {
@@ -2233,7 +2227,7 @@ The first registrant's information will be used to complete the registrar inform
             tbWaitListTransitionFromEmail.Text = registrationTemplate.WaitListTransitionFromEmail;
             tbWaitListTransitionSubject.Text = registrationTemplate.WaitListTransitionSubject;
             ceWaitListTransitionEmailTemplate.Text = registrationTemplate.WaitListTransitionEmailTemplate;
-            
+
             tbRegistrationTerm.Text = registrationTemplate.RegistrationTerm;
             tbRegistrantTerm.Text = registrationTemplate.RegistrantTerm;
             tbFeeTerm.Text = registrationTemplate.FeeTerm;
@@ -2295,7 +2289,7 @@ The first registrant's information will be used to complete the registrar inform
                     {
                         string formFieldName = ( formField.Attribute != null ) ? formField.Attribute.Name : formField.PersonFieldType.ConvertToString();
                         string fieldTypeName = ( formField.Attribute != null ) ? FieldTypeCache.GetName( formField.Attribute.FieldTypeId ) : string.Empty;
-                        attributeText += string.Format( 
+                        attributeText += string.Format(
                             @"<div class='row'>
                                 <div class='col-sm-1'></div>
                                 <div class='col-sm-4'>{0}</div>
@@ -2510,7 +2504,7 @@ The first registrant's information will be used to complete the registrar inform
                         Name = ( a.FieldSource != RegistrationFieldSource.PersonField && a.Attribute != null ) ?
                             a.Attribute.Name : a.PersonFieldType.ConvertToString(),
                         FieldSource = a.FieldSource.ConvertToString(),
-                        FieldType = ( a.FieldSource != RegistrationFieldSource.PersonField && a.Attribute != null ) ? 
+                        FieldType = ( a.FieldSource != RegistrationFieldSource.PersonField && a.Attribute != null ) ?
                             a.Attribute.FieldTypeId : 0,
                         a.IsInternal,
                         a.IsSharedValue,
@@ -2620,7 +2614,7 @@ The first registrant's information will be used to complete the registrar inform
 
                 hfFormGuid.Value = formGuid.ToString();
                 hfAttributeGuid.Value = formFieldGuid.ToString();
-                
+
                 lPersonField.Visible = formField.FieldSource == RegistrationFieldSource.PersonField && (
                     formField.PersonFieldType == RegistrationPersonFieldType.FirstName ||
                     formField.PersonFieldType == RegistrationPersonFieldType.LastName );
@@ -2657,7 +2651,7 @@ The first registrant's information will be used to complete the registrar inform
 
             cbInternalField.Visible = true;
             cbCommonValue.Visible = true;
-            cbUsePersonCurrentValue.Visible = 
+            cbUsePersonCurrentValue.Visible =
                 fieldSource == RegistrationFieldSource.PersonAttribute ||
                 fieldSource == RegistrationFieldSource.PersonField;
 
@@ -2748,7 +2742,7 @@ The first registrant's information will be used to complete the registrar inform
             int order = 0;
             fieldList.ForEach( a => a.Order = order++ );
         }
-        
+
         #endregion
 
         #region Discount Methods
