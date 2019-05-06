@@ -27,7 +27,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     //[GroupRoleField( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Family Role", "The family role that has access to edit this attribute for other family members.", true, "Adult", "", 2 )]
     [CustomCheckboxListField( "Family Roles", "The Family Roles which can edit this attribute.", "SELECT [r].[Id] AS [Value], [r].[Name] AS [Text] FROM [GroupTypeRole] [r] JOIN [GroupType] [t] ON [r].[GroupTypeId] = [t].[Id] WHERE [t].[Guid] LIKE '790E3215-3B10-442B-AF69-616C0DCB998E'", true )]
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attribute", "The person attribute that will be set for each selected family member. If it's a datetime attribute, current datetime will be saved, otherwise \"True\" will be the value.", true, false, order: 3 )]
-    [TextField( "Confirmation Text", "The text to display when information has been successfully submitted.", false, "", "", 4 )]
+    [TextField( "Confirmation Message", "The text to display when information has been successfully submitted.", false, "Form submitted successfully!" , "", 4 )]
     [LinkedPage( "Confirmation Page", "The page to redirect the user to once the form has been submitted. Overrides the Confirmation Text setting.", false, "", "", 5 )]
     [TextField( "Not Authorized Message", "The message to display if a user that is not in one of the selected group type roles lands on this block.", false, "", "", 6 )]
 
@@ -93,6 +93,36 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var introText = new HtmlContent();
             introText.Content = GetAttributeValue( "IntroText" );
             lIntroText.Text = introText.Content;
+
+            pnlNotAuthorizedMessage.Visible = false;
+
+            var allowedFamilyIds = new List<int>();
+
+            foreach ( Group family in _person.GetFamilies() )
+            {
+                var roleId = family.Members
+                    .Where( m => m.PersonId == _person.Id )
+                    .OrderBy( m => m.GroupRole.Order )
+                    .FirstOrDefault()
+                    .GroupRoleId;
+
+                if ( _familyRoles.Contains( roleId ) )
+                {
+                    allowedFamilyIds.Add( family.Id );
+                }
+            }
+
+            if( allowedFamilyIds.Count() == 0 )
+            {
+                pnlView.Visible = false;
+
+                Literal notAuthorizedText = new Literal();
+                notAuthorizedText.Text = GetAttributeValue( "NotAuthorizedMessage" );
+                pnlNotAuthorizedMessage.Controls.Add( notAuthorizedText );
+                pnlNotAuthorizedMessage.Visible = true;
+            }
+
+            pnlConfirmationMessage.Visible = false;
         }
 
         /// <summary>
@@ -136,7 +166,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void lbRequestChanges_Click( object sender, EventArgs e )
         {
-            NavigateToLinkedPage( "WorkflowLaunchPage" );
+            NavigateToLinkedPage( "ConfirmationPage" );
         }
 
         /// <summary>
@@ -212,11 +242,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         {
 
             var rockContext = new RockContext();
-            if ( ddlGroup.SelectedValueAsId().HasValue )
-            {
-                var group = new GroupService( rockContext ).Get( ddlGroup.SelectedValueAsId().Value );
-                if ( group != null )
-                {
+            //if ( ddlGroup.SelectedValueAsId().HasValue )
+            //{
+                //var group = new GroupService( rockContext ).Get( ddlGroup.SelectedValueAsId().Value );
+                //if ( group != null )
+                //{
                     var personService = new PersonService( rockContext );
                     var peopleToUpdate = new List<int>();
 
@@ -265,9 +295,24 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     //    queryString.Add( "Person", personParam );
                     //}
 
+                    if ( GetAttributeValue( "ConfirmationPage" ) != "" )
+                    {
+                        NavigateToLinkedPage( "ConfirmationPage" );
+                    }
+                    else
+                    {
+                        Literal confirmationText = new Literal();
+                        confirmationText.Text = GetAttributeValue( "ConfirmationMessage" );
+                        pnlConfirmationMessage.Controls.Add( confirmationText );
+                        pnlConfirmationMessage.Visible = true;
+                        pnlView.Visible = false;
+                        lIntroText.Visible = false;
+                        pnlConfirmationMessage.Visible = true;
+                    }
+
                     //NavigateToPage( RockPage.Guid, queryString );
-                }
-            }
+                //}
+            //}
         }
 
         /// <summary>
@@ -327,7 +372,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 var groups = new GroupService( rockContext )
                     .Queryable()
                     .Where( g => allowedFamilyIds.Contains( g.Id ) )
-                    .ToList(); //.Get( ddlGroup.SelectedValueAsId().Value );
+                    .ToList();
 
                 if ( groups.Any() )
                 {

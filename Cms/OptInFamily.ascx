@@ -13,6 +13,9 @@
         <div class="panel panel-block">
             <div class="panel-body">
                 <asp:HiddenField ID="hfPersonId" runat="server" />
+                <asp:Panel ID="pnlNotAuthorizedMessage" runat="server" CssClass="alert alert-warning"></asp:Panel>
+
+                <asp:Panel ID="pnlConfirmationMessage" runat="server" CssClass="alert alert-success"></asp:Panel>
                 <asp:Panel ID="pnlView" runat="server">
                     <div class="row">
                         <div class="col-sm-9">
@@ -49,12 +52,13 @@
                             <br />
                         </ItemTemplate>
                     </asp:Repeater>
+                    <div class="actions">
+                        <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
+                        <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
+                    </div>
                 </asp:Panel>
             </div>
-            <div class="actions">
-                <asp:LinkButton ID="btnSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="btnSave_Click" />
-                <asp:LinkButton ID="btnCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="btnCancel_Click" />
-            </div>
+            
         </div>
     </ContentTemplate>
 </asp:UpdatePanel>
