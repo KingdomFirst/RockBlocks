@@ -31,7 +31,7 @@
                         <ItemTemplate>
                             <div class="row">
                                 <div class="col-md-6" >
-                                    <asp:CheckBox ID="cbSelectFamilyMember" runat="server" CommandArgument='<%# Eval("PersonId") %>' />
+                                    <asp:CheckBox ID="cbSelectFamilyMember" runat="server" CommandArgument='<%# Eval("PersonId") %>'/>
                                     <asp:Literal ID="lGroupMemberFamilies" runat="server" />
                                 </div>
                                 <div class="col-md-2">

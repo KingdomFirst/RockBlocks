@@ -29,7 +29,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attribute", "The person attribute that will be set for each selected family member. If it's a datetime attribute, current datetime will be saved, otherwise \"True\" will be the value.", true, false, order: 3 )]
     [TextField( "Confirmation Message", "The text to display when information has been successfully submitted.", false, "Form submitted successfully!" , "", 4 )]
     [LinkedPage( "Confirmation Page", "The page to redirect the user to once the form has been submitted. Overrides the Confirmation Text setting.", false, "", "", 5 )]
-    [TextField( "Not Authorized Message", "The message to display if a user that is not in one of the selected group type roles lands on this block.", false, "", "", 6 )]
+    [TextField( "Not Authorized Message", "The message to display if a user that is not in one of the selected group type roles lands on this block.", false, "Your family role has not been given authorization to fill out this form. Please contact your system administrator.", "", 6 )]
 
     #endregion
 
@@ -139,7 +139,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             else
             {
                 pnlView.Visible = false;
-                //nbNotAuthorized.Visible = true;
+                pnlNotAuthorizedMessage.Visible = true;
             }
         }
 
@@ -158,16 +158,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         }
 
         #region View Events
-
-        /// <summary>
-        /// Handles the Click event of the lbRequestChanges control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void lbRequestChanges_Click( object sender, EventArgs e )
-        {
-            NavigateToLinkedPage( "ConfirmationPage" );
-        }
 
         /// <summary>
         /// Handles the ItemCommand event of the rptGroupMembers control.
@@ -252,7 +242,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                     foreach ( RepeaterItem item in rptGroupMembers.Items )
                     {
-                        var chk = item.FindControl( "cbSelectFamilyMember" ) as CheckBox;
+                        CheckBox chk = item.FindControl( "cbSelectFamilyMember" ) as CheckBox;
 
                         if ( chk.Checked )
                         {
@@ -267,15 +257,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         var person = personService.Get( pid );
                         if ( person != null )
                         {
-                            //person.LoadAttributes();
                             var attributeSetting = GetAttributeValue( "PersonAttribute" );
                             var attribute = AttributeCache.Get( attributeSetting );
                             if ( attribute.FieldTypeId == 11 )
                             {
                                 string originalValue = person.GetAttributeValue( attribute.Key );
-                                //string newValue = attribute.FieldType.Field.GetEditValue( attributeControl, attribute.QualifierValues );
-                                //Rock.Attribute.Helper.SaveAttributeValue( person, attribute, newValue, rockContext );
-
                                 string newValue = RockDateTime.Now.ToString();
                                 Rock.Attribute.Helper.SaveAttributeValue( person, attribute, newValue, rockContext );
                             }
@@ -286,14 +272,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                         }
                     }
-
-                    //var queryString = new Dictionary<string, string>();
-
-                    //var personParam = PageParameter( "Person" );
-                    //if ( !string.IsNullOrWhiteSpace( personParam ) )
-                    //{
-                    //    queryString.Add( "Person", personParam );
-                    //}
 
                     if ( GetAttributeValue( "ConfirmationPage" ) != "" )
                     {
