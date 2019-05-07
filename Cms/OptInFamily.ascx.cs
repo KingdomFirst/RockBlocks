@@ -108,6 +108,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             if( allowedFamilyIds.Count() == 0 )
             {
                 pnlView.Visible = false;
+                btnSave.Visible = false;
+                btnCancel.Visible = false;
 
                 Literal notAuthorizedText = new Literal();
                 notAuthorizedText.Text = GetAttributeValue( "NotAuthorizedMessage" );
@@ -132,6 +134,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             else
             {
                 pnlView.Visible = false;
+                btnSave.Visible = false;
+                btnCancel.Visible = false;
                 pnlNotAuthorizedMessage.Visible = true;
             }
         }
@@ -272,6 +276,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         pnlConfirmationMessage.Controls.Add( confirmationText );
                         pnlConfirmationMessage.Visible = true;
                         pnlView.Visible = false;
+                        btnSave.Visible = false;
+                        btnCancel.Visible = false;
                         lIntroText.Visible = false;
                         pnlConfirmationMessage.Visible = true;
                     }
@@ -348,10 +354,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     rptGroupMembers.DataBind();
                 }
 
-            }
+                hfPersonId.Value = string.Empty;
+                pnlView.Visible = true;
 
-            hfPersonId.Value = string.Empty;
-            pnlView.Visible = true;
+            }
         }
 
 
