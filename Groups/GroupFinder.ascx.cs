@@ -245,6 +245,32 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     }
                 }
 
+                if ( AttributeFilters != null && AttributeFilters.Any() )
+                {
+                    foreach ( var attribute in AttributeFilters )
+                    {
+                        var filterControl = phFilterControls.FindControl( "filter_" + attribute.Id.ToString() );
+                        var filterPageParam = PageParameter( "filter_" + attribute.Id.ToString() );
+                        if ( !string.IsNullOrWhiteSpace( filterPageParam ) )
+                        {
+                            var filterParamList = filterPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
+                            if ( attribute.FieldType.Field is DefinedValueFieldType )
+                            {
+                                for ( var i=0; i<filterParamList.Count(); i++ )
+                                {
+                                    var param = filterParamList[i];
+                                    if ( param.AsGuidOrNull() == null )
+                                    {
+                                        var definedValue = DefinedValueCache.Get( param.AsInteger() );
+                                        filterParamList[i] = definedValue.Guid.ToString();
+                                    }
+                                }
+                            }
+                            attribute.FieldType.Field.SetFilterValues( filterControl, attribute.QualifierValues, filterParamList.ToList() );
+                        }
+                    }
+                }
+
                 if ( _targetPersonGuid != Guid.Empty )
                 {
                     ShowViewForPerson( _targetPersonGuid );
