@@ -68,20 +68,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             var rockContext = new RockContext();
 
-            // If impersonation is allowed, and a valid person key was used, set the target to that person
-            if ( GetAttributeValue( "Impersonation" ).AsBooleanOrNull() ?? false )
-            {
-                string personKey = PageParameter( "Person" );
-                if ( !string.IsNullOrWhiteSpace( personKey ) )
-                {
-                    _person = new PersonService( rockContext ).GetByUrlEncodedKey( personKey );
-                }
-            }
-
-            if ( _person == null )
-            {
-                _person = CurrentPerson;
-            }
+            _person = CurrentPerson;
 
             var introText = new HtmlContent();
             introText.Content = GetAttributeValue( "IntroText" );
