@@ -17,16 +17,6 @@
 
                 <asp:Panel ID="pnlConfirmationMessage" runat="server" CssClass="alert alert-success"></asp:Panel>
                 <asp:Panel ID="pnlView" runat="server">
-                    <div class="row">
-                        <div class="col-sm-9">
-                            <h1 class="title name">
-                                <asp:Literal ID="lName" runat="server" /><div class="pull-right">
-                                    <Rock:RockDropDownList ID="ddlGroup" runat="server" DataTextField="Name" DataValueField="Id" OnSelectedIndexChanged="ddlGroup_SelectedIndexChanged" AutoPostBack="true" Visible="false" />
-                                </div>
-                            </h1>
-                        </div>
-                    </div>
-
                     <asp:Repeater ID="rptGroupMembers" runat="server" OnItemDataBound="rptGroupMembers_ItemDataBound" OnItemCommand="rptGroupMembers_ItemCommand">
                         <ItemTemplate>
                             <div class="row">

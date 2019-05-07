@@ -22,9 +22,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     [Category( "KFS > CMS" )]
     [Description( "Block for users to manage the opting in/out of family members from a certain matter based on the value of a supplied Person Attribute." )]
 
-    //[MemoField( "Intro Text", "The text to instruct users how and why to use this form.", false, "", "", 1, null, 3, true )]
     [CodeEditorField( "Intro Text", "The text to instruct users how and why to use this form.", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "", 3 )]
-    //[GroupRoleField( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY, "Family Role", "The family role that has access to edit this attribute for other family members.", true, "Adult", "", 2 )]
     [CustomCheckboxListField( "Family Roles", "The Family Roles which can edit this attribute.", "SELECT [r].[Id] AS [Value], [r].[Name] AS [Text] FROM [GroupTypeRole] [r] JOIN [GroupType] [t] ON [r].[GroupTypeId] = [t].[Id] WHERE [t].[Guid] LIKE '790E3215-3B10-442B-AF69-616C0DCB998E'", true )]
     [AttributeField( Rock.SystemGuid.EntityType.PERSON, "Person Attribute", "The person attribute that will be set for each selected family member. If it's a datetime attribute, current datetime will be saved, otherwise \"True\" will be the value.", true, false, order: 3 )]
     [TextField( "Confirmation Message", "The text to display when information has been successfully submitted.", false, "Form submitted successfully!" , "", 4 )]
@@ -49,8 +47,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             set { ViewState["RoleType"] = value; }
         }
 
-        private bool _canEdit = false;
-
         #endregion
 
         #region Base Control Methods
@@ -70,8 +66,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             this.BlockUpdated += Block_BlockUpdated;
 
-            //_canEdit = !GetAttributeValue( "ViewOnly" ).AsBoolean();
-
             var rockContext = new RockContext();
 
             // If impersonation is allowed, and a valid person key was used, set the target to that person
@@ -80,7 +74,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 string personKey = PageParameter( "Person" );
                 if ( !string.IsNullOrWhiteSpace( personKey ) )
                 {
-                    //var rockContext = new RockContext();
                     _person = new PersonService( rockContext ).GetByUrlEncodedKey( personKey );
                 }
             }
@@ -232,11 +225,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         {
 
             var rockContext = new RockContext();
-            //if ( ddlGroup.SelectedValueAsId().HasValue )
-            //{
-                //var group = new GroupService( rockContext ).Get( ddlGroup.SelectedValueAsId().Value );
-                //if ( group != null )
-                //{
                     var personService = new PersonService( rockContext );
                     var peopleToUpdate = new List<int>();
 
@@ -288,9 +276,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         pnlConfirmationMessage.Visible = true;
                     }
 
-                    //NavigateToPage( RockPage.Guid, queryString );
-                //}
-            //}
         }
 
         /// <summary>
@@ -299,16 +284,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnCancel_Click( object sender, EventArgs e )
-        {
-            ShowDetail();
-        }
-
-        /// <summary>
-        /// Handles the SelectedIndexChanged event of the ddlGroup control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void ddlGroup_SelectedIndexChanged( object sender, EventArgs e )
         {
             ShowDetail();
         }
@@ -326,7 +301,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var groupMemberService = new GroupMemberService( rockContext );
             var attributeValueService = new AttributeValueService( rockContext );
 
-            if ( _person != null )
+            if ( !IsPostBack && _person != null )
             {
                 var personId = _person.Id;
 
@@ -364,8 +339,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                 peopleDictionary.Add( groupMember.PersonId, groupMember );
                             }
                         }
-
-
 
                     }
                     rptGroupMembers.DataSource = peopleDictionary.Values.Where( gm =>
