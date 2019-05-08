@@ -291,19 +291,23 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         if ( !string.IsNullOrWhiteSpace( filterPageParam ) )
                         {
                             var filterParamList = filterPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
-                            if ( attribute.FieldType.Field is DefinedValueFieldType )
+                            if ( attribute.FieldType.Field is DefinedValueFieldType &&
+                                 filterControl != null &&
+                                 filterControl.Controls != null &&
+                                 filterControl.Controls.Count != 0 &&
+                                 filterControl.Controls[0].Controls != null &&
+                                 filterControl.Controls[0].Controls.Count != 0 &&
+                                 filterControl.Controls.Count > 1 &&
+                                 filterControl.Controls[1].Controls != null &&
+                                 filterControl.Controls[1].Controls.Count != 0 )
                             {
-                                for ( var i=0; i<filterParamList.Count(); i++ )
-                                {
-                                    var param = filterParamList[i];
-                                    if ( param.AsGuidOrNull() == null )
-                                    {
-                                        var definedValue = DefinedValueCache.Get( param.AsInteger() );
-                                        filterParamList[i] = definedValue.Guid.ToString();
-                                    }
-                                }
+                                var definedValuePicker = filterControl.Controls[1].Controls[0] as DefinedValuesPicker;
+                                definedValuePicker.SelectedValue = filterPageParam;
                             }
-                            attribute.FieldType.Field.SetFilterValues( filterControl, attribute.QualifierValues, filterParamList.ToList() );
+                            else
+                            {
+                                attribute.FieldType.Field.SetFilterValues( filterControl, attribute.QualifierValues, filterParamList.ToList() );
+                            }
                         }
                     }
                 }
