@@ -233,6 +233,10 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 BindAttributes();
                 BuildDynamicControls();
 
+                var campusPageParam = PageParameter( "filter_campus" );
+                var dowPageParam = PageParameter( "filter_dow" );
+                var timePageParam = PageParameter( "filter_time" );
+
                 if ( GetAttributeValue( "EnableCampusContext" ).AsBoolean() )
                 {
                     var campusEntityType = EntityTypeCache.Get( "Rock.Model.Campus" );
@@ -242,6 +246,39 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     {
                         cblCampus.SetValue( contextCampus.Id.ToString() );
                         ddlCampus.SetValue( contextCampus.Id.ToString() );
+                    }
+                }
+                else if ( !string.IsNullOrWhiteSpace( campusPageParam ) )
+                {
+                    var pageParamList = campusPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
+                    cblCampus.SetValues( pageParamList );
+                    ddlCampus.SetValue( campusPageParam );
+
+                }
+                if ( !string.IsNullOrWhiteSpace( dowPageParam ) )
+                {
+                    var pageParamList = dowPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
+                    var dowsFilterControl = phFilterControls.FindControl( "filter_dows" ) as RockCheckBoxList;
+                    if ( dowsFilterControl != null )
+                    {
+                        dowsFilterControl.SetValues( pageParamList );
+                    }
+
+                    var dowFilterControl = phFilterControls.FindControl( "filter_dow" );
+                    if ( dowFilterControl != null )
+                    {
+                        var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field;
+                        field.SetFilterValues( dowFilterControl, null, pageParamList );
+                    }
+                }
+                if ( !string.IsNullOrWhiteSpace( timePageParam ) )
+                {
+                    var pageParamList = timePageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
+                    var timeFilterControl = phFilterControls.FindControl( "filter_time" );
+                    if ( timeFilterControl != null )
+                    {
+                        var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.TIME ).Field;
+                        field.SetFilterValues( timeFilterControl, null, pageParamList );
                     }
                 }
 
