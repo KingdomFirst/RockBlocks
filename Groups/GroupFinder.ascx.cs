@@ -1575,8 +1575,8 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     position: position,
                     map: map,
                     title: htmlDecode(mapItem.Name),
-                    //icon: pinImage,
-                    //shadow: pinShadow,
+                    icon: pinImage,
+                    shadow: pinShadow,
                     info_window: mapItem.InfoWindow
                 }});
     
