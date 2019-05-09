@@ -1543,13 +1543,10 @@ namespace RockWeb.Plugins.com_kfs.Crm
                         acAddress.Required = field.IsRequired;
                         acAddress.ValidationGroup = BlockValidationGroup;
 
-                        foreach ( var ctrl in acAddress.Controls )
+                        var ctrlDDL = acAddress.FindControl( "ddlCountry") as RockDropDownList;
+                        if ( ctrlDDL != null )
                         {
-                            var ctrlDDL = ctrl as RockDropDownList;
-                            if ( ctrlDDL != null && ctrlDDL.ID == "ddlCountry" )
-                            {
-                                ctrlDDL.SelectedIndexChanged += ddlCountry_indexChanged;
-                            }
+                            ctrlDDL.SelectedIndexChanged += ddlCountry_indexChanged;
                         }
 
                         phContent.Controls.Add( acAddress );
