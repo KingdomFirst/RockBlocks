@@ -1260,6 +1260,22 @@ namespace RockWeb.Plugins.com_kfs.Crm
                             if ( attribute != null )
                             {
                                 attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
+
+                                if ( attribute.FieldType.Field is AddressFieldType )
+                                {
+                                    foreach ( var ctrl in phContent.Controls )
+                                    {
+                                        if ( ctrl is AddressControl )
+                                        {
+                                            var ac = ( AddressControl ) ctrl;
+                                            var ddlCountry = ac.FindControl( "ddlCountry" ) as RockDropDownList;
+                                            if ( ddlCountry != null )
+                                            {
+                                                ddlCountry.SelectedIndexChanged += ddlCountry_indexChanged;
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
