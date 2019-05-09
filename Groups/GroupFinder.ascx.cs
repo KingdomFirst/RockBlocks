@@ -1,5 +1,6 @@
 ﻿// <copyright>
 // Copyright by the Spark Development Network
+// Modifications copyright 2019 by Kingdom First Solutions
 //
 // Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,11 +21,8 @@ using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.Caching;
-using System.Text;
 using System.Web;
 using System.Web.UI;
-using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 
 using DotLiquid;
@@ -51,7 +49,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [DisplayName( "Group Finder KFS" )]
     [Category( "KFS > Groups" )]
     [Description( "Block for people to find a group that matches their search parameters." )]
-
     [BooleanField( "Auto Load", "When set to true, all results will be loaded to begin.", false )]
     [CampusField( "Default Location", "The campus address that should be used as fallback for the search criteria.", false, "", "" )]
     [BooleanField( "Single Select Filters", "When set to true, all filters will be a drop down instead of checkbox.", false )]
@@ -63,7 +60,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
     // Filter Settings
     [GroupTypeField( "Group Type", "", true, "", "CustomSetting" )]
     [GroupTypeField( "Geofenced Group Type", "", false, "", "CustomSetting" )]
-
     [TextField( "CampusLabel", "", true, "Campuses", "CustomSetting" )]
     [TextField( "TimeOfDayLabel", "", true, "Time of Day", "CustomSetting" )]
     [TextField( "DayOfWeekLabel", "", true, "Day of Week", "CustomSetting" )]
@@ -80,7 +76,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [BooleanField( "Show Fence", "", false, "CustomSetting" )]
     [ValueListField( "Polygon Colors", "", false, "#f37833|#446f7a|#afd074|#649dac|#f8eba2|#92d0df|#eaf7fc", "#ffffff", null, null, "CustomSetting" )]
     [CodeEditorField( "Map Info", "", CodeEditorMode.Lava, CodeEditorTheme.Rock, 200, false, @"
-<h4 class='margin-t-none'>{{ Group.Name }}</h4> 
+<h4 class='margin-t-none'>{{ Group.Name }}</h4>
 
 <div class='margin-b-sm'>
 {% for attribute in Group.AttributeValues %}
@@ -126,7 +122,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [BooleanField( "Sort By Distance", "", false, "CustomSetting" )]
     [TextField( "Page Sizes", "To show a dropdown of page sizes, enter a comma delimited list of page sizes. For example: 10,20 will present a drop down with 10,20,All as options with the default as 10", false, "", "CustomSetting" )]
 
-    #endregion
+    #endregion Block Attributes
 
     public partial class GroupFinder : RockBlockCustomSettings
     {
@@ -137,7 +133,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         private bool _autoLoad = false;
         private bool _ssFilters = false;
 
-        #endregion
+        #endregion Private Variables
 
         #region Properties
 
@@ -171,7 +167,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// </value>
         public List<AttributeCache> AttributeColumns { get; set; }
 
-        #endregion
+        #endregion Properties
 
         #region Base Control Methods
 
@@ -253,7 +249,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     var pageParamList = campusPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
                     cblCampus.SetValues( pageParamList );
                     ddlCampus.SetValue( campusPageParam );
-
                 }
                 if ( !string.IsNullOrWhiteSpace( dowPageParam ) )
                 {
@@ -337,7 +332,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             return base.SaveViewState();
         }
 
-        #endregion
+        #endregion Base Control Methods
 
         #region Events
 
@@ -376,7 +371,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             SetAttributeValue( "GroupType", GetGroupTypeGuid( gtpGroupType.SelectedGroupTypeId ) );
             SetAttributeValue( "GeofencedGroupType", GetGroupTypeGuid( gtpGeofenceGroupType.SelectedGroupTypeId ) );
 
-            SetAttributeValue( "DayOfWeekLabel", tbDayOfWeekLabel.Text);
+            SetAttributeValue( "DayOfWeekLabel", tbDayOfWeekLabel.Text );
             SetAttributeValue( "TimeOfDayLabel", tbTimeOfDayLabel.Text );
             SetAttributeValue( "CampusLabel", tbCampusLabel.Text );
 
@@ -503,7 +498,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             ShowResults();
         }
 
-        #endregion
+        #endregion Events
 
         #region Internal Methods
 
@@ -528,11 +523,11 @@ namespace RockWeb.Plugins.com_kfs.Groups
             tbTimeOfDayLabel.Text = GetAttributeValue( "TimeOfDayLabel" );
 
             var scheduleFilters = GetAttributeValue( "ScheduleFilters" ).SplitDelimitedValues( false ).ToList();
-            if ( scheduleFilters.Contains("Day") )
+            if ( scheduleFilters.Contains( "Day" ) )
             {
                 rblFilterDOW.SetValue( "Day" );
             }
-            else if ( scheduleFilters.Contains( "Days"))
+            else if ( scheduleFilters.Contains( "Days" ) )
             {
                 rblFilterDOW.SetValue( "Days" );
             }
@@ -696,7 +691,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 }
                 else
                 {
-                    // Hide the search button and show the results immediately since there is 
+                    // Hide the search button and show the results immediately since there is
                     // no filter criteria to be entered
                     phFilterControls.Visible = false;
                     btnSearch.Visible = GetAttributeValue( "DisplayCampusFilter" ).AsBoolean();
@@ -718,7 +713,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// </summary>
         private void BindAttributes()
         {
-            // Parse the attribute filters 
+            // Parse the attribute filters
             AttributeFilters = new List<AttributeCache>();
             foreach ( string attr in GetAttributeValue( "AttributeFilters" ).SplitDelimitedValues() )
             {
@@ -733,7 +728,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 }
             }
 
-            // Parse the attribute filters 
+            // Parse the attribute filters
             AttributeColumns = new List<AttributeCache>();
             foreach ( string attr in GetAttributeValue( "AttributeColumns" ).SplitDelimitedValues() )
             {
@@ -764,7 +759,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 dowsFilterControl.Label = GetAttributeValue( "DayOfWeekLabel" );
                 dowsFilterControl.BindToEnum<DayOfWeek>();
                 dowsFilterControl.RepeatDirection = RepeatDirection.Horizontal;
-                
+
                 AddFilterControl( dowsFilterControl, "Days of Week", "The day of week that group meets on." );
             }
 
@@ -781,7 +776,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 string timeOfDayLabel = GetAttributeValue( "TimeOfDayLabel" );
                 AddFilterControl( control, timeOfDayLabel, "The time of day that group meets." );
             }
-            
+
             if ( GetAttributeValue( "DisplayCampusFilter" ).AsBoolean() )
             {
                 if ( _ssFilters )
@@ -1470,7 +1465,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
         var locationData = {0};
         var fenceData = {1};
-        var groupData = {2}; 
+        var groupData = {2};
 
         var allMarkers = [];
 
@@ -1494,7 +1489,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
         initializeMap();
 
         function initializeMap() {{
-
             // Set default map options
             var mapOptions = {{
                  mapTypeId: 'roadmap'
@@ -1539,7 +1533,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
             if (!bounds.isEmpty()) {{
                 map.fitBounds(bounds);
             }}
-
         }}
 
         function openInfoWindowById(id) {{
@@ -1553,11 +1546,9 @@ namespace RockWeb.Plugins.com_kfs.Groups
         }}
 
         function addMapItem( i, mapItem, color ) {{
-
             var items = [];
 
-            if (mapItem.Point) {{ 
-
+            if (mapItem.Point) {{
                 var position = new google.maps.LatLng(mapItem.Point.Latitude, mapItem.Point.Longitude);
                 bounds.extend(position);
 
@@ -1579,11 +1570,11 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     shadow: pinShadow,
                     info_window: mapItem.InfoWindow
                 }});
-    
+
                 items.push(marker);
                 allMarkers.push(marker);
 
-                if ( mapItem.InfoWindow != null ) {{ 
+                if ( mapItem.InfoWindow != null ) {{
                     google.maps.event.addListener(marker, 'click', (function (marker, i) {{
                         return function () {{
                             openInfoWindow(marker);
@@ -1591,7 +1582,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     }})(marker, i));
                 }}
 
-                if ( mapItem.EntityId && mapItem.EntityId > 0 ) {{ 
+                if ( mapItem.EntityId && mapItem.EntityId > 0 ) {{
                     google.maps.event.addListener(marker, 'mouseover', (function (marker, i) {{
                         return function () {{
                             $(""tr[datakey='"" + mapItem.EntityId + ""']"").addClass('row-highlight');
@@ -1603,13 +1594,10 @@ namespace RockWeb.Plugins.com_kfs.Groups
                             $(""tr[datakey='"" + mapItem.EntityId + ""']"").removeClass('row-highlight');
                         }}
                     }})(marker, i));
-
                 }}
-
             }}
 
             if (typeof mapItem.PolygonPoints !== 'undefined' && mapItem.PolygonPoints.length > 0) {{
-
                 var polygon;
                 var polygonPoints = [];
 
@@ -1636,7 +1624,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     polyBounds.extend(polygonPoints[j]);
                 }}
 
-                if ( mapItem.InfoWindow != null ) {{ 
+                if ( mapItem.InfoWindow != null ) {{
                     google.maps.event.addListener(polygon, 'click', (function (polygon, i) {{
                         return function () {{
                             infoWindow.setContent( mapItem.InfoWindow );
@@ -1648,9 +1636,8 @@ namespace RockWeb.Plugins.com_kfs.Groups
             }}
 
             return items;
-
         }}
-        
+
         function setAllMap(markers, map) {{
             for (var i = 0; i < markers.length; i++) {{
                 markers[i].setMap(map);
@@ -1676,7 +1663,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
         }}
 
         function adjustOverlappedMarkers() {{
-            
             if (allMarkers.length > 1) {{
                 for(i=0; i < allMarkers.length-1; i++) {{
                     var marker1 = allMarkers[i];
@@ -1692,7 +1678,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     }}
                 }}
             }}
-
         }}
 ";
 
@@ -1741,7 +1726,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             nbNotice.Visible = true;
         }
 
-        #endregion
+        #endregion Internal Methods
 
         /// <summary>
         /// A map item class specific to group finder
