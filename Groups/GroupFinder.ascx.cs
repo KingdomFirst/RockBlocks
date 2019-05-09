@@ -1,4 +1,21 @@
-﻿using System;
+﻿// <copyright>
+// Copyright by the Spark Development Network
+// Modifications copyright 2019 by Kingdom First Solutions
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
@@ -32,7 +49,6 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [DisplayName( "Group Finder KFS" )]
     [Category( "KFS > Groups" )]
     [Description( "Block for people to find a group that matches their search parameters." )]
-
     [BooleanField( "Auto Load", "When set to true, all results will be loaded to begin.", false )]
     [CampusField( "Default Location", "The campus address that should be used as fallback for the search criteria.", false, "", "" )]
     [BooleanField( "Single Select Filters", "When set to true, all filters will be a drop down instead of checkbox.", false )]
@@ -44,6 +60,9 @@ namespace RockWeb.Plugins.com_kfs.Groups
     // Filter Settings
     [GroupTypeField( "Group Type", "", true, "", "CustomSetting" )]
     [GroupTypeField( "Geofenced Group Type", "", false, "", "CustomSetting" )]
+    [TextField( "CampusLabel", "", true, "Campuses", "CustomSetting" )]
+    [TextField( "TimeOfDayLabel", "", true, "Time of Day", "CustomSetting" )]
+    [TextField( "DayOfWeekLabel", "", true, "Day of Week", "CustomSetting" )]
     [TextField( "ScheduleFilters", "", false, "", "CustomSetting" )]
     [BooleanField( "Display Campus Filter", "", false, "CustomSetting" )]
     [BooleanField( "Enable Campus Context", "", false, "CustomSetting" )]
@@ -103,7 +122,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
     [BooleanField( "Sort By Distance", "", false, "CustomSetting" )]
     [TextField( "Page Sizes", "To show a dropdown of page sizes, enter a comma delimited list of page sizes. For example: 10,20 will present a drop down with 10,20,All as options with the default as 10", false, "", "CustomSetting" )]
 
-    #endregion
+    #endregion Block Attributes
 
     public partial class GroupFinder : RockBlockCustomSettings
     {
@@ -114,7 +133,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         private bool _autoLoad = false;
         private bool _ssFilters = false;
 
-        #endregion
+        #endregion Private Variables
 
         #region Properties
 
@@ -148,7 +167,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// </value>
         public List<AttributeCache> AttributeColumns { get; set; }
 
-        #endregion
+        #endregion Properties
 
         #region Base Control Methods
 
@@ -210,6 +229,10 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 BindAttributes();
                 BuildDynamicControls();
 
+                var campusPageParam = PageParameter( "filter_campus" );
+                var dowPageParam = PageParameter( "filter_dow" );
+                var timePageParam = PageParameter( "filter_time" );
+
                 if ( GetAttributeValue( "EnableCampusContext" ).AsBoolean() )
                 {
                     var campusEntityType = EntityTypeCache.Get( "Rock.Model.Campus" );
@@ -219,6 +242,68 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     {
                         cblCampus.SetValue( contextCampus.Id.ToString() );
                         ddlCampus.SetValue( contextCampus.Id.ToString() );
+                    }
+                }
+                else if ( !string.IsNullOrWhiteSpace( campusPageParam ) )
+                {
+                    var pageParamList = campusPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
+                    cblCampus.SetValues( pageParamList );
+                    ddlCampus.SetValue( campusPageParam );
+                }
+                if ( !string.IsNullOrWhiteSpace( dowPageParam ) )
+                {
+                    var pageParamList = dowPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
+                    var dowsFilterControl = phFilterControls.FindControl( "filter_dows" ) as RockCheckBoxList;
+                    if ( dowsFilterControl != null )
+                    {
+                        dowsFilterControl.SetValues( pageParamList );
+                    }
+
+                    var dowFilterControl = phFilterControls.FindControl( "filter_dow" );
+                    if ( dowFilterControl != null )
+                    {
+                        var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field;
+                        field.SetFilterValues( dowFilterControl, null, pageParamList );
+                    }
+                }
+                if ( !string.IsNullOrWhiteSpace( timePageParam ) )
+                {
+                    var pageParamList = timePageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
+                    var timeFilterControl = phFilterControls.FindControl( "filter_time" );
+                    if ( timeFilterControl != null )
+                    {
+                        var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.TIME ).Field;
+                        field.SetFilterValues( timeFilterControl, null, pageParamList );
+                    }
+                }
+
+                if ( AttributeFilters != null && AttributeFilters.Any() )
+                {
+                    foreach ( var attribute in AttributeFilters )
+                    {
+                        var filterControl = phFilterControls.FindControl( "filter_" + attribute.Id.ToString() );
+                        var filterPageParam = PageParameter( "filter_" + attribute.Id.ToString() );
+                        if ( !string.IsNullOrWhiteSpace( filterPageParam ) )
+                        {
+                            var filterParamList = filterPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
+                            if ( attribute.FieldType.Field is DefinedValueFieldType &&
+                                 filterControl != null &&
+                                 filterControl.Controls != null &&
+                                 filterControl.Controls.Count != 0 &&
+                                 filterControl.Controls[0].Controls != null &&
+                                 filterControl.Controls[0].Controls.Count != 0 &&
+                                 filterControl.Controls.Count > 1 &&
+                                 filterControl.Controls[1].Controls != null &&
+                                 filterControl.Controls[1].Controls.Count != 0 )
+                            {
+                                var definedValuePicker = filterControl.Controls[1].Controls[0] as DefinedValuesPicker;
+                                definedValuePicker.SelectedValue = filterPageParam;
+                            }
+                            else
+                            {
+                                attribute.FieldType.Field.SetFilterValues( filterControl, attribute.QualifierValues, filterParamList.ToList() );
+                            }
+                        }
                     }
                 }
 
@@ -247,7 +332,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             return base.SaveViewState();
         }
 
-        #endregion
+        #endregion Base Control Methods
 
         #region Events
 
@@ -256,7 +341,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void Block_Updated( object sender, EventArgs e )
+        protected void Block_Updated( object sender, EventArgs e )
         {
             ShowView();
         }
@@ -286,13 +371,18 @@ namespace RockWeb.Plugins.com_kfs.Groups
             SetAttributeValue( "GroupType", GetGroupTypeGuid( gtpGroupType.SelectedGroupTypeId ) );
             SetAttributeValue( "GeofencedGroupType", GetGroupTypeGuid( gtpGeofenceGroupType.SelectedGroupTypeId ) );
 
+            SetAttributeValue( "DayOfWeekLabel", tbDayOfWeekLabel.Text );
+            SetAttributeValue( "TimeOfDayLabel", tbTimeOfDayLabel.Text );
+            SetAttributeValue( "CampusLabel", tbCampusLabel.Text );
+
             var schFilters = new List<string>();
             if ( rblFilterDOW.Visible )
             {
                 schFilters.Add( rblFilterDOW.SelectedValue );
-                schFilters.Add( cbFilterTimeOfDay.Checked ? "Time" : "" );
+                schFilters.Add( cbFilterTimeOfDay.Checked ? "Time" : string.Empty );
             }
-            SetAttributeValue( "ScheduleFilters", schFilters.Where( f => f != "" ).ToList().AsDelimited( "," ) );
+
+            SetAttributeValue( "ScheduleFilters", schFilters.Where( f => f != string.Empty ).ToList().AsDelimited( "," ) );
 
             SetAttributeValue( "DisplayCampusFilter", cbFilterCampus.Checked.ToString() );
             SetAttributeValue( "EnableCampusContext", cbCampusContext.Checked.ToString() );
@@ -378,7 +468,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        private void registerColumn_Click( object sender, RowEventArgs e )
+        protected void registerColumn_Click( object sender, RowEventArgs e )
         {
             using ( var rockContext = new RockContext() )
             {
@@ -403,12 +493,12 @@ namespace RockWeb.Plugins.com_kfs.Groups
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private void gGroups_GridRebind( object sender, EventArgs e )
+        protected void gGroups_GridRebind( object sender, EventArgs e )
         {
             ShowResults();
         }
 
-        #endregion
+        #endregion Events
 
         #region Internal Methods
 
@@ -427,6 +517,10 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             BindGroupType( gtpGroupType, groupTypes, "GroupType" );
             BindGroupType( gtpGeofenceGroupType, groupTypes, "GeofencedGroupType" );
+            string av = GetAttributeValue( "CampusLabel" );
+            tbCampusLabel.Text = GetAttributeValue( "CampusLabel" );
+            tbDayOfWeekLabel.Text = GetAttributeValue( "DayOfWeekLabel" );
+            tbTimeOfDayLabel.Text = GetAttributeValue( "TimeOfDayLabel" );
 
             var scheduleFilters = GetAttributeValue( "ScheduleFilters" ).SplitDelimitedValues( false ).ToList();
             if ( scheduleFilters.Contains( "Day" ) )
@@ -437,6 +531,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             {
                 rblFilterDOW.SetValue( "Days" );
             }
+
             cbFilterTimeOfDay.Checked = scheduleFilters.Contains( "Time" );
 
             SetGroupTypeOptions();
@@ -480,6 +575,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     li.Selected = true;
                 }
             }
+
             var ppFieldType = new PageReferenceFieldType();
             ppFieldType.SetEditValue( ppGroupDetailPage, null, GetAttributeValue( "GroupDetailPage" ) );
             ppFieldType.SetEditValue( ppRegisterPage, null, GetAttributeValue( "RegisterPage" ) );
@@ -517,6 +613,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         {
                             cblAttributes.Items.Add( new ListItem( attribute.Value.Name, attribute.Value.Guid.ToString() ) );
                         }
+
                         cblGridAttributes.Items.Add( new ListItem( attribute.Value.Name, attribute.Value.Guid.ToString() ) );
                     }
                 }
@@ -537,7 +634,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
             if ( targetPerson != null )
             {
-                lTitle.Text = String.Format( "<h4 class='margin-t-none'>Groups for {0}</h4>", targetPerson.FullName );
+                lTitle.Text = string.Format( "<h4 class='margin-t-none'>Groups for {0}</h4>", targetPerson.FullName );
                 acAddress.SetValues( targetPersonLocation );
                 acAddress.Visible = false;
                 phFilterControls.Visible = false;
@@ -546,17 +643,17 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                 if ( targetPersonLocation != null && targetPersonLocation.GeoPoint != null )
                 {
-                    lTitle.Text += String.Format( "<p>Search based on: {0}</p>", targetPersonLocation.ToString() );
+                    lTitle.Text += string.Format( "<p>Search based on: {0}</p>", targetPersonLocation.ToString() );
 
                     ShowResults();
                 }
                 else if ( targetPersonLocation != null )
                 {
-                    lTitle.Text += String.Format( "<p>The position of the address on file ({0}) could not be determined.</p>", targetPersonLocation.ToString() );
+                    lTitle.Text += string.Format( "<p>The position of the address on file ({0}) could not be determined.</p>", targetPersonLocation.ToString() );
                 }
                 else
                 {
-                    lTitle.Text += String.Format( "<p>The person does not have an address on file.</p>" );
+                    lTitle.Text += string.Format( "<p>The person does not have an address on file.</p>" );
                 }
             }
         }
@@ -654,25 +751,30 @@ namespace RockWeb.Plugins.com_kfs.Groups
         {
             // Clear attribute filter controls and recreate
             phFilterControls.Controls.Clear();
-            var ScheduleFilters = GetAttributeValue( "ScheduleFilters" ).SplitDelimitedValues().ToList();
-            if ( ScheduleFilters.Contains( "Days" ) )
+            var scheduleFilters = GetAttributeValue( "ScheduleFilters" ).SplitDelimitedValues().ToList();
+            if ( scheduleFilters.Contains( "Days" ) )
             {
                 var dowsFilterControl = new RockCheckBoxList();
                 dowsFilterControl.ID = "filter_dows";
-                dowsFilterControl.Label = "Day of Week";
+                dowsFilterControl.Label = GetAttributeValue( "DayOfWeekLabel" );
                 dowsFilterControl.BindToEnum<DayOfWeek>();
                 dowsFilterControl.RepeatDirection = RepeatDirection.Horizontal;
+
                 AddFilterControl( dowsFilterControl, "Days of Week", "The day of week that group meets on." );
             }
-            if ( ScheduleFilters.Contains( "Day" ) )
+
+            if ( scheduleFilters.Contains( "Day" ) )
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field.FilterControl( null, "filter_dow", false, Rock.Reporting.FilterMode.SimpleFilter );
-                AddFilterControl( control, "Day of Week", "The day of week that group meets on." );
+                string dayOfWeekLabel = GetAttributeValue( "DayOfWeekLabel" );
+                AddFilterControl( control, dayOfWeekLabel, "The day of week that group meets on." );
             }
-            if ( ScheduleFilters.Contains( "Time" ) )
+
+            if ( scheduleFilters.Contains( "Time" ) )
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.TIME ).Field.FilterControl( null, "filter_time", false, Rock.Reporting.FilterMode.SimpleFilter );
-                AddFilterControl( control, "Time of Day", "The time of day that group meets." );
+                string timeOfDayLabel = GetAttributeValue( "TimeOfDayLabel" );
+                AddFilterControl( control, timeOfDayLabel, "The time of day that group meets." );
             }
 
             if ( GetAttributeValue( "DisplayCampusFilter" ).AsBoolean() )
@@ -693,6 +795,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     cblCampus.DataSource = CampusCache.All().Where( c => c.IsActive == true );
                     cblCampus.DataBind();
                 }
+                cblCampus.Label = GetAttributeValue( "CampusLabel" );
             }
             else
             {
@@ -717,6 +820,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             {
                 gGroups.Columns.Remove( column );
             }
+
             if ( AttributeColumns != null )
             {
                 foreach ( var attribute in AttributeColumns )
@@ -764,7 +868,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
             }
 
             var pageSizes = new List<int>();
-            if ( !String.IsNullOrWhiteSpace( GetAttributeValue( "PageSizes" ) ) )
+            if ( !string.IsNullOrWhiteSpace( GetAttributeValue( "PageSizes" ) ) )
             {
                 pageSizes = GetAttributeValue( "PageSizes" ).Split( ',' ).AsIntegerList();
             }
@@ -916,38 +1020,10 @@ namespace RockWeb.Plugins.com_kfs.Groups
             // Filter query by any configured attribute filters
             if ( AttributeFilters != null && AttributeFilters.Any() )
             {
-                var attributeValueService = new AttributeValueService( rockContext );
-                var parameterExpression = attributeValueService.ParameterExpression;
-
                 foreach ( var attribute in AttributeFilters )
                 {
                     var filterControl = phFilterControls.FindControl( "filter_" + attribute.Id.ToString() );
-                    if ( filterControl == null )
-                        continue;
-
-                    var filterValues = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                    var filterIsDefault = attribute.FieldType.Field.IsEqualToValue( filterValues, attribute.DefaultValue );
-                    var expression = attribute.FieldType.Field.AttributeFilterExpression( attribute.QualifierValues, filterValues, parameterExpression );
-                    if ( expression == null )
-                        continue;
-
-                    var attributeValues = attributeValueService
-                        .Queryable()
-                        .Where( v => v.Attribute.Id == attribute.Id );
-
-                    var filteredAttributeValues = attributeValues.Where( parameterExpression, expression, null );
-
-                    if ( filterIsDefault )
-                    {
-                        groupQry = groupQry.Where( w =>
-                             !attributeValues.Any( v => v.EntityId == w.Id ) ||
-                             filteredAttributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
-                    }
-                    else
-                    {
-                        groupQry = groupQry.Where( w =>
-                            filteredAttributeValues.Select( v => v.EntityId ).Contains( w.Id ) );
-                    }
+                    groupQry = attribute.FieldType.Field.ApplyAttributeQueryFilter( groupQry, filterControl, attribute, groupService, Rock.Reporting.FilterMode.SimpleFilter );
                 }
             }
 
@@ -999,14 +1075,16 @@ namespace RockWeb.Plugins.com_kfs.Groups
                 FinderMapItem personMapItem = null;
                 if ( showMap && personLocation != null && personLocation.GeoPoint != null )
                 {
-                    var infoWindow = string.Format( @"
+                    var infoWindow = string.Format(
+                        @"
 <div style='width:250px'>
     <div class='clearfix'>
 		<strong>Your Location</strong>
         <br/>{0}
     </div>
 </div>
-", personLocation.FormattedHtmlAddress );
+",
+                        personLocation.FormattedHtmlAddress );
 
                     personMapItem = new FinderMapItem( personLocation );
                     personMapItem.Name = "Your Location";
@@ -1147,7 +1225,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
 
                             if ( showDebug )
                             {
-                                lMapInfoDebug.Text = mergeFields.lavaDebugInfo( null, "<span class='label label-info'>Lava used for the map window.</span>", "" );
+                                lMapInfoDebug.Text = mergeFields.lavaDebugInfo( null, "<span class='label label-info'>Lava used for the map window.</span>", string.Empty );
                                 showDebug = false;
                             }
 
@@ -1253,7 +1331,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         Schedule = g.Schedule,
                         MemberCount = qryMembers.Count(),
                         AverageAge = Math.Round( qryMembers.Select( m => m.Person.BirthDate ).ToList().Select( a => Person.GetAge( a ) ).Average() ?? 0.0D ),
-                        Campus = g.Campus != null ? g.Campus.Name : "",
+                        Campus = g.Campus != null ? g.Campus.Name : string.Empty,
                         Distance = distances.Where( d => d.Key == g.Id )
                             .Select( d => d.Value ).FirstOrDefault()
                     };
@@ -1300,6 +1378,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     return groupType.Id;
                 }
             }
+
             return null;
         }
 
@@ -1318,6 +1397,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     return groupType.Guid.ToString();
                 }
             }
+
             return string.Empty;
         }
 
@@ -1340,7 +1420,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                             #map_canvas {{
                                 width: 100%;
                                 height: 100%;
-                                border-radius: 8px;
+                                border-radius: var(--border-radius-base);
                             }}
                         </style>";
             lMapStyling.Text = string.Format( mapStylingFormat, GetAttributeValue( "MapHeight" ) );
@@ -1358,6 +1438,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                     .ToList();
                 markerColors.ForEach( c => c = c.Replace( "#", string.Empty ) );
             }
+
             if ( !markerColors.Any() )
             {
                 markerColors.Add( "FE7569" );
@@ -1601,15 +1682,16 @@ namespace RockWeb.Plugins.com_kfs.Groups
 ";
 
             var locationJson = location != null ?
-                string.Format( "JSON.parse('{0}')", location.ToJson().Replace( Environment.NewLine, "" ).Replace( "\\", "\\\\" ).EscapeQuotes().Replace( "\x0A", "" ) ) : "null";
+                string.Format( "JSON.parse('{0}')", location.ToJson().Replace( Environment.NewLine, string.Empty ).Replace( "\\", "\\\\" ).EscapeQuotes().Replace( "\x0A", string.Empty ) ) : "null";
 
             var fencesJson = fences != null && fences.Any() ?
-                string.Format( "JSON.parse('{0}')", fences.ToJson().Replace( Environment.NewLine, "" ).Replace( "\\", "\\\\" ).EscapeQuotes().Replace( "\x0A", "" ) ) : "null";
+                string.Format( "JSON.parse('{0}')", fences.ToJson().Replace( Environment.NewLine, string.Empty ).Replace( "\\", "\\\\" ).EscapeQuotes().Replace( "\x0A", string.Empty ) ) : "null";
 
             var groupsJson = groups != null && groups.Any() ?
-                string.Format( "JSON.parse('{0}')", groups.ToJson().Replace( Environment.NewLine, "" ).Replace( "\\", "\\\\" ).EscapeQuotes().Replace( "\x0A", "" ) ) : "null";
+                string.Format( "JSON.parse('{0}')", groups.ToJson().Replace( Environment.NewLine, string.Empty ).Replace( "\\", "\\\\" ).EscapeQuotes().Replace( "\x0A", string.Empty ) ) : "null";
 
-            string mapScript = string.Format( mapScriptFormat,
+            string mapScript = string.Format(
+                mapScriptFormat,
                 locationJson,       // 0
                 fencesJson,         // 1
                 groupsJson,         // 2
@@ -1644,12 +1726,12 @@ namespace RockWeb.Plugins.com_kfs.Groups
             nbNotice.Visible = true;
         }
 
-        #endregion
+        #endregion Internal Methods
 
         /// <summary>
         /// A map item class specific to group finder
         /// </summary>
-        private class FinderMapItem : MapItem
+        public class FinderMapItem : MapItem
         {
             /// <summary>
             /// Gets or sets the information window.
