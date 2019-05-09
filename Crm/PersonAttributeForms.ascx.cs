@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -796,6 +796,11 @@ namespace RockWeb.Plugins.com_kfs.Crm
             upnlContent.Update();
         }
 
+        private void ddlCountry_indexChanged( object sender, EventArgs e )
+        {
+            upnlContent.Update();
+        }
+
         #region Form Control Events
 
         /// <summary>
@@ -1521,6 +1526,15 @@ namespace RockWeb.Plugins.com_kfs.Crm
                         acAddress.UseCountryAbbreviation = false;
                         acAddress.Required = field.IsRequired;
                         acAddress.ValidationGroup = BlockValidationGroup;
+
+                        foreach ( var ctrl in acAddress.Controls )
+                        {
+                            var ctrlDDL = ctrl as RockDropDownList;
+                            if ( ctrlDDL != null && ctrlDDL.ID == "ddlCountry" )
+                            {
+                                ctrlDDL.SelectedIndexChanged += ddlCountry_indexChanged;
+                            }
+                        }
 
                         phContent.Controls.Add( acAddress );
 
