@@ -216,58 +216,84 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         {
 
             var rockContext = new RockContext();
-                    var personService = new PersonService( rockContext );
-                    var peopleToUpdate = new List<int>();
+            var personService = new PersonService( rockContext );
+            var peopleToUpdateTrue = new List<int>();
+            var peopleToUpdateFalse = new List<int>();
 
-                    foreach ( RepeaterItem item in rptGroupMembers.Items )
+            foreach ( RepeaterItem item in rptGroupMembers.Items )
+            {
+                CheckBox chk = item.FindControl( "cbSelectFamilyMember" ) as CheckBox;
+                var pid = chk.Attributes["CommandArgument"].AsInteger();
+                if ( chk.Checked )
+                {
+                    peopleToUpdateTrue.Add( pid );
+                }
+                else
+                {
+                    peopleToUpdateFalse.Add( pid );
+                }
+
+            }
+
+            foreach ( int pid in peopleToUpdateTrue )
+            {
+                var person = personService.Get( pid );
+                if ( person != null )
+                {
+                    var attributeSetting = GetAttributeValue( "PersonAttribute" );
+                    var attribute = AttributeCache.Get( attributeSetting );
+                    //if ( attribute.FieldTypeId == 11 )
+                    if( attribute.FieldType.Guid == Rock.SystemGuid.FieldType.DATE.AsGuid() || attribute.FieldType.Guid == Rock.SystemGuid.FieldType.DATE_TIME.AsGuid() )
                     {
-                        CheckBox chk = item.FindControl( "cbSelectFamilyMember" ) as CheckBox;
-
-                        if ( chk.Checked )
-                        {
-                            var pid = chk.Attributes["CommandArgument"].AsInteger();
-                            peopleToUpdate.Add( pid );
-                        }
-
-                    }
-
-                    foreach ( int pid in peopleToUpdate )
-                    {
-                        var person = personService.Get( pid );
-                        if ( person != null )
-                        {
-                            var attributeSetting = GetAttributeValue( "PersonAttribute" );
-                            var attribute = AttributeCache.Get( attributeSetting );
-                            if ( attribute.FieldTypeId == 11 )
-                            {
-                                string originalValue = person.GetAttributeValue( attribute.Key );
-                                string newValue = RockDateTime.Now.ToString();
-                                Rock.Attribute.Helper.SaveAttributeValue( person, attribute, newValue, rockContext );
-                            }
-                            else
-                            {
-                                Rock.Attribute.Helper.SaveAttributeValue( person, attribute, "True", rockContext );
-                            }
-
-                        }
-                    }
-
-                    if ( GetAttributeValue( "ConfirmationPage" ) != "" )
-                    {
-                        NavigateToLinkedPage( "ConfirmationPage" );
+                        string originalValue = person.GetAttributeValue( attribute.Key );
+                        string newValue = RockDateTime.Now.ToString();
+                        Rock.Attribute.Helper.SaveAttributeValue( person, attribute, newValue, rockContext );
                     }
                     else
                     {
-                        Literal confirmationText = new Literal();
-                        confirmationText.Text = GetAttributeValue( "ConfirmationMessage" );
-                        pnlConfirmationMessage.Controls.Add( confirmationText );
-                        pnlConfirmationMessage.Visible = true;
-                        pnlView.Visible = false;
-                        btnSave.Visible = false;
-                        btnCancel.Visible = false;
-                        lIntroText.Visible = false;
-                        pnlConfirmationMessage.Visible = true;
+                        Rock.Attribute.Helper.SaveAttributeValue( person, attribute, "True", rockContext );
                     }
+
+                }
+            }
+
+            foreach ( int pid in peopleToUpdateFalse )
+            {
+                var person = personService.Get( pid );
+                if ( person != null )
+                {
+                    var attributeSetting = GetAttributeValue( "PersonAttribute" );
+                    var attribute = AttributeCache.Get( attributeSetting );
+                    if ( attribute.FieldType.Guid == Rock.SystemGuid.FieldType.DATE.AsGuid() || attribute.FieldType.Guid == Rock.SystemGuid.FieldType.DATE_TIME.AsGuid() )
+                    {
+                        string originalValue = person.GetAttributeValue( attribute.Key );
+                        string newValue = null;
+                        Rock.Attribute.Helper.SaveAttributeValue( person, attribute, newValue, rockContext );
+                    }
+                    else
+                    {
+                        Rock.Attribute.Helper.SaveAttributeValue( person, attribute, "False", rockContext );
+                    }
+
+                }
+            }
+
+            if ( GetAttributeValue( "ConfirmationPage" ) != "" )
+            {
+                NavigateToLinkedPage( "ConfirmationPage" );
+            }
+            else
+            {
+                Literal confirmationText = new Literal();
+                confirmationText.Text = GetAttributeValue( "ConfirmationMessage" );
+                pnlConfirmationMessage.Controls.Add( confirmationText );
+                pnlConfirmationMessage.Visible = true;
+                pnlView.Visible = false;
+                btnSave.Visible = false;
+                btnCancel.Visible = false;
+                lIntroText.Visible = false;
+                pnlConfirmationMessage.Visible = true;
+            }
 
         }
 
