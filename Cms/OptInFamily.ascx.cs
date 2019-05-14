@@ -200,6 +200,21 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             familyNames = "<span style='font-size: 12px;'>" + familyNames + "</span>";
 
+            person.LoadAttributes();
+            var attributeSetting = GetAttributeValue( "PersonAttribute" );
+            var attribute = AttributeCache.Get( attributeSetting );
+            var originalValue = person.GetAttributeValue( attribute.Key );
+            
+            if ( ( attribute.FieldType.Guid == Rock.SystemGuid.FieldType.DATE.AsGuid() || attribute.FieldType.Guid == Rock.SystemGuid.FieldType.DATE_TIME.AsGuid() ) && !originalValue.IsNullOrWhiteSpace()  )
+            {
+                cbSelectFamilyMember.Checked = true;
+            }
+
+            if ( originalValue.AsBoolean() == true )
+            {
+                cbSelectFamilyMember.Checked = true;
+            }
+
             // Person Info
             cbSelectFamilyMember.Text = ( "<span style='font-weight: bold; font-size: 16px; margin-right: 10px;'>" + person.FullName + "</span><span>" + familyNames + "</span>" );
 
@@ -242,7 +257,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 {
                     var attributeSetting = GetAttributeValue( "PersonAttribute" );
                     var attribute = AttributeCache.Get( attributeSetting );
-                    //if ( attribute.FieldTypeId == 11 )
+
                     if( attribute.FieldType.Guid == Rock.SystemGuid.FieldType.DATE.AsGuid() || attribute.FieldType.Guid == Rock.SystemGuid.FieldType.DATE_TIME.AsGuid() )
                     {
                         string originalValue = person.GetAttributeValue( attribute.Key );
