@@ -35,6 +35,14 @@ namespace RockWeb.Blocks.Fundraising
     [DisplayName( "Fundraising Progress" )]
     [Category( "Fundraising" )]
     [Description( "Progress for all people in a fundraising opportunity" )]
+
+    [BooleanField( "Show Group Title", "Should the Group Title be displayed?", true )]
+    [BooleanField( "Show Total Goals Amount", "Should the Total Individual Goals amount be displayed?", true )]
+    [BooleanField( "Show Total Goals Progress Bar", "Should the Total Individual Goals progress bar be displayed?", true )]
+    [BooleanField( "Show Group Member Goals", "Should individual group member goals be displayed?", true )]
+    [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true )]
+    [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true )]
+
     public partial class FundraisingProgress : RockBlock
     {
 
