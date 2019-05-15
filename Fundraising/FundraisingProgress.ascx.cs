@@ -20,12 +20,13 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
     [Category( "Fundraising" )]
     [Description( "Progress for all people in a fundraising opportunity" )]
 
-    [BooleanField( "Show Group Title", "Should the Group Title be displayed?", true )]
-    [BooleanField( "Show Total Goals Amount", "Should the Total Individual Goals amount be displayed?", true )]
-    [BooleanField( "Show Total Goals Progress Bar", "Should the Total Individual Goals progress bar be displayed?", true )]
-    [BooleanField( "Show Group Member Goals", "Should individual group member goals be displayed?", true )]
-    [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true )]
-    [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true )]
+    [BooleanField( "Show Group Title", "Should the Group Title be displayed?", true, "", 1 )]
+    [BooleanField( "Show Group Total Goals", "Should the Total Individual Goals be displayed?", true, "", 2 )]
+    [BooleanField( "Show Total Goals Amount", "Should the Total Individual Goals amount be displayed?", true, "", 3 )]
+    [BooleanField( "Show Total Goals Progress Bar", "Should the Total Individual Goals progress bar be displayed?", true, "", 4 )]
+    [BooleanField( "Show Group Member Goals", "Should individual group member goals be displayed?", true, "", 5 )]
+    [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true, "", 6 )]
+    [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true, "", 7 )]
 
     public partial class FundraisingProgress : RockBlock
     {
@@ -76,6 +77,13 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 {
                     pnlView.Visible = false;
                 }
+
+                divPanelHeading.Visible = GetAttributeValue( "ShowGroupTitle" ).AsBoolean();
+                pnlHeader.Visible = GetAttributeValue( "ShowGroupTotalGoals" ).AsBoolean();
+                pTotalAmounts.Visible = GetAttributeValue( "ShowTotalGoalsAmount" ).AsBoolean();
+                divTotalProgress.Visible = GetAttributeValue( "ShowTotalGoalsProgressBar" ).AsBoolean();
+                ulGroupMembers.Visible = GetAttributeValue( "ShowGroupMemberGoals" ).AsBoolean();
+
             }
         }
 
@@ -116,6 +124,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
             lTitle.Text = group.Name.FormatAsHtmlTitle();
 
             BindGroupMembersProgressGrid( group, groupMember, rockContext );
+
         }
 
         /// <summary>
@@ -197,6 +206,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
 
             rptFundingProgress.DataSource = groupMemberList;
             rptFundingProgress.DataBind();
+
         }
 
         #endregion
@@ -211,6 +221,29 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
             ShowView( hfGroupId.Value.AsIntegerOrNull(), hfGroupMemberId.Value.AsIntegerOrNull() );
+        }
+
+        /// <summary>
+        /// Handles the ItemDataBound event of the rptFundingProgress control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
+        protected void rptFundingProgress_ItemDataBound( object sender, RepeaterItemEventArgs e )
+        {
+            var divMemberGoalAmount = e.Item.FindControl( "divMemberGoalAmount" );
+            var pnlMemberGoalProgressBar = e.Item.FindControl( "pnlMemberGoalProgressBar" ) as Panel;
+
+            divMemberGoalAmount.Visible = GetAttributeValue( "ShowGroupMemberGoalAmounts" ).AsBoolean();
+            pnlMemberGoalProgressBar.Visible = GetAttributeValue( "ShowGroupMemberGoalProgressBars" ).AsBoolean();
+
+            if ( divMemberGoalAmount.Visible )
+            {
+                pnlMemberGoalProgressBar.CssClass = "col-xs-12 col-md-8 col-md-offset-4";
+            }
+            else
+            {
+                pnlMemberGoalProgressBar.CssClass = "col-xs-12 col-md-8";
+            }
         }
 
         #endregion
