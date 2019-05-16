@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -796,6 +796,11 @@ namespace RockWeb.Plugins.com_kfs.Crm
             upnlContent.Update();
         }
 
+        private void ddlCountry_indexChanged( object sender, EventArgs e )
+        {
+            upnlContent.Update();
+        }
+
         #region Form Control Events
 
         /// <summary>
@@ -1255,6 +1260,22 @@ namespace RockWeb.Plugins.com_kfs.Crm
                             if ( attribute != null )
                             {
                                 attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
+
+                                if ( attribute.FieldType.Field is AddressFieldType )
+                                {
+                                    foreach ( var ctrl in phContent.Controls )
+                                    {
+                                        if ( ctrl is AddressControl )
+                                        {
+                                            var ac = ( AddressControl ) ctrl;
+                                            var ddlCountry = ac.FindControl( "ddlCountry" ) as RockDropDownList;
+                                            if ( ddlCountry != null )
+                                            {
+                                                ddlCountry.SelectedIndexChanged += ddlCountry_indexChanged;
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -1521,6 +1542,12 @@ namespace RockWeb.Plugins.com_kfs.Crm
                         acAddress.UseCountryAbbreviation = false;
                         acAddress.Required = field.IsRequired;
                         acAddress.ValidationGroup = BlockValidationGroup;
+
+                        var ctrlDDL = acAddress.FindControl( "ddlCountry") as RockDropDownList;
+                        if ( ctrlDDL != null )
+                        {
+                            ctrlDDL.SelectedIndexChanged += ddlCountry_indexChanged;
+                        }
 
                         phContent.Controls.Add( acAddress );
 
