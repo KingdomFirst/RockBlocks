@@ -1,4 +1,21 @@
-﻿using System;
+﻿// <copyright>
+// Copyright by the Spark Development Network
+// Modifications copyright 2019 by Kingdom First Solutions
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -17,14 +34,14 @@ using Rock.Web.UI.Controls;
 namespace RockWeb.Plugins.rocks_kfs.Fundraising
 {
     [DisplayName( "Fundraising Progress" )]
-    [Category( "Fundraising" )]
+    [Category( "KFS > Fundraising" )]
     [Description( "Progress for all people in a fundraising opportunity" )]
 
     [BooleanField( "Show Group Title", "Should the Group Title be displayed?", true, "", 1 )]
-    [BooleanField( "Show Group Total Goals", "Should the Total Individual Goals be displayed?", true, "", 2 )]
-    [BooleanField( "Show Total Goals Amount", "Should the Total Individual Goals amount be displayed?", true, "", 3 )]
-    [BooleanField( "Show Total Goals Progress Bar", "Should the Total Individual Goals progress bar be displayed?", true, "", 4 )]
-    [BooleanField( "Show Group Member Goals", "Should individual group member goals be displayed?", true, "", 5 )]
+    [BooleanField( "Show Group Total Goals", "Should the total goals be displayed?", true, "", 2 )]
+    [BooleanField( "Show Group Total Goals Amount", "Should the group total goals amount be displayed?", true, "", 3 )]
+    [BooleanField( "Show Group Total Goals Progress Bar", "Should the group total goals progress bar be displayed?", true, "", 4 )]
+    [BooleanField( "Show Group Member Goals", "Should group member goals be displayed?", true, "", 5 )]
     [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true, "", 6 )]
     [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true, "", 7 )]
 
