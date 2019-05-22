@@ -97,8 +97,8 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
 
                 divPanelHeading.Visible = GetAttributeValue( "ShowGroupTitle" ).AsBoolean();
                 pnlHeader.Visible = GetAttributeValue( "ShowGroupTotalGoals" ).AsBoolean();
-                pTotalAmounts.Visible = GetAttributeValue( "ShowTotalGoalsAmount" ).AsBoolean();
-                divTotalProgress.Visible = GetAttributeValue( "ShowTotalGoalsProgressBar" ).AsBoolean();
+                pTotalAmounts.Visible = GetAttributeValue( "ShowGroupTotalGoalsAmount" ).AsBoolean();
+                divTotalProgress.Visible = GetAttributeValue( "ShowGroupTotalGoalsProgressBar" ).AsBoolean();
                 ulGroupMembers.Visible = GetAttributeValue( "ShowGroupMemberGoals" ).AsBoolean();
 
             }
