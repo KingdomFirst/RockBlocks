@@ -285,7 +285,7 @@ namespace RockWeb.Plugins.com_kfs.Groups
                         var filterPageParam = PageParameter( "filter_" + attribute.Id.ToString() );
                         if ( !string.IsNullOrWhiteSpace( filterPageParam ) )
                         {
-                            var filterParamList = filterPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
+                            var filterParamList = filterPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
                             if ( attribute.FieldType.Field is DefinedValueFieldType &&
                                  filterControl != null &&
                                  filterControl.Controls != null &&
@@ -297,11 +297,19 @@ namespace RockWeb.Plugins.com_kfs.Groups
                                  filterControl.Controls[1].Controls.Count != 0 )
                             {
                                 var definedValuePicker = filterControl.Controls[1].Controls[0] as DefinedValuesPicker;
-                                definedValuePicker.SelectedValue = filterPageParam;
+                                var filterParamValue = new List<string>();
+                                foreach ( var param in filterParamList )
+                                {
+                                    if ( definedValuePicker.Items.FindByValue( param ) != null )
+                                    {
+                                        filterParamValue.Add( param );
+                                    }
+                                }
+                                definedValuePicker.SelectedValue = filterParamValue.JoinStrings(",");
                             }
                             else
                             {
-                                attribute.FieldType.Field.SetFilterValues( filterControl, attribute.QualifierValues, filterParamList.ToList() );
+                                attribute.FieldType.Field.SetFilterValues( filterControl, attribute.QualifierValues, filterParamList );
                             }
                         }
                     }
