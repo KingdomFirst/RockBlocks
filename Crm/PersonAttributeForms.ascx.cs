@@ -477,7 +477,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
 
                             var pageAttributeIds = new List<int>();
 
-                            if ( saveEachPage && CurrentPageIndex > 0 && CurrentPageIndex <= FormState.Count )
+                            if ( saveEachPage && CurrentPageIndex > 0 && ( CurrentPageIndex - 1 ) <= FormState.Count )
                             {
                                 pageAttributeIds = FormState[CurrentPageIndex - 1].Fields
                                     .Where( f => f.AttributeId.HasValue )
@@ -1543,7 +1543,7 @@ namespace RockWeb.Plugins.com_kfs.Crm
                         acAddress.Required = field.IsRequired;
                         acAddress.ValidationGroup = BlockValidationGroup;
 
-                        var ctrlDDL = acAddress.FindControl( "ddlCountry") as RockDropDownList;
+                        var ctrlDDL = acAddress.FindControl( "ddlCountry" ) as RockDropDownList;
                         if ( ctrlDDL != null )
                         {
                             ctrlDDL.SelectedIndexChanged += ddlCountry_indexChanged;
