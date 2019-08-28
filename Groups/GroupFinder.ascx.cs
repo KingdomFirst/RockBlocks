@@ -22,6 +22,7 @@
 // * Added abiltiy to set default location so when address is enabled a campus can be selected and results auto load.
 // * Added single select setting so that multiselect filters will be a drop down.
 // * Added ability to set filters by url param
+// * Added an override setting for PersonGuid mode that enables search options
 // </notice>
 //
 using System;
@@ -66,6 +67,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [BooleanField( "Auto Load", "When set to true, all results will be loaded to begin.", false )]
     [CampusField( "Default Location", "The campus address that should be used as fallback for the search criteria.", false, "", "" )]
     [BooleanField( "Single Select Filters", "When set to true, all filters will be a drop down instead of checkbox.", false )]
+    [BooleanField( "Allow Search in PersonGuid Mode", "When set to true PersonGuid mode will allow you to change filters and search in that mode for that person.", false, key:"AllowSearchPersonGuid" )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page", "The page to navigate to for group details.", false, "", "CustomSetting" )]
@@ -146,6 +148,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private Dictionary<string, string> _urlParms = new Dictionary<string, string>();
         private bool _autoLoad = false;
         private bool _ssFilters = false;
+        private bool _allowSearch = false;
 
         #endregion Private Variables
 
@@ -207,6 +210,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         {
             _autoLoad = GetAttributeValue( "AutoLoad" ).AsBoolean();
             _ssFilters = GetAttributeValue( "SingleSelectFilters" ).AsBoolean();
+            _allowSearch = GetAttributeValue( "AllowSearchPersonGuid" ).AsBoolean();
 
             base.OnInit( e );
 
@@ -659,9 +663,17 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 lTitle.Text = string.Format( "<h4 class='margin-t-none'>Groups for {0}</h4>", targetPerson.FullName );
                 acAddress.SetValues( targetPersonLocation );
                 acAddress.Visible = false;
-                phFilterControls.Visible = false;
-                btnSearch.Visible = false;
-                btnClear.Visible = false;
+                phFilterControls.Visible = _allowSearch;
+                if ( _ssFilters )
+                {
+                    ddlCampus.Visible = _allowSearch;
+                }
+                else
+                {
+                    cblCampus.Visible = _allowSearch;
+                }
+                btnSearch.Visible = _allowSearch;
+                btnClear.Visible = _allowSearch;
 
                 if ( targetPersonLocation != null && targetPersonLocation.GeoPoint != null )
                 {
