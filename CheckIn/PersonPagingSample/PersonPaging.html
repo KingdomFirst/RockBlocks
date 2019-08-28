@@ -1,0 +1,95 @@
+<script>
+    (function ($) {
+        $.fn.extend({
+            rotaterator: function (options) {
+
+                var defaults = {
+                    fadeSpeed: 500,
+                    pauseSpeed: 5000,
+                    child: null
+                };
+
+                var options = $.extend(defaults, options);
+
+                return this.each(function () {
+                    var o = options;
+                    var obj = $(this);
+                    var items = $(obj.children(), obj);
+                    var count = $(obj.children(), obj).length;
+                    if (count > 1) {
+                        items.each(function () { $(this).hide(); })
+                        if (!o.child) {
+                            var next = $(obj).children(':first');
+                        } else {
+                            var next = o.child;
+                        }
+                        $(next).fadeIn(o.fadeSpeed, function () {
+                            $(next).delay(o.pauseSpeed).fadeOut(o.fadeSpeed, function () {
+                                var next = $(this).next();
+                                if (next.length == 0) {
+                                    getAlertsJson();
+                                }
+                                $(obj).rotaterator({ child: next, fadeSpeed: o.fadeSpeed, pauseSpeed: o.pauseSpeed });
+                            })
+                        });
+                    } else {
+
+                        setTimeout(function () {
+                            getAlertsJson();
+                        }, o.pauseSpeed);
+                    }
+                });
+            }
+        });
+    })(jQuery);
+
+    $(document).ready(function () {
+        getAlertsJson();
+    });
+
+    function setupRotate() {
+        $('#rotate').rotaterator({ fadeSpeed: 500, pauseSpeed: 5000 });
+        $('#rotate').removeClass("hidden");
+    }
+
+    function getAlertsJson() {
+        var channelId = 6;
+        var templateId = 686;
+        var itemList = "";
+        $.getJSON("/GetChannelFeed.ashx?ChannelId=" + channelId + "&TemplateId=" + templateId, function (data) {
+            jQuery(data.paging).each(function (i, item) {
+                itemList = itemList + "<div class=\"" + item.class + "\">" + item.title + "<span class=\"name\">" + item.name + "</span></div>";
+            })
+            $('#rotate').addClass("hidden");
+            $("#rotate").html(itemList);
+            setupRotate();
+        });
+    }
+</script>
+
+<div id="wrapper">
+    <div id="rotate" class="hidden"></div>
+</div>
+
+<style>
+    body {
+        background-color: black !important;
+        color: #d0d0d0;
+        font-family: 'Arial Rounded MT Bold', 'Arial Rounded MT';
+        font-weight: bold;
+    }
+    #rotate {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        line-height: .5;
+    }
+    .item {
+        font-size: 50vmin;
+    }
+    .name {
+        font-size: 15vmin;
+    }
+</style>
