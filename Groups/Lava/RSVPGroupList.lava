@@ -1,0 +1,42 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    {% if ShowInactive -%}{% assign inactiveParamVal = 'Global' | PageParameter:InactiveParameter -%}
+    <div class="pull-right btn-group btn-toggle">
+      <a class="btn btn-default btn-xs {% if inactiveParamVal == '0' or InitialActive == 1 and inactiveParamVal == null %}active{% endif %}" href='{{ 'Global=''' | Page:'Path=''' }}?{{ InactiveParameter }}=0'>Active</a>
+      <a class="btn btn-default btn-xs {% if inactiveParamVal == '1' or InitialActive == 0 and PainactiveParamVal == null %}active{% endif %}" href='{{ 'Global=''' | Page:'Path=''' }}?{{ InactiveParameter }}=1'>All</a>
+    </div>
+    {% endif -%}
+    RSVP Groups
+  </div>
+
+  {% assign groupCount = Groups | Size -%}
+
+  {% if groupCount == 0 -%}
+  <div class="margin-all-md"> No Groups Available To List</div>
+  {% endif -%}
+  <ul class="list-group list-group-panel">
+    {% for group in Groups -%}
+
+    {% assign current = 0 -%}
+    {% for member in group.Members -%}
+    {% assign memberRSVP = member | Attribute:'RSVPCount' -%}
+    {% assign current = current | Plus:memberRSVP -%}
+    {% endfor -%}
+    {% assign capacity = group | Attribute:'MaxRSVP' -%}
+    {% if capacity <= 0 -%}
+    {% assign capacity = 'Unlimited' -%}
+    {% endif -%}
+
+    <li class="list-group-item">
+      {% if group.IsActive == true -%}
+      <a href="{{ LinkedPages.DetailPage }}?GroupGuid={{group.Guid}}">{{ group.Name }}</a> <span class="label label-default">{{ current }}/{{ capacity }}</span>
+      {% else -%}
+      <div class="text-muted">
+        {{ group.Name }}
+      </div>
+      {% endif -%}
+    </li>
+    {% endfor -%}
+  </ul>
+
+</div>
