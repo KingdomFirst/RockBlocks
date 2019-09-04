@@ -966,6 +966,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             var attributeGuid = hfAttributeGuid.Value.AsGuid();
 
             var form = FormState.FirstOrDefault( f => f.Guid == formGuid );
+
+            if ( form == null && formGuid == Guid.Empty )
+            {
+                form = FormState.FirstOrDefault( f => f.Guid == Guid.Empty );
+            }
+
             if ( form != null )
             {
                 var field = form.Fields.FirstOrDefault( a => a.Guid.Equals( attributeGuid ) );
@@ -1923,6 +1929,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             BuildEditControls( true );
 
             var form = FormState.FirstOrDefault( f => f.Guid == formGuid );
+
+            if ( form == null && formGuid == Guid.Empty )
+            {
+                form = FormState.FirstOrDefault( f => f.Guid == Guid.Empty );
+            }
+
             if ( form != null )
             {
                 var field = form.Fields.FirstOrDefault( a => a.Guid.Equals( formFieldGuid ) );
