@@ -974,13 +974,13 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     field = new AttributeFormField();
                     field.Order = form.Fields.Any() ? form.Fields.Max( a => a.Order ) + 1 : 0;
                     field.Guid = attributeGuid;
+                    field.FieldSource = ddlFieldSource.SelectedValueAsEnum<FormFieldSource>();
                     form.Fields.Add( field );
                 }
 
                 field.PreText = ceAttributePreText.Text;
                 field.PostText = ceAttributePostText.Text;
-                field.FieldSource = ddlFieldSource.SelectedValueAsEnum<FormFieldSource>();
-
+                
                 switch ( field.FieldSource )
                 {
                     case FormFieldSource.PersonField:
