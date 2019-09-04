@@ -1942,13 +1942,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 {
                     lFieldSource.Text = field.FieldSource.ConvertToString();
                     lFieldSource.Visible = true;
+                    ddlFieldSource.SetValue( field.FieldSource.ConvertToInt() );
                     ddlFieldSource.Visible = false;
                 }
 
                 ceAttributePreText.Text = field.PreText;
                 ceAttributePostText.Text = field.PostText;
-
-                ddlFieldSource.SetValue( field.FieldSource.ConvertToInt() );
 
                 ddlPersonAttributes.Items.Clear();
                 var person = new Person();
