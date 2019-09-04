@@ -229,6 +229,9 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                         case "re-order-form":
                                             SortForms( guid, newIndex );
                                             break;
+                                        case "cancel-dlg-field":
+                                            BuildEditControls( true );
+                                            break;
                                     }
                                 }
                             }
