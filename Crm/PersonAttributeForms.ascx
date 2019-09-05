@@ -3,6 +3,8 @@
 <script type="text/javascript">
     function clearActiveDialog() {
         $('#<%=hfActiveDialog.ClientID %>').val('');
+        var postbackArg = 'cancel-dlg-field:0;0'
+        window.location = "javascript:__doPostBack('<%=upnlContent.ClientID %>', '" + postbackArg + "')";
     }
 </script>
 

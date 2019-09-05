@@ -229,6 +229,9 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                         case "re-order-form":
                                             SortForms( guid, newIndex );
                                             break;
+                                        case "cancel-dlg-field":
+                                            BuildEditControls( true );
+                                            break;
                                     }
                                 }
                             }
@@ -966,6 +969,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             var attributeGuid = hfAttributeGuid.Value.AsGuid();
 
             var form = FormState.FirstOrDefault( f => f.Guid == formGuid );
+
+            if ( form == null && formGuid == Guid.Empty )
+            {
+                form = FormState.FirstOrDefault( f => f.Guid == Guid.Empty );
+            }
+
             if ( form != null )
             {
                 var field = form.Fields.FirstOrDefault( a => a.Guid.Equals( attributeGuid ) );
@@ -974,13 +983,13 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     field = new AttributeFormField();
                     field.Order = form.Fields.Any() ? form.Fields.Max( a => a.Order ) + 1 : 0;
                     field.Guid = attributeGuid;
+                    field.FieldSource = ddlFieldSource.SelectedValueAsEnum<FormFieldSource>();
                     form.Fields.Add( field );
                 }
 
                 field.PreText = ceAttributePreText.Text;
                 field.PostText = ceAttributePostText.Text;
-                field.FieldSource = ddlFieldSource.SelectedValueAsEnum<FormFieldSource>();
-
+                
                 switch ( field.FieldSource )
                 {
                     case FormFieldSource.PersonField:
@@ -1923,6 +1932,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             BuildEditControls( true );
 
             var form = FormState.FirstOrDefault( f => f.Guid == formGuid );
+
+            if ( form == null && formGuid == Guid.Empty )
+            {
+                form = FormState.FirstOrDefault( f => f.Guid == Guid.Empty );
+            }
+
             if ( form != null )
             {
                 var field = form.Fields.FirstOrDefault( a => a.Guid.Equals( formFieldGuid ) );
@@ -1942,13 +1957,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 {
                     lFieldSource.Text = field.FieldSource.ConvertToString();
                     lFieldSource.Visible = true;
+                    ddlFieldSource.SetValue( field.FieldSource.ConvertToInt() );
                     ddlFieldSource.Visible = false;
                 }
 
                 ceAttributePreText.Text = field.PreText;
                 ceAttributePostText.Text = field.PostText;
-
-                ddlFieldSource.SetValue( field.FieldSource.ConvertToInt() );
 
                 ddlPersonAttributes.Items.Clear();
                 var person = new Person();
