@@ -16,11 +16,12 @@
             <div class="panel-body">
                 <asp:Literal ID="lTitle" runat="server" />
 
-                <asp:Panel ID="pnlSearch" runat="server">
+                <asp:Panel ID="pnlSearch" runat="server" DefaultButton="btnSearch">
 
                     <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
 
                     <Rock:AddressControl ID="acAddress" runat="server" Required="true" RequiredErrorMessage="Your Address is Required" />
+                    <Rock:NumberBox ID="nbPostalCode" runat="server" Required="true" RequiredErrorMessage="Your Postal Code is Required" Label="Postal Code" />
                     <Rock:RockCheckBoxList ID="cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Visible="false" />
                     <Rock:RockDropDownList ID="ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
                     <asp:PlaceHolder ID="phFilterControls" runat="server" />
@@ -89,6 +90,7 @@
                                         <Rock:RockTextBox ID="tbDayOfWeekLabel" runat="server" Label="Day of Week Filter Label" Help="The text above the day of week filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbTimeOfDayLabel" runat="server" Label="Time of Day Filter Label" Help="The text above the time of day filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbCampusLabel" runat="server" Label="Campus Filter Label" Help="The text above the campus filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockTextBox ID="tbPostalCodeLabel" runat="server" Label="Postal Code Label" Help="The text above the postal code filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                     </div>
                                     <div class="col-md-6">
                                         <Rock:RockRadioButtonList ID="rblFilterDOW" runat="server" Label="Display Day of Week Filter" RepeatDirection="Horizontal"
@@ -103,6 +105,8 @@
                                             Help="Display the campus filter" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBox ID="cbCampusContext" runat="server" Label="Enable Campus Context" Text="Yes"
                                             Help="If the page has a campus context its value will be used as a filter" ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockCheckBox ID="cbPostalCode" runat="server" Label="Enable Postal Code Search" Text="Yes"
+                                            Help="Set to true to enable simple Postal code search instead of full address." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblAttributes" runat="server" Label="Display Attribute Filters" RepeatDirection="Horizontal"
                                             Help="The group attributes that should be available for user to filter results by." ValidationGroup="GroupFinderSettings" />
                                     </div>
