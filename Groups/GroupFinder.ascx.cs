@@ -29,6 +29,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
+using System.Data.Entity.Spatial;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Web;
@@ -67,7 +68,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [BooleanField( "Auto Load", "When set to true, all results will be loaded to begin.", false )]
     [CampusField( "Default Location", "The campus address that should be used as fallback for the search criteria.", false, "", "" )]
     [BooleanField( "Single Select Filters", "When set to true, all filters will be a drop down instead of checkbox.", false )]
-    [BooleanField( "Allow Search in PersonGuid Mode", "When set to true PersonGuid mode will allow you to change filters and search in that mode for that person.", false, key:"AllowSearchPersonGuid" )]
+    [BooleanField( "Allow Search in PersonGuid Mode", "When set to true PersonGuid mode will allow you to change filters and search in that mode for that person.", false, key: "AllowSearchPersonGuid" )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page", "The page to navigate to for group details.", false, "", "CustomSetting" )]
@@ -80,10 +81,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [TextField( "TimeOfDayLabel", "", true, "Time of Day", "CustomSetting" )]
     [TextField( "DayOfWeekLabel", "", true, "Day of Week", "CustomSetting" )]
     [TextField( "ScheduleFilters", "", false, "", "CustomSetting" )]
+    [TextField( "PostalCodeLabel", "", true, "Zip Code", "CustomSetting" )]
     [BooleanField( "Display Campus Filter", "", false, "CustomSetting" )]
     [BooleanField( "Enable Campus Context", "", false, "CustomSetting" )]
     [BooleanField( "Hide Overcapacity Groups", "When set to true, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden.", true )]
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Attribute Filters", "", false, true, "", "CustomSetting" )]
+    [BooleanField( "Enable Postal Code Search", "", false, "CustomSetting" )]
 
     // Map Settings
     [BooleanField( "Show Map", "", false, "CustomSetting" )]
@@ -400,6 +403,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( "DayOfWeekLabel", tbDayOfWeekLabel.Text );
             SetAttributeValue( "TimeOfDayLabel", tbTimeOfDayLabel.Text );
             SetAttributeValue( "CampusLabel", tbCampusLabel.Text );
+            SetAttributeValue( "PostalCodeLabel", tbPostalCodeLabel.Text );
+            SetAttributeValue( "EnablePostalCodeSearch", cbPostalCode.Checked.ToString() );
 
             var schFilters = new List<string>();
             if ( rblFilterDOW.Visible )
@@ -468,6 +473,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         protected void btnClear_Click( object sender, EventArgs e )
         {
             acAddress.SetValues( null );
+            nbPostalCode.Text = "";
             BuildDynamicControls();
 
             pnlMap.Visible = false;
@@ -547,6 +553,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             tbCampusLabel.Text = GetAttributeValue( "CampusLabel" );
             tbDayOfWeekLabel.Text = GetAttributeValue( "DayOfWeekLabel" );
             tbTimeOfDayLabel.Text = GetAttributeValue( "TimeOfDayLabel" );
+            tbPostalCodeLabel.Text = GetAttributeValue( "PostalCodeLabel" );
 
             var scheduleFilters = GetAttributeValue( "ScheduleFilters" ).SplitDelimitedValues( false ).ToList();
             if ( scheduleFilters.Contains( "Day" ) )
@@ -572,6 +579,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             cbFilterCampus.Checked = GetAttributeValue( "DisplayCampusFilter" ).AsBoolean();
             cbCampusContext.Checked = GetAttributeValue( "EnableCampusContext" ).AsBoolean();
+            cbPostalCode.Checked = GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean();
 
             cbShowMap.Checked = GetAttributeValue( "ShowMap" ).AsBoolean();
             ddlMapStyle.BindToDefinedType( DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.MAP_STYLES.AsGuid() ) );
@@ -702,11 +710,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             Guid? fenceTypeGuid = GetAttributeValue( "GeofencedGroupType" ).AsGuidOrNull();
             if ( fenceTypeGuid.HasValue || GetAttributeValue( "ShowProximity" ).AsBoolean() )
             {
-                acAddress.Visible = true;
+                acAddress.Visible = !GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean();
+                nbPostalCode.Visible = GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean();
 
                 if ( CurrentPerson != null )
                 {
-                    acAddress.SetValues( CurrentPerson.GetHomeLocation() );
+                    var currentPersonLocation = CurrentPerson.GetHomeLocation();
+                    acAddress.SetValues( currentPersonLocation );
+                    nbPostalCode.Text = currentPersonLocation.PostalCode;
                 }
 
                 phFilterControls.Visible = true;
@@ -715,6 +726,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             else
             {
                 acAddress.Visible = false;
+                nbPostalCode.Visible = false;
 
                 // Check to see if there's any filters
                 string scheduleFilters = GetAttributeValue( "ScheduleFilters" );
@@ -836,6 +848,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 ddlCampus.Visible = false;
                 cblCampus.Visible = false;
             }
+
+            nbPostalCode.Label = GetAttributeValue( "PostalCodeLabel" );
+            nbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( "PostalCodeLabel" ) );
 
             if ( AttributeFilters != null )
             {
@@ -1088,11 +1103,22 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 // Get the location for the address entered
                 Location personLocation = null;
+                MapCoordinate mapCoordinate = null;
                 if ( fenceGroupTypeId.HasValue || showProximity || _autoLoad )
                 {
-                    personLocation = new LocationService( rockContext )
+
+                    if ( GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean() )
+                    {
+                        mapCoordinate = new LocationService( rockContext )
+                            .GetMapCoordinateFromPostalCode( nbPostalCode.Text );
+                    }
+                    else
+                    {
+                        personLocation = new LocationService( rockContext )
                         .Get( acAddress.Street1, acAddress.Street2, acAddress.City,
                             acAddress.State, acAddress.PostalCode, acAddress.Country );
+                        if ( personLocation.GeoPoint != null ) mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
+                    }
 
                     if ( personLocation == null )
                     {
@@ -1101,6 +1127,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         {
                             var campusLocation = CampusCache.Get( ( Guid ) campusGuid ).LocationId;
                             personLocation = new LocationService( rockContext ).Get( ( int ) campusLocation );
+                            if ( personLocation.GeoPoint != null ) mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                         }
                     }
                 }
@@ -1124,6 +1151,27 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     personMapItem.Name = "Your Location";
                     personMapItem.InfoWindow = HttpUtility.HtmlEncode( infoWindow.Replace( Environment.NewLine, string.Empty ).Replace( "\n", string.Empty ).Replace( "\t", string.Empty ) );
                 }
+                else if ( mapCoordinate != null && GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean() )
+                {
+
+                    var infoWindow = string.Format(
+                        @"
+<div style='width:250px'>
+    <div class='clearfix'>
+		<strong>Your Location</strong>
+        <br/>{0}
+    </div>
+</div>
+",
+                        nbPostalCode.Text );
+
+                    personMapItem = new FinderMapItem();
+                    personMapItem.Name = "Your Location";
+                    personMapItem.Point = mapCoordinate;
+                    personMapItem.PolygonPoints = new List<MapCoordinate>();
+                    personMapItem.PolygonPoints.Add( mapCoordinate );
+                    personMapItem.InfoWindow = HttpUtility.HtmlEncode( infoWindow.Replace( Environment.NewLine, string.Empty ).Replace( "\n", string.Empty ).Replace( "\t", string.Empty ) );
+                }
 
                 // Get the locations, and optionally calculate the distance for each of the groups
                 var groupLocations = new List<GroupLocation>();
@@ -1134,9 +1182,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     {
                         groupLocations.Add( groupLocation );
 
-                        if ( showProximity && personLocation != null && personLocation.GeoPoint != null )
+                        if ( showProximity && ( ( personLocation != null && personLocation.GeoPoint != null ) || ( mapCoordinate != null ) ) )
                         {
-                            double meters = groupLocation.Location.GeoPoint.Distance( personLocation.GeoPoint ) ?? 0.0D;
+                            string geoText = string.Format( "POINT({0} {1})", mapCoordinate.Longitude, mapCoordinate.Latitude );
+                            DbGeography geoPoint = DbGeography.FromText( geoText );
+                            double meters = groupLocation.Location.GeoPoint.Distance( geoPoint ) ?? 0.0D;
                             double miles = meters * Location.MilesPerMeter;
 
                             // If this group already has a distance calculated, see if this location is closer and if so, use it instead
@@ -1303,6 +1353,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 }
 
                 mergeFields.Add( "Groups", groups );
+
+                mergeFields.Add( "GroupDistances", distances.Select( d => { return new { Id = d.Key, Distance = d.Value }; } ).ToList() );
 
                 Dictionary<string, object> linkedPages = new Dictionary<string, object>();
                 linkedPages.Add( "GroupDetailPage", LinkedPageRoute( "GroupDetailPage" ) );
@@ -1774,6 +1826,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             /// The information window.
             /// </value>
             public string InfoWindow { get; set; }
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="FinderMapItem"/> class.
+            /// </summary>
+            public FinderMapItem()
+                : base()
+            {
+            }
 
             /// <summary>
             /// Initializes a new instance of the <see cref="FinderMapItem"/> class.
