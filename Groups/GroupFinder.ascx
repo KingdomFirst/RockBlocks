@@ -1,5 +1,13 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="GroupFinder.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Groups.GroupFinder" %>
+<style>
+    .group-finder-kfs .btn-kfs-filter .fa-caret-up, .group-finder-kfs .btn-kfs-filter.collapsed .fa-caret-down {
+        display: inline;
+    }
 
+    .group-finder-kfs .btn-kfs-filter .fa-caret-down, .group-finder-kfs .btn-kfs-filter.collapsed .fa-caret-up {
+        display: none;
+    }
+</style>
 <asp:UpdatePanel ID="upnlContent" runat="server" UpdateMode="Conditional">
     <ContentTemplate>
 
@@ -16,20 +24,24 @@
             <div class="panel-body">
                 <asp:Literal ID="lTitle" runat="server" />
 
-                <asp:Panel ID="pnlSearch" runat="server" DefaultButton="btnSearch">
+                <asp:Panel ID="pnlSearchParent" runat="server">
+                    <asp:Panel ID="pnlSearchFilters" runat="server" Visible="false"></asp:Panel>
+                    <button id="btnFilter" runat="server" visible="false" class="btn btn-primary btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">Filter <i class="fa fa-caret-down"></i><i class="fa fa-caret-up"></i></button>
+                    <asp:Panel ID="pnlSearch" runat="server" DefaultButton="btnSearch">
 
-                    <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
+                        <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
 
-                    <Rock:AddressControl ID="acAddress" runat="server" Required="true" RequiredErrorMessage="Your Address is Required" />
-                    <Rock:NumberBox ID="nbPostalCode" runat="server" Required="true" RequiredErrorMessage="Your Postal Code is Required" Label="Postal Code" />
-                    <Rock:RockCheckBoxList ID="cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Visible="false" />
-                    <Rock:RockDropDownList ID="ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
-                    <asp:PlaceHolder ID="phFilterControls" runat="server" />
+                        <Rock:AddressControl ID="acAddress" runat="server" Required="true" RequiredErrorMessage="Your Address is Required" />
+                        <Rock:NumberBox ID="nbPostalCode" runat="server" Required="true" RequiredErrorMessage="Your Postal Code is Required" Label="Postal Code" />
+                        <Rock:RockCheckBoxList ID="cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Visible="false" />
+                        <Rock:RockDropDownList ID="ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
+                        <asp:PlaceHolder ID="phFilterControls" runat="server" />
 
-                    <div class="actions">
-                        <asp:LinkButton ID="btnSearch" runat="server" Text="Search" CssClass="btn btn-primary" OnClick="btnSearch_Click" />
-                        <asp:LinkButton ID="btnClear" runat="server" Text="Clear" CssClass="btn btn-link" OnClick="btnClear_Click" />
-                    </div>
+                        <div class="actions">
+                            <asp:LinkButton ID="btnSearch" runat="server" Text="Search" CssClass="btn btn-primary" OnClick="btnSearch_Click" />
+                            <asp:LinkButton ID="btnClear" runat="server" Text="Clear" CssClass="btn btn-link" OnClick="btnClear_Click" />
+                        </div>
+                    </asp:Panel>
                 </asp:Panel>
 
                 <asp:Panel ID="pnlResults" runat="server" Visible="false">
