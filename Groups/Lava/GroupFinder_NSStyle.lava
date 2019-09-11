@@ -1,6 +1,8 @@
-﻿<style>
+﻿{% comment -%}
+<!-- Place in Advanced settings, Pre-HTML -->
+<style>
 @media (min-width:768px) {
-    [id$=pnlMap] {
+    [id$=pnlMap], .mapBg {
         position: fixed;
         top: 0;
         right: 0;
@@ -9,13 +11,22 @@
         bottom: 0;
         margin: 0 !important;
     }
+    .mapBg {
+        background-image: url('/Content/GroupsBG.png');
+        background-size: cover;
+        background-position: center center;
+        z-index: 1;
+    }
+    [id$=pnlMap] {
+        z-index: 2;
+    }
     #map_wrapper {
         height: 100% !important;
     }
     body {
         padding-right: 40%;
     }
-    .main-section .container, .site-header .container, .right-menu-icon .container, footer .container, .copyright .container {
+    .main-section .container:not(.modal), .site-header .container, .right-menu-icon .container, footer .container, .copyright .container {
         width: 100%;
     }
     .site-header {
@@ -31,10 +42,9 @@
 }
 
 .panel h3 {
-    margin: 0;
+    margin: 0px 0 15px 0;
 }
 
-/* Set in Advanced settings
 .group-finder-kfs .in-columns {
     -moz-column-count: unset;
     -webkit-column-count: unset;
@@ -62,7 +72,7 @@
 .group-finder-kfs .customCheckRadio.checkbox [type="checkbox"]+.label-text,
 .group-finder-kfs .customCheckRadio.checkbox-inline [type="checkbox"]+.label-text {
     background: #FFF;
-    border-radius: 21px;
+    border-radius: 8px;
     color: #ff6900;
     padding: 7px 12px;
     border: 1px solid #ff6900;
@@ -118,19 +128,28 @@
     top: 7px;
     font-size: 1.1em;
 }
-*/
 </style>
+<div class="mapBg"></div>
+{% endcomment -%}{% assign groupCount = Groups | Size -%}
+<p class="margin-v-md">{{ groupCount }} Results</p>
+{% if groupCount > 0 -%}
 {% for group in Groups %}
 <div class="panel panel-default panel-image"{% if LinkedPages.GroupDetailPage and LinkedPages.GroupDetailPage != '' %} data-href='{{ LinkedPages.GroupDetailPage }}?GroupId={{ group.Id }}'{% endif %}>
     <div class="panel-body">
         <div class="row">
-        {% assign SGimg = group | Attribute:'SmallGroupImage' %}
-        {% assign img = group | Attribute:'image' %}
+        {% assign SGimg = group | Attribute:'SmallGroupImage' -%}
+        {% assign img = group | Attribute:'image' -%}
+        {% assign groupUrl = group | Attribute:'URL','RawValue' -%}
         {% if SGimg != '' or img != '' %}
             <div class="col-sm-12 padding-v-md">{% else %}<div class="col-sm-12 padding-v-md">{% endif %}
+                <div class="pull-right margin-l-md hidden-xs hidden-sm">
                 {% if LinkedPages.RegisterPage and LinkedPages.RegisterPage != '' -%}
-                    <a class='btn btn-action pull-right hidden-xs hidden-sm' href='{{ LinkedPages.RegisterPage }}?GroupId={{ group.Id }}'>Contact Leader</a>
+                    <a class='btn btn-action btn-block' href='{{ LinkedPages.RegisterPage }}?GroupId={{ group.Id }}'>Contact Leader</a>
                 {% endif -%}
+                {% if groupUrl != '' -%}
+                    <a class='btn btn-action btn-block' href='{{ groupUrl }}'>Register Now</a>
+                {% endif -%}
+                </div>
                 <h3 class="panel-title">{{ group.Name}}</h3>
                 <h4 class="panel-schedule">{{ group.Schedule.FriendlyScheduleText }}</h4>
                 {% for location in group.GroupLocations  %}
@@ -144,16 +163,25 @@
                         {% comment %}<strong>{{ attribute.AttributeName }}:</strong> {{ attribute.ValueFormatted }} <br />{% endcomment %}
                     {% endif %}
                 {% endfor %}
+                <p class="visible-xs-block visible-sm-block">
                 {% if LinkedPages.RegisterPage and LinkedPages.RegisterPage != '' -%}
-                    <a class='btn btn-action visible-xs-inline-block visible-sm-inline-block' href='{{ LinkedPages.RegisterPage }}?GroupId={{ group.Id }}'>Contact Leader</a>
+                    <a class='btn btn-action btn-block' href='{{ LinkedPages.RegisterPage }}?GroupId={{ group.Id }}'>Contact Leader</a> 
                 {% endif -%}
+                {% if groupUrl != '' %}<a class='btn btn-action btn-block' href='{{ groupUrl }}'>Register Now</a>{% endif %}</p>
                {% assign grouptags = group | Attribute:'SmallGroupType' %}{% assign grouptagsarr = grouptags | Split:',' %}
-                {% if grouptags and grouptags != '' %}{% for grouptag in grouptagsarr %}<a data-tag="#{{ grouptag | Trim }}" href="/page/883?postalcode=&filter_4039={{ grouptag | Trim }}" class="btn btn-default btn-sm margin-t-sm">{{ grouptag }}</a> {% endfor %}{% endif %} {% if group.Campus %}<a data-tag="#{{ group.Campus.Name }}" href="/page/883?postalcode=&filter_campus={{ group.Campus.Id }}" class="btn btn-default btn-sm margin-t-sm">{{ group.Campus.Name }}</a>{% endif %}
+                {% if grouptags and grouptags != '' %}{% for grouptag in grouptagsarr %}<span data-tag="#{{ grouptag | Trim }}" class="label label-default margin-t-sm">{{ grouptag }}</span> {% endfor %}{% endif %} {% if group.Campus %}<span data-tag="#{{ group.Campus.Name }}" class="label label-default margin-t-sm">{{ group.Campus.Name }}</span>{% endif %}
             </div>
         </div>
     </div>
 </div>
 {% endfor %}
+{% else %}
+<div class="panel panel-default panel-image">
+    <div class="panel-body">
+        <h3>Unfortunately, we didn't find any groups matching your search.</h3>
+    </div>
+</div>
+{% endif %}
 <script>
 function bindDataHref() {
     $(document).on('click', '.panel[data-href]:not(a)', function(){
