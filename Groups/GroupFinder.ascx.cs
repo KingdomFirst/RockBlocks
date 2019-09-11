@@ -69,6 +69,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [CampusField( "Default Location", "The campus address that should be used as fallback for the search criteria.", false, "", "" )]
     [BooleanField( "Single Select Filters", "When set to true, all filters will be a drop down instead of checkbox.", false )]
     [BooleanField( "Allow Search in PersonGuid Mode", "When set to true PersonGuid mode will allow you to change filters and search in that mode for that person.", false, key: "AllowSearchPersonGuid" )]
+    [BooleanField( "Collapse Filters on Search", "When set to true, all filters will be collapsed into a single 'Filters' dropdown.", false )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page", "The page to navigate to for group details.", false, "", "CustomSetting" )]
@@ -152,6 +153,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private bool _autoLoad = false;
         private bool _ssFilters = false;
         private bool _allowSearch = false;
+        private bool _collapseFilters = false;
 
         #endregion Private Variables
 
@@ -214,6 +216,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             _autoLoad = GetAttributeValue( "AutoLoad" ).AsBoolean();
             _ssFilters = GetAttributeValue( "SingleSelectFilters" ).AsBoolean();
             _allowSearch = GetAttributeValue( "AllowSearchPersonGuid" ).AsBoolean();
+            _collapseFilters = GetAttributeValue( "CollapseFiltersonSearch" ).AsBoolean();
 
             base.OnInit( e );
 
@@ -253,6 +256,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var campusPageParam = PageParameter( "filter_campus" );
                 var dowPageParam = PageParameter( "filter_dow" );
                 var timePageParam = PageParameter( "filter_time" );
+                var postalcodePageParam = PageParameter( "postalcode" );
 
                 if ( GetAttributeValue( "EnableCampusContext" ).AsBoolean() )
                 {
@@ -334,6 +338,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             }
                         }
                     }
+                }
+
+                if ( !string.IsNullOrWhiteSpace( postalcodePageParam ) )
+                {
+                    nbPostalCode.Text = postalcodePageParam.AsNumeric();
                 }
 
                 if ( _targetPersonGuid != Guid.Empty )
@@ -983,6 +992,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             bool showProximity = GetAttributeValue( "ShowProximity" ).AsBoolean();
             gGroups.Columns[6].Visible = showProximity;  // Distance
+
+            if (_collapseFilters)
+            {
+                pnlSearch.CssClass = "collapse";
+                btnFilter.Visible = true;
+                btnFilter.Attributes["data-target"] = string.Format( "#{0}", pnlSearch.ClientID );
+                btnFilter.Attributes["aria-controls"] = pnlSearch.ClientID;
+            }
 
             // Get query of groups of the selected group type
             var rockContext = new RockContext();
