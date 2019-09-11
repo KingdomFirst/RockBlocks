@@ -128,6 +128,16 @@
     top: 7px;
     font-size: 1.1em;
 }
+[id$='pnlSearchParent'].affix {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    background: #FFF;
+    width: 60%;
+    padding: 15px;
+    box-shadow: 0px 17px 56px -5px rgba(0,0,0,0.2);
+}
 </style>
 <div class="mapBg"></div>
 {% endcomment -%}{% assign groupCount = Groups | Size -%}
@@ -195,6 +205,7 @@ function bindDataHref() {
         requestManager.add_endRequest(function (sender, args)
         {
           bindDataHref();
+          $('[id$='pnlSearchParent']').affix({offset:300});
         });
         bindDataHref();
     });
