@@ -83,11 +83,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [TextField( "DayOfWeekLabel", "", true, "Day of Week", "CustomSetting" )]
     [TextField( "ScheduleFilters", "", false, "", "CustomSetting" )]
     [TextField( "PostalCodeLabel", "", true, "Zip Code", "CustomSetting" )]
+    [TextField( "FilterLabel", "", true, "Filter", "CustomSetting" )]
+    [TextField( "MoreFiltersLabel", "", true, "More Filters", "CustomSetting" )]
     [BooleanField( "Display Campus Filter", "", false, "CustomSetting" )]
     [BooleanField( "Enable Campus Context", "", false, "CustomSetting" )]
     [BooleanField( "Hide Overcapacity Groups", "When set to true, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden.", true )]
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Attribute Filters", "", false, true, "", "CustomSetting" )]
     [BooleanField( "Enable Postal Code Search", "", false, "CustomSetting" )]
+    [CheckListField( "Hide Selected Filters on Initial Load", "", "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_PostalCode') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'", false, "", "CustomSetting", key: "HideFiltersInitialLoad" )]
 
     // Map Settings
     [BooleanField( "Show Map", "", false, "CustomSetting" )]
@@ -414,6 +417,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( "CampusLabel", tbCampusLabel.Text );
             SetAttributeValue( "PostalCodeLabel", tbPostalCodeLabel.Text );
             SetAttributeValue( "EnablePostalCodeSearch", cbPostalCode.Checked.ToString() );
+            SetAttributeValue( "FilterLabel", tbFilterLabel.Text );
+            SetAttributeValue( "MoreFiltersLabel", tbMoreFiltersLabel.Text );
 
             var schFilters = new List<string>();
             if ( rblFilterDOW.Visible )
@@ -427,6 +432,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( "DisplayCampusFilter", cbFilterCampus.Checked.ToString() );
             SetAttributeValue( "EnableCampusContext", cbCampusContext.Checked.ToString() );
             SetAttributeValue( "AttributeFilters", cblAttributes.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
+            SetAttributeValue( "HideFiltersInitialLoad", cblInitialLoadFilters.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
 
             SetAttributeValue( "ShowMap", cbShowMap.Checked.ToString() );
             SetAttributeValue( "MapStyle", ddlMapStyle.SelectedValue );
@@ -563,6 +569,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             tbDayOfWeekLabel.Text = GetAttributeValue( "DayOfWeekLabel" );
             tbTimeOfDayLabel.Text = GetAttributeValue( "TimeOfDayLabel" );
             tbPostalCodeLabel.Text = GetAttributeValue( "PostalCodeLabel" );
+            tbFilterLabel.Text = GetAttributeValue( "FilterLabel" );
+            tbMoreFiltersLabel.Text = GetAttributeValue( "MoreFiltersLabel" );
 
             var scheduleFilters = GetAttributeValue( "ScheduleFilters" ).SplitDelimitedValues( false ).ToList();
             if ( scheduleFilters.Contains( "Day" ) )
@@ -580,6 +588,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             foreach ( string attr in GetAttributeValue( "AttributeFilters" ).SplitDelimitedValues() )
             {
                 var li = cblAttributes.Items.FindByValue( attr );
+                if ( li != null )
+                {
+                    li.Selected = true;
+                }
+            }
+            foreach ( string attr in GetAttributeValue( "HideFiltersInitialLoad" ).SplitDelimitedValues() )
+            {
+                var li = cblInitialLoadFilters.Items.FindByValue( attr );
                 if ( li != null )
                 {
                     li.Selected = true;
@@ -637,6 +653,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             // Rebuild the checkbox list settings for both the filter and display in grid attribute lists
             cblAttributes.Items.Clear();
             cblGridAttributes.Items.Clear();
+            cblInitialLoadFilters.Items.Clear();
 
             if ( gtpGroupType.SelectedGroupTypeId.HasValue )
             {
@@ -646,6 +663,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     bool hasWeeklyschedule = ( groupType.AllowedScheduleTypes & ScheduleType.Weekly ) == ScheduleType.Weekly;
                     rblFilterDOW.Visible = hasWeeklyschedule;
                     cbFilterTimeOfDay.Visible = hasWeeklyschedule;
+                    if ( hasWeeklyschedule )
+                    {
+                        cblInitialLoadFilters.Items.Add( new ListItem( "DayofWeek", "filter_dow" ) );
+                        cblInitialLoadFilters.Items.Add( new ListItem( "TimeofDay", "filter_time" ) );
+                    }
+                    cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
+                    cblInitialLoadFilters.Items.Add( new ListItem( "PostalCode", "filter_postalcode" ) );
 
                     var group = new Group();
                     group.GroupTypeId = groupType.Id;
@@ -655,6 +679,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         if ( attribute.Value.FieldType.Field.HasFilterControl() )
                         {
                             cblAttributes.Items.Add( new ListItem( attribute.Value.Name, attribute.Value.Guid.ToString() ) );
+                            cblInitialLoadFilters.Items.Add( new ListItem( attribute.Value.Name, attribute.Value.Guid.ToString() ) );
                         }
 
                         cblGridAttributes.Items.Add( new ListItem( attribute.Value.Name, attribute.Value.Guid.ToString() ) );
@@ -739,6 +764,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 // Check to see if there's any filters
                 string scheduleFilters = GetAttributeValue( "ScheduleFilters" );
+
                 if ( !string.IsNullOrWhiteSpace( scheduleFilters ) || AttributeFilters.Any() )
                 {
                     phFilterControls.Visible = true;
@@ -804,8 +830,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// </summary>
         private void BuildDynamicControls()
         {
+            var hideFilters = GetAttributeValues( "HideFiltersInitialLoad" );
+            if ( Page.IsPostBack || _autoLoad )
+            {
+                hideFilters.Clear();
+            }
             // Clear attribute filter controls and recreate
             phFilterControls.Controls.Clear();
+            phFilterControlsCollapsed.Controls.Clear();
             var scheduleFilters = GetAttributeValue( "ScheduleFilters" ).SplitDelimitedValues().ToList();
             if ( scheduleFilters.Contains( "Days" ) )
             {
@@ -815,21 +847,21 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 dowsFilterControl.BindToEnum<DayOfWeek>();
                 dowsFilterControl.RepeatDirection = RepeatDirection.Horizontal;
 
-                AddFilterControl( dowsFilterControl, "Days of Week", "The day of week that group meets on." );
+                AddFilterControl( dowsFilterControl, "Days of Week", "The day of week that group meets on.", hideFilters.Contains("filter_dow") );
             }
 
             if ( scheduleFilters.Contains( "Day" ) )
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field.FilterControl( null, "filter_dow", false, Rock.Reporting.FilterMode.SimpleFilter );
                 string dayOfWeekLabel = GetAttributeValue( "DayOfWeekLabel" );
-                AddFilterControl( control, dayOfWeekLabel, "The day of week that group meets on." );
+                AddFilterControl( control, dayOfWeekLabel, "The day of week that group meets on.", hideFilters.Contains( "filter_dow" ) );
             }
 
             if ( scheduleFilters.Contains( "Time" ) )
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.TIME ).Field.FilterControl( null, "filter_time", false, Rock.Reporting.FilterMode.SimpleFilter );
                 string timeOfDayLabel = GetAttributeValue( "TimeOfDayLabel" );
-                AddFilterControl( control, timeOfDayLabel, "The time of day that group meets." );
+                AddFilterControl( control, timeOfDayLabel, "The time of day that group meets.", hideFilters.Contains( "filter_time" ) );
             }
 
             if ( GetAttributeValue( "DisplayCampusFilter" ).AsBoolean() )
@@ -843,12 +875,22 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         ListItem li = new ListItem( campus.Name, campus.Id.ToString() );
                         ddlCampus.Items.Add( li );
                     }
+                    if ( hideFilters.Contains( "filter_campus" ) )
+                    {
+                        pnlSearch.Controls.Remove( ddlCampus );
+                        phFilterControlsCollapsed.Controls.Add( ddlCampus );
+                    }
                 }
                 else
                 {
                     cblCampus.Visible = true;
                     cblCampus.DataSource = CampusCache.All().Where( c => c.IsActive == true );
                     cblCampus.DataBind();
+                    if ( hideFilters.Contains( "filter_campus" ) )
+                    {
+                        pnlSearch.Controls.Remove( cblCampus );
+                        phFilterControlsCollapsed.Controls.Add( cblCampus );
+                    }
                 }
                 cblCampus.Label = GetAttributeValue( "CampusLabel" );
             }
@@ -860,6 +902,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             nbPostalCode.Label = GetAttributeValue( "PostalCodeLabel" );
             nbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( "PostalCodeLabel" ) );
+            if ( hideFilters.Contains( "filter_postalcode" ) )
+            {
+                pnlSearch.Controls.Remove( nbPostalCode );
+                phFilterControlsCollapsed.Controls.Add( nbPostalCode );
+            }
+
+            btnFilter.InnerHtml = btnFilter.InnerHtml.Replace("Filter ", GetAttributeValue( "FilterLabel" )+" ");
+            btnFilterControls.InnerHtml = btnFilterControls.InnerHtml.Replace( "More Filters ", GetAttributeValue( "MoreFiltersLabel" ) + " " );
 
             if ( AttributeFilters != null )
             {
@@ -868,9 +918,16 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
                     if ( control != null )
                     {
-                        AddFilterControl( control, attribute.Name, attribute.Description );
+                        AddFilterControl( control, attribute.Name, attribute.Description, hideFilters.Contains( attribute.Guid.ToString() ) );
                     }
                 }
+            }
+
+            if ( phFilterControlsCollapsed.Controls.Count > 0 )
+            {
+                btnFilterControls.Visible = true;
+                btnFilterControls.Attributes["data-target"] = string.Format( "#{0}", pnlHiddenFilterControls.ClientID );
+                btnFilterControls.Attributes["aria-controls"] = pnlHiddenFilterControls.ClientID;
             }
 
             // Build attribute columns
@@ -953,14 +1010,21 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             }
         }
 
-        private void AddFilterControl( Control control, string name, string description )
+        private void AddFilterControl( Control control, string name, string description, bool collapsible = false )
         {
             if ( control is IRockControl )
             {
                 var rockControl = ( IRockControl ) control;
                 rockControl.Label = name;
                 rockControl.Help = description;
-                phFilterControls.Controls.Add( control );
+                if ( collapsible )
+                {
+                    phFilterControlsCollapsed.Controls.Add( control );
+                }
+                else
+                {
+                    phFilterControls.Controls.Add( control );
+                }
             }
             else
             {
@@ -968,7 +1032,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 wrapper.ID = control.ID + "_wrapper";
                 wrapper.Label = name;
                 wrapper.Controls.Add( control );
-                phFilterControls.Controls.Add( wrapper );
+                if ( collapsible )
+                {
+                    phFilterControlsCollapsed.Controls.Add( wrapper );
+                }
+                else
+                {
+                    phFilterControls.Controls.Add( wrapper );
+                }
             }
         }
 
