@@ -207,7 +207,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             AttributeFilters = ViewState["AttributeFilters"] as List<AttributeCache>;
             AttributeColumns = ViewState["AttributeColumns"] as List<AttributeCache>;
 
-            BuildDynamicControls();
+            BuildDynamicControls(true);
         }
 
         /// <summary>
@@ -477,6 +477,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnSearch_Click( object sender, EventArgs e )
         {
+            btnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
             ShowResults();
         }
 
@@ -490,6 +491,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             acAddress.SetValues( null );
             nbPostalCode.Text = "";
             BuildDynamicControls();
+
+            pnlSearch.CssClass = "";
+            btnFilter.Visible = false;
 
             pnlMap.Visible = false;
             pnlLavaOutput.Visible = false;
@@ -828,10 +832,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// <summary>
         /// Builds the dynamic controls.
         /// </summary>
-        private void BuildDynamicControls()
+        private void BuildDynamicControls( bool clearHideFilters = false )
         {
             var hideFilters = GetAttributeValues( "HideFiltersInitialLoad" );
-            if ( Page.IsPostBack || _autoLoad )
+            if ( clearHideFilters || _autoLoad )
             {
                 hideFilters.Clear();
             }
@@ -908,8 +912,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 phFilterControlsCollapsed.Controls.Add( nbPostalCode );
             }
 
-            btnFilter.InnerHtml = btnFilter.InnerHtml.Replace("Filter ", GetAttributeValue( "FilterLabel" )+" ");
-            btnFilterControls.InnerHtml = btnFilterControls.InnerHtml.Replace( "More Filters ", GetAttributeValue( "MoreFiltersLabel" ) + " " );
+            btnFilter.InnerHtml = btnFilter.InnerHtml.Replace("[Filter] ", GetAttributeValue( "FilterLabel" )+" ");
+            btnFilterControls.InnerHtml = btnFilterControls.InnerHtml.Replace( "[More Filters] ", GetAttributeValue( "MoreFiltersLabel" ) + " " );
 
             if ( AttributeFilters != null )
             {
@@ -923,12 +927,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 }
             }
 
-            if ( phFilterControlsCollapsed.Controls.Count > 0 )
-            {
-                btnFilterControls.Visible = true;
-                btnFilterControls.Attributes["data-target"] = string.Format( "#{0}", pnlHiddenFilterControls.ClientID );
-                btnFilterControls.Attributes["aria-controls"] = pnlHiddenFilterControls.ClientID;
-            }
+            btnFilterControls.Attributes["data-target"] = string.Format( "#{0}", pnlHiddenFilterControls.ClientID );
+            btnFilterControls.Attributes["aria-controls"] = pnlHiddenFilterControls.ClientID;
+            btnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
 
             // Build attribute columns
             foreach ( var column in gGroups.Columns.OfType<AttributeField>().ToList() )
