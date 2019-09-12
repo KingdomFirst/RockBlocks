@@ -27,7 +27,7 @@
                 <asp:Panel ID="pnlSearchParent" runat="server">
                     <asp:Panel ID="pnlSearchFilters" runat="server" Visible="false"></asp:Panel>
                     <div class="form-group">
-                        <button id="btnFilter" runat="server" visible="false" class="btn btn-primary btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">Filter <i class="fa fa-caret-down"></i><i class="fa fa-caret-up"></i></button>
+                        <button id="btnFilter" runat="server" visible="false" class="btn btn-primary btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">[Filter] <i class="fa fa-caret-down"></i><i class="fa fa-caret-up"></i></button>
                     </div>
                     <asp:Panel ID="pnlSearch" runat="server" DefaultButton="btnSearch">
 
@@ -39,7 +39,7 @@
                         <Rock:RockDropDownList ID="ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
                         <asp:PlaceHolder ID="phFilterControls" runat="server" />
                         <div class="form-group">
-                            <button id="btnFilterControls" runat="server" visible="false" class="btn btn-default btn-xs btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">More Filters <i class="fa fa-caret-down"></i><i class="fa fa-caret-up"></i></button>
+                            <button id="btnFilterControls" runat="server" visible="false" class="btn btn-default btn-xs btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">[More Filters] <i class='fa fa-caret-down'></i><i class='fa fa-caret-up'></i></button>
                         </div>
                         <asp:Panel ID="pnlHiddenFilterControls" runat="server" CssClass="form-group collapse">
                             <asp:PlaceHolder ID="phFilterControlsCollapsed" runat="server" />
