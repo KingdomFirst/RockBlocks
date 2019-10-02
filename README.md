@@ -2,7 +2,7 @@
 
 # RockBlocks
 
-This is an open-source repository of [Kingdom First Solutions](https://www.kingdomfirstsolutions.com/rock) for all public Rock RMS Blocks. Remember to check our [RockAssemblies](https://github.com/KingdomFirst/RockAssemblies) repo.
+This is an open-source repository of [Kingdom First Solutions](https://www.kingdomfirstsolutions.com/rock) for all public Rock RMS Blocks. Remember to check our [RockAssemblies](https://github.com/KingdomFirst/RockAssemblies) repo. All code in this repository is target for RockRMS version 8 or earlier. Version 9 support will be added in the future.
 
 ## Setup
 
