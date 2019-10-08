@@ -597,6 +597,7 @@ namespace RockWeb.Blocks.Groups
                             break;
 
                         case "SendAlternateCommunication":
+                            // include the transformParent parameter
                             SendAlternateCommunication( parameters );
                             break;
                     }
@@ -698,11 +699,12 @@ namespace RockWeb.Blocks.Groups
                     var parents = GetGroupMemberPeople( rockContext, transformParent: true );
                     if ( parents.Any() )
                     {
+                        var familyGroupType = GroupTypeCache.GetFamilyGroupType();
                         // add collection for each child's parents
                         var childParents = new Dictionary<string, object>();
                         foreach ( var member in group.Members )
                         {
-                            var memberParents = parents.Where( p => p.Members.Any( m => m.Group.Members.Any( gm => gm.PersonId == member.PersonId ) ) ).ToList();
+                            var memberParents = parents.Where( p => p.Members.Any( m => m.Group.GroupTypeId == familyGroupType.Id && m.Group.Members.Any( gm => gm.PersonId == member.PersonId ) ) ).ToList();
                             childParents.Add( member.PersonId.ToString(), memberParents );
                         }
 
@@ -1190,16 +1192,17 @@ namespace RockWeb.Blocks.Groups
             else
             {
                 var familyGroupType = GroupTypeCache.GetFamilyGroupType();
-                var adultRoleId = familyGroupType.Roles.FirstOrDefault( a => a.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ).Id;
-                var childRoleId = familyGroupType.Roles.FirstOrDefault( a => a.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid() ).Id;
-                var idQuery = new GroupMemberService( rockContext ).Queryable()
+                var idQuery = new GroupMemberService( rockContext ).Queryable().AsNoTracking()
                     .Where( m => m.GroupId == _groupId && m.GroupMemberStatus != GroupMemberStatus.Inactive )
                     .Select( m => m.PersonId );
 
                 groupMemberPeople = new PersonService( rockContext ).Queryable()
-                    .Where( p => p.Members.Where( a => a.GroupRoleId == adultRoleId )
-                    .Any( a => a.Group.Members
-                    .Any( c => c.GroupRoleId == childRoleId && idQuery.Contains( c.PersonId ) ) ) )
+                    .Where( p =>
+                        p.Members.Where( a => a.Person.AgeClassification == AgeClassification.Adult && a.Group.GroupTypeId == familyGroupType.Id )
+                                 .Any( a => a.Group.Members
+                                             .Any( c => c.Person.AgeClassification == AgeClassification.Child && idQuery.Contains( c.PersonId ) )
+                                 )
+                          )
                     .ToList();
             }
 
