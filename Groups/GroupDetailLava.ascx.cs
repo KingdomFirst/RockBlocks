@@ -30,10 +30,10 @@ using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Blocks.Groups
+namespace RockWeb.Plugins.rocks_kfs.Groups
 {
     [DisplayName( "Group Detail Lava" )]
-    [Category( "Groups" )]
+    [Category( "KFS > Groups" )]
     [Description( "Presents the details of a group using Lava" )]
 
     [LinkedPage( "Person Detail Page", "Page to link to for more information on a group member.", false, "", "", 0 )]
