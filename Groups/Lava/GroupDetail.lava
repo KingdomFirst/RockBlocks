@@ -330,7 +330,7 @@
 					</a>
 				{% endif %}
 			{% endif %}
-            {% if LinkedPages.AlternateCommunicationPage %}
+            {% if LinkedPages.AlternateCommunicationPage and Parents != null %}
                 {% if AllowedActions.Edit == true or AllowedActions.ManageMembers == true %}
                 <a href="#" onclick="{{ 'Yes' | Postback:'SendAlternateCommunication' }}" class="btn btn-default btn-xs">
                     <i class="fa fa-mobile-phone"></i> Text Parents
