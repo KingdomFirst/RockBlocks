@@ -1,4 +1,4 @@
-<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ShelbyGLExport.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Finance.ShelbyGLExport" %>
+<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ShelbyGLExport.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Finance.ShelbyGLExport" %>
 
 <asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>

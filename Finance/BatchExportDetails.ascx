@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="BatchExportDetails.ascx.cs" Inherits="RockWeb.Plugins.com_kfs.Finance.BatchExportDetails" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="BatchExportDetails.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Finance.BatchExportDetails" %>
 
 <asp:UpdatePanel runat="server" ID="upnlBatchExportDetails">
     <ContentTemplate>

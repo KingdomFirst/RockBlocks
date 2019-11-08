@@ -8,7 +8,7 @@ using Rock.Data;
 using Rock.Model;
 using Rock.Web.UI;
 
-namespace RockWeb.Plugins.com_kfs.Finance
+namespace RockWeb.Plugins.rocks_kfs.Finance
 {
     [DisplayName( "Batch Export Details" )]
     [Category( "KFS > Finance" )]

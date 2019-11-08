@@ -1,4 +1,4 @@
-﻿namespace RockWeb.Plugins.com_kfs.Finance
+﻿namespace RockWeb.Plugins.rocks_kfs.Finance
 {
 	using System;
 	using System.Collections.Generic;

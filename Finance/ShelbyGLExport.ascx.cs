@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -16,7 +16,7 @@ using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Plugins.com_kfs.Finance
+namespace RockWeb.Plugins.rocks_kfs.Finance
 {
     [DisplayName( "Shelby GL Export" )]
     [Category( "KFS > Finance" )]
@@ -413,7 +413,7 @@ namespace RockWeb.Plugins.com_kfs.Finance
 
                     Session["GLExportLineItems"] = output;
 
-                    var url = "/Plugins/com_kfs/Finance/GLExport.aspx";
+                    var url = "/Plugins/rocks_kfs/Finance/GLExport.aspx";
                     ScriptManager.RegisterStartupScript( this.Page, this.GetType(), "batchexport", string.Format( "window.downloadIframe.location = '{0}';", url ), true );
 
                 }
