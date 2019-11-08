@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="GLExport.aspx.cs" Inherits="RockWeb.Plugins.com_kfs.Finance.GLExport" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="GLExport.aspx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Finance.GLExport" %>
 
 <!DOCTYPE html>
 
