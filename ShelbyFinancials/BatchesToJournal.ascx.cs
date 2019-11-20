@@ -48,6 +48,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
     [LinkedPage( "Detail Page", "", true, "606BDA31-A8FE-473A-B3F8-A00ECF7E06EC", order: 0 )]
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Create Shelby Export", "", 1 )]
     [IntegerField( "Months Back", "The number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches.", true, 2, "", 2 )]
+    [LavaField( "Journal Description Lava", "Lava for the journal description column per line. Default: Batch.Id: Batch.Name", true, "{{ Batch.Id }}: {{ Batch.Name }}" )]
 
     #endregion
 
@@ -379,7 +380,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     var journalCode = ddlJournalType.SelectedValue;
                     var period = tbAccountingPeriod.Text.AsInteger();
 
-                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period ) );
+                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, GetAttributeValue("JournalDescriptionLava") ) );
 
                     HistoryService.SaveChanges(
                         rockContext,

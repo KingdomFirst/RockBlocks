@@ -40,6 +40,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Create Shelby Export", "", 0 )]
     [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.", true, "", 3 )]
+    [LavaField( "Journal Description Lava", "Lava for the journal description column per line. Default: Batch.Id: Batch.Name", true, "{{ Batch.Id }}: {{ Batch.Name }}" )]
 
     #endregion
 
@@ -162,7 +163,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                 var journalCode = ddlJournalType.SelectedValue;
                 var period = tbAccountingPeriod.Text.AsInteger();
 
-                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period );
+                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, GetAttributeValue( "JournalDescriptionLava" ) );
 
                 if ( items.Count > 0 )
                 {
