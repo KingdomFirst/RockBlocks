@@ -49,6 +49,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Create Shelby Export", "", 1 )]
     [IntegerField( "Months Back", "The number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches.", true, 2, "", 2 )]
     [LavaField( "Journal Description Lava", "Lava for the journal description column per line. Default: Batch.Id: Batch.Name", true, "{{ Batch.Id }}: {{ Batch.Name }}" )]
+    [BooleanField( "Enable Debug", "Outputs the object graph to help create your Lava syntax.", false )]
 
     #endregion
 
@@ -91,10 +92,23 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnLoad( EventArgs e )
         {
+            var debugEnabled = GetAttributeValue( "EnableDebug" ).AsBoolean();
+
             if ( !Page.IsPostBack )
             {
                 BindFilter();
                 BindGrid();
+            }
+
+            if ( debugEnabled )
+            {
+                var debugLava = Session["ShelbyFinancialsDebugLava"].ToStringSafe();
+                if ( !string.IsNullOrWhiteSpace( debugLava ) )
+                {
+                    lDebug.Visible = true;
+                    lDebug.Text += debugLava;
+                    Session["ShelbyFinancialsDebugLava"] = string.Empty;
+                }
             }
         }
 
@@ -330,6 +344,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             {
                 var sfJournal = new SFJournal();
                 var items = new List<SFJournal.GLExcelLine>();
+                var debugLava = GetAttributeValue( "EnableDebug" );
 
                 var rockContext = new RockContext();
                 var batchService = new FinancialBatchService( rockContext );
@@ -380,7 +395,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     var journalCode = ddlJournalType.SelectedValue;
                     var period = tbAccountingPeriod.Text.AsInteger();
 
-                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, GetAttributeValue("JournalDescriptionLava") ) );
+                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( "JournalDescriptionLava") ) );
 
                     HistoryService.SaveChanges(
                         rockContext,
@@ -409,6 +424,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
                 Session["ShelbyFinancialsExcelExport"] = excel;
                 Session["ShelbyFinancialsFileId"] = RockDateTime.Now.ToString( "yyyyMMdd_HHmmss" );
+                Session["ShelbyFinancialsDebugLava"] = debugLava;
 
                 NavigateToPage( this.RockPage.Guid, new Dictionary<string, string>() );
             }
