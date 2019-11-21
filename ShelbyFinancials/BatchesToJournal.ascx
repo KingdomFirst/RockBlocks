@@ -62,6 +62,7 @@
                 </div>
             </div>
             <Rock:NotificationBox ID="nbError" runat="server" Visible="false" Dismissable="true"></Rock:NotificationBox>
+            <asp:Literal ID="lDebug" runat="server" Visible="false" />
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>
