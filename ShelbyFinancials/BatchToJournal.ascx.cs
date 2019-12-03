@@ -40,6 +40,8 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
     [TextField( "Button Text", "The text to use in the Export Button.", false, "Create Shelby Export", "", 0 )]
     [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.", true, "", 3 )]
+    [LavaField( "Journal Description Lava", "Lava for the journal description column per line. Default: Batch.Id: Batch.Name", true, "{{ Batch.Id }}: {{ Batch.Name }}" )]
+    [BooleanField( "Enable Debug", "Outputs the object graph to help create your Lava syntax.", false )]
 
     #endregion
 
@@ -97,6 +99,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         {
             var rockContext = new RockContext();
             var isExported = false;
+            var debugEnabled = GetAttributeValue( "EnableDebug" ).AsBoolean();
 
             _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
             DateTime? dateExported = null;
@@ -147,6 +150,17 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     btnRemoveDate.Visible = true;
                 }
             }
+
+            if ( debugEnabled )
+            {
+                var debugLava = Session["ShelbyFinancialsDebugLava"].ToStringSafe();
+                if ( !string.IsNullOrWhiteSpace( debugLava ) )
+                {
+                    lDebug.Visible = true;
+                    lDebug.Text += debugLava;
+                    Session["ShelbyFinancialsDebugLava"] = string.Empty;
+                }
+            }
         }
 
         protected void btnExportToShelbyFinancials_Click( object sender, EventArgs e )
@@ -162,7 +176,9 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                 var journalCode = ddlJournalType.SelectedValue;
                 var period = tbAccountingPeriod.Text.AsInteger();
 
-                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period );
+                var debugLava = GetAttributeValue( "EnableDebug" );
+
+                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, ref debugLava, GetAttributeValue( "JournalDescriptionLava" ) );
 
                 if ( items.Count > 0 )
                 {
@@ -170,7 +186,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
                     Session["ShelbyFinancialsExcelExport"] = excel;
                     Session["ShelbyFinancialsFileId"] = _financialBatch.Id.ToString();
-
+                    Session["ShelbyFinancialsDebugLava"] = debugLava;
                     //
                     // vars we need to know
                     //
