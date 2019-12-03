@@ -33,6 +33,7 @@
                 </div>
             </div>
         </div>
+        <asp:Literal ID="lDebug" runat="server" Visible="false" />
     </ContentTemplate>
 </asp:UpdatePanel>
 <iframe id="sfDownload" src="/Plugins/rocks_kfs/ShelbyFinancials/ShelbyFinancialsExcelExport.aspx" frameborder="0" width="0" height="0"></iframe>
