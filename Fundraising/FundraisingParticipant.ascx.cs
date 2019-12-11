@@ -1,4 +1,4 @@
-// <copyright>
+﻿// <copyright>
 // Copyright by the Spark Development Network
 //
 // Licensed under the Rock Community License (the "License");
@@ -85,7 +85,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 // Setup for being able to copy text to clipboard
                 RockPage.AddScriptLink( this.Page, "~/Scripts/clipboard.js/clipboard.min.js" );
                 string script = string.Format( @"
-    new Clipboard('#{0}');
+    new ClipboardJS('#{0}');
     $('#{0}').tooltip();
 ", btnCopyToClipboard.ClientID );
                 ScriptManager.RegisterStartupScript( btnCopyToClipboard, btnCopyToClipboard.GetType(), "share-copy", script, true );
@@ -230,10 +230,19 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
         private void CreateDynamicControls( GroupMember groupMember )
         {
             groupMember.LoadAttributes();
+            groupMember.Group.LoadAttributes();
             // GroupMember Attributes (all of them)
             phGroupMemberAttributes.Controls.Clear();
 
-            List<string> excludes = new List<string>();
+            // Exclude any attributes for which the current person has NO EDIT access.
+            // But skip these three special member attributes since they are handled in a special way.
+            List<string> excludes = groupMember.Attributes.Where(
+                a => !a.Value.IsAuthorized( Rock.Security.Authorization.EDIT, this.CurrentPerson ) &&
+                a.Key != "IndividualFundraisingGoal" &&
+                a.Key != "DisablePublicContributionRequests" &&
+                a.Key != "PersonalOpportunityIntroduction" )
+                .Select( a => a.Key ).ToList();
+
             if ( !groupMember.Group.GetAttributeValue( "AllowIndividualDisablingofContributionRequests" ).AsBoolean() )
             {
                 excludes.Add( "DisablePublicContributionRequests" );
@@ -420,7 +429,14 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
 
             // Left Top Sidebar
             var photoGuid = group.GetAttributeValue( "OpportunityPhoto" );
-            imgOpportunityPhoto.ImageUrl = string.Format( "~/GetImage.ashx?Guid={0}", photoGuid );
+            if ( !string.IsNullOrWhiteSpace( photoGuid ) )
+            {
+                imgOpportunityPhoto.ImageUrl = string.Format( "~/GetImage.ashx?Guid={0}", photoGuid );
+            }
+            else
+            {
+                imgOpportunityPhoto.Visible = false;
+            }
 
             // Top Main
             string profileLavaTemplate = this.GetAttributeValue( "ProfileLavaTemplate" );
@@ -582,10 +598,21 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
         protected void BindContributionsGrid()
         {
             var showAddress = GetAttributeValue( "ShowAddress" ).AsBoolean();
-            gContributions.Columns[1].Visible = showAddress;
+            var addressCol = gContributions.ColumnsOfType<RockLiteralField>()
+                .FirstOrDefault( c => c.ID == "lAddress" );
+            if ( addressCol != null )
+            {
+                addressCol.Visible = showAddress;
+            }
 
+            // Hide the whole Amount column if the block setting is set to hide
             var showAmount = GetAttributeValue( "ShowAmount" ).AsBoolean();
-            gContributions.Columns[3].Visible = showAmount;
+            var amountCol = gContributions.ColumnsOfType<RockLiteralField>()
+                .FirstOrDefault( c => c.ID == "lTransactionDetailAmount" );
+            if ( amountCol != null )
+            {
+                amountCol.Visible = showAmount;
+            }
 
             var rockContext = new RockContext();
             var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
@@ -628,17 +655,17 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                     lPersonName.Text = financialTransaction.ShowAsAnonymous ? "Anonymous" : financialTransaction.AuthorizedPersonAlias.Person.FullName;
                 }
 
+                // The transaction may have been split with details for one contribution going to the person
+                // and the other details going elsewhere.  We only want to show details that match this group member.
                 Literal lTransactionDetailAmount = e.Row.FindControl( "lTransactionDetailAmount" ) as Literal;
-                if ( lTransactionDetailAmount != null )
+                if ( lTransactionDetailAmount != null && lTransactionDetailAmount.Visible )
                 {
                     var entityTypeIdGroupMember = EntityTypeCache.GetId<Rock.Model.GroupMember>();
                     int groupMemberId = hfGroupMemberId.Value.AsInteger();
-
                     var amount = financialTransaction.TransactionDetails
                         .Where( d => d.EntityTypeId.HasValue && d.EntityTypeId == entityTypeIdGroupMember && d.EntityId == groupMemberId )
-                        .Sum( d => ( decimal? ) d.Amount )
-                        .ToString();
-                    lTransactionDetailAmount.Text = string.Format( "${0}", amount );
+                        .Sum( d => ( decimal? ) d.Amount );
+                    lTransactionDetailAmount.Text = amount.FormatAsCurrency();
                 }
             }
         }
