@@ -37,10 +37,8 @@
                 <br />
 
                 <ul id="tlTabList" runat="server" class="nav nav-pills margin-v-md">
-                    <li id="liUpdatesTab" runat="server">
-                        <asp:LinkButton ID="btnUpdatesTab" runat="server" Text="Updates" OnClick="btnUpdatesTab_Click" /></li>
-                    <li id="liContributionsTab" runat="server">
-                        <asp:LinkButton ID="btnContributionsTab" runat="server" Text="Contributions" OnClick="btnContributionsTab_Click" /></li>
+                    <li id="liUpdatesTab" runat="server"><asp:LinkButton ID="btnUpdatesTab" runat="server" Text="Updates" OnClick="btnUpdatesTab_Click" /></li>
+                    <li id="liContributionsTab" runat="server"><asp:LinkButton ID="btnContributionsTab" runat="server" Text="Contributions" OnClick="btnContributionsTab_Click" /></li>
                 </ul>
 
                 <asp:Panel ID="pnlUpdatesComments" CssClass="row" runat="server">
@@ -50,7 +48,7 @@
                     <div id="pnlComments" runat="server" class="col-md-4">
                         <label>Comments</label>
                         <Rock:NoteContainer ID="notesCommentsTimeline" runat="server" UsePersonIcon="true" AddAllowed="true" DisplayType="Full" />
-                        <asp:Literal ID="lNoLoginNoCommentsYet" runat="server"><br /><i>No comments yet.</i></asp:Literal>
+                        <asp:Literal ID="lNoLoginNoCommentsYet" runat="server" ><br /><i>No comments yet.</i></asp:Literal>
                         <asp:LinkButton ID="btnLoginToComment" CssClass="btn btn-link pull-right" runat="server" Text="Login to Comment" OnClick="btnLoginToComment_Click" />
                     </div>
                 </asp:Panel>
@@ -65,6 +63,8 @@
                         </Columns>
                     </Rock:Grid>
                 </asp:Panel>
+
+
             </asp:Panel>
 
             <%-- Edit Preferences Panel --%>
@@ -76,6 +76,7 @@
                         <asp:Literal ID="lProfileTitle" runat="server" Text="Profile..." /></h1>
 
                     <asp:Literal ID="lDateRange" runat="server" Text="Dates..." />
+
                 </div>
 
                 <div class="row">
@@ -94,6 +95,7 @@
                     <asp:LinkButton ID="btnSaveEditPreferences" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" ValidationGroup="vgProfileEdit" OnClick="btnSaveEditPreferences_Click" />
                     <asp:LinkButton ID="btnCancelEditPreferences" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" ValidationGroup="vgProfileEdit" CausesValidation="false" OnClick="btnCancelEditPreferences_Click" />
                 </div>
+
             </asp:Panel>
         </asp:Panel>
     </ContentTemplate>
