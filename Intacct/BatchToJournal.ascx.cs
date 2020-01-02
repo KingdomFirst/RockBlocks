@@ -49,6 +49,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     [EncryptedTextField( "User Id", "The Intacct User Id. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 3 )]
     [EncryptedTextField( "User Password", "The Intacct User Password. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 4 )]
     [EncryptedTextField( "Location Id", "The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.", false, "", "Configuration", 5 )]
+    [LavaField( "Journal Description Lava", "Lava for the journal memo per line. Default: Batch.Id: Batch.Name", true, "{{ Batch.Id }}: {{ Batch.Name }}" )]
+    [BooleanField( "Enable Debug", "Outputs the object graph to help create your Lava syntax. (Debug data will show after clicking export.)", false )]
 
     #endregion
 
@@ -95,6 +97,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             var rockContext = new RockContext();
             var isExported = false;
+            var debugEnabled = GetAttributeValue( "EnableDebug" ).AsBoolean();
 
             _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
             DateTime? dateExported = null;
@@ -115,6 +118,17 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 if ( dateExported != null && dateExported > DateTime.MinValue )
                 {
                     isExported = true;
+                }
+
+                if ( debugEnabled )
+                {
+                    var debugLava = Session["IntacctDebugLava"].ToStringSafe();
+                    if ( !string.IsNullOrWhiteSpace( debugLava ) )
+                    {
+                        lDebug.Visible = true;
+                        lDebug.Text += debugLava;
+                        Session["IntacctDebugLava"] = string.Empty;
+                    }
                 }
             }
 
@@ -167,8 +181,9 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                 var journal = new IntacctJournal();
                 var endpoint = new IntacctEndpoint();
+                var debugLava = GetAttributeValue( "EnableDebug" );
 
-                var postXml = journal.CreateJournalEntryXML( intacctAuth, _financialBatch.Id, GetAttributeValue( "JournalId" ) );
+                var postXml = journal.CreateJournalEntryXML( intacctAuth, _financialBatch.Id, GetAttributeValue( "JournalId" ), ref debugLava, GetAttributeValue( "JournalDescriptionLava" ) );
                 var resultXml = endpoint.PostToIntacct( postXml );
                 var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, GetAttributeValue( "LogResponse" ).AsBoolean() );
 
@@ -177,6 +192,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     var rockContext = new RockContext();
                     var financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
                     var changes = new History.HistoryChangeList();
+
+                    Session["IntacctDebugLava"] = debugLava;
 
                     //
                     // Close Batch if we're supposed to
