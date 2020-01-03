@@ -49,7 +49,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     [EncryptedTextField( "User Id", "The Intacct User Id. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 3 )]
     [EncryptedTextField( "User Password", "The Intacct User Password. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 4 )]
     [EncryptedTextField( "Location Id", "The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.", false, "", "Configuration", 5 )]
-    [LavaField( "Journal Description Lava", "Lava for the journal memo per line. Default: Batch.Id: Batch.Name", true, "{{ Batch.Id }}: {{ Batch.Name }}" )]
+    [LavaField( "Journal Memo Lava", "Lava for the journal memo per line. Default: Batch.Id: Batch.Name", true, "{{ Batch.Id }}: {{ Batch.Name }}" )]
     [BooleanField( "Enable Debug", "Outputs the object graph to help create your Lava syntax. (Debug data will show after clicking export.)", false )]
 
     #endregion
@@ -183,7 +183,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 var endpoint = new IntacctEndpoint();
                 var debugLava = GetAttributeValue( "EnableDebug" );
 
-                var postXml = journal.CreateJournalEntryXML( intacctAuth, _financialBatch.Id, GetAttributeValue( "JournalId" ), ref debugLava, GetAttributeValue( "JournalDescriptionLava" ) );
+                var postXml = journal.CreateJournalEntryXML( intacctAuth, _financialBatch.Id, GetAttributeValue( "JournalId" ), ref debugLava, GetAttributeValue( "JournalMemoLava" ) );
                 var resultXml = endpoint.PostToIntacct( postXml );
                 var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, GetAttributeValue( "LogResponse" ).AsBoolean() );
 
