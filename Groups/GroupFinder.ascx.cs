@@ -161,6 +161,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private bool _ssFilters = false;
         private bool _allowSearch = false;
         private bool _collapseFilters = false;
+        private Dictionary<string, string> _filterValues = new Dictionary<string, string>();
 
         #endregion Private Variables
 
@@ -1108,6 +1109,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 if ( dows.Any() )
                 {
+                    _filterValues.Add( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited("^") );
                     groupQry = groupQry.Where( g =>
                         g.Schedule.WeeklyDayOfWeek.HasValue &&
                         dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) );
@@ -1121,6 +1123,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 var filterValues = field.GetFilterValues( dowFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
                 var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyDayOfWeek", typeof( DayOfWeek? ) );
+                _filterValues.Add( "FilterDow", filterValues.AsDelimited( "^" ) );
                 groupQry = groupQry.Where( groupParameterExpression, expression, null );
             }
 
@@ -1131,6 +1134,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 var filterValues = field.GetFilterValues( timeFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
                 var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyTimeOfDay", typeof( TimeSpan? ) );
+                _filterValues.Add( "FilterTime", filterValues.AsDelimited( "^" ) );
                 groupQry = groupQry.Where( groupParameterExpression, expression, null );
             }
 
@@ -1151,6 +1155,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 }
                 if ( searchCampuses.Count > 0 )
                 {
+                    _filterValues.Add( "FilterCampus", searchCampuses.AsDelimited( "^" ) );
                     groupQry = groupQry.Where( c => searchCampuses.Contains( c.CampusId ?? -1 ) );
                 }
             }
@@ -1183,6 +1188,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     var filterControl = phFilterControls.FindControl( "filter_" + attribute.Id.ToString() );
                     groupQry = attribute.FieldType.Field.ApplyAttributeQueryFilter( groupQry, filterControl, attribute, groupService, Rock.Reporting.FilterMode.SimpleFilter );
+                    _filterValues.Add( "FilterValue" + attribute.Key, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).AsDelimited("^") );
 
                     if ( attributeCustomSortGuid != null && attribute.Guid == attributeCustomSortGuid )
                     {
@@ -1560,6 +1566,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 mergeFields.Add( "LinkedPages", linkedPages );
                 mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Get( "Rock.Model.Campus" ) ) as Campus );
+                mergeFields.Add( "FilterValues", _filterValues );
+                foreach (var filter in _filterValues)
+                {
+                    mergeFields.Add( filter.Key, filter.Value );
+                }
 
                 lLavaOverview.Text = template.ResolveMergeFields( mergeFields );
 
