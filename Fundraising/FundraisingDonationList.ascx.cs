@@ -14,6 +14,15 @@
 // limitations under the License.
 // </copyright>
 //
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * Added the donation TransactionId to the available grid values. ( accessible by {{ Row.TransactionId }} )
+// * Added Custom Grid Options functionality to the block settings to support adding custom columns.
+// </notice>
+//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -31,7 +40,7 @@ using Rock.Model;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Blocks.Fundraising
+namespace RockWeb.Plugins.rocks_kfs.Fundraising
 {
     [DisplayName( "Fundraising Donation List" )]
     [Category( "KFS > Fundraising" )]
