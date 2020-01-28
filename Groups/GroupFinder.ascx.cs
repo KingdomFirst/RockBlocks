@@ -1,4 +1,4 @@
-﻿// <copyright>
+// <copyright>
 // Copyright by the Spark Development Network
 //
 // Licensed under the Rock Community License (the "License");
@@ -1224,7 +1224,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                     groups.Sort( ( item1, item2 ) =>
                     {
-                        var parseAttributeVal = attributeVal.Split( ',' ); ;
+                        var parseAttributeVal = attributeVal.Split( ',' );
                         var item1AttributeValues = item1.AttributeValues.Where( a => a.Key == attributeValKey ).FirstOrDefault().Value.Value.Split( ',' );
                         var compareIntersect1 = parseAttributeVal.Intersect( item1AttributeValues ).ToList();
                         var item2AttributeValues = item2.AttributeValues.Where( a => a.Key == attributeValKey ).FirstOrDefault().Value.Value.Split( ',' );
@@ -1422,7 +1422,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                         groups.Sort( ( item1, item2 ) =>
                         {
-                            var parseAttributeVal = attributeVal.Split( ',' ); ;
+                            var parseAttributeVal = attributeVal.Split( ',' );
                             var item1AttributeValues = item1.AttributeValues.Where( a => a.Key == attributeValKey ).FirstOrDefault().Value.Value.Split( ',' );
                             var compareIntersect1 = parseAttributeVal.Intersect( item1AttributeValues ).ToList();
                             var item2AttributeValues = item2.AttributeValues.Where( a => a.Key == attributeValKey ).FirstOrDefault().Value.Value.Split( ',' );
