@@ -133,6 +133,8 @@
                                             Help="The group attributes that should be available for user to filter results by." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblInitialLoadFilters" runat="server" Label="Hide Filters on Initial Load" RepeatDirection="Horizontal"
                                             Help="Hide these filter controls under a collapsible panel for user on first load." ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockDropDownList ID="ddlAttributeSort" runat="server" Label="Attribute Filter Sort"
+                                            Help="Select an attribute to sort by if a group contains multiple of the selected filter options." ValidationGroup="GroupFinderSettings" />
                                     </div>
                                 </div>
                                 <div class="row">
