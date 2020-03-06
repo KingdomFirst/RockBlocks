@@ -32,9 +32,11 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using OfficeOpenXml;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Lava;
 using Rock.Model;
 using Rock.Utility;
 using Rock.Web.Cache;
@@ -55,13 +57,14 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
     #region Block Settings
 
     [BooleanField( "Show Group Title", "Should the Group Title be displayed?", true, "", 1 )]
-    [BooleanField( "Show Group Total Goals", "Should the total goals be displayed?", true, "", 2 )]
-    [BooleanField( "Show Group Total Goals Amount", "Should the group total goals amount be displayed?", true, "", 3 )]
-    [BooleanField( "Show Group Total Goals Progress Bar", "Should the group total goals progress bar be displayed?", true, "", 4 )]
-    [BooleanField( "Show Group Member Goals", "Should group member goals be displayed?", true, "", 5 )]
-    [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true, "", 6 )]
-    [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true, "", 7 )]
-    [BooleanField( "Show Excel Export Button", "Should the Excel Export Button be displayed?", false, "", 8 )]
+    [BooleanField( "Show Total Amount Raised", "Should the total amount raised be displayed?", false, "", 2 )]
+    [BooleanField( "Show Group Total Goals", "Should the total goals be displayed?", true, "", 3 )]
+    [BooleanField( "Show Group Total Goals Amount", "Should the group total goals amount be displayed?", true, "", 4 )]
+    [BooleanField( "Show Group Total Goals Progress Bar", "Should the group total goals progress bar be displayed?", true, "", 5 )]
+    [BooleanField( "Show Group Member Goals", "Should group member goals be displayed?", true, "", 6 )]
+    [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true, "", 7 )]
+    [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true, "", 8 )]
+    [BooleanField( "Show Excel Export Button", "Should the Excel Export Button be displayed?", false, "", 9 )]
 
     #endregion
 
@@ -114,12 +117,14 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                     pnlView.Visible = false;
                 }
 
+                divTotalRaised.Visible = GetAttributeValue( "ShowTotalAmountRaised" ).AsBoolean();
                 divPanelHeading.Visible = GetAttributeValue( "ShowGroupTitle" ).AsBoolean();
                 pnlHeader.Visible = GetAttributeValue( "ShowGroupTotalGoals" ).AsBoolean();
                 pTotalAmounts.Visible = GetAttributeValue( "ShowGroupTotalGoalsAmount" ).AsBoolean();
                 divTotalProgress.Visible = GetAttributeValue( "ShowGroupTotalGoalsProgressBar" ).AsBoolean();
                 ulGroupMembers.Visible = GetAttributeValue( "ShowGroupMemberGoals" ).AsBoolean();
                 pnlActions.Visible = GetAttributeValue( "ShowExcelExportButton" ).AsBoolean();
+
             }
         }
 
@@ -160,6 +165,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
             lTitle.Text = group.Name.FormatAsHtmlTitle();
 
             BindGroupMembersProgressGrid( group, groupMember, rockContext );
+
         }
 
         /// <summary>
@@ -217,6 +223,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                     progressBarWidth = 100;
                 }
 
+
                 if ( !individualFundraisingGoal.HasValue )
                 {
                     individualFundraisingGoal = 0;
@@ -243,6 +250,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
 
             rptFundingProgress.DataSource = groupMemberList;
             rptFundingProgress.DataBind();
+
         }
 
         #endregion
@@ -301,8 +309,6 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
 
             return cssClass;
         }
-
-        #endregion
 
         protected void btnExport_Click( object sender, EventArgs e )
         {
@@ -428,4 +434,6 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
             }
         }
     }
+
+    #endregion
 }

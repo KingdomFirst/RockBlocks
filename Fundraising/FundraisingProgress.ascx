@@ -13,6 +13,16 @@
                     </h1>
                 </div>
 
+                <div style="text-align: center; text-transform: uppercase;" id="divTotalRaised" runat="server">
+                    <h2 style="padding-top: 20px; letter-spacing: 4px; word-spacing: 4px;"><strong>Total raised year to date:</strong></h2>
+                    <div style="margin-top: 20px;">
+                        <div style="padding: 10px 15px; background: #fd5200; color: white; max-width: 500px; font-size: 35px; margin: auto;">
+                            $<%=this.GroupContributionTotal%>
+                        </div>
+                    </div>
+
+                </div>
+
                 <asp:Panel ID="pnlHeader" runat="server" class="bg-color padding-t-md padding-l-md padding-r-md padding-b-sm">
                     <div class="clearfix">
                         <b>Total Individual Goals</b>
@@ -45,6 +55,7 @@
                                             </div>
                                         </div>
                                     </asp:Panel>
+                                </div>
                             </li>
                         </ItemTemplate>
                     </asp:Repeater>
@@ -54,5 +65,5 @@
     </ContentTemplate>
 </asp:UpdatePanel>
 <asp:Panel runat="server" ID="pnlActions" CssClass="actions">
-    <asp:Button ID="btnExport" runat="server" Text="Export to Excel" CssClass="btn btn-primary" OnClick="btnExport_Click"/>
+    <asp:Button ID="btnExport" runat="server" Text="Export to Excel" CssClass="btn btn-primary" OnClick="btnExport_Click" />
 </asp:Panel>
