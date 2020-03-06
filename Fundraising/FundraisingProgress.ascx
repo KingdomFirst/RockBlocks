@@ -13,14 +13,11 @@
                     </h1>
                 </div>
 
-                <div style="text-align: center; text-transform: uppercase;" id="divTotalRaised" runat="server">
-                    <h2 style="padding-top: 20px; letter-spacing: 4px; word-spacing: 4px;"><strong>Total raised year to date:</strong></h2>
-                    <div style="margin-top: 20px;">
-                        <div style="padding: 10px 15px; background: #fd5200; color: white; max-width: 500px; font-size: 35px; margin: auto;">
-                            $<%=this.GroupContributionTotal.ToString("N")%>
-                        </div>
+                <div id="divTotalRaised" runat="server" class="text-center total-raised">
+                    <h2 class="padding-top-lg total-raised-h2">Total raised year to date:</h2>
+                    <div class="padding-h-xl padding-v-md alert alert-default h1 alert-total-raised">
+                        $<%=this.GroupContributionTotal.ToString("N")%>
                     </div>
-
                 </div>
 
                 <asp:Panel ID="pnlHeader" runat="server" class="bg-color padding-t-md padding-l-md padding-r-md padding-b-sm">
