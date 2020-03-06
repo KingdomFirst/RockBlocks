@@ -17,7 +17,7 @@
                     <h2 style="padding-top: 20px; letter-spacing: 4px; word-spacing: 4px;"><strong>Total raised year to date:</strong></h2>
                     <div style="margin-top: 20px;">
                         <div style="padding: 10px 15px; background: #fd5200; color: white; max-width: 500px; font-size: 35px; margin: auto;">
-                            $<%=this.GroupContributionTotal%>
+                            $<%=this.GroupContributionTotal.ToString("N")%>
                         </div>
                     </div>
 
@@ -26,7 +26,7 @@
                 <asp:Panel ID="pnlHeader" runat="server" class="bg-color padding-t-md padding-l-md padding-r-md padding-b-sm">
                     <div class="clearfix">
                         <b>Total Individual Goals</b>
-                        <p id="pTotalAmounts" runat="server" class="pull-right" style="margin-bottom: 0;"><strong>$<%=this.GroupContributionTotal%>/$<%=this.GroupIndividualFundraisingGoal%></strong></p>
+                        <p id="pTotalAmounts" runat="server" class="pull-right" style="margin-bottom: 0;"><strong>$<%=this.GroupContributionTotal.ToString("N")%>/$<%=this.GroupIndividualFundraisingGoal.ToString("N")%></strong></p>
                     </div>
 
                     <div class="progress" id="divTotalProgress" runat="server" style="margin-top: 12px;">

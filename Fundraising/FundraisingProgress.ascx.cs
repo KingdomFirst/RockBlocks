@@ -227,9 +227,9 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
 
                 return new
                 {
-                    FullName = groupMember.Person.FullName,
-                    NickName = groupMember.Person.NickName,
-                    LastName = groupMember.Person.LastName,
+                    groupMember.Person.FullName,
+                    groupMember.Person.NickName,
+                    groupMember.Person.LastName,
                     GroupName = group.Name,
                     IndividualFundraisingGoal = ( individualFundraisingGoal ?? 0.00M ).ToString( "0.##" ),
                     ContributionTotal = contributionTotal.ToString( "0.##" ),
@@ -239,6 +239,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 };
             } ).ToList();
             Session["IndividualData"] = groupMemberList;
+
             this.GroupIndividualFundraisingGoal = groupMemberList.Sum( a => decimal.Parse( a.IndividualFundraisingGoal ) );
             this.GroupContributionTotal = groupMemberList.Sum( a => decimal.Parse( a.ContributionTotal ) );
             this.PercentComplete = decimal.Round( this.GroupIndividualFundraisingGoal == 0 ? 100 : this.GroupContributionTotal / ( this.GroupIndividualFundraisingGoal * 0.01M ), 2 );
