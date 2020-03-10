@@ -13,10 +13,17 @@
                     </h1>
                 </div>
 
+                <div id="divTotalRaised" runat="server" class="text-center total-raised">
+                    <h2 class="padding-top-lg total-raised-h2">Total raised year to date:</h2>
+                    <div class="padding-h-xl padding-v-md alert alert-default h1 alert-total-raised">
+                        $<%=this.GroupContributionTotal.ToString("N")%>
+                    </div>
+                </div>
+
                 <asp:Panel ID="pnlHeader" runat="server" class="bg-color padding-t-md padding-l-md padding-r-md padding-b-sm">
                     <div class="clearfix">
                         <b>Total Individual Goals</b>
-                        <p id="pTotalAmounts" runat="server" class="pull-right" style="margin-bottom: 0;"><strong>$<%=this.GroupContributionTotal%>/$<%=this.GroupIndividualFundraisingGoal%></strong></p>
+                        <p id="pTotalAmounts" runat="server" class="pull-right" style="margin-bottom: 0;"><strong>$<%=this.GroupContributionTotal.ToString("N")%>/$<%=this.GroupIndividualFundraisingGoal.ToString("N")%></strong></p>
                     </div>
 
                     <div class="progress" id="divTotalProgress" runat="server" style="margin-top: 12px;">
@@ -45,6 +52,7 @@
                                             </div>
                                         </div>
                                     </asp:Panel>
+                                </div>
                             </li>
                         </ItemTemplate>
                     </asp:Repeater>
@@ -54,5 +62,5 @@
     </ContentTemplate>
 </asp:UpdatePanel>
 <asp:Panel runat="server" ID="pnlActions" CssClass="actions">
-    <asp:Button ID="btnExport" runat="server" Text="Export to Excel" CssClass="btn btn-primary" OnClick="btnExport_Click"/>
+    <asp:Button ID="btnExport" runat="server" Text="Export to Excel" CssClass="btn btn-primary" OnClick="btnExport_Click" />
 </asp:Panel>

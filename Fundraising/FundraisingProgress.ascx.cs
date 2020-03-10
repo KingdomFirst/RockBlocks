@@ -32,6 +32,7 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using OfficeOpenXml;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -50,20 +51,21 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
     [Category( "KFS > Fundraising" )]
     [Description( "Progress for all people in a fundraising opportunity" )]
 
-    #endregion
+    #endregion Block Attributes
 
     #region Block Settings
 
     [BooleanField( "Show Group Title", "Should the Group Title be displayed?", true, "", 1 )]
-    [BooleanField( "Show Group Total Goals", "Should the total goals be displayed?", true, "", 2 )]
-    [BooleanField( "Show Group Total Goals Amount", "Should the group total goals amount be displayed?", true, "", 3 )]
-    [BooleanField( "Show Group Total Goals Progress Bar", "Should the group total goals progress bar be displayed?", true, "", 4 )]
-    [BooleanField( "Show Group Member Goals", "Should group member goals be displayed?", true, "", 5 )]
-    [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true, "", 6 )]
-    [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true, "", 7 )]
-    [BooleanField( "Show Excel Export Button", "Should the Excel Export Button be displayed?", false, "", 8 )]
+    [BooleanField( "Show Total Amount Raised", "Should the total amount raised be displayed?", false, "", 2 )]
+    [BooleanField( "Show Group Total Goals", "Should the total goals be displayed?", true, "", 3 )]
+    [BooleanField( "Show Group Total Goals Amount", "Should the group total goals amount be displayed?", true, "", 4 )]
+    [BooleanField( "Show Group Total Goals Progress Bar", "Should the group total goals progress bar be displayed?", true, "", 5 )]
+    [BooleanField( "Show Group Member Goals", "Should group member goals be displayed?", true, "", 6 )]
+    [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true, "", 7 )]
+    [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true, "", 8 )]
+    [BooleanField( "Show Excel Export Button", "Should the Excel Export Button be displayed?", false, "", 9 )]
 
-    #endregion
+    #endregion Block Settings
 
     public partial class FundraisingProgress : RockBlock
     {
@@ -74,7 +76,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
         public decimal GroupContributionTotal;
         public string ProgressCssClass;
 
-        #endregion
+        #endregion Fields
 
         #region Base Control Methods
 
@@ -114,6 +116,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                     pnlView.Visible = false;
                 }
 
+                divTotalRaised.Visible = GetAttributeValue( "ShowTotalAmountRaised" ).AsBoolean();
                 divPanelHeading.Visible = GetAttributeValue( "ShowGroupTitle" ).AsBoolean();
                 pnlHeader.Visible = GetAttributeValue( "ShowGroupTotalGoals" ).AsBoolean();
                 pTotalAmounts.Visible = GetAttributeValue( "ShowGroupTotalGoalsAmount" ).AsBoolean();
@@ -123,9 +126,9 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
             }
         }
 
-        #endregion
+        #endregion Base Control Methods
 
-        #region Methods
+        #region Protected Methods
 
         /// <summary>
         /// Shows the view.
@@ -224,9 +227,9 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
 
                 return new
                 {
-                    FullName = groupMember.Person.FullName,
-                    NickName = groupMember.Person.NickName,
-                    LastName = groupMember.Person.LastName,
+                    groupMember.Person.FullName,
+                    groupMember.Person.NickName,
+                    groupMember.Person.LastName,
                     GroupName = group.Name,
                     IndividualFundraisingGoal = ( individualFundraisingGoal ?? 0.00M ).ToString( "0.##" ),
                     ContributionTotal = contributionTotal.ToString( "0.##" ),
@@ -236,6 +239,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 };
             } ).ToList();
             Session["IndividualData"] = groupMemberList;
+
             this.GroupIndividualFundraisingGoal = groupMemberList.Sum( a => decimal.Parse( a.IndividualFundraisingGoal ) );
             this.GroupContributionTotal = groupMemberList.Sum( a => decimal.Parse( a.ContributionTotal ) );
             this.PercentComplete = decimal.Round( this.GroupIndividualFundraisingGoal == 0 ? 100 : this.GroupContributionTotal / ( this.GroupIndividualFundraisingGoal * 0.01M ), 2 );
@@ -244,65 +248,6 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
             rptFundingProgress.DataSource = groupMemberList;
             rptFundingProgress.DataBind();
         }
-
-        #endregion
-
-        #region Events
-
-        /// <summary>
-        /// Handles the BlockUpdated event of the Block control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void Block_BlockUpdated( object sender, EventArgs e )
-        {
-            ShowView( hfGroupId.Value.AsIntegerOrNull(), hfGroupMemberId.Value.AsIntegerOrNull() );
-        }
-
-        /// <summary>
-        /// Handles the ItemDataBound event of the rptFundingProgress control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
-        protected void rptFundingProgress_ItemDataBound( object sender, RepeaterItemEventArgs e )
-        {
-            var divMemberGoalAmount = e.Item.FindControl( "divMemberGoalAmount" );
-            var pnlMemberGoalProgressBar = e.Item.FindControl( "pnlMemberGoalProgressBar" ) as Panel;
-
-            divMemberGoalAmount.Visible = GetAttributeValue( "ShowGroupMemberGoalAmounts" ).AsBoolean();
-            pnlMemberGoalProgressBar.Visible = GetAttributeValue( "ShowGroupMemberGoalProgressBars" ).AsBoolean();
-
-            if ( divMemberGoalAmount.Visible )
-            {
-                pnlMemberGoalProgressBar.CssClass = "col-xs-12 col-md-8 col-md-offset-4";
-            }
-            else
-            {
-                pnlMemberGoalProgressBar.CssClass = "col-xs-12 col-md-8";
-            }
-        }
-
-        #endregion
-
-        #region Methods
-
-        private string GetProgressCssClass( decimal percentage )
-        {
-            var cssClass = "warning";
-
-            if ( percentage >= 100 )
-            {
-                cssClass = "success";
-            }
-            else if ( percentage > 40 && percentage < 100 )
-            {
-                cssClass = "info";
-            }
-
-            return cssClass;
-        }
-
-        #endregion
 
         protected void btnExport_Click( object sender, EventArgs e )
         {
@@ -427,5 +372,64 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 }
             }
         }
+
+        #endregion Protected Methods
+
+        #region Events
+
+        /// <summary>
+        /// Handles the BlockUpdated event of the Block control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void Block_BlockUpdated( object sender, EventArgs e )
+        {
+            ShowView( hfGroupId.Value.AsIntegerOrNull(), hfGroupMemberId.Value.AsIntegerOrNull() );
+        }
+
+        /// <summary>
+        /// Handles the ItemDataBound event of the rptFundingProgress control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
+        protected void rptFundingProgress_ItemDataBound( object sender, RepeaterItemEventArgs e )
+        {
+            var divMemberGoalAmount = e.Item.FindControl( "divMemberGoalAmount" );
+            var pnlMemberGoalProgressBar = e.Item.FindControl( "pnlMemberGoalProgressBar" ) as Panel;
+
+            divMemberGoalAmount.Visible = GetAttributeValue( "ShowGroupMemberGoalAmounts" ).AsBoolean();
+            pnlMemberGoalProgressBar.Visible = GetAttributeValue( "ShowGroupMemberGoalProgressBars" ).AsBoolean();
+
+            if ( divMemberGoalAmount.Visible )
+            {
+                pnlMemberGoalProgressBar.CssClass = "col-xs-12 col-md-8 col-md-offset-4";
+            }
+            else
+            {
+                pnlMemberGoalProgressBar.CssClass = "col-xs-12 col-md-8";
+            }
+        }
+
+        #endregion Events
+
+        #region Private Methods
+
+        private string GetProgressCssClass( decimal percentage )
+        {
+            var cssClass = "warning";
+
+            if ( percentage >= 100 )
+            {
+                cssClass = "success";
+            }
+            else if ( percentage > 40 && percentage < 100 )
+            {
+                cssClass = "info";
+            }
+
+            return cssClass;
+        }
+
+        #endregion Private Methods
     }
 }
