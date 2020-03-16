@@ -84,7 +84,8 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
     [CustomDropdownListField( "Print Density", "The default print density for reprint.", "6^6 dpmm (152 dpi),8^8 dpmm (203 dpi),12^12 dpmm (300 dpi),24^24 dpmm (600 dpi)", true, "8", "Print Actions", 1 )]
     [TextField( "Label Width", "The default width of label for reprint.", true, "4", "Print Actions", 2 )]
     [TextField( "Label Height", "The default height of label for reprint.", true, "2", "Print Actions", 3 )]
-    [BooleanField( "Show ZPL Print Button", "A flag indicating if the ZPL Print Button should be displayed.", false, "Print Actions", 4 )]
+    // implementation does not work, needs someone to fund to fix.
+    //[BooleanField( "Show ZPL Print Button", "A flag indicating if the ZPL Print Button should be displayed.", false, "Print Actions", 4 )]
 
     #endregion
 
@@ -151,7 +152,8 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
             ShowMove = GetAttributeValue( "ShowMove" ).AsBoolean();
             ShowPrintLabel = GetAttributeValue( "ShowPrintLabel" ).AsBoolean();
             _showAdvancedPrintOptions = GetAttributeValue( "ShowAdvancedPrintOptions" ).AsBoolean();
-            _showZplPrintButton = GetAttributeValue( "ShowZPLPrintButton" ).AsBoolean();
+            // implementation does not work, needs someone to fund to fix.
+            //_showZplPrintButton = GetAttributeValue( "ShowZPLPrintButton" ).AsBoolean();
 
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.js" );
             RockPage.AddScriptLink( "~/Scripts/flot/jquery.flot.time.js" );
