@@ -64,7 +64,6 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
     [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true, "", 7 )]
     [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true, "", 8 )]
     [BooleanField( "Show Excel Export Button", "Should the Excel Export Button be displayed?", false, "", 9 )]
-    [GroupTypeField( "Fundraising Child Group Type", "If your group is not from the system fundraising group type please select it here.", false, order: 10 )]
 
     #endregion Block Settings
 
@@ -140,7 +139,6 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
             var rockContext = new RockContext();
             Group group = null;
             GroupMember groupMember = null;
-            GroupType settingGroupType = new GroupTypeService( rockContext ).Get( GetAttributeValue( "FundraisingChildGroupType" ).AsGuid() );
             int fundraisingOpportunityTypeId = GroupTypeCache.Get( Rock.SystemGuid.GroupType.GROUPTYPE_FUNDRAISINGOPPORTUNITY ).Id;
 
             pnlView.Visible = true;
@@ -157,7 +155,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 group = groupMember.Group;
             }
 
-            if ( group == null || ( group.GroupTypeId != fundraisingOpportunityTypeId && ( settingGroupType == null || ( settingGroupType != null && group.GroupTypeId != settingGroupType.Id ) ) ) ) //|| fundraisingOpportunityType.ChildGroupTypes.Contains( (GroupTypeCache) group.GroupType ) )
+            if ( group == null || ( group.GroupTypeId != fundraisingOpportunityTypeId && group.GroupType.InheritedGroupTypeId != fundraisingOpportunityTypeId ) )
             {
                 pnlView.Visible = false;
                 return;
