@@ -1,4 +1,4 @@
-// <copyright>
+﻿// <copyright>
 // Copyright by the Spark Development Network
 //
 // Licensed under the Rock Community License (the "License");
@@ -773,7 +773,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     var currentPersonLocation = CurrentPerson.GetHomeLocation();
                     acAddress.SetValues( currentPersonLocation );
-                    nbPostalCode.Text = currentPersonLocation.PostalCode;
+                    if ( currentPersonLocation != null )
+                    {
+                        nbPostalCode.Text = currentPersonLocation.PostalCode;
+                    }
                 }
 
                 phFilterControls.Visible = true;
@@ -1109,7 +1112,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 if ( dows.Any() )
                 {
-                    _filterValues.Add( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited("^") );
+                    _filterValues.Add( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited( "^" ) );
                     groupQry = groupQry.Where( g =>
                         g.Schedule.WeeklyDayOfWeek.HasValue &&
                         dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) );
@@ -1188,7 +1191,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     var filterControl = phFilterControls.FindControl( "filter_" + attribute.Id.ToString() );
                     groupQry = attribute.FieldType.Field.ApplyAttributeQueryFilter( groupQry, filterControl, attribute, groupService, Rock.Reporting.FilterMode.SimpleFilter );
-                    _filterValues.Add( "FilterValue" + attribute.Key, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).AsDelimited("^") );
+                    _filterValues.Add( "FilterValue" + attribute.Key, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).AsDelimited( "^" ) );
 
                     if ( attributeCustomSortGuid != null && attribute.Guid == attributeCustomSortGuid )
                     {
@@ -1265,8 +1268,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                     if ( GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean() )
                     {
-                        mapCoordinate = new LocationService( rockContext )
-                            .GetMapCoordinateFromPostalCode( nbPostalCode.Text );
+                        if ( !string.IsNullOrWhiteSpace( nbPostalCode.Text ) )
+                        {
+                            mapCoordinate = new LocationService( rockContext )
+                                .GetMapCoordinateFromPostalCode( nbPostalCode.Text );
+                        }
                     }
                     else
                     {
@@ -1567,7 +1573,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 mergeFields.Add( "LinkedPages", linkedPages );
                 mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Get( "Rock.Model.Campus" ) ) as Campus );
                 mergeFields.Add( "FilterValues", _filterValues );
-                foreach (var filter in _filterValues)
+                foreach ( var filter in _filterValues )
                 {
                     mergeFields.Add( filter.Key, filter.Value );
                 }
