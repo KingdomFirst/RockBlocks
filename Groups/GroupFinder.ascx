@@ -135,6 +135,8 @@
                                             Help="Hide these filter controls under a collapsible panel for user on first load." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockDropDownList ID="ddlAttributeSort" runat="server" Label="Attribute Filter Sort"
                                             Help="Select an attribute to sort by if a group contains multiple of the selected filter options." ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockCheckBoxList ID="cblAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values" RepeatDirection="Horizontal"
+                                            Help="The group attribute values that you would like to hide from the filter options." ValidationGroup="GroupFinderSettings" />
                                     </div>
                                 </div>
                                 <div class="row">
