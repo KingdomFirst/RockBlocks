@@ -165,6 +165,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private bool _collapseFilters = false;
         private Dictionary<string, string> _filterValues = new Dictionary<string, string>();
 
+        private const string DEFINED_TYPE_KEY = "definedtype";
+        private const string ALLOW_MULTIPLE_KEY = "allowmultiple";
+        private const string DISPLAY_DESCRIPTION = "displaydescription";
+        private const string INCLUDE_INACTIVE_KEY = "includeInactive";
+        private const string VALUES_KEY = "values";
+        private const string REPEAT_COLUMNS = "repeatColumns";
+
         #endregion Private Variables
 
         #region Properties
@@ -670,13 +677,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             upnlContent.Update();
         }
-
-        private const string DEFINED_TYPE_KEY = "definedtype";
-        private const string ALLOW_MULTIPLE_KEY = "allowmultiple";
-        private const string DISPLAY_DESCRIPTION = "displaydescription";
-        private const string INCLUDE_INACTIVE_KEY = "includeInactive";
-        private const string VALUES_KEY = "values";
-        private const string REPEAT_COLUMNS = "repeatColumns";
 
         /// <summary>
         /// Binds the group attribute list.
