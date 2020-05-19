@@ -155,7 +155,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 group = groupMember.Group;
             }
 
-            if ( group == null || group.GroupTypeId != fundraisingOpportunityTypeId )
+            if ( group == null || ( group.GroupTypeId != fundraisingOpportunityTypeId && group.GroupType.InheritedGroupTypeId != fundraisingOpportunityTypeId ) )
             {
                 pnlView.Visible = false;
                 return;
