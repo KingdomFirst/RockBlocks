@@ -629,7 +629,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     li.Selected = true;
                 }
             }
-            foreach ( string attr in GetAttributeValue( "HideAttributeValues" ).SplitDelimitedValues( "," ) )
+            foreach ( string attr in GetAttributeValue( "HideAttributeValues" ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ) )
             {
                 var li = cblAttributeHiddenOptions.Items.FindByValue( attr );
                 if ( li != null )
@@ -1081,10 +1081,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( hiddenAttributeValues.HasValue() )
             {
                 var hiddenValues = new Dictionary<string, string>();
-                var splitValues = hiddenAttributeValues.SplitDelimitedValues( "," );
+                var splitValues = hiddenAttributeValues.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
                 foreach ( var val in splitValues )
                 {
-                    var dictSplit = val.SplitDelimitedValues( "||" );
+                    var dictSplit = val.Split( new string[] { "||" }, StringSplitOptions.RemoveEmptyEntries );
                     if ( dictSplit.Count() > 1 )
                     {
                         if ( hiddenValues.ContainsKey( dictSplit[0] ) )
