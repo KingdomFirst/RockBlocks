@@ -897,7 +897,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         {
             var hideFilters = GetAttributeValues( "HideFiltersInitialLoad" );
             var hideValues = GetAttributeValues( "HideAttributeValues" );
-            if ( clearHideFilters || _autoLoad )
+            if ( clearHideFilters )
             {
                 hideFilters.Clear();
             }
@@ -1375,6 +1375,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         {
                             var campusLocation = CampusCache.Get( ( Guid ) campusGuid ).LocationId;
                             personLocation = new LocationService( rockContext ).Get( ( int ) campusLocation );
+                            nbPostalCode.Text = personLocation.PostalCode;
                             if ( personLocation.GeoPoint != null ) mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                         }
                     }
