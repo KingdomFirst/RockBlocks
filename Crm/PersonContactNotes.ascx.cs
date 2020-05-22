@@ -15,6 +15,7 @@
 // </copyright>
 //
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Rock;
@@ -24,6 +25,7 @@ using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
+using DotLiquid;
 
 namespace RockWeb.Plugins.kfs_rocks.Crm
 {
@@ -50,6 +52,7 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
     [BooleanField( "Expand Replies", "Should replies to automatically expanded?", false, "", 10 )]
     [CodeEditorField( "Note View Lava Template", "The Lava Template to use when rendering the view of the notes.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false, @"{% include '~~/Assets/Lava/NoteViewList.lava' %}", order: 11 )]
     [MemoField( "Default Note Text", "Enter default note text such as pre-filled questions here.", false, "", "", 12 )]
+    [CodeEditorField( "Person Info Lava Template", "The Lava Template to use when rendering the person that was selected.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false, @"{% include '~/Plugins/rocks_kfs/crm/Lava/PersonInfo.lava' %}", order: 11 )]
     #endregion
     public partial class Notes : RockBlock
     {
@@ -57,6 +60,7 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
 
         private int? _entityTypeId = null;
         private int? _entityId = null;
+        private RockContext _rockContext = new RockContext();
 
         #endregion
 
@@ -85,13 +89,10 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
                 gmpGroupMember.AutoPostBack = true;
                 if ( groupMemberId.HasValue )
                 {
-                    using ( var rockContext = new RockContext() )
-                    {
-                        var groupMember = new GroupMemberService( rockContext ).Get( groupMemberId.Value );
-                        gmpGroupMember.GroupId = groupMember.GroupId;
-                        gmpGroupMember.SetValue( groupMemberId );
-                        _entityId = groupMemberId;
-                    }
+                    var groupMember = new GroupMemberService( _rockContext ).Get( groupMemberId.Value );
+                    gmpGroupMember.GroupId = groupMember.GroupId;
+                    gmpGroupMember.SetValue( groupMemberId );
+                    _entityId = groupMemberId;
                 }
             }
             else
@@ -101,12 +102,13 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
                 gmpGroupMember.Visible = false;
                 if ( personId.HasValue )
                 {
-                    ppPerson.PersonId = personId;
-                    ppPerson.SelectedValue = personId;
+                    var person = new PersonService( _rockContext ).Get( personId.Value );
+                    ppPerson.SetValue( person );
                     _entityId = personId;
                 }
             }
 
+            ShowPersonInfo();
             ShowNotes();
         }
 
@@ -172,6 +174,23 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
             }
         }
 
+        private void ShowPersonInfo()
+        {
+            Template template = Template.Parse( GetAttributeValue( "PersonInfoLavaTemplate" ) );
+            var mergeFields = new Dictionary<string, object>();
+            if ( ppPerson.Visible && _entityId.HasValue )
+            {
+                var person = new PersonService( _rockContext ).Get( _entityId.Value );
+                mergeFields.Add( "Person", person );
+            }
+            else if ( _entityId.HasValue )
+            {
+                var groupMember = new GroupMemberService( _rockContext ).Get( _entityId.Value );
+                mergeFields.Add( "GroupMember", groupMember );
+            }
+            lLavaPersonInfo.Text = template.Render( Hash.FromDictionary( mergeFields ) );
+        }
+
         /// <summary>
         /// Handles the BlockUpdated event of the Notes control.
         /// </summary>
@@ -209,6 +228,7 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
         public void SelectPerson( object sender, EventArgs e )
         {
             ShowNotes();
+            ShowPersonInfo();
         }
         #endregion
     }

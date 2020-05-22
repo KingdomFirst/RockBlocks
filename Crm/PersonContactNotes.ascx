@@ -3,7 +3,7 @@
 <asp:UpdatePanel ID="upPersonContactNotes" runat="server">
     <ContentTemplate>
         <div class="row row-eq-height">
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <asp:Panel ID="pnlSelectPerson" CssClass="panel panel-block" runat="server">
                     <div class="panel-heading">
                         <h1 class="panel-title"><i class="fa fa-user"></i> Select a Person</h1>
@@ -15,7 +15,7 @@
                     </div>
                 </asp:Panel>
             </div>
-            <div class="col-md-9">
+            <div class="col-md-8">
                 <asp:Panel ID="pnlNoteEntry" CssClass="panel panel-block" runat="server">
                     <div class="panel-heading">
                         <h1 class="panel-title"><i class="fa fa-sticky-note"></i> Add a Note</h1>
