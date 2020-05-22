@@ -1,0 +1,34 @@
+﻿{% if GroupMember %}{% assign Person = GroupMember.Person %}{% endif %}
+{% if Person %}
+<h2>
+    {{ Person.FullName }}
+    <small><span class="role">{{ Person.AgeClassification }}</span> <em class="age">({{ Person.Age }} yrs old)</em></small>
+</h2>
+<div class="clearfix" data-has-details="true">
+    <div class="person-image" style="background-image:url({{ Person.PhotoUrl }}&amp;maxwidth=200&amp;maxheight=200&amp;width=65);"></div>
+    <span class="label label-default pull-right">{{ Person.ConnectionStatusValue.Value }}</span>
+    <div class="contents">
+        {%- assign spouse = Person | Spouse -%}
+        {% if spouse %}<p class="spouse"><strong>Spouse:</strong> {{ spouse.FullName }}</p>{% endif %}
+        <dl class="address">
+            <dt>Address</dt>
+            <dd>{{ Person | Address:'Home','[[FormattedHtmlAddress]]' }}</dd>
+        </dl>
+        <div class="margin-t-sm">
+            <span class="email">{{ Person.Email }}</span>
+            <ul class="phones list-unstyled">
+            {% for phone in Person.PhoneNumbers %}
+                <li>{{ phone.NumberFormatted }} <small>{{ phone.NumberTypeValue.Value }}</small></li>
+            {% endfor %}
+            </ul>
+        </div>
+        <p class="margin-t-sm">
+            <small><a href="/person/{{ Person.Id }}" class="cursor-pointer" onclick="javascript: window.open('/person/{{ Person.Id }}', '_blank', 'scrollbars=1,resizable=1,toolbar=1'); return false;" data-toggle="tooltip" title="View Profile" tabindex="-1">View Profile</a></small>
+        </p>
+        </div>
+    </div>
+{% endif %}
+{% if GroupMember %}
+    <!-- GroupMember Specific Lava Values -->
+{% endif %}
+{{ 'Lava' | Debug }}
