@@ -26,6 +26,7 @@
 // * Added postal code search capability
 // * Added Collapsible filters
 // * Added Custom Sorting based on Attribute Filter
+// * Added ability to hide attribute values from the search panel
 // </notice>
 //
 using System;
@@ -96,7 +97,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Attribute Custom Sort", "Select an attribute to sort by if a group contains multiple of the selected filter options.", false, false, "", "CustomSetting" )]
     [BooleanField( "Enable Postal Code Search", "", false, "CustomSetting" )]
     [CheckListField( "Hide Selected Filters on Initial Load", "", "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_PostalCode') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'", false, "", "CustomSetting", key: "HideFiltersInitialLoad" )]
-    [CheckListField( "Hide Attribute Values from Filter", "Use this setting to hide attribute values from the available options in the search filter", "SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'", false, "", "CustomSetting", key: "HideAttributeValues" )]
+    [CheckListField( "Exclude Attribute Values from Filter", "Use this setting to hide attribute values from the available options in the search filter", "SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'", false, "", "CustomSetting", key: "HideAttributeValues" )]
 
     // Map Settings
     [BooleanField( "Show Map", "", false, "CustomSetting" )]
@@ -896,7 +897,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private void BuildDynamicControls( bool clearHideFilters = false )
         {
             var hideFilters = GetAttributeValues( "HideFiltersInitialLoad" );
-            var hideValues = GetAttributeValues( "HideAttributeValues" );
             if ( clearHideFilters )
             {
                 hideFilters.Clear();
@@ -1093,7 +1093,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         }
                         else
                         {
-                            hiddenValues.AddOrReplace( dictSplit[0], dictSplit[1] );
+                            hiddenValues.Add( dictSplit[0], dictSplit[1] );
                         }
                     }
                 }
@@ -1375,7 +1375,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         {
                             var campusLocation = CampusCache.Get( ( Guid ) campusGuid ).LocationId;
                             personLocation = new LocationService( rockContext ).Get( ( int ) campusLocation );
-                            nbPostalCode.Text = personLocation.PostalCode;
+                            if ( !string.IsNullOrWhiteSpace( personLocation.PostalCode ) )
+                            {
+                                nbPostalCode.Text = personLocation.PostalCode.Substring( 0, 5 );
+                            }
                             if ( personLocation.GeoPoint != null ) mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                         }
                     }
