@@ -26,6 +26,7 @@
 // * Added postal code search capability
 // * Added Collapsible filters
 // * Added Custom Sorting based on Attribute Filter
+// * Added ability to hide attribute values from the search panel
 // </notice>
 //
 using System;
@@ -35,12 +36,13 @@ using System.Data.Entity;
 using System.Data.Entity.Spatial;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 using DotLiquid;
-
+using RestSharp.Extensions;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -95,6 +97,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Attribute Custom Sort", "Select an attribute to sort by if a group contains multiple of the selected filter options.", false, false, "", "CustomSetting" )]
     [BooleanField( "Enable Postal Code Search", "", false, "CustomSetting" )]
     [CheckListField( "Hide Selected Filters on Initial Load", "", "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_PostalCode') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'", false, "", "CustomSetting", key: "HideFiltersInitialLoad" )]
+    [CheckListField( "Exclude Attribute Values from Filter", "Use this setting to hide attribute values from the available options in the search filter", "SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'", false, "", "CustomSetting", key: "HideAttributeValues" )]
 
     // Map Settings
     [BooleanField( "Show Map", "", false, "CustomSetting" )]
@@ -162,6 +165,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private bool _allowSearch = false;
         private bool _collapseFilters = false;
         private Dictionary<string, string> _filterValues = new Dictionary<string, string>();
+
+        private const string DEFINED_TYPE_KEY = "definedtype";
+        private const string ALLOW_MULTIPLE_KEY = "allowmultiple";
+        private const string DISPLAY_DESCRIPTION = "displaydescription";
+        private const string INCLUDE_INACTIVE_KEY = "includeInactive";
+        private const string VALUES_KEY = "values";
+        private const string REPEAT_COLUMNS = "repeatColumns";
 
         #endregion Private Variables
 
@@ -439,6 +449,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( "AttributeFilters", cblAttributes.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( "HideFiltersInitialLoad", cblInitialLoadFilters.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( "AttributeCustomSort", ddlAttributeSort.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
+            SetAttributeValue( "HideAttributeValues", cblAttributeHiddenOptions.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
 
             SetAttributeValue( "ShowMap", cbShowMap.Checked.ToString() );
             SetAttributeValue( "MapStyle", ddlMapStyle.SelectedValue );
@@ -619,6 +630,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     li.Selected = true;
                 }
             }
+            foreach ( string attr in GetAttributeValue( "HideAttributeValues" ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ) )
+            {
+                var li = cblAttributeHiddenOptions.Items.FindByValue( attr );
+                if ( li != null )
+                {
+                    li.Selected = true;
+                }
+            }
 
             cbFilterCampus.Checked = GetAttributeValue( "DisplayCampusFilter" ).AsBoolean();
             cbCampusContext.Checked = GetAttributeValue( "EnableCampusContext" ).AsBoolean();
@@ -673,6 +692,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cblGridAttributes.Items.Clear();
             cblInitialLoadFilters.Items.Clear();
             ddlAttributeSort.Items.Clear();
+            cblAttributeHiddenOptions.Items.Clear();
 
             if ( gtpGroupType.SelectedGroupTypeId.HasValue )
             {
@@ -701,6 +721,26 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             cblAttributes.Items.Add( new ListItem( attribute.Value.Name, attribute.Value.Guid.ToString() ) );
                             cblInitialLoadFilters.Items.Add( new ListItem( attribute.Value.Name, attribute.Value.Guid.ToString() ) );
                             ddlAttributeSort.Items.Add( new ListItem( attribute.Value.Name, attribute.Value.Guid.ToString() ) );
+
+                            var configurationValues = attribute.Value.QualifierValues;
+                            bool useDescription = configurationValues != null && configurationValues.ContainsKey( DISPLAY_DESCRIPTION ) && configurationValues[DISPLAY_DESCRIPTION].Value.AsBoolean();
+                            int? definedTypeId = configurationValues != null && configurationValues.ContainsKey( DEFINED_TYPE_KEY ) ? configurationValues[DEFINED_TYPE_KEY].Value.AsIntegerOrNull() : null;
+
+                            if ( definedTypeId.HasValue )
+                            {
+                                var definedType = DefinedTypeCache.Get( definedTypeId.Value );
+                                foreach ( var val in definedType.DefinedValues )
+                                {
+                                    cblAttributeHiddenOptions.Items.Add( new ListItem( ( useDescription ) ? val.Description : val.Value, string.Format( "filter_{0}||{1}", attribute.Value.Id.ToString(), val.Id.ToString() ) ) );
+                                }
+                            }
+                            else
+                            {
+                                foreach ( var keyVal in Rock.Field.Helper.GetConfiguredValues( configurationValues ) )
+                                {
+                                    cblAttributeHiddenOptions.Items.Add( new ListItem( keyVal.Value, string.Format( "filter_{0}||{1}", attribute.Value.Id.ToString(), keyVal.Key ) ) );
+                                }
+                            }
                         }
 
                         cblGridAttributes.Items.Add( new ListItem( attribute.Value.Name, attribute.Value.Guid.ToString() ) );
@@ -711,6 +751,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cblAttributes.Visible = cblAttributes.Items.Count > 0;
             cblGridAttributes.Visible = cblAttributes.Items.Count > 0;
             ddlAttributeSort.Visible = ddlAttributeSort.Items.Count > 0;
+            cblAttributeHiddenOptions.Visible = cblAttributeHiddenOptions.Items.Count > 0;
         }
 
         private void ShowViewForPerson( Guid targetPersonGuid )
@@ -856,7 +897,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private void BuildDynamicControls( bool clearHideFilters = false )
         {
             var hideFilters = GetAttributeValues( "HideFiltersInitialLoad" );
-            if ( clearHideFilters || _autoLoad )
+            if ( clearHideFilters )
             {
                 hideFilters.Clear();
             }
@@ -938,6 +979,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             if ( AttributeFilters != null )
             {
+                hideAttributeValues();
                 foreach ( var attribute in AttributeFilters )
                 {
                     var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
@@ -1029,6 +1071,50 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( GetAttributeValue( "SortByDistance" ).AsBoolean() )
             {
                 gGroups.AllowSorting = false;
+            }
+        }
+
+        private void hideAttributeValues()
+        {
+            var hiddenAttributeValues = GetAttributeValue( "HideAttributeValues" );
+
+            if ( hiddenAttributeValues.HasValue() )
+            {
+                var hiddenValues = new Dictionary<string, string>();
+                var splitValues = hiddenAttributeValues.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
+                foreach ( var val in splitValues )
+                {
+                    var dictSplit = val.Split( new string[] { "||" }, StringSplitOptions.RemoveEmptyEntries );
+                    if ( dictSplit.Count() > 1 )
+                    {
+                        if ( hiddenValues.ContainsKey( dictSplit[0] ) )
+                        {
+                            hiddenValues[dictSplit[0]] = string.Format( "{0},{1}", hiddenValues[dictSplit[0]], dictSplit[1] );
+                        }
+                        else
+                        {
+                            hiddenValues.Add( dictSplit[0], dictSplit[1] );
+                        }
+                    }
+                }
+                if ( hiddenValues.Count > 0 )
+                {
+                    var cssStyle = new StringBuilder();
+                    foreach ( var hideFilter in hiddenValues )
+                    {
+                        var valSplit = hideFilter.Value.SplitDelimitedValues();
+                        foreach ( var hideVal in valSplit )
+                        {
+                            cssStyle.AppendFormat( "[id*=\"{0}\"] [value=\"{1}\"], [id*=\"{0}\"] [value=\"{1}\"] + span, ", hideFilter.Key, hideVal.EscapeQuotes() );
+                        }
+                    }
+                    cssStyle.Append( " .hideSpecificValue { display: none; visibility: hidden; }" );
+                    cssStyle.AppendLine( ".field-criteria .in-columns, .field-criteria .checkbox-inline { margin-top: 0px; }" );
+                    cssStyle.AppendLine( ".radio input[type=\"radio\"], .radio-inline input[type=\"radio\"], .checkbox input[type=\"checkbox\"], .checkbox-inline input[type=\"checkbox\"] { top: 50%; transform: translateY(-50%); }" );
+                    cssStyle.AppendLine( ".in-columns .label-text { margin-top: 8px }" );
+
+                    Page.Header.Controls.Add( new LiteralControl( string.Format( "<style>{0}</style>", cssStyle ) ) );
+                }
             }
         }
 
@@ -1289,6 +1375,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         {
                             var campusLocation = CampusCache.Get( ( Guid ) campusGuid ).LocationId;
                             personLocation = new LocationService( rockContext ).Get( ( int ) campusLocation );
+                            if ( !string.IsNullOrWhiteSpace( personLocation.PostalCode ) )
+                            {
+                                nbPostalCode.Text = personLocation.PostalCode.Substring( 0, 5 );
+                            }
                             if ( personLocation.GeoPoint != null ) mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                         }
                     }
