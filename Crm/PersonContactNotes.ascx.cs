@@ -42,17 +42,19 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
 
     [TextField( "Note Term", "The term to use for note (i.e. 'Note', 'Comment').", false, "Note", "", 1 )]
     [CustomDropdownListField( "Display Type", "The format to use for displaying notes.", "Full,Light", true, "Full", "", 2 )]
-    [BooleanField( "Use Person Icon", "", false, "", 3 )]
-    [BooleanField( "Show Alert Checkbox", "", true, "", 4 )]
-    [BooleanField( "Show Private Checkbox", "", true, "", 5 )]
-    [BooleanField( "Show Security Button", "", true, "", 6 )]
-    [BooleanField( "Allow Backdated Notes", "", false, "", 7 )]
-    [NoteTypeField( "Note Types", "Optional list of note types to limit display to", true, "", "", "", false, "", "", 8 )]
+    [BooleanField( "Show Alert Checkbox", "", true, "", 3 )]
+    [BooleanField( "Show Private Checkbox", "", true, "", 4 )]
+    [BooleanField( "Show Security Button", "", true, "", 5 )]
+    [BooleanField( "Allow Backdated Notes", "", false, "", 6 )]
+    [NoteTypeField( "Person Note Types", "Optional list of person note types to limit display to", true, "Rock.Model.Person", "", "", false, "", "", 7 )]
+    [NoteTypeField( "Group Member Note Types", "Optional list of group member note types to limit display to", true, "Rock.Model.GroupMember", "", "", false, "", "", 8 )]
     [BooleanField( "Display Note Type Heading", "Should each note's Note Type be displayed as a heading above each note?", false, "", 9 )]
-    [BooleanField( "Expand Replies", "Should replies to automatically expanded?", false, "", 10 )]
+    [BooleanField( "Expand Replies", "Should replies be automatically expanded?", false, "", 10 )]
     [CodeEditorField( "Note View Lava Template", "The Lava Template to use when rendering the view of the notes.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false, @"{% include '~~/Assets/Lava/NoteViewList.lava' %}", order: 11 )]
     [MemoField( "Default Note Text", "Enter default note text such as pre-filled questions here.", false, "", "", 12 )]
     [CodeEditorField( "Person Info Lava Template", "The Lava Template to use when rendering the person that was selected.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false, @"{% include '~/Plugins/rocks_kfs/crm/Lava/PersonInfo.lava' %}", order: 11 )]
+    [WorkflowTypeField( "Workflow", "Workflow to initiate after contact note is entered.", false, false, "", "", 14 )]
+    [CustomDropdownListField( "Workflow Entity", "", "Person,Note,GroupMember", true, "Person", "", 15 )]
     #endregion
     public partial class Notes : RockBlock
     {
@@ -60,6 +62,7 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
 
         private int? _entityTypeId = null;
         private int? _entityId = null;
+        private int? _noteId = null;
         private RockContext _rockContext = new RockContext();
 
         #endregion
@@ -113,85 +116,6 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
         }
 
         /// <summary>
-        /// Renders the notes.
-        /// </summary>
-        private void ShowNotes()
-        {
-            if ( gmpGroupMember.SelectedValueAsId().HasValue )
-            {
-                _entityId = gmpGroupMember.SelectedValueAsId();
-            }
-            if ( ppPerson.SelectedValue.HasValue )
-            {
-                _entityId = ppPerson.SelectedValue;
-            }
-
-            if ( _entityTypeId.HasValue && _entityId.HasValue )
-            {
-                pnlNoteEntry.Visible = true;
-
-                using ( var rockContext = new RockContext() )
-                {
-                    var noteTypes = NoteTypeCache.GetByEntity( _entityTypeId, string.Empty, string.Empty, true );
-
-                    // If block is configured to only allow certain note types, limit notes to those types.
-                    var configuredNoteTypes = GetAttributeValue( "NoteTypes" ).SplitDelimitedValues().AsGuidList();
-                    if ( configuredNoteTypes.Any() )
-                    {
-                        noteTypes = noteTypes.Where( n => configuredNoteTypes.Contains( n.Guid ) ).ToList();
-                    }
-
-                    NoteOptions noteOptions = new NoteOptions( new NoteContainer() )
-                    {
-                        EntityId = _entityId,
-                        NoteTypes = noteTypes.ToArray(),
-                        NoteLabel = GetAttributeValue( "NoteTerm" ),
-                        DisplayType = GetAttributeValue( "DisplayType" ) == "Light" ? NoteDisplayType.Light : NoteDisplayType.Full,
-                        ShowAlertCheckBox = GetAttributeValue( "ShowAlertCheckbox" ).AsBoolean(),
-                        ShowPrivateCheckBox = GetAttributeValue( "ShowPrivateCheckbox" ).AsBoolean(),
-                        ShowSecurityButton = GetAttributeValue( "ShowSecurityButton" ).AsBoolean(),
-                        AddAlwaysVisible = true,
-                        ShowCreateDateInput = GetAttributeValue( "AllowBackdatedNotes" ).AsBoolean(),
-                        NoteViewLavaTemplate = GetAttributeValue( "NoteViewLavaTemplate" ),
-                        DisplayNoteTypeHeading = GetAttributeValue( "DisplayNoteTypeHeading" ).AsBoolean(),
-                        UsePersonIcon = GetAttributeValue( "UsePersonIcon" ).AsBoolean(),
-                        ExpandReplies = GetAttributeValue( "ExpandReplies" ).AsBoolean()
-                    };
-
-                    noteEditor.SetNoteOptions( noteOptions );
-                    noteEditor.Text = GetAttributeValue( "DefaultNoteText" );
-                    noteEditor.ShowEditMode = true;
-                    noteEditor.EntityId = _entityId;
-                    noteEditor.CssClass = "note-new";
-
-                    noteEditor.CreatedByPersonAlias = RockPage.CurrentPersonAlias;
-                    noteEditor.SaveButtonClick += note_SaveButtonClick;
-                }
-            }
-            else
-            {
-                pnlNoteEntry.Visible = false;
-            }
-        }
-
-        private void ShowPersonInfo()
-        {
-            Template template = Template.Parse( GetAttributeValue( "PersonInfoLavaTemplate" ) );
-            var mergeFields = new Dictionary<string, object>();
-            if ( ppPerson.Visible && _entityId.HasValue )
-            {
-                var person = new PersonService( _rockContext ).Get( _entityId.Value );
-                mergeFields.Add( "Person", person );
-            }
-            else if ( _entityId.HasValue )
-            {
-                var groupMember = new GroupMemberService( _rockContext ).Get( _entityId.Value );
-                mergeFields.Add( "GroupMember", groupMember );
-            }
-            lLavaPersonInfo.Text = template.Render( Hash.FromDictionary( mergeFields ) );
-        }
-
-        /// <summary>
         /// Handles the BlockUpdated event of the Notes control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -208,17 +132,16 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void note_SaveButtonClick( object sender, NoteEventArgs e )
         {
-            noteEditor.Text = string.Empty;
-            noteEditor.IsAlert = false;
-            noteEditor.IsPrivate = false;
-            noteEditor.NoteId = null;
+            //var noteEditor = ( NoteEditor ) notesTimeline.Controls[0];
+            //noteEditor.Text = string.Empty;
+            //noteEditor.IsAlert = false;
+            //noteEditor.IsPrivate = false;
+            //noteEditor.NoteId = null;
+            _noteId = e.NoteId;
+            LaunchWorkflow();
 
             ShowNotes();
         }
-
-        #endregion
-
-        #region Methods
 
         /// <summary>
         /// Handles the SelectPerson event of the Notes control.
@@ -227,8 +150,179 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         public void SelectPerson( object sender, EventArgs e )
         {
-            ShowNotes();
-            ShowPersonInfo();
+            var groupMemberId = gmpGroupMember.SelectedValueAsId();
+            var url = Request.Path;
+            if ( ppPerson.SelectedValue.HasValue )
+            {
+                url += string.Format( "?PersonId={0}", ppPerson.SelectedValue.ToString() );
+            }
+            else if ( groupMemberId.HasValue )
+            {
+                url += string.Format( "?GroupMember={0}", groupMemberId.ToString() );
+            }
+
+            Response.Redirect( url, true );
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        /// <summary>
+        /// Renders the notes.
+        /// </summary>
+        private void ShowNotes()
+        {
+            if ( gmpGroupMember.SelectedValueAsId().HasValue )
+            {
+                _entityId = gmpGroupMember.SelectedValueAsId();
+            }
+            if ( ppPerson.SelectedValue.HasValue )
+            {
+                _entityId = ppPerson.SelectedValue;
+            }
+
+            if ( _entityTypeId.HasValue && _entityId.HasValue )
+            {
+                notesTimeline.Visible = true;
+
+                using ( var rockContext = new RockContext() )
+                {
+                    List<NoteTypeCache> noteTypes = getNoteTypes();
+
+                    NoteOptions noteOptions = new NoteOptions( new NoteContainer() )
+                    {
+                        EntityId = _entityId,
+                        NoteTypes = noteTypes.ToArray(),
+                        NoteLabel = GetAttributeValue( "NoteTerm" ),
+                        DisplayType = GetAttributeValue( "DisplayType" ) == "Light" ? NoteDisplayType.Light : NoteDisplayType.Full,
+                        ShowAlertCheckBox = GetAttributeValue( "ShowAlertCheckbox" ).AsBoolean(),
+                        ShowPrivateCheckBox = GetAttributeValue( "ShowPrivateCheckbox" ).AsBoolean(),
+                        ShowSecurityButton = GetAttributeValue( "ShowSecurityButton" ).AsBoolean(),
+                        AddAlwaysVisible = true,
+                        ShowCreateDateInput = GetAttributeValue( "AllowBackdatedNotes" ).AsBoolean(),
+                        NoteViewLavaTemplate = GetAttributeValue( "NoteViewLavaTemplate" ),
+                        DisplayNoteTypeHeading = GetAttributeValue( "DisplayNoteTypeHeading" ).AsBoolean(),
+                        UsePersonIcon = false,
+                        ExpandReplies = GetAttributeValue( "ExpandReplies" ).AsBoolean()
+                    };
+
+                    notesTimeline.NoteOptions = noteOptions;
+                    notesTimeline.Title = string.Format( "Add a {0}", GetAttributeValue( "NoteTerm" ) );
+                    notesTimeline.TitleIconCssClass = "fa fa-sticky-note";
+                    notesTimeline.AllowAnonymousEntry = false;
+                    notesTimeline.SortDirection = ListSortDirection.Descending;
+
+                    var noteEditor = ( NoteEditor ) notesTimeline.Controls[0];
+                    noteEditor.Text = GetAttributeValue( "DefaultNoteText" );
+                    noteEditor.CssClass = "note-new-kfs";
+                    noteEditor.SaveButtonClick += note_SaveButtonClick;
+
+                }
+            }
+            else
+            {
+                notesTimeline.Visible = false;
+            }
+        }
+
+        private List<NoteTypeCache> getNoteTypes()
+        {
+            var noteTypes = NoteTypeCache.GetByEntity( _entityTypeId, string.Empty, string.Empty, true );
+
+            // If block is configured to only allow certain note types, limit notes to those types.
+            var configuredPersonNoteTypes = GetAttributeValue( "PersonNoteTypes" ).SplitDelimitedValues().AsGuidList();
+            var configuredGroupMemberNoteTypes = GetAttributeValue( "GroupMemberNoteTypes" ).SplitDelimitedValues().AsGuidList();
+            if ( configuredPersonNoteTypes.Any() || configuredGroupMemberNoteTypes.Any() )
+            {
+                noteTypes = noteTypes.Where( n => configuredPersonNoteTypes.Contains( n.Guid ) || configuredGroupMemberNoteTypes.Contains( n.Guid ) ).ToList();
+            }
+
+            return noteTypes;
+        }
+
+        private void ShowPersonInfo()
+        {
+            var noteTypes = getNoteTypes();
+            Template template = Template.Parse( GetAttributeValue( "PersonInfoLavaTemplate" ) );
+            var mergeFields = new Dictionary<string, object>();
+            if ( ppPerson.Visible && _entityId.HasValue )
+            {
+                var person = new PersonService( _rockContext ).Get( _entityId.Value );
+                mergeFields.Add( "Person", person );
+            }
+            else if ( _entityId.HasValue )
+            {
+                var groupMember = new GroupMemberService( _rockContext ).Get( _entityId.Value );
+                mergeFields.Add( "GroupMember", groupMember );
+            }
+            var notesList = new List<Note>();
+            foreach ( var noteType in noteTypes )
+            {
+                notesList.AddRange( new NoteService( _rockContext ).Get( noteType.Id, _entityId.Value ) );
+            }
+            mergeFields.Add( "Notes", notesList.OrderByDescending( n => n.CreatedDateTime ) );
+            lLavaPersonInfo.Text = template.Render( Hash.FromDictionary( mergeFields ) );
+        }
+
+        public void LaunchWorkflow()
+        {
+            Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
+            if ( workflowTypeGuid.HasValue )
+            {
+                var workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
+                if ( workflowType != null && ( workflowType.IsActive ?? true ) )
+                {
+                    Person person = null;
+                    int? groupMemberId = null;
+                    if ( gmpGroupMember.SelectedValueAsId().HasValue )
+                    {
+                        groupMemberId = gmpGroupMember.SelectedValueAsId();
+                    }
+                    if ( ppPerson.SelectedValue.HasValue )
+                    {
+                        person = new PersonService( _rockContext ).Get( ppPerson.PersonId.Value );
+                    }
+
+                    try
+                    {
+                        var workflowEntity = GetAttributeValue( "WorkflowEntity" );
+
+                        if ( workflowEntity.Equals( "Note" ) && _noteId.HasValue )
+                        {
+                            ConnectionRequest connectionRequest = null;
+                            connectionRequest = new ConnectionRequestService( _rockContext ).Get( _noteId.Value );
+                            if ( connectionRequest != null )
+                            {
+                                var workflow = Workflow.Activate( workflowType, person.FullName );
+                                List<string> workflowErrors;
+                                new WorkflowService( _rockContext ).Process( workflow, connectionRequest, out workflowErrors );
+                            }
+                        }
+                        else if ( workflowEntity.Equals( "GroupMember" ) && groupMemberId.HasValue )
+                        {
+                            GroupMember groupMember = null;
+                            groupMember = new GroupMemberService( _rockContext ).Get( groupMemberId.Value );
+                            if ( groupMember != null )
+                            {
+                                var workflow = Workflow.Activate( workflowType, person.FullName );
+                                List<string> workflowErrors;
+                                new WorkflowService( _rockContext ).Process( workflow, groupMember, out workflowErrors );
+                            }
+                        }
+                        else
+                        {
+                            var workflow = Workflow.Activate( workflowType, person.FullName );
+                            List<string> workflowErrors;
+                            new WorkflowService( _rockContext ).Process( workflow, person, out workflowErrors );
+                        }
+                    }
+                    catch ( Exception ex )
+                    {
+                        ExceptionLogService.LogException( ex, this.Context );
+                    }
+                }
+            }
         }
         #endregion
     }
