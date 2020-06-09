@@ -92,6 +92,7 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
                 ppPerson.Visible = false;
                 gmpGroupMember.GroupId = groupId;
                 gmpGroupMember.AutoPostBack = true;
+                lblPersonInfoHdr.Text = "Select a Group Member";
                 if ( groupMemberId.HasValue )
                 {
                     var groupMember = new GroupMemberService( _rockContext ).Get( groupMemberId.Value );
