@@ -20,13 +20,19 @@
             </div>
         </div>
         <script>
-            $(document).ready(function () {
+
+            (function (Sys) {
+                'use strict';
+                Sys.Application.add_load(inputListener);
+            }(Sys));
+
+            function inputListener() {
                 $('.note-new-kfs textarea').on("input", function () {
                     $(this).css("height", ""); //reset the height
                     $(this).css("height", Math.min($(this).prop('scrollHeight'), 400) + "px");
                 });
                 $('.note-new-kfs textarea').css("height", Math.min($('.note-new-kfs textarea').prop('scrollHeight'), 400) + "px");
-            });
+            }
         </script>
     </ContentTemplate>
 </asp:UpdatePanel>
