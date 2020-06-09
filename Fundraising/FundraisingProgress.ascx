@@ -5,6 +5,7 @@
         <asp:Panel ID="pnlView" runat="server">
             <asp:HiddenField ID="hfGroupId" runat="server" />
             <asp:HiddenField ID="hfGroupMemberId" runat="server" />
+            <asp:HiddenField ID="hfGroupGuid" runat="server" />
             <div class="panel panel-block">
                 <div class="panel-heading" id="divPanelHeading" runat="server">
                     <h1 class="panel-title">

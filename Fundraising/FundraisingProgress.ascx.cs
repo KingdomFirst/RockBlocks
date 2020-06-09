@@ -64,6 +64,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
     [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true, "", 7 )]
     [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true, "", 8 )]
     [BooleanField( "Show Excel Export Button", "Should the Excel Export Button be displayed?", false, "", 9 )]
+    [GroupField( "Show Specific Group", "Should this block show this specified group instead of requiring the GroupId URL parameter? The URL Parameter will still override this setting.", false, "", "", 9 )]
 
     #endregion Block Settings
 
@@ -106,10 +107,11 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 Session["IndividualData"] = null;
                 int? groupId = this.PageParameter( "GroupId" ).AsIntegerOrNull();
                 int? groupMemberId = this.PageParameter( "GroupMemberId" ).AsIntegerOrNull();
+                Guid? groupGuid = GetAttributeValue( "ShowSpecificGroup" ).AsGuidOrNull();
 
-                if ( groupId.HasValue || groupMemberId.HasValue )
+                if ( groupId.HasValue || groupMemberId.HasValue || groupGuid.HasValue )
                 {
-                    ShowView( groupId, groupMemberId );
+                    ShowView( groupId, groupMemberId, groupGuid );
                 }
                 else
                 {
@@ -134,7 +136,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
         /// Shows the view.
         /// </summary>
         /// <param name = "groupId" > The group identifier.</param>
-        protected void ShowView( int? groupId, int? groupMemberId )
+        protected void ShowView( int? groupId, int? groupMemberId, Guid? groupGuid )
         {
             var rockContext = new RockContext();
             Group group = null;
@@ -144,10 +146,15 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
             pnlView.Visible = true;
             hfGroupId.Value = groupId.ToStringSafe();
             hfGroupMemberId.Value = groupMemberId.ToStringSafe();
+            hfGroupGuid.Value = groupGuid.ToStringSafe();
 
             if ( groupId.HasValue )
             {
                 group = new GroupService( rockContext ).Get( groupId.Value );
+            }
+            else if ( groupGuid.HasValue )
+            {
+                group = new GroupService( rockContext ).Get( groupGuid.Value );
             }
             else
             {
@@ -365,10 +372,11 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 Response.End();
                 int? groupId = this.PageParameter( "GroupId" ).AsIntegerOrNull();
                 int? groupMemberId = this.PageParameter( "GroupMemberId" ).AsIntegerOrNull();
+                Guid? groupGuid = GetAttributeValue( "ShowSpecificGroup" ).AsGuidOrNull();
 
-                if ( groupId.HasValue || groupMemberId.HasValue )
+                if ( groupId.HasValue || groupMemberId.HasValue || groupGuid.HasValue )
                 {
-                    ShowView( groupId, groupMemberId );
+                    ShowView( groupId, groupMemberId, groupGuid );
                 }
             }
         }
@@ -384,7 +392,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
-            ShowView( hfGroupId.Value.AsIntegerOrNull(), hfGroupMemberId.Value.AsIntegerOrNull() );
+            ShowView( hfGroupId.Value.AsIntegerOrNull(), hfGroupMemberId.Value.AsIntegerOrNull(), hfGroupGuid.Value.AsGuidOrNull() );
         }
 
         /// <summary>
