@@ -9,6 +9,9 @@ This block is intended for use within the Rock internal pages to focus on contac
 
 ![image-20200609144629605](..\.screenshots\crm_personContactNotes_SelectPerson.png)
 
+**Select a Group Member:**
+![image-20200609150624220](..\.screenshots\crm_personContactNotes_SelectGroupMember.png)
+
 
 **Person Contact Note Entry:**
 ![image-20200609144819732](..\.screenshots\crm_personContactNotes_AddNote.png)

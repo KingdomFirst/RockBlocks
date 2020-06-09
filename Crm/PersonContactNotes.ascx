@@ -6,7 +6,7 @@
             <div class="col-md-4">
                 <asp:Panel ID="pnlSelectPerson" CssClass="panel panel-block" runat="server">
                     <div class="panel-heading">
-                        <h1 class="panel-title"><i class="fa fa-user"></i>Select a Person</h1>
+                        <h1 class="panel-title"><i class="fa fa-user"></i> <asp:Label runat="server" ID="lblPersonInfoHdr" Text="Select a Person"></asp:Label></h1>
                     </div>
                     <div class="panel-body">
                         <Rock:PersonPicker ID="ppPerson" runat="server" OnSelectPerson="SelectPerson" />
