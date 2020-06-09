@@ -25,10 +25,22 @@
         <p class="margin-t-sm">
             <small><a href="/person/{{ Person.Id }}" class="cursor-pointer" onclick="javascript: window.open('/person/{{ Person.Id }}', '_blank', 'scrollbars=1,resizable=1,toolbar=1'); return false;" data-toggle="tooltip" title="View Profile" tabindex="-1">View Profile</a></small>
         </p>
+    {%- assign lastContactNote = Notes | First -%}
+    {%- if lastContactNote and lastContactNote != empty -%}
+        <p class="margin-t-sm">
+            <strong>Last Contact Date:</strong> {{ lastContactNote.CreatedDateTime }}<br>
+            <strong>Last Contact Person:</strong> {{ lastContactNote.CreatedByPersonName }}
+        </p>
+    {%- endif -%}
+    {%- assign lastVolunteered = Person | LastAttendedGroupOfType:"23" -%}
+    {%- if lastVolunteered and lastVolunteered != empty -%}
+        <p class="margin-t-sm">
+            <strong>Last Volunteer Date:</strong> {{ lastVolunteered.StartDateTime | Date:'M/d/yyy' }}
+        </p>
+    {%- endif -%}
         </div>
     </div>
 {% endif %}
 {% if GroupMember %}
     <!-- GroupMember Specific Lava Values -->
 {% endif %}
-{{ 'Lava' | Debug }}

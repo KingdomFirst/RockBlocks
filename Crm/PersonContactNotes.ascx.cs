@@ -41,20 +41,22 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
     #region Block Settings
 
     [TextField( "Note Term", "The term to use for note (i.e. 'Note', 'Comment').", false, "Note", "", 1 )]
-    [CustomDropdownListField( "Display Type", "The format to use for displaying notes.", "Full,Light", true, "Full", "", 2 )]
-    [BooleanField( "Show Alert Checkbox", "", true, "", 3 )]
-    [BooleanField( "Show Private Checkbox", "", true, "", 4 )]
-    [BooleanField( "Show Security Button", "", true, "", 5 )]
-    [BooleanField( "Allow Backdated Notes", "", false, "", 6 )]
+    [CustomDropdownListField( "Display Type", "The format to use for displaying notes.", "Full,Light", true, "Full", "Notes Column", 2 )]
+    [BooleanField( "Show Alert Checkbox", "", true, "Notes Column", 3 )]
+    [BooleanField( "Show Private Checkbox", "", true, "Notes Column", 4 )]
+    [BooleanField( "Show Security Button", "", true, "Notes Column", 5 )]
+    [BooleanField( "Allow Backdated Notes", "", false, "Notes Column", 6 )]
     [NoteTypeField( "Person Note Types", "Optional list of person note types to limit display to", true, "Rock.Model.Person", "", "", false, "", "", 7 )]
     [NoteTypeField( "Group Member Note Types", "Optional list of group member note types to limit display to", true, "Rock.Model.GroupMember", "", "", false, "", "", 8 )]
-    [BooleanField( "Display Note Type Heading", "Should each note's Note Type be displayed as a heading above each note?", false, "", 9 )]
-    [BooleanField( "Expand Replies", "Should replies be automatically expanded?", false, "", 10 )]
-    [CodeEditorField( "Note View Lava Template", "The Lava Template to use when rendering the view of the notes.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false, @"{% include '~~/Assets/Lava/NoteViewList.lava' %}", order: 11 )]
-    [MemoField( "Default Note Text", "Enter default note text such as pre-filled questions here.", false, "", "", 12 )]
-    [CodeEditorField( "Person Info Lava Template", "The Lava Template to use when rendering the person that was selected.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false, @"{% include '~/Plugins/rocks_kfs/crm/Lava/PersonInfo.lava' %}", order: 11 )]
-    [WorkflowTypeField( "Workflow", "Workflow to initiate after contact note is entered.", false, false, "", "", 14 )]
-    [CustomDropdownListField( "Workflow Entity", "", "Person,Note,GroupMember", true, "Person", "", 15 )]
+    [BooleanField( "Display Note Type Heading", "Should each note's Note Type be displayed as a heading above each note?", false, "Notes Column", 9 )]
+    [BooleanField( "Expand Replies", "Should replies be automatically expanded?", false, "Notes Column", 10 )]
+    [CodeEditorField( "Note View Lava Template", "The Lava Template to use when rendering the view of the notes.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false, @"{% include '~~/Assets/Lava/NoteViewList.lava' %}", "Notes Column", 11 )]
+    [MemoField( "Default Note Text", "Enter default note text such as pre-filled questions here.", false, "", "Notes Column", 12 )]
+    [CodeEditorField( "Person Info Lava Template", "The Lava Template to use when rendering the person that was selected.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 100, false, @"{% include '~/Plugins/rocks_kfs/crm/Lava/PersonInfo.lava' %}", "Person Info", 13 )]
+    [LavaCommandsField( "Enabled Lava Commands", "The Lava commands that should be enabled for the Person Info block.", false, "", "Person Info", 14 )]
+    [WorkflowTypeField( "Workflow", "Workflow to initiate after contact note is entered.", false, false, "", "", 15 )]
+    [CustomDropdownListField( "Workflow Entity", "", "Person,Note,GroupMember", true, "Person", "", 16 )]
+    [BooleanField( "Start new search after adding a note", "Should each time you add/save a note the page restart from the person picker?", false, "", 17, "StartNewSearch" )]
     #endregion
     public partial class Notes : RockBlock
     {
@@ -140,7 +142,14 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
             _noteId = e.NoteId;
             LaunchWorkflow();
 
-            ShowNotes();
+            if ( GetAttributeValue( "StartNewSearch" ).AsBoolean() )
+            {
+                Response.Redirect( Request.Path );
+            }
+            else
+            {
+                ShowNotes();
+            }
         }
 
         /// <summary>
@@ -244,25 +253,29 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
         private void ShowPersonInfo()
         {
             var noteTypes = getNoteTypes();
-            Template template = Template.Parse( GetAttributeValue( "PersonInfoLavaTemplate" ) );
-            var mergeFields = new Dictionary<string, object>();
-            if ( ppPerson.Visible && _entityId.HasValue )
+            var template = GetAttributeValue( "PersonInfoLavaTemplate" );
+            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
+            mergeFields.Add( "CurrentPage", this.PageCache );
+            if ( _entityId.HasValue )
             {
-                var person = new PersonService( _rockContext ).Get( _entityId.Value );
-                mergeFields.Add( "Person", person );
+                if ( ppPerson.Visible )
+                {
+                    var person = new PersonService( _rockContext ).Get( _entityId.Value );
+                    mergeFields.Add( "Person", person );
+                }
+                else
+                {
+                    var groupMember = new GroupMemberService( _rockContext ).Get( _entityId.Value );
+                    mergeFields.Add( "GroupMember", groupMember );
+                }
+                var notesList = new List<Note>();
+                foreach ( var noteType in noteTypes )
+                {
+                    notesList.AddRange( new NoteService( _rockContext ).Get( noteType.Id, _entityId.Value ) );
+                }
+                mergeFields.Add( "Notes", notesList.OrderByDescending( n => n.CreatedDateTime ) );
             }
-            else if ( _entityId.HasValue )
-            {
-                var groupMember = new GroupMemberService( _rockContext ).Get( _entityId.Value );
-                mergeFields.Add( "GroupMember", groupMember );
-            }
-            var notesList = new List<Note>();
-            foreach ( var noteType in noteTypes )
-            {
-                notesList.AddRange( new NoteService( _rockContext ).Get( noteType.Id, _entityId.Value ) );
-            }
-            mergeFields.Add( "Notes", notesList.OrderByDescending( n => n.CreatedDateTime ) );
-            lLavaPersonInfo.Text = template.Render( Hash.FromDictionary( mergeFields ) );
+            lLavaPersonInfo.Text = template.ResolveMergeFields( mergeFields, GetAttributeValue( "EnabledLavaCommands" ) );
         }
 
         public void LaunchWorkflow()
@@ -275,9 +288,15 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
                 {
                     Person person = null;
                     int? groupMemberId = null;
+                    GroupMember groupMember = null;
                     if ( gmpGroupMember.SelectedValueAsId().HasValue )
                     {
                         groupMemberId = gmpGroupMember.SelectedValueAsId();
+                        if ( groupMemberId.HasValue )
+                        {
+                            groupMember = new GroupMemberService( _rockContext ).Get( groupMemberId.Value );
+                            person = groupMember.Person;
+                        }
                     }
                     if ( ppPerson.SelectedValue.HasValue )
                     {
@@ -290,25 +309,19 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
 
                         if ( workflowEntity.Equals( "Note" ) && _noteId.HasValue )
                         {
-                            ConnectionRequest connectionRequest = null;
-                            connectionRequest = new ConnectionRequestService( _rockContext ).Get( _noteId.Value );
-                            if ( connectionRequest != null )
+                            var noteRequest = new NoteService( _rockContext ).Get( _noteId.Value );
+                            if ( noteRequest != null )
                             {
                                 var workflow = Workflow.Activate( workflowType, person.FullName );
                                 List<string> workflowErrors;
-                                new WorkflowService( _rockContext ).Process( workflow, connectionRequest, out workflowErrors );
+                                new WorkflowService( _rockContext ).Process( workflow, noteRequest, out workflowErrors );
                             }
                         }
-                        else if ( workflowEntity.Equals( "GroupMember" ) && groupMemberId.HasValue )
+                        else if ( workflowEntity.Equals( "GroupMember" ) && groupMemberId.HasValue && groupMember != null )
                         {
-                            GroupMember groupMember = null;
-                            groupMember = new GroupMemberService( _rockContext ).Get( groupMemberId.Value );
-                            if ( groupMember != null )
-                            {
-                                var workflow = Workflow.Activate( workflowType, person.FullName );
-                                List<string> workflowErrors;
-                                new WorkflowService( _rockContext ).Process( workflow, groupMember, out workflowErrors );
-                            }
+                            var workflow = Workflow.Activate( workflowType, person.FullName );
+                            List<string> workflowErrors;
+                            new WorkflowService( _rockContext ).Process( workflow, groupMember, out workflowErrors );
                         }
                         else
                         {
