@@ -125,6 +125,7 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         private void Notes_BlockUpdated( object sender, EventArgs e )
         {
+            ShowPersonInfo();
             ShowNotes();
         }
 
@@ -149,6 +150,7 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
             }
             else
             {
+                ShowPersonInfo();
                 ShowNotes();
             }
         }
