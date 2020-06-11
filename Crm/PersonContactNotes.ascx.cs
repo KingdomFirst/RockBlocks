@@ -136,11 +136,6 @@ namespace RockWeb.Plugins.kfs_rocks.Crm
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void note_SaveButtonClick( object sender, NoteEventArgs e )
         {
-            //var noteEditor = ( NoteEditor ) notesTimeline.Controls[0];
-            //noteEditor.Text = string.Empty;
-            //noteEditor.IsAlert = false;
-            //noteEditor.IsPrivate = false;
-            //noteEditor.NoteId = null;
             _noteId = e.NoteId;
             LaunchWorkflow();
 
