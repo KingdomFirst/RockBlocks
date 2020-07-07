@@ -64,7 +64,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
     [BooleanField( "Show Group Member Goal Amounts", "Should group member goal amounts be displayed?", true, "", 7 )]
     [BooleanField( "Show Group Member Goal Progress Bars", "Should group member goal progress bars be displayed?", true, "", 8 )]
     [BooleanField( "Show Excel Export Button", "Should the Excel Export Button be displayed?", false, "", 9 )]
-    [GroupField( "Show Specific Group", "Should this block show this specified group instead of requiring the GroupId URL parameter? The URL Parameter will still override this setting.", false, "", "", 9 )]
+    [GroupField( "Show Specific Group", "Should this block show this specified group instead of requiring the GroupId URL parameter? The URL Parameter will still override this setting.", false, "", "", 10 )]
 
     #endregion Block Settings
 
