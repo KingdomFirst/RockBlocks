@@ -26,7 +26,36 @@
                         </div>
                     </div>
                 </asp:Panel>
+                <asp:Literal ID="lView" runat="server"></asp:Literal>
+                <div class="actions">
+                    <asp:LinkButton ID="btnEdit" runat="server" CssClass="btn btn-primary" OnClick="btnEdit_Click">Edit</asp:LinkButton>
+                </div>
             </div>
+        </asp:Panel>
+        <asp:Panel ID="pnlGridWrapper" runat="server" CssClass="panel panel-block">
+
+            <div class="panel-heading clearfix">
+                <h1 class="panel-title pull-left">
+                    <i class="fa fa-users"></i>&nbsp;<asp:Literal ID="lHeading" runat="server" Text="Linked Groups" />
+                </h1>
+            </div>
+
+            <div class="panel-body">
+
+                <div class="grid grid-panel">
+                    <Rock:NotificationBox ID="nbLinkedGroups" runat="server" NotificationBoxType="Danger" Dismissable="true" Visible="false" />
+                    <Rock:Grid ID="gEBLinkedGroups" runat="server" AllowSorting="true" DisplayType="Full" RowItemText="Group" DataKeyNames="RockGroupId" OnRowDataBound="gEBLinkedGroups_RowDataBound">
+                        <Columns>
+                            <asp:HyperLinkField DataNavigateUrlFields="PersonId" DataTextField="Person" Visible="false" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
+                            <Rock:RockBoundField DataField="RockGroupName" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
+                            <Rock:RockBoundField DataField="EventbriteEventName" HeaderText="Eventbrite Event Name" SortExpression="EventbriteEventName"  />
+                            <Rock:DateField DataField="LastSynced" DataFormatString="{0:d} {0:t}" HeaderText="Last Synced" SortExpression="LastSynced" />
+                            <Rock:LinkButtonField ID="btnSyncNow" CssClass="btn btn-default btn-sm fa fa-refresh" HeaderText="Sync" OnClick="lbSyncNow_Click"></Rock:LinkButtonField>
+                            <Rock:LinkButtonField ID="btnEditRow" CssClass="btn btn-default btn-sm fa fa-edit" HeaderText="Edit" OnClick="lbEditRow_Click"></Rock:LinkButtonField>
+                            <Rock:DeleteField OnClick="lbDelete_Click"></Rock:DeleteField>
+                        </Columns>
+                    </Rock:Grid>
+                </div>
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>

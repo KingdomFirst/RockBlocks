@@ -15,13 +15,22 @@
 // </copyright>
 //
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq.Dynamic;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using DocumentFormat.OpenXml.Drawing.Charts;
+using EventbriteDotNetFramework;
+using EventbriteDotNetFramework.Entities;
+using Lucene.Net.Analysis.Hunspell;
 using Mono.CSharp;
+using OpenXmlPowerTools;
 using Rock;
+using Rock.Attribute;
 using Rock.Model;
+using Rock.Web;
+using Rock.Web.UI.Controls;
 using rocks.kfs.Eventbrite;
 
 namespace RockWeb.Plugins.rocks_kfs.Eventbrite
@@ -29,6 +38,8 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
     [DisplayName( "Eventbrite Settings" )]
     [Category( "KFS > Eventbrite" )]
     [Description( "Allows you to configure any necessary system settings for Eventbrite integration" )]
+
+    [LinkedPage( "Group Detail", "", true, "", "", 0 )]
 
     public partial class EventbriteSettings : Rock.Web.UI.RockBlock
     {
@@ -71,6 +82,9 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             nbNotification.Visible = false;
             pnlToken.Visible = true;
             HideSecondaryBlocks( true );
+            pnlGridWrapper.Visible = false;
+            lView.Visible = false;
+            btnEdit.Visible = false;
         }
 
         /// <summary>
@@ -98,6 +112,47 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             ShowDetail();
         }
 
+        /// <summary>
+        /// Handles the RowDataBound event of the gOccurrences control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="GridViewRowEventArgs"/> instance containing the event data.</param>
+        protected void gEBLinkedGroups_RowDataBound( object sender, GridViewRowEventArgs e )
+        {
+            if ( e.Row.RowType == DataControlRowType.DataRow || e.Row.RowType == DataControlRowType.Header )
+            {
+                //var ebEvent = e.Row.DataItem as RockEventbriteEvent;
+                var detailPage = GetAttributeValue( "GroupDetail" );
+
+                if ( detailPage.IsNullOrWhiteSpace() )
+                {
+                    var colIndex = gEBLinkedGroups.GetColumnByHeaderText( "Edit" );
+                    e.Row.Cells[gEBLinkedGroups.GetColumnIndex( colIndex )].Visible = false;
+                }
+            }
+        }
+
+        protected void lbSyncNow_Click( object sender, RowEventArgs e )
+        {
+            var groupId = e.RowKeyValue.ToString().AsInteger();
+            rocks.kfs.Eventbrite.Eventbrite.SyncEvent( groupId );
+            ShowDetail();
+        }
+        protected void lbEditRow_Click( object sender, RowEventArgs e )
+        {
+            var groupId = e.RowKeyValue.ToString().AsInteger();
+            var qryParams = new Dictionary<string, string> {
+                { "GroupId", groupId.ToString() }
+            };
+            NavigateToLinkedPage( "GroupDetail", qryParams );
+        }
+        protected void lbDelete_Click( object sender, RowEventArgs e )
+        {
+            var groupId = e.RowKeyValue.ToString().AsInteger();
+            rocks.kfs.Eventbrite.Eventbrite.UnlinkEvents( groupId );
+            ShowDetail();
+        }
+
         #endregion
 
         #region Internal Methods
@@ -113,7 +168,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             {
                 pnlToken.Visible = true;
                 HideSecondaryBlocks( true );
-
+                pnlGridWrapper.Visible = false;
             }
             else
             {
@@ -130,10 +185,17 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                     lblLoginStatus.CssClass = "pull-right label label-danger";
                     tbOAuthToken.Text = "";
                 }
-                //lView.Text = new DescriptionList()
-                //    .Add( "Private Token", accessToken )
-                //    .Html;
-                pnlToken.Visible = true;
+                lView.Text = new DescriptionList()
+                    .Add( "Private Token", _accessToken )
+                    .Add( "Organization", Settings.GetOrganizationId() )
+                    .Html;
+                pnlToken.Visible = false;
+                nbNotification.Visible = false;
+                pnlGridWrapper.Visible = true;
+                lView.Visible = true;
+                btnEdit.Visible = true;
+                gEBLinkedGroups.DataSource = new EventbriteEvents().Events();
+                gEBLinkedGroups.DataBind();
             }
         }
 
