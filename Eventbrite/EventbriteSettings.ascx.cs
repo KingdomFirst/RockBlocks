@@ -89,6 +89,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             pnlGridWrapper.Visible = false;
             lView.Visible = false;
             btnEdit.Visible = false;
+            pnlCreateGroupFromEventbrite.Visible = false;
         }
 
         /// <summary>
@@ -180,9 +181,8 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                         {
                             IsActive = true,
                             CreatedByPersonAliasId = CurrentPersonAlias.Id,
-                            CreatedDateTime = DateTime.Now,
+                            CreatedDateTime = RockDateTime.Now,
                             Description = EbEvent.Description.Text != null ? EbEvent.Description.Text : "",
-                            Schedule = new Schedule { EffectiveStartDate = EbEvent.Start.Local, EffectiveEndDate = EbEvent.End.Local, IsActive = true },
                             Name = string.Format( "{0} - {1}", EbEvent.Name.Text.ToString(), EbEvent.Start.Local ),
                             ParentGroupId = parentGroup.Id,
                             GroupTypeId = groupType.Id
