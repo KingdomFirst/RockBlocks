@@ -48,7 +48,7 @@
                         <Columns>
                             <asp:HyperLinkField DataNavigateUrlFields="PersonId" DataTextField="Person" Visible="false" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
                             <Rock:RockBoundField DataField="RockGroupName" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
-                            <Rock:RockBoundField DataField="EventbriteEventName" HeaderText="Eventbrite Event Name" SortExpression="EventbriteEventName"  />
+                            <Rock:RockBoundField DataField="EventbriteEventName" HeaderText="Eventbrite Event Name" SortExpression="EventbriteEventName" />
                             <Rock:DateField DataField="LastSynced" DataFormatString="{0:d} {0:t}" HeaderText="Last Synced" SortExpression="LastSynced" />
                             <Rock:LinkButtonField ID="btnSyncNow" CssClass="btn btn-default btn-sm fa fa-refresh" HeaderText="Sync" OnClick="lbSyncNow_Click"></Rock:LinkButtonField>
                             <Rock:LinkButtonField ID="btnEditRow" CssClass="btn btn-default btn-sm fa fa-edit" HeaderText="Edit" OnClick="lbEditRow_Click"></Rock:LinkButtonField>
@@ -56,6 +56,25 @@
                         </Columns>
                     </Rock:Grid>
                 </div>
+            </div>
         </asp:Panel>
+
+        <asp:Panel ID="pnlCreateGroupFromEventbrite" runat="server" CssClass="panel panel-block">
+            <div class="panel-heading clearfix">
+                <h1 class="panel-title pull-left">Create new Rock Group from existing Eventbrite Event</h1>
+            </div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <Rock:RockDropDownList runat="server" ID="ddlEventbriteEvents"></Rock:RockDropDownList>
+                        <Rock:NotificationBox ID="nbLinkNew" runat="server" NotificationBoxType="Danger" Dismissable="true" Visible="false" />
+                    </div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <asp:LinkButton CssClass="btn btn-primary btn-sm" runat="server" ID="lbCreateNewRockGroup" OnClick="lbCreateNewRockGroup_Click" Text="Create New Rock Group"></asp:LinkButton>
+            </div>
+        </asp:Panel>
+
     </ContentTemplate>
 </asp:UpdatePanel>
