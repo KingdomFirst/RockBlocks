@@ -2,17 +2,11 @@
 
 <asp:UpdatePanel runat="server" ID="upnlEventbriteButtons">
     <ContentTemplate>
-        <asp:Panel runat="server" ID="pnlEventbriteButtons" CssClass="row" Visible="false">
+        <asp:Panel runat="server" ID="pnlEventbriteButtons" CssClass="pull-right" Visible="false">
             <asp:HiddenField ID="hfGroupId" runat="server" />
-            <asp:Panel runat="server" ID="pnlSyncButton" Visible="true" CssClass="col-md-12 pull-right">
-                <p>
-                    &nbsp;<asp:LinkButton runat="server" ID="lbSyncButton" Visible="true" CssClass="btn btn-default btn-sync pull-right" OnClick="lbSyncButton_Click">Eventbrite Sync</asp:LinkButton><br />
-                    &nbsp;
-                </p>
-            </asp:Panel>
-            <div class="clearfix">
-                <br />
-            </div>
+            &nbsp;<asp:LinkButton runat="server" ID="lbSyncButton" Visible="true" CssClass="btn btn-default btn-sync" OnClick="lbSyncButton_Click">Eventbrite Sync Attendees</asp:LinkButton>
+            <asp:LinkButton runat="server" ID="lbUnlink" Visible="true" CssClass="btn btn-default btn-unlink" OnClick="lbUnlink_Click">Unlink Eventbrite Event</asp:LinkButton><br />
+            &nbsp;
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>

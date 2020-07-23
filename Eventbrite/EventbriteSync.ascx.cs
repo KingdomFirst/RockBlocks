@@ -17,7 +17,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 
 using Rock;
 using Rock.Data;
@@ -63,7 +62,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             if ( !Page.IsPostBack )
             {
                 string groupId = PageParameter( "GroupId" );
-                if ( !string.IsNullOrWhiteSpace( groupId ) )
+                if ( !string.IsNullOrWhiteSpace( groupId ) && rocks.kfs.Eventbrite.Eventbrite.EBUsageCheck( groupId.AsInteger() ) )
                 {
                     ShowPanels( groupId.AsInteger() );
                 }
@@ -82,7 +81,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
             string groupId = PageParameter( "GroupId" );
-            if ( !string.IsNullOrWhiteSpace( groupId ) )
+            if ( !string.IsNullOrWhiteSpace( groupId ) && rocks.kfs.Eventbrite.Eventbrite.EBUsageCheck( groupId.AsInteger() ) )
             {
                 ShowPanels( groupId.AsInteger() );
             }
@@ -128,7 +127,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         }
 
         /// <summary>
-        /// Handles the Click event of the btnSync control.
+        /// Handles the Click event of the lbSyncButton control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
@@ -137,6 +136,22 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             int groupId = hfGroupId.ValueAsInt();
 
             rocks.kfs.Eventbrite.Eventbrite.SyncEvent( groupId );
+
+            NavigateToCurrentPage( new Dictionary<string, string> { { "GroupId", groupId.ToString() } } );
+        }
+
+        /// <summary>
+        /// Handles the Click event of the lbUnlink control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void lbUnlink_Click( object sender, EventArgs e )
+        {
+            int groupId = hfGroupId.ValueAsInt();
+
+            rocks.kfs.Eventbrite.Eventbrite.UnlinkEvents( groupId );
+
+            NavigateToCurrentPage( new Dictionary<string, string> { { "GroupId", groupId.ToString() } } );
         }
 
         /// <summary>
@@ -145,7 +160,15 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         /// <param name="visible">if set to <c>true</c> [visible].</param>
         public void SetVisible( bool visible )
         {
-            pnlEventbriteButtons.Visible = visible;
+            string groupId = PageParameter( "GroupId" );
+            if ( !visible )
+            {
+                pnlEventbriteButtons.Visible = visible;
+            }
+            else if ( !string.IsNullOrWhiteSpace( groupId ) && rocks.kfs.Eventbrite.Eventbrite.EBUsageCheck( groupId.AsInteger() ) )
+            {
+                pnlEventbriteButtons.Visible = visible;
+            }
         }
     }
 }

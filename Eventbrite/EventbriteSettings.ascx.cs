@@ -28,8 +28,10 @@ using Mono.CSharp;
 using OpenXmlPowerTools;
 using Rock;
 using Rock.Attribute;
+using Rock.Data;
 using Rock.Model;
 using Rock.Web;
+using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 using rocks.kfs.Eventbrite;
 
@@ -40,6 +42,8 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
     [Description( "Allows you to configure any necessary system settings for Eventbrite integration" )]
 
     [LinkedPage( "Group Detail", "", true, "", "", 0 )]
+    [GroupField( "New Group Parent", "Where new groups, if created, will be placed under.", false )]
+    [GroupTypeField( "New Group Type", "Group type to be used when creating new groups", false )]
 
     public partial class EventbriteSettings : Rock.Web.UI.RockBlock
     {
@@ -153,6 +157,60 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             ShowDetail();
         }
 
+        protected void lbCreateNewRockGroup_Click( object sender, EventArgs e )
+        {
+            var eb = rocks.kfs.Eventbrite.Eventbrite.Api( Settings.GetAccessToken() );
+            var ebUser = eb.GetUser();
+            var ebEventToCreate = new long();
+            long.TryParse( ddlEventbriteEvents.SelectedValue, out ebEventToCreate );
+            var EbEvent = eb.GetEventById( ebEventToCreate );
+            var parentGroupGuid = GetAttributeValue( "NewGroupParent" ).AsGuidOrNull();
+            var groupTypeGuid = GetAttributeValue( "NewGroupType" ).AsGuidOrNull();
+            Group newGroup = null;
+            if ( parentGroupGuid.HasValue && groupTypeGuid.HasValue )
+            {
+                using ( var rockContext = new RockContext() )
+                {
+                    var groupService = new GroupService( rockContext );
+                    var groupType = GroupTypeCache.Get( groupTypeGuid.Value, rockContext );
+                    var parentGroup = groupService.Get( parentGroupGuid.Value );
+                    if ( groupType != null && parentGroup != null )
+                    {
+                        newGroup = new Group
+                        {
+                            IsActive = true,
+                            CreatedByPersonAliasId = CurrentPersonAlias.Id,
+                            CreatedDateTime = DateTime.Now,
+                            Description = EbEvent.Description.Text != null ? EbEvent.Description.Text : "",
+                            Schedule = new Schedule { EffectiveStartDate = EbEvent.Start.Local, EffectiveEndDate = EbEvent.End.Local, IsActive = true },
+                            Name = string.Format( "{0} - {1}", EbEvent.Name.Text.ToString(), EbEvent.Start.Local ),
+                            ParentGroupId = parentGroup.Id,
+                            GroupTypeId = groupType.Id
+                        };
+                        groupService.Add( newGroup );
+                        rockContext.SaveChanges();
+                    }
+                }
+            }
+            var linked = false;
+            if ( newGroup != null )
+            {
+                linked = rocks.kfs.Eventbrite.Eventbrite.LinkEvents( newGroup.Id, EbEvent.Id );
+            }
+
+            if ( linked )
+            {
+                Response.Redirect( Request.RawUrl );
+            }
+            else
+            {
+                nbLinkNew.Text = "Failed to link new group. You must manually associate group or try again.";
+                nbLinkNew.Visible = true;
+            }
+        }
+
+
+
         #endregion
 
         #region Internal Methods
@@ -169,6 +227,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 pnlToken.Visible = true;
                 HideSecondaryBlocks( true );
                 pnlGridWrapper.Visible = false;
+                pnlCreateGroupFromEventbrite.Visible = false;
             }
             else
             {
@@ -196,6 +255,21 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 btnEdit.Visible = true;
                 gEBLinkedGroups.DataSource = new EventbriteEvents().Events();
                 gEBLinkedGroups.DataBind();
+
+                var parentGroupGuid = GetAttributeValue( "NewGroupParent" ).AsGuidOrNull();
+                var groupTypeGuid = GetAttributeValue( "NewGroupType" ).AsGuidOrNull();
+
+                if ( parentGroupGuid.HasValue && groupTypeGuid.HasValue )
+                {
+                    foreach ( var evnt in rocks.kfs.Eventbrite.Eventbrite.Api( _accessToken ).GetOrganizationEvents().Events )
+                    {
+                        ddlEventbriteEvents.Items.Add( new ListItem( string.Format( "{0} - {1} ({2})", evnt.Name.Text.ToString(), evnt.Start.Local, evnt.Status ), evnt.Id.ToString() ) );
+                    }
+                }
+                else
+                {
+                    pnlCreateGroupFromEventbrite.Visible = false;
+                }
             }
         }
 
