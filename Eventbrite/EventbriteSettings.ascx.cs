@@ -42,8 +42,8 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
     [Description( "Allows you to configure any necessary system settings for Eventbrite integration" )]
 
     [LinkedPage( "Group Detail", "", true, "", "", 0 )]
-    [GroupField( "New Group Parent", "Where new groups, if created, will be placed under.", false )]
-    [GroupTypeField( "New Group Type", "Group type to be used when creating new groups", false )]
+    [GroupField( "New Group Parent", "Where new groups, if created, will be placed under. This parent group's group type must allow children of the 'New Group Type' setting below.", false )]
+    [GroupTypeField( "New Group Type", "Group type to be used when creating new groups.", false )]
 
     public partial class EventbriteSettings : Rock.Web.UI.RockBlock
     {
@@ -209,7 +209,11 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             }
         }
 
-
+        protected void tbToken_TextChanged( object sender, EventArgs e )
+        {
+            _accessToken = tbOAuthToken.Text;
+            loadOrganizations();
+        }
 
         #endregion
 
@@ -228,6 +232,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 HideSecondaryBlocks( true );
                 pnlGridWrapper.Visible = false;
                 pnlCreateGroupFromEventbrite.Visible = false;
+                btnEdit.Visible = false;
             }
             else
             {
@@ -268,7 +273,11 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 }
                 else
                 {
-                    pnlCreateGroupFromEventbrite.Visible = false;
+                    ddlEventbriteEvents.Visible = false;
+                    lbCreateNewRockGroup.Visible = false;
+                    nbLinkNew.Text = "Set the 'New Group Parent' and 'New Group Type' settings if you wish to use this feature.";
+                    nbLinkNew.NotificationBoxType = NotificationBoxType.Info;
+                    nbLinkNew.Visible = true;
                 }
             }
         }

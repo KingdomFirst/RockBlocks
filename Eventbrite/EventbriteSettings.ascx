@@ -5,7 +5,7 @@
         <asp:Panel ID="pnlWrapper" runat="server" CssClass="panel panel-block">
             <div class="panel-heading">
                 <h1 class="panel-title"><i class="fa fa-calendar-alt"></i>Eventbrite Settings</h1>
-                <asp:Label ID="lblLoginStatus" runat="server" CssClass="pull-right label label-danger" Text="Not Authenticiated"></asp:Label>
+                <asp:Label ID="lblLoginStatus" runat="server" CssClass="pull-right label label-danger" Text="Not Authenticated"></asp:Label>
             </div>
             <div class="panel-body">
                 <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-danger" />
@@ -16,7 +16,7 @@
                         <div class="col-md-12">
                             <div class="row">
                                 <div class="col-md-12">
-                                    <Rock:RockTextBox ID="tbOAuthToken" runat="server" Label="Private Token" Required="true" RequiredErrorMessage="An Eventbrite OAuth Key is Required" Help="The Eventbrite OAuth token is generated from this page https://www.eventbrite.com/platform/api-keys." />
+                                    <Rock:RockTextBox ID="tbOAuthToken" runat="server" Label="Private Token" Required="true" RequiredErrorMessage="An Eventbrite OAuth Key is Required" Help="The Eventbrite OAuth token is generated from this page https://www.eventbrite.com/platform/api-keys." OnTextChanged="tbToken_TextChanged" AutoPostBack="true" />
                                     <Rock:RockDropDownList ID="ddlOrganization" runat="server" Label="Organization" Required="true" RequiredErrorMessage="You must select an organization to complete the Eventbrite setup." />
                                     <div class="actions">
                                         <asp:LinkButton ID="btnSave" runat="server" CssClass="btn btn-primary" OnClick="btnSave_Click">Save</asp:LinkButton>
