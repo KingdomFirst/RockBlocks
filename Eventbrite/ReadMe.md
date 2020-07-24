@@ -1,6 +1,6 @@
 ## KFS Eventbrite Integration
 
-*Tested/Supported in Rock version: 10.2*
+*Tested/Supported in Rock version: 10.2*   
 *Released: 7/28/2020*
 
 This is a new set of Rock Blocks to go with our Eventbrite assembly. Our Eventbrite integration will allow you to synchronize groups with Eventbrite events. For the primary purpose of communication and pulling in new records from your Eventbrite events. This integration also allows you to use Eventbrite check-in and will pull the corresponding attendance into the linked Rock group.
