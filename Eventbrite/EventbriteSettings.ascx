@@ -20,6 +20,7 @@
                                     <Rock:RockDropDownList ID="ddlOrganization" runat="server" Label="Organization" Required="true" RequiredErrorMessage="You must select an organization to complete the Eventbrite setup." />
                                     <div class="actions">
                                         <asp:LinkButton ID="btnSave" runat="server" CssClass="btn btn-primary" OnClick="btnSave_Click">Save</asp:LinkButton>
+                                        <asp:LinkButton ID="btnCancel" runat="server" CssClass="btn btn-default" OnClick="btnCancel_Click">Cancel</asp:LinkButton>
                                     </div>
                                 </div>
                             </div>
@@ -44,7 +45,7 @@
 
                 <div class="grid grid-panel">
                     <Rock:NotificationBox ID="nbLinkedGroups" runat="server" NotificationBoxType="Danger" Dismissable="true" Visible="false" />
-                    <Rock:Grid ID="gEBLinkedGroups" runat="server" AllowSorting="true" DisplayType="Full" RowItemText="Group" DataKeyNames="RockGroupId" OnRowDataBound="gEBLinkedGroups_RowDataBound">
+                    <Rock:Grid ID="gEBLinkedGroups" runat="server" AllowSorting="true" DisplayType="Full" RowItemText="Group Link" DataKeyNames="RockGroupId" OnRowDataBound="gEBLinkedGroups_RowDataBound">
                         <Columns>
                             <asp:HyperLinkField DataNavigateUrlFields="PersonId" DataTextField="Person" Visible="false" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
                             <Rock:RockBoundField DataField="RockGroupName" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
@@ -52,7 +53,7 @@
                             <Rock:DateField DataField="LastSynced" DataFormatString="{0:d} {0:t}" HeaderText="Last Synced" SortExpression="LastSynced" />
                             <Rock:LinkButtonField ID="btnSyncNow" CssClass="btn btn-default btn-sm fa fa-refresh" HeaderText="Sync" OnClick="lbSyncNow_Click"></Rock:LinkButtonField>
                             <Rock:LinkButtonField ID="btnEditRow" CssClass="btn btn-default btn-sm fa fa-edit" HeaderText="Edit" OnClick="lbEditRow_Click"></Rock:LinkButtonField>
-                            <Rock:DeleteField OnClick="lbDelete_Click"></Rock:DeleteField>
+                            <Rock:DeleteField OnClick="lbDelete_Click" Tooltip="Unlink this group"></Rock:DeleteField>
                         </Columns>
                     </Rock:Grid>
                 </div>

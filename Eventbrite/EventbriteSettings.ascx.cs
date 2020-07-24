@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Linq.Dynamic;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -33,6 +34,7 @@ using Rock.Model;
 using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
+using Rock.Workflow.Action.CheckIn;
 using rocks.kfs.Eventbrite;
 
 namespace RockWeb.Plugins.rocks_kfs.Eventbrite
@@ -44,10 +46,12 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
     [LinkedPage( "Group Detail", "", true, "", "", 0 )]
     [GroupField( "New Group Parent", "Where new groups, if created, will be placed under. This parent group's group type must allow children of the 'New Group Type' setting below.", false )]
     [GroupTypeField( "New Group Type", "Group type to be used when creating new groups.", false )]
+    [CustomCheckboxListField( "New Event Statuses", "Which event statuses from Eventbrite would you like to be available for creating new groups?", "live,completed,draft,canceled,started,ended", false, "live,completed,draft,canceled,started,ended" )]
 
     public partial class EventbriteSettings : Rock.Web.UI.RockBlock
     {
         private string _accessToken = null;
+        private List<RockEventbriteEvent> _groups = null;
         #region Control Methods
 
         /// <summary>
@@ -67,15 +71,29 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         {
             base.OnLoad( e );
 
+            _accessToken = Settings.GetAccessToken();
+
             if ( !Page.IsPostBack )
             {
                 ShowDetail();
+                loadEvents();
             }
         }
 
         #endregion
 
         #region Events
+        /// <summary>
+        /// Handles the BlockUpdated event of the control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void Block_BlockUpdated( object sender, EventArgs e )
+        {
+            ShowDetail();
+            loadEvents();
+        }
+
         /// <summary>
         /// Handles the Click event of the btnEdit control.
         /// </summary>
@@ -90,6 +108,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             lView.Visible = false;
             btnEdit.Visible = false;
             pnlCreateGroupFromEventbrite.Visible = false;
+            loadOrganizations();
         }
 
         /// <summary>
@@ -115,6 +134,21 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             nbNotification.NotificationBoxType = Rock.Web.UI.Controls.NotificationBoxType.Info;
             nbNotification.Dismissable = true;
             ShowDetail();
+            loadEvents();
+        }
+
+        /// <summary>
+        /// Handles the Click event of the btnCancel control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void btnCancel_Click( object sender, EventArgs e )
+        {
+            pnlToken.Visible = false;
+            HideSecondaryBlocks( false );
+            nbNotification.Visible = false;
+            ShowDetail();
+            loadEvents();
         }
 
         /// <summary>
@@ -156,6 +190,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             var groupId = e.RowKeyValue.ToString().AsInteger();
             rocks.kfs.Eventbrite.Eventbrite.UnlinkEvents( groupId );
             ShowDetail();
+            loadEvents();
         }
 
         protected void lbCreateNewRockGroup_Click( object sender, EventArgs e )
@@ -200,7 +235,8 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
 
             if ( linked )
             {
-                Response.Redirect( Request.RawUrl );
+                ShowDetail();
+                loadEvents();
             }
             else
             {
@@ -222,9 +258,8 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         /// <summary>
         /// Shows the detail.
         /// </summary>
-        private void ShowDetail()
+        private void ShowDetail( bool loadGroups = true )
         {
-            _accessToken = Settings.GetAccessToken();
             var isAuthenticated = rocks.kfs.Eventbrite.Eventbrite.EBoAuthCheck();
             if ( _accessToken.IsNullOrWhiteSpace() )
             {
@@ -241,7 +276,6 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 {
                     lblLoginStatus.Text = "Authenticated";
                     lblLoginStatus.CssClass = "pull-right label label-success";
-                    loadOrganizations();
                 }
                 else
                 {
@@ -258,27 +292,12 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 pnlGridWrapper.Visible = true;
                 lView.Visible = true;
                 btnEdit.Visible = true;
-                gEBLinkedGroups.DataSource = new EventbriteEvents().Events();
+                if ( loadGroups )
+                {
+                    _groups = new EventbriteEvents().Events();
+                }
+                gEBLinkedGroups.DataSource = _groups;
                 gEBLinkedGroups.DataBind();
-
-                var parentGroupGuid = GetAttributeValue( "NewGroupParent" ).AsGuidOrNull();
-                var groupTypeGuid = GetAttributeValue( "NewGroupType" ).AsGuidOrNull();
-
-                if ( parentGroupGuid.HasValue && groupTypeGuid.HasValue )
-                {
-                    foreach ( var evnt in rocks.kfs.Eventbrite.Eventbrite.Api( _accessToken ).GetOrganizationEvents().Events )
-                    {
-                        ddlEventbriteEvents.Items.Add( new ListItem( string.Format( "{0} - {1} ({2})", evnt.Name.Text.ToString(), evnt.Start.Local, evnt.Status ), evnt.Id.ToString() ) );
-                    }
-                }
-                else
-                {
-                    ddlEventbriteEvents.Visible = false;
-                    lbCreateNewRockGroup.Visible = false;
-                    nbLinkNew.Text = "Set the 'New Group Parent' and 'New Group Type' settings if you wish to use this feature.";
-                    nbLinkNew.NotificationBoxType = NotificationBoxType.Info;
-                    nbLinkNew.Visible = true;
-                }
             }
         }
 
@@ -303,6 +322,41 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             else
             {
                 ddlOrganization.Visible = false;
+            }
+        }
+        private void loadEvents()
+        {
+            var parentGroupGuid = GetAttributeValue( "NewGroupParent" ).AsGuidOrNull();
+            var groupTypeGuid = GetAttributeValue( "NewGroupType" ).AsGuidOrNull();
+            var newEventStatuses = GetAttributeValue( "NewEventStatuses" ).SplitDelimitedValues( "," ).ToList();
+
+            ddlEventbriteEvents.Items.Clear();
+            if ( parentGroupGuid.HasValue && groupTypeGuid.HasValue )
+            {
+                foreach ( var evnt in rocks.kfs.Eventbrite.Eventbrite.Api( _accessToken ).GetOrganizationEvents().Events.FindAll( e => newEventStatuses.Contains( e.Status ) ) )
+                {
+                    if ( !_groups.Select( g => g.EventbriteEventId ).ToList().Contains( evnt.Id ) )
+                    {
+                        ddlEventbriteEvents.Items.Add( new ListItem( string.Format( "{0} - {1} ({2})", evnt.Name.Text.ToString(), evnt.Start.Local, evnt.Status ), evnt.Id.ToString() ) );
+                    }
+                }
+            }
+            else
+            {
+                ddlEventbriteEvents.Visible = false;
+                lbCreateNewRockGroup.Visible = false;
+                nbLinkNew.Text = "Set the 'New Group Parent' and 'New Group Type' settings if you wish to use this feature.";
+                nbLinkNew.NotificationBoxType = NotificationBoxType.Info;
+                nbLinkNew.Visible = true;
+            }
+            if ( ddlEventbriteEvents.Items.Count == 0 )
+            {
+                ddlEventbriteEvents.Visible = false;
+                nbLinkNew.Text = "There are currently no events available to link.";
+                nbLinkNew.NotificationBoxType = NotificationBoxType.Warning;
+                nbLinkNew.Dismissable = false;
+                nbLinkNew.Visible = true;
+                lbCreateNewRockGroup.Visible = false;
             }
         }
 
