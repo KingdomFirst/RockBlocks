@@ -70,7 +70,8 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
 
             switch ( eventbriteData.Config.Action )
             {
-                case "attendee.updated":
+                case "attendee.checked_in":
+                case "barcode.checked_in":
                     var splitUrl = eventbriteData.Api_Url.SplitDelimitedValues( "/" );
                     // api_url example: https://www.eventbriteapi.com/v3/events/113027799190/attendees/1955015294/
                     // 6th element in array should be event id as long.
@@ -88,32 +89,25 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                         response.Write( "Invalid data received." );
                         response.StatusCode = HttpStatusCode.BadRequest.ConvertToInt();
                     }
-                    if ( splitUrl.Length > 4 && splitUrl[4] == "events" && splitUrl.Length > 5 )
+                    break;
+                case "order.placed":
+                case "order.refunded":
+                    if ( eventbriteData.Api_Url.IsNotNullOrWhiteSpace() )
                     {
-                        var ebEventId = splitUrl[5].AsLongOrNull();
-                        if ( ebEventId.HasValue )
-                        {
-                            var group = rocks.kfs.Eventbrite.Eventbrite.GetGroupByEBEventId( ebEventId.Value );
-                            if ( group != null )
-                            {
-                                var tasks = new[]
-                                {
-                                    System.Threading.Tasks.Task.Run(() => rocks.kfs.Eventbrite.Eventbrite.SyncEvent( group.Id, ThrottleSync: true ))
-                                };
-                            }
-                            response.Write( string.Format( "Eventbrite sync started for group {0}", group.Name ) );
-                        }
-                        else
-                        {
-                            response.Write( string.Format( "Cannot find linked group for event id: {0}", ebEventId.ToString() ) );
-                        }
+                        //var tasks = new[]
+                        //{
+                        //    System.Threading.Tasks.Task.Run(() => rocks.kfs.Eventbrite.Eventbrite.SyncOrder( eventbriteData.Api_Url ))
+                        //};
+                        rocks.kfs.Eventbrite.Eventbrite.SyncOrder( eventbriteData.Api_Url );
+                        response.Write( string.Format( "SyncOrder Ran ({0})", eventbriteData.Api_Url ) );
+                    }
+                    else
+                    {
+                        response.Write( "Invalid data received." );
+                        response.StatusCode = HttpStatusCode.BadRequest.ConvertToInt();
                     }
                     break;
                 case "order.updated":
-                case "order.placed":
-                case "order.refunded":
-                    // do something with orders...
-                    break;
                 case "event.created":
                 case "event.published":
                 case "event.unpublished":
