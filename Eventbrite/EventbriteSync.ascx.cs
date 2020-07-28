@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 
 using Rock;
+using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Security;
@@ -32,6 +33,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
     [Category( "KFS > Eventbrite" )]
     [Description( "Allows a sync button to be placed on any group aware page to be able to sync this group with Eventbrite." )]
 
+    [BooleanField( "Enable Logging", "Enable logging for Eventbrite sync method from this block.", false )]
     #endregion
 
     #region Block Settings
@@ -134,8 +136,9 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         protected void lbSyncButton_Click( object sender, EventArgs e )
         {
             int groupId = hfGroupId.ValueAsInt();
-
-            rocks.kfs.Eventbrite.Eventbrite.SyncEvent( groupId );
+            var enableLogging = GetAttributeValue( "EnableLogging" ).AsBoolean();
+            Server.ScriptTimeout = Server.ScriptTimeout * 2;
+            rocks.kfs.Eventbrite.Eventbrite.SyncEvent( groupId, EnableLogging: enableLogging );
 
             NavigateToCurrentPage( new Dictionary<string, string> { { "GroupId", groupId.ToString() } } );
         }

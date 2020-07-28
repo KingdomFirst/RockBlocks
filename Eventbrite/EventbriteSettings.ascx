@@ -49,7 +49,7 @@
                         <Columns>
                             <asp:HyperLinkField DataNavigateUrlFields="PersonId" DataTextField="Person" Visible="false" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
                             <Rock:RockBoundField DataField="RockGroupName" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
-                            <Rock:RockBoundField DataField="EventbriteEventName" HeaderText="Eventbrite Event Name" SortExpression="EventbriteEventName" />
+                            <Rock:RockBoundField DataField="EventbriteEventId" HeaderText="Eventbrite Event Id" SortExpression="EventbriteEventId" />
                             <Rock:DateField DataField="LastSynced" DataFormatString="{0:d} {0:t}" HeaderText="Last Synced" SortExpression="LastSynced" />
                             <Rock:LinkButtonField ID="btnSyncNow" CssClass="btn btn-default btn-sm fa fa-refresh" HeaderText="Sync" OnClick="lbSyncNow_Click"></Rock:LinkButtonField>
                             <Rock:LinkButtonField ID="btnEditRow" CssClass="btn btn-default btn-sm fa fa-edit" HeaderText="Edit" OnClick="lbEditRow_Click"></Rock:LinkButtonField>

@@ -24,6 +24,7 @@ using System.Web.UI.WebControls;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using EventbriteDotNetFramework;
 using EventbriteDotNetFramework.Entities;
+using EventbriteDotNetFramework.Responses;
 using Lucene.Net.Analysis.Hunspell;
 using Mono.CSharp;
 using OpenXmlPowerTools;
@@ -333,7 +334,18 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             ddlEventbriteEvents.Items.Clear();
             if ( parentGroupGuid.HasValue && groupTypeGuid.HasValue )
             {
-                foreach ( var evnt in rocks.kfs.Eventbrite.Eventbrite.Api( _accessToken ).GetOrganizationEvents().Events.FindAll( e => newEventStatuses.Contains( e.Status ) ) )
+                var eb = rocks.kfs.Eventbrite.Eventbrite.Api( _accessToken );
+                var organizationEvents = eb.GetOrganizationEvents( GetAttributeValue( "NewEventStatuses" ) );
+                if ( organizationEvents.Pagination.Has_More_Items )
+                {
+                    var looper = new OrganizationEventsResponse();
+                    for ( int i = 2; i <= organizationEvents.Pagination.PageCount; i++ )
+                    {
+                        looper = eb.GetOrganizationEvents( i, GetAttributeValue( "NewEventStatuses" ) );
+                        organizationEvents.Events.AddRange( looper.Events );
+                    }
+                }
+                foreach ( var evnt in organizationEvents.Events.FindAll( e => newEventStatuses.Contains( e.Status ) ) )
                 {
                     if ( !_groups.Select( g => g.EventbriteEventId ).ToList().Contains( evnt.Id ) )
                     {
