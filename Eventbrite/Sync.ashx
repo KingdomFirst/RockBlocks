@@ -74,6 +74,20 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                     var splitUrl = eventbriteData.Api_Url.SplitDelimitedValues( "/" );
                     // api_url example: https://www.eventbriteapi.com/v3/events/113027799190/attendees/1955015294/
                     // 6th element in array should be event id as long.
+                    if ( eventbriteData.Api_Url.IsNotNullOrWhiteSpace() )
+                    {
+                        //var tasks = new[]
+                        //{
+                        //    System.Threading.Tasks.Task.Run(() => rocks.kfs.Eventbrite.Eventbrite.SyncAttendee( eventbriteData.Api_Url ))
+                        //};
+                        rocks.kfs.Eventbrite.Eventbrite.SyncAttendee( eventbriteData.Api_Url );
+                        response.Write( string.Format( "SyncAttendee Ran ({0})", eventbriteData.Api_Url ) );
+                    }
+                    else
+                    {
+                        response.Write( "Invalid data received." );
+                        response.StatusCode = HttpStatusCode.BadRequest.ConvertToInt();
+                    }
                     if ( splitUrl.Length > 4 && splitUrl[4] == "events" && splitUrl.Length > 5 )
                     {
                         var ebEventId = splitUrl[5].AsLongOrNull();
@@ -82,19 +96,17 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                             var group = rocks.kfs.Eventbrite.Eventbrite.GetGroupByEBEventId( ebEventId.Value );
                             if ( group != null )
                             {
-                                rocks.kfs.Eventbrite.Eventbrite.SyncEvent( group.Id );
-                                response.Write( string.Format( "Eventbrite sync ran for group {0}", group.Name ) );
+                                var tasks = new[]
+                                {
+                                    System.Threading.Tasks.Task.Run(() => rocks.kfs.Eventbrite.Eventbrite.SyncEvent( group.Id, ThrottleSync: true ))
+                                };
                             }
-                            else
-                            {
-                                response.Write( string.Format( "Cannot find linked group for event id: {0}", ebEventId.ToString() ) );
-                            }
+                            response.Write( string.Format( "Eventbrite sync started for group {0}", group.Name ) );
                         }
-                    }
-                    else
-                    {
-                        response.Write( "Invalid data received." );
-                        response.StatusCode = HttpStatusCode.BadRequest.ConvertToInt();
+                        else
+                        {
+                            response.Write( string.Format( "Cannot find linked group for event id: {0}", ebEventId.ToString() ) );
+                        }
                     }
                     break;
                 case "order.updated":
