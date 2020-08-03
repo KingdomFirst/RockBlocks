@@ -361,7 +361,7 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
                     newDate = RockDateTime.Now.ToString();
                     History.EvaluateChange( changes, "Date Exported", oldDate, newDate.ToString() );
 
-                    items.AddRange( feJournal.GetGlEntries( rockContext, batch, GetAttributeValue( "JournalType" ) ) );
+                    items.AddRange( feJournal.GetGlEntries( rockContext, batch, tbJournalType.Text ) );
 
                     HistoryService.SaveChanges(
                         rockContext,
