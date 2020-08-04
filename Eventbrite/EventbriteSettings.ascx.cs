@@ -31,6 +31,7 @@ using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 using rocks.kfs.Eventbrite;
+using rocks.kfs.Eventbrite.Utility.ExtensionMethods;
 
 namespace RockWeb.Plugins.rocks_kfs.Eventbrite
 {
@@ -141,7 +142,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             nbNotification.Title = "";
             nbNotification.NotificationBoxType = Rock.Web.UI.Controls.NotificationBoxType.Info;
             nbNotification.Dismissable = true;
-            ShowDetail();
+            ShowDetail( true );
             loadEvents();
         }
 
@@ -155,6 +156,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             pnlToken.Visible = false;
             HideSecondaryBlocks( false );
             nbNotification.Visible = false;
+            pnlCreateGroupFromEventbrite.Visible = true;
             ShowDetail();
             loadEvents();
         }
@@ -168,7 +170,6 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         {
             if ( e.Row.RowType == DataControlRowType.DataRow || e.Row.RowType == DataControlRowType.Header )
             {
-                //var ebEvent = e.Row.DataItem as RockEventbriteEvent;
                 var detailPage = GetAttributeValue( "GroupDetail" );
 
                 if ( detailPage.IsNullOrWhiteSpace() )
@@ -212,9 +213,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         protected void lbCreateNewRockGroup_Click( object sender, EventArgs e )
         {
             var eb = rocks.kfs.Eventbrite.Eventbrite.Api( Settings.GetAccessToken() );
-            var ebUser = eb.GetUser();
-            var ebEventToCreate = new long();
-            long.TryParse( ddlEventbriteEvents.SelectedValue, out ebEventToCreate );
+            var ebEventToCreate = ddlEventbriteEvents.SelectedValue.AsLong();
             var EbEvent = eb.GetEventById( ebEventToCreate );
             var parentGroupGuid = GetAttributeValue( "NewGroupParent" ).AsGuidOrNull();
             var groupTypeGuid = GetAttributeValue( "NewGroupType" ).AsGuidOrNull();
@@ -226,7 +225,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                     var groupService = new GroupService( rockContext );
                     var groupType = GroupTypeCache.Get( groupTypeGuid.Value, rockContext );
                     var parentGroup = groupService.Get( parentGroupGuid.Value );
-                    if ( groupType != null && parentGroup != null )
+                    if ( groupType != null && parentGroup != null && parentGroup.GroupType.ChildGroupTypes.Select( gt => gt.Id ).Contains( groupType.Id ) )
                     {
                         newGroup = new Group
                         {
@@ -234,12 +233,18 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                             CreatedByPersonAliasId = CurrentPersonAlias.Id,
                             CreatedDateTime = RockDateTime.Now,
                             Description = EbEvent.Description.Text != null ? EbEvent.Description.Text : "",
-                            Name = string.Format( "{0} - {1}", EbEvent.Name.Text.ToString(), EbEvent.Start.Local ),
+                            Name = string.Format( "{0} - {1}", EbEvent.Start.Local, EbEvent.Name.Text.ToString() ),
                             ParentGroupId = parentGroup.Id,
                             GroupTypeId = groupType.Id
                         };
                         groupService.Add( newGroup );
                         rockContext.SaveChanges();
+                    }
+                    else
+                    {
+                        nbLinkNew.Text = "There is an error with your New Group Type or New Group Parent configuration. If the settings are set properly, please ensure the New Group Parent group type allows child groups of the New Group Type specified.";
+                        nbLinkNew.Visible = true;
+                        return;
                     }
                 }
             }
@@ -256,7 +261,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             }
             else
             {
-                nbLinkNew.Text = "Failed to link new group. You must manually associate group or try again.";
+                nbLinkNew.Text = "Failed to link new group. You must manually associate group via the group detail page or try again.";
                 nbLinkNew.Visible = true;
             }
         }
@@ -274,7 +279,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         /// <summary>
         /// Shows the detail.
         /// </summary>
-        private void ShowDetail()
+        private void ShowDetail( bool showNotificationbox = false )
         {
             var isAuthenticated = rocks.kfs.Eventbrite.Eventbrite.EBoAuthCheck();
             if ( _accessToken.IsNullOrWhiteSpace() )
@@ -304,7 +309,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                     .Add( "Organization", Settings.GetOrganizationId() )
                     .Html;
                 pnlToken.Visible = false;
-                nbNotification.Visible = false;
+                nbNotification.Visible = showNotificationbox;
                 pnlGridWrapper.Visible = true;
                 lView.Visible = true;
                 btnEdit.Visible = true;

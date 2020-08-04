@@ -45,9 +45,8 @@
 
                 <div class="grid grid-panel">
                     <Rock:NotificationBox ID="nbLinkedGroups" runat="server" NotificationBoxType="Danger" Dismissable="true" Visible="false" />
-                    <Rock:Grid ID="gEBLinkedGroups" runat="server" AllowSorting="true" DisplayType="Full" RowItemText="Group Link" DataKeyNames="RockGroupId" OnRowDataBound="gEBLinkedGroups_RowDataBound">
+                    <Rock:Grid ID="gEBLinkedGroups" runat="server" AllowSorting="true" DisplayType="Full" RowItemText="Group Link" DataKeyNames="RockGroupId" OnRowDataBound="gEBLinkedGroups_RowDataBound" OnRowSelected="lbEditRow_Click">
                         <Columns>
-                            <asp:HyperLinkField DataNavigateUrlFields="RockGroupId" DataTextField="RockGroupName" Visible="false" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
                             <Rock:RockBoundField DataField="RockGroupName" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
                             <Rock:RockBoundField DataField="EventbriteEventName" HeaderText="Eventbrite Event Name" SortExpression="EventbriteEventName" Visible="false" />
                             <Rock:RockBoundField DataField="EventbriteEventId" HeaderText="Eventbrite Event Id" SortExpression="EventbriteEventId" />
@@ -69,7 +68,7 @@
                 <div class="row">
                     <div class="col-md-12">
                         <Rock:RockDropDownList runat="server" ID="ddlEventbriteEvents"></Rock:RockDropDownList>
-                        <Rock:NotificationBox ID="nbLinkNew" runat="server" NotificationBoxType="Danger" Dismissable="true" Visible="false" />
+                        <Rock:NotificationBox ID="nbLinkNew" CssClass="margin-t-md" runat="server" NotificationBoxType="Danger" Dismissable="true" Visible="false" />
                     </div>
                 </div>
             </div>
