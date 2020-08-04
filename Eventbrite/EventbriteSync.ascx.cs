@@ -33,11 +33,13 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
     [Category( "KFS > Eventbrite" )]
     [Description( "Allows a sync button to be placed on any group aware page to be able to sync this group with Eventbrite." )]
 
-    [BooleanField( "Enable Logging", "Enable logging for Eventbrite sync method from this block.", false )]
-    #endregion
+    #endregion Block Attributes
 
     #region Block Settings
-    #endregion
+
+    [BooleanField( "Enable Logging", "Enable logging for Eventbrite sync method from this block.", false )]
+
+    #endregion Block Settings
 
     public partial class EventbriteSync : Rock.Web.UI.RockBlock, ISecondaryBlock
     {

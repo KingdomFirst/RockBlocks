@@ -21,13 +21,8 @@ using System.Linq;
 using System.Linq.Dynamic;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using DocumentFormat.OpenXml.Drawing.Charts;
-using EventbriteDotNetFramework;
 using EventbriteDotNetFramework.Entities;
 using EventbriteDotNetFramework.Responses;
-using Lucene.Net.Analysis.Hunspell;
-using Mono.CSharp;
-using OpenXmlPowerTools;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -35,24 +30,34 @@ using Rock.Model;
 using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
-using Rock.Workflow.Action.CheckIn;
 using rocks.kfs.Eventbrite;
 
 namespace RockWeb.Plugins.rocks_kfs.Eventbrite
 {
+    #region Block Attributes
+
     [DisplayName( "Eventbrite Settings" )]
     [Category( "KFS > Eventbrite" )]
     [Description( "Allows you to configure any necessary system settings for Eventbrite integration" )]
+
+    #endregion Block Attributes
+
+    #region Block Settings
 
     [LinkedPage( "Group Detail", "", true, "", "", 0 )]
     [GroupField( "New Group Parent", "Where new groups, if created, will be placed under. This parent group's group type must allow children of the 'New Group Type' setting below.", false )]
     [GroupTypeField( "New Group Type", "Group type to be used when creating new groups.", false )]
     [CustomCheckboxListField( "New Event Statuses", "Which event statuses from Eventbrite would you like to be available for creating new groups?", "live,completed,draft,canceled,started,ended", false, "live,completed,draft,canceled,started,ended" )]
+    [BooleanField( "Enable Logging", "Enable logging for Eventbrite sync methods from this block.", false )]
+    [BooleanField( "Display Eventbrite Event Name", "Display Eventbrite Event name on the grid of linked events instead of just the Event Id. (Warning, this may cause some performance issues)", false )]
+
+    #endregion Block Settings
 
     public partial class EventbriteSettings : Rock.Web.UI.RockBlock
     {
         private string _accessToken = null;
         private List<RockEventbriteEvent> _groups = null;
+
         #region Control Methods
 
         /// <summary>
@@ -62,6 +67,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
+            this.BlockUpdated += Block_BlockUpdated;
         }
 
         /// <summary>
@@ -81,9 +87,10 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             }
         }
 
-        #endregion
+        #endregion Control Methods
 
         #region Events
+
         /// <summary>
         /// Handles the BlockUpdated event of the control.
         /// </summary>
@@ -169,15 +176,22 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                     var colIndex = gEBLinkedGroups.GetColumnByHeaderText( "Edit" );
                     e.Row.Cells[gEBLinkedGroups.GetColumnIndex( colIndex )].Visible = false;
                 }
+
+                if ( GetAttributeValue( "DisplayEventbriteEventName" ).AsBoolean() )
+                {
+                    gEBLinkedGroups.GetColumnByHeaderText( "Eventbrite Event Name" ).Visible = true;
+                    gEBLinkedGroups.GetColumnByHeaderText( "Eventbrite Event Id" ).Visible = false;
+                }
             }
         }
 
         protected void lbSyncNow_Click( object sender, RowEventArgs e )
         {
             var groupId = e.RowKeyValue.ToString().AsInteger();
-            rocks.kfs.Eventbrite.Eventbrite.SyncEvent( groupId );
+            rocks.kfs.Eventbrite.Eventbrite.SyncEvent( groupId, EnableLogging: GetAttributeValue( "EnableLogging" ).AsBoolean() );
             ShowDetail();
         }
+
         protected void lbEditRow_Click( object sender, RowEventArgs e )
         {
             var groupId = e.RowKeyValue.ToString().AsInteger();
@@ -186,6 +200,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             };
             NavigateToLinkedPage( "GroupDetail", qryParams );
         }
+
         protected void lbDelete_Click( object sender, RowEventArgs e )
         {
             var groupId = e.RowKeyValue.ToString().AsInteger();
@@ -252,14 +267,14 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             loadOrganizations();
         }
 
-        #endregion
+        #endregion Events
 
         #region Internal Methods
 
         /// <summary>
         /// Shows the detail.
         /// </summary>
-        private void ShowDetail( bool loadGroups = true )
+        private void ShowDetail()
         {
             var isAuthenticated = rocks.kfs.Eventbrite.Eventbrite.EBoAuthCheck();
             if ( _accessToken.IsNullOrWhiteSpace() )
@@ -293,10 +308,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 pnlGridWrapper.Visible = true;
                 lView.Visible = true;
                 btnEdit.Visible = true;
-                if ( loadGroups )
-                {
-                    _groups = new EventbriteEvents().Events();
-                }
+                _groups = new EventbriteEvents().Events( GetAttributeValue( "DisplayEventbriteEventName" ).AsBoolean() );
                 gEBLinkedGroups.DataSource = _groups;
                 gEBLinkedGroups.DataBind();
             }
@@ -325,6 +337,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 ddlOrganization.Visible = false;
             }
         }
+
         private void loadEvents()
         {
             var parentGroupGuid = GetAttributeValue( "NewGroupParent" ).AsGuidOrNull();
@@ -372,6 +385,6 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             }
         }
 
-        #endregion
+        #endregion Internal Methods
     }
 }
