@@ -47,8 +47,9 @@
                     <Rock:NotificationBox ID="nbLinkedGroups" runat="server" NotificationBoxType="Danger" Dismissable="true" Visible="false" />
                     <Rock:Grid ID="gEBLinkedGroups" runat="server" AllowSorting="true" DisplayType="Full" RowItemText="Group Link" DataKeyNames="RockGroupId" OnRowDataBound="gEBLinkedGroups_RowDataBound">
                         <Columns>
-                            <asp:HyperLinkField DataNavigateUrlFields="PersonId" DataTextField="Person" Visible="false" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
+                            <asp:HyperLinkField DataNavigateUrlFields="RockGroupId" DataTextField="RockGroupName" Visible="false" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
                             <Rock:RockBoundField DataField="RockGroupName" HeaderText="Rock Group Name" SortExpression="RockGroupName" />
+                            <Rock:RockBoundField DataField="EventbriteEventName" HeaderText="Eventbrite Event Name" SortExpression="EventbriteEventName" Visible="false" />
                             <Rock:RockBoundField DataField="EventbriteEventId" HeaderText="Eventbrite Event Id" SortExpression="EventbriteEventId" />
                             <Rock:DateField DataField="LastSynced" DataFormatString="{0:d} {0:t}" HeaderText="Last Synced" SortExpression="LastSynced" />
                             <Rock:LinkButtonField ID="btnSyncNow" CssClass="btn btn-default btn-sm fa fa-refresh" HeaderText="Sync" OnClick="lbSyncNow_Click"></Rock:LinkButtonField>
