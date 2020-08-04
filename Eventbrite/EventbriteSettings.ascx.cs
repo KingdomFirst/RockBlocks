@@ -142,6 +142,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             nbNotification.Title = "";
             nbNotification.NotificationBoxType = Rock.Web.UI.Controls.NotificationBoxType.Info;
             nbNotification.Dismissable = true;
+            pnlCreateGroupFromEventbrite.Visible = true;
             ShowDetail( true );
             loadEvents();
         }
@@ -354,7 +355,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             {
                 var eb = rocks.kfs.Eventbrite.Eventbrite.Api( _accessToken );
                 var organizationEvents = eb.GetOrganizationEvents( GetAttributeValue( "NewEventStatuses" ) );
-                if ( organizationEvents.Pagination.Has_More_Items )
+                if ( organizationEvents != null && organizationEvents.Pagination != null && organizationEvents.Pagination.Has_More_Items )
                 {
                     var looper = new OrganizationEventsResponse();
                     for ( int i = 2; i <= organizationEvents.Pagination.PageCount; i++ )
@@ -363,11 +364,14 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                         organizationEvents.Events.AddRange( looper.Events );
                     }
                 }
-                foreach ( var evnt in organizationEvents.Events.FindAll( e => newEventStatuses.Contains( e.Status ) ) )
+                if ( organizationEvents != null && organizationEvents.Events != null )
                 {
-                    if ( !_groups.Select( g => g.EventbriteEventId ).ToList().Contains( evnt.Id ) )
+                    foreach ( var evnt in organizationEvents.Events.FindAll( e => newEventStatuses.Contains( e.Status ) ) )
                     {
-                        ddlEventbriteEvents.Items.Add( new ListItem( string.Format( "{0} - {1} ({2})", evnt.Name.Text.ToString(), evnt.Start.Local, evnt.Status ), evnt.Id.ToString() ) );
+                        if ( !_groups.Select( g => g.EventbriteEventId ).ToList().Contains( evnt.Id ) )
+                        {
+                            ddlEventbriteEvents.Items.Add( new ListItem( string.Format( "{0} - {1} ({2})", evnt.Name.Text.ToString(), evnt.Start.Local, evnt.Status ), evnt.Id.ToString() ) );
+                        }
                     }
                 }
             }
