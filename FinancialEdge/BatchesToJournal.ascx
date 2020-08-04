@@ -35,9 +35,9 @@
             </div>
 
             <div class="row">
-                <div class="col-sm-2">
-                    <label>&nbsp;</label>
-                    <div>
+                <div class="col-sm-6">
+                    <div class="form-inline">
+                        <Rock:RockTextBox runat="server" ID="tbJournalType" Placeholder="Journal Type" ValidationGroup="KFSGLExport"></Rock:RockTextBox>
                         <Rock:BootstrapButton runat="server" ID="btnExportToFinancialEdge" OnClick="btnExportToFinancialEdge_Click" CssClass="btn btn-primary" ValidationGroup="KFSGLExport" />
                     </div>
                 </div>
