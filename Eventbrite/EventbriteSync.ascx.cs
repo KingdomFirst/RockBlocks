@@ -139,7 +139,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
         {
             int groupId = hfGroupId.ValueAsInt();
             var enableLogging = GetAttributeValue( "EnableLogging" ).AsBoolean();
-            Server.ScriptTimeout = Server.ScriptTimeout * 2;
+
             rocks.kfs.Eventbrite.Eventbrite.SyncEvent( groupId, EnableLogging: enableLogging );
 
             NavigateToCurrentPage( new Dictionary<string, string> { { "GroupId", groupId.ToString() } } );

@@ -24,7 +24,6 @@ using Rock;
 using Rock.Data;
 using Newtonsoft.Json;
 using rocks.kfs.Eventbrite.Entities;
-using rocks.kfs.Eventbrite.Utility.ExtensionMethods;
 
 namespace RockWeb.Plugins.rocks_kfs.Eventbrite
 {
@@ -72,15 +71,9 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             {
                 case "attendee.checked_in":
                 case "barcode.checked_in":
-                    var splitUrl = eventbriteData.Api_Url.SplitDelimitedValues( "/" );
                     // api_url example: https://www.eventbriteapi.com/v3/events/113027799190/attendees/1955015294/
-                    // 6th element in array should be event id as long.
                     if ( eventbriteData.Api_Url.IsNotNullOrWhiteSpace() )
                     {
-                        //var tasks = new[]
-                        //{
-                        //    System.Threading.Tasks.Task.Run(() => rocks.kfs.Eventbrite.Eventbrite.SyncAttendee( eventbriteData.Api_Url ))
-                        //};
                         rocks.kfs.Eventbrite.Eventbrite.SyncAttendee( eventbriteData.Api_Url );
                         response.Write( string.Format( "SyncAttendee Ran ({0})", eventbriteData.Api_Url ) );
                     }
@@ -94,10 +87,6 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 case "order.refunded":
                     if ( eventbriteData.Api_Url.IsNotNullOrWhiteSpace() )
                     {
-                        //var tasks = new[]
-                        //{
-                        //    System.Threading.Tasks.Task.Run(() => rocks.kfs.Eventbrite.Eventbrite.SyncOrder( eventbriteData.Api_Url ))
-                        //};
                         rocks.kfs.Eventbrite.Eventbrite.SyncOrder( eventbriteData.Api_Url );
                         response.Write( string.Format( "SyncOrder Ran ({0})", eventbriteData.Api_Url ) );
                     }
