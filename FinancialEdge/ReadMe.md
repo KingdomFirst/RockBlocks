@@ -1,10 +1,10 @@
-![Kingdom First Solutions](Images/KFSBanner.jpg)
+![Kingdom First Solutions](images/KFSBanner.jpg)
 
 # Financial Edge Export
 
-*Tested/Supported in Rock version: 8.0-10.3*
-*Released: 10/1/2018*
-*Updated: 8/4/2020*
+*Tested/Supported in Rock version: 8.0-10.3*  
+*Released: 10/1/2018*   
+*Updated: 8/4/2020*   
 
 ## Summary
 
@@ -26,7 +26,7 @@ The following new goodness will be added to your Rock install with this plugin:
 - **New Page**: Financial Edge Batch Export (Finance > Functions > Financial Edge Batch Export)  
 - **New Defined Type**: Financial Edge Projects stores the Defined Values that designate what Project a transaction should be associated with  
 - **New Batch Attribute**: Date Exported  
-<div style="page-break-after: always;"></div>
+
 ## Configuration
 ---
 
@@ -54,14 +54,14 @@ You will need to define the values for the Financial Projects defined type so th
 
 On the Financial Edge Projects page, add a value for each of your organization's Projects. The Value must be the Financial Edge Journal Id. Description will be a friendly name for the Project.
 
-![](Images/FinancialProjectsDefinedValues.png)
+![](images/FinancialProjectsDefinedValues.png)
 
 
 **Account Attributes**
 
 The export will always create (at a minimum) two lines for a Journal - a debit and a credit line. The Credit and Debit Account attributes are how this is defined.
 
-![](Images/AccountAttributes.png)
+![](images/AccountAttributes.png)
 
 ```
     Default Project: Designates the Financial Edge Project at the account level. 
@@ -80,7 +80,7 @@ This page is similar to the core Batches page with the additional option of expo
 
 You will need to set the Journal Type for the Financial Edge Batches to Journal block settings.
 
-![](Images/BatchesToJournalBlock.png)
+![](images/BatchesToJournalBlock.png)
 
 ```
     Name: Block name
@@ -97,7 +97,7 @@ You will need to set the Journal Type for the Financial Edge Batches to Journal 
 
 To export multiple batches to Financial Edge at one time, select the desired batches on the page and click the Create FE CSV button at the bottom of the grid
 
-![](Images/BatchesToJournalPage.png)
+![](images/BatchesToJournalPage.png)
 
 ## Importing into Financial Edge
 
