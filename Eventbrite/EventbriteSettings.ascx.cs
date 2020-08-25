@@ -332,7 +332,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 {
                     ddlOrganization.Items.Add( new ListItem( org.Name, org.Id.ToString() ) );
                 }
-                if ( selectedOrgId.IsNotNullOrWhiteSpace() )
+                if ( selectedOrgId.IsNotNullOrWhiteSpace() && ddlOrganization.Items.FindByValue( selectedOrgId ) != null )
                 {
                     ddlOrganization.SelectedValue = selectedOrgId;
                 }
