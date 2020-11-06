@@ -1368,7 +1368,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         if ( personLocation.GeoPoint != null ) mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                     }
 
-                    if ( personLocation == null || ( personLocation != null && personLocation.GeoPoint == null ) )
+                    if ( mapCoordinate == null && personLocation == null || ( personLocation != null && personLocation.GeoPoint == null ) )
                     {
                         Guid? campusGuid = GetAttributeValue( "DefaultLocation" ).AsGuidOrNull();
                         if ( campusGuid != null )
