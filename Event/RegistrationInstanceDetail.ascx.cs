@@ -3012,7 +3012,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
             lAccount.Text = instance.Account != null ? instance.Account.Name : "";
 
             lMaxAttendees.Visible = instance.MaxAttendees > 0;
-            lMaxAttendees.Text = instance.MaxAttendees.ToString( "N0" );
+            lMaxAttendees.Text = instance.MaxAttendees.Value.ToString( "N0" );
             lWorkflowType.Text = instance.RegistrationWorkflowType != null ?
                 instance.RegistrationWorkflowType.Name : string.Empty;
             lWorkflowType.Visible = !string.IsNullOrWhiteSpace( lWorkflowType.Text );
