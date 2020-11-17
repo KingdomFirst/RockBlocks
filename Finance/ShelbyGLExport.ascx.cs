@@ -440,7 +440,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
         protected IQueryable<AttributeValue> generateAttributeFilters()
         {
             var attributeValueService = new AttributeValueService( rockContext );
-            var attributes = attributeService.GetByEntityTypeId( EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id );
+            var attributes = attributeService.GetByEntityTypeId( EntityTypeCache.Get<Rock.Model.FinancialBatch>().Id );
             var exported = attributes.AsNoTracking().FirstOrDefault( a => a.Key == attributeKeyDateExported );
 
             var attribute = AttributeCache.Get( exported.Id );
@@ -462,7 +462,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
                 var newStatus = BatchStatus.Closed;
                 var newDateExported = RockDateTime.Now;
 
-                var changes = new List<string>();
+                var changes = new History.HistoryChangeList();
                 History.EvaluateChange( changes, "Status", batch.Status, newStatus );
                 batch.Status = newStatus;
                 History.EvaluateChange( changes, "Batch Exported", batch.GetAttributeValue( attributeKeyDateExported ), newDateExported.ToString() );
@@ -819,7 +819,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
 
                 gBatchList.SetLinqDataSource( batchRowQry );
                 gBatchList.DataSource = attributeBatchRowList;
-                gBatchList.EntityTypeId = EntityTypeCache.Read<Rock.Model.FinancialBatch>().Id;
+                gBatchList.EntityTypeId = EntityTypeCache.Get<Rock.Model.FinancialBatch>().Id;
                 gBatchList.DataBind();
 
                 var qryTransactionDetails = qry.SelectMany( a => a.Transactions ).SelectMany( a => a.TransactionDetails );
