@@ -236,8 +236,8 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                                 .ToList();
 
                 bool newRegistrant = false;
-                var registrantChanges = new List<string>();
-                var personChanges = new List<string>();
+                var registrantChanges = new History.HistoryChangeList();
+                var personChanges = new History.HistoryChangeList();
 
                 if ( registrant == null )
                 {
@@ -245,7 +245,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                     registrant = new RegistrationRegistrant();
                     registrant.RegistrationId = RegistrantState.RegistrationId;
                     registrantService.Add( registrant );
-                    registrantChanges.Add( "Created Registrant" );
+                    registrantChanges.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Registrant" );
                 }
 
                 if ( !registrant.PersonAliasId.Equals( ppPerson.PersonAliasId ) )
@@ -294,7 +294,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                             rockContext.SaveChanges();
                             registrant.GroupMember = groupMember;
                             registrant.GroupMemberId = groupMember.Id;
-                            registrantChanges.Add( string.Format( "Registrant added to {0} group", RegistrationGroup.Name ) );
+                            registrantChanges.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, string.Format( "Registrant to {0} group", RegistrationGroup.Name ) );
                         }
                         else if ( groupMember != null && !RegistrantPlacedInGroup )
                         {
@@ -302,7 +302,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                             groupMemberService.Delete( groupMember );
                             rockContext.SaveChanges();
                             registrant.GroupMember = null;
-                            registrantChanges.Add( string.Format( "Registrant removed from {0} group", RegistrationGroup.Name ) );
+                            registrantChanges.AddChange( History.HistoryVerb.RemovedFromGroup, History.HistoryChangeType.Record, string.Format( "Registrant from {0} group", RegistrationGroup.Name ) );
                         }
                     } );
                 }
@@ -331,8 +331,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                                 f.Option == dbFee.Option &&
                                 f.Quantity > 0 ) )
                     {
-                        registrantChanges.Add( string.Format( "Removed '{0}' Fee (Quantity:{1:N0}, Cost:{2:C2}, Option:{3}",
-                            dbFee.RegistrationTemplateFee.Name, dbFee.Quantity, dbFee.Cost, dbFee.Option ) );
+                        registrantChanges.AddChange( History.HistoryVerb.Delete, History.HistoryChangeType.Record, "Fee" ).SetOldValue( string.Format( "Removed '{0}' Fee (Quantity:{1:N0}, Cost:{2:C2}, Option:{3}", dbFee.RegistrationTemplateFee.Name, dbFee.Quantity, dbFee.Cost, dbFee.Option ) );
 
                         registrant.Fees.Remove( dbFee );
                         registrantFeeService.Delete( dbFee );
@@ -372,7 +371,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
                         if ( dbFee.Id <= 0 )
                         {
-                            registrantChanges.Add( feeName + " Fee Added" );
+                            registrantChanges.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Fee" ).SetNewValue( feeName );
                         }
 
                         History.EvaluateChange( registrantChanges, feeName + " Quantity", dbFee.Quantity, uiFeeOption.Quantity );
@@ -445,7 +444,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                     return;
                 }
 
-                var familyGroupType = GroupTypeCache.Read( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY );
+                var familyGroupType = GroupTypeCache.Get( Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY );
                 var adultRoleId = familyGroupType.Roles
                 .Where( r => r.Guid.Equals( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ) )
                 .Select( r => r.Id )
@@ -590,7 +589,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
                         if ( fieldValue != null )
                         {
-                            var attribute = AttributeCache.Read( field.AttributeId.Value );
+                            var attribute = AttributeCache.Get( field.AttributeId.Value );
                             if ( attribute != null )
                             {
                                 string originalValue = person.GetAttributeValue( attribute.Key );
@@ -653,7 +652,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
                         if ( fieldValue != null )
                         {
-                            var attribute = AttributeCache.Read( field.AttributeId.Value );
+                            var attribute = AttributeCache.Get( field.AttributeId.Value );
                             if ( attribute != null )
                             {
                                 string originalValue = registrant.GetAttributeValue( attribute.Key );
@@ -711,7 +710,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
                             if ( fieldValue != null )
                             {
-                                var attribute = AttributeCache.Read( field.AttributeId.Value );
+                                var attribute = AttributeCache.Get( field.AttributeId.Value );
                                 if ( attribute != null )
                                 {
                                     string originalValue = registrant.GroupMember.GetAttributeValue( attribute.Key );
@@ -774,11 +773,11 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
                                     newRockContext.SaveChanges();
 
-                                    registrantChanges.Add( string.Format( "Registrant added to {0} group", reloadedRegistrant.Registration.Group.Name ) );
+                                    registrantChanges.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, string.Format( "Registrant to {0} group", reloadedRegistrant.Registration.Group.Name ) );
                                 }
                                 else
                                 {
-                                    registrantChanges.Add( string.Format( "Registrant group member reference updated to existing person in {0} group", reloadedRegistrant.Registration.Group.Name ) );
+                                    registrantChanges.AddChange( History.HistoryVerb.Modify, History.HistoryChangeType.Record, string.Format( "Registrant to existing person in {0} group", reloadedRegistrant.Registration.Group.Name ) );
                                 }
 
                                 // Record this to the Person's and Registrants Notes and History...
@@ -817,7 +816,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
         protected void lbWizardTemplate_Click( object sender, EventArgs e )
         {
             var qryParams = new Dictionary<string, string>();
-            var pageCache = PageCache.Read( RockPage.PageId );
+            var pageCache = PageCache.Get( RockPage.PageId );
             if ( pageCache != null &&
                 pageCache.ParentPage != null &&
                 pageCache.ParentPage.ParentPage != null &&
@@ -836,7 +835,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
         protected void lbWizardInstance_Click( object sender, EventArgs e )
         {
             var qryParams = new Dictionary<string, string>();
-            var pageCache = PageCache.Read( RockPage.PageId );
+            var pageCache = PageCache.Get( RockPage.PageId );
             if ( pageCache != null &&
                 pageCache.ParentPage != null &&
                 pageCache.ParentPage.ParentPage != null )
@@ -1063,7 +1062,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                                 }
                                 else if ( field.AttributeId.HasValue )
                                 {
-                                    var attribute = AttributeCache.Read( field.AttributeId.Value );
+                                    var attribute = AttributeCache.Get( field.AttributeId.Value );
                                     string value = string.Empty;
                                     if ( setValues && fieldValue != null )
                                     {
@@ -1384,7 +1383,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                                 }
                                 else if ( field.AttributeId.HasValue )
                                 {
-                                    var attribute = AttributeCache.Read( field.AttributeId.Value );
+                                    var attribute = AttributeCache.Get( field.AttributeId.Value );
                                     string fieldId = "attribute_field_" + attribute.Id.ToString();
 
                                     Control control = phFields.FindControl( fieldId );
@@ -1593,7 +1592,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
             if ( familyId.HasValue && location != null )
             {
-                var homeLocationType = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME.AsGuid() );
+                var homeLocationType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME.AsGuid() );
                 if ( homeLocationType != null )
                 {
                     var familyGroup = new GroupService( rockContext ).Get( familyId.Value );
@@ -1618,7 +1617,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
         /// <param name="person">The person.</param>
         /// <param name="phoneTypeGuid">The phone type unique identifier.</param>
         /// <param name="changes">The changes.</param>
-        private void SavePhone( object fieldValue, Person person, Guid phoneTypeGuid, List<string> changes )
+        private void SavePhone( object fieldValue, Person person, Guid phoneTypeGuid, History.HistoryChangeList changes )
         {
             var phoneNumber = fieldValue as PhoneNumber;
             if ( phoneNumber != null )
@@ -1626,7 +1625,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                 string cleanNumber = PhoneNumber.CleanNumber( phoneNumber.Number );
                 if ( !string.IsNullOrWhiteSpace( cleanNumber ) )
                 {
-                    var numberType = DefinedValueCache.Read( phoneTypeGuid );
+                    var numberType = DefinedValueCache.Get( phoneTypeGuid );
                     if ( numberType != null )
                     {
                         var phone = person.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValueId == numberType.Id );
@@ -1825,7 +1824,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                         ddlMaritalStatus.Label = "Marital Status";
                         ddlMaritalStatus.Required = field.IsRequired;
                         ddlMaritalStatus.ValidationGroup = BlockValidationGroup;
-                        ddlMaritalStatus.BindToDefinedType( DefinedTypeCache.Read( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
+                        ddlMaritalStatus.BindToDefinedType( DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ), true );
                         phFields.Controls.Add( ddlMaritalStatus );
 
                         if ( setValue && fieldValue != null )
@@ -1839,7 +1838,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
                 case RegistrationPersonFieldType.MobilePhone:
                     {
-                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
+                        var dv = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
                         if ( dv != null )
                         {
                             var ppMobile = new PhoneNumberBox();
@@ -1866,7 +1865,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                     }
                 case RegistrationPersonFieldType.HomePhone:
                     {
-                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
+                        var dv = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME );
                         if ( dv != null )
                         {
                             var ppHome = new PhoneNumberBox();
@@ -1894,7 +1893,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
 
                 case RegistrationPersonFieldType.WorkPhone:
                     {
-                        var dv = DefinedValueCache.Read( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK );
+                        var dv = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK );
                         if ( dv != null )
                         {
                             var ppWork = new PhoneNumberBox();
@@ -1945,15 +1944,15 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                 var alreadyRegistered = registrantService.Queryable().Any( r => r.PersonAliasId == ppPerson.PersonAliasId && r.Registration.RegistrationInstanceId == registration.RegistrationInstanceId );
                 if ( !alreadyRegistered )
                 {
-                    var registrantChanges = new List<string>();
-                    var personChanges = new List<string>();
+                    var registrantChanges = new History.HistoryChangeList();
+                    var personChanges = new History.HistoryChangeList();
 
                     if ( registrant == null )
                     {
                         registrant = new RegistrationRegistrant();
                         registrant.RegistrationId = RegistrantState.RegistrationId;
                         registrantService.Add( registrant );
-                        registrantChanges.Add( "Created Registrant" );
+                        registrantChanges.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Registrant" );
                     }
 
                     if ( !registrant.PersonAliasId.Equals( ppPerson.PersonAliasId ) )

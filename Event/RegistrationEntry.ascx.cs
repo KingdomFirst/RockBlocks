@@ -353,7 +353,7 @@ namespace RockWeb.Plugins.rocks_kfs.Event
                         return int.MaxValue;
                     }
 
-                    return RegistrationTemplate.MaxRegistrants;
+                    return RegistrationTemplate.MaxRegistrants.Value;
                 }
 
                 // Default is a maximum of one
