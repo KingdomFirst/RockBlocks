@@ -88,13 +88,32 @@ CREATE TABLE _rocks_kfs_peopleCsvTemp (
 	PersonId INT
 );
 
+DECLARE @StatusGroupID INT
+DECLARE @StatusAttendanceTimestamp INT
+
+-- Populate Temp Table
+SELECT @cmd = '
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+WHERE [TABLE_NAME] = ''' + @ImportTable + '''
+   AND COLUMN_NAME = ''GroupID''
+';
+EXEC(@cmd)
+SET @StatusGroupID = @@ROWCOUNT
+
+SELECT @cmd = '
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+WHERE [TABLE_NAME] = ''' + @ImportTable + '''
+   AND COLUMN_NAME = ''AttendanceTimestamp''
+';
+EXEC(@cmd)
+SET @StatusAttendanceTimestamp = @@ROWCOUNT
 
 -- Populate Temp Table
 SELECT @cmd = '
 ;WITH personData AS (
     SELECT * FROM ' + QUOTENAME(@ImportTable) +
 ')
-INSERT _rocks_kfs_peopleCsvTemp (FirstName, LastName, BirthDate, Email, Gender, GroupID, ForeignGuid)
+INSERT _rocks_kfs_peopleCsvTemp (FirstName, LastName, BirthDate, Email, Gender, ForeignGuid, GroupID, AttendanceTimestamp)
 SELECT 
     CASE WHEN NULLIF(LTRIM([FirstName]), '''') IS NULL THEN RIGHT(Email, LEN(Email) - CHARINDEX(''@'', email)) ELSE [FirstName] END,
 	CASE WHEN NULLIF(LTRIM([LastName]), '''') IS NULL THEN LEFT(Email, LEN(Email) - CHARINDEX(''@'', email)) ELSE [LastName] END,
@@ -105,14 +124,17 @@ SELECT
         WHEN Gender = ''Male'' THEN 1
         ELSE 0
     END AS Gender,
-	--CONVERT(INT, ConnectionStatusId),
-	CONVERT(INT, GroupID),
-	NEWID()
+	NEWID()'+
+    CASE
+        WHEN @StatusGroupID = 1 AND @StatusAttendanceTimestamp = 1 THEN ', CONVERT(INT, GroupID), AttendanceTimestamp'
+        WHEN @StatusGroupID = 1 AND @StatusAttendanceTimestamp = 0 THEN ', CONVERT(INT, GroupID), NULL'
+        WHEN @StatusGroupID = 0 AND @StatusAttendanceTimestamp = 1 THEN ', NULL, AttendanceTimestamp'
+        ELSE 'NULL, NULL'
+    END
+    +'
 FROM personData fd
 ';
-
 EXEC(@cmd)
-
 
 -- Output unmatched people
 SELECT @cmd = '
@@ -128,7 +150,6 @@ DECLARE @Status NVARCHAR(1000)
             OR p.NickName = RTRIM(LTRIM(fd.[FirstName])))
             WHERE p.[Id] IS NULL FOR XML PATH ('''')), 1, 1, '''' )
 )
-DECLARE @Status NVARCHAR(1000)
 SELECT @Status = ISNULL(''Missing Person records will be created: '' + NULLIF(missingPeople, ''''), ''No unmatched person records...'')
 FROM RockMatch;
 
@@ -231,6 +252,43 @@ FROM NewGroupMembers
 
 EXEC(@cmd)
 
+RAISERROR('Adding/Updated attendance...', 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
+
+-- insert to attendanceOccurrence
+SELECT @cmd = '
+;WITH NewAttendanceOccurrences AS (
+SELECT t.GroupID,
+	CAST(t.AttendanceTimestamp AS DATE) as OccurrenceDate
+FROM _rocks_kfs_peopleCsvTemp t
+LEFT OUTER JOIN AttendanceOccurrence ao ON ao.GroupId = t.GroupID AND CAST(ao.OccurrenceDate AS DATE) = CAST(t.AttendanceTimestamp AS DATE)
+WHERE ao.[Id] IS NULL
+)
+INSERT AttendanceOccurrence( GroupID, OccurrenceDate, [Guid], CreatedDateTime, ModifiedDateTime )
+SELECT GroupID, OccurrenceDate, NEWID(), GETDATE(), GETDATE()
+FROM NewAttendanceOccurrences GROUP BY GroupID, OccurrenceDate
+';
+
+EXEC(@cmd)
+
+-- insert to attendance
+SELECT @cmd = '
+;WITH NewAttendance AS (
+SELECT ao.Id as OccurrenceId,
+	t.AttendanceTimestamp,
+	pa.Id as PersonAliasId
+FROM _rocks_kfs_peopleCsvTemp t
+JOIN [PersonAlias] pa ON t.PersonId = pa.PersonId
+JOIN AttendanceOccurrence ao ON ao.GroupId = t.GroupID AND CAST(ao.OccurrenceDate AS DATE) = CAST(t.AttendanceTimestamp AS DATE)
+LEFT OUTER JOIN [Attendance] a ON a.PersonAliasId = pa.Id
+WHERE a.[Id] IS NULL
+)
+INSERT Attendance( OccurrenceId, StartDateTime, PersonAliasId, DidAttend, [Guid], CreatedDateTime, ModifiedDateTime )
+SELECT DISTINCT OccurrenceId, AttendanceTimestamp, PersonAliasId, 1, NEWID(), GETDATE(), GETDATE()
+FROM NewAttendance GROUP BY OccurrenceId, AttendanceTimestamp, PersonAliasId
+';
+
+EXEC(@cmd)
 
 /* =================================
 Cleanup table post processing
