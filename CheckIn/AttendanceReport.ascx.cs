@@ -67,10 +67,15 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         key: AttributeKeys.ScheduleCategories )]
     [BooleanField(
         name: "Show Campus Filter",
-        defaultValue: true,
+        defaultValue: false,
         order: 2,
         key: AttributeKeys.ShowCampusFilter )]
     [CampusField( "Default Campus", "An optional default campus to set filter groups.", false, "", "", 3, AttributeKeys.DefaultCampus )]
+    [BooleanField(
+        name: "Enable Grid Row Selection",
+        defaultValue: true,
+        order: 4,
+        key: AttributeKeys.EnableSelection )]
 
     #endregion
 
@@ -82,6 +87,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             public const string ScheduleCategories = "ScheduleCategories";
             public const string ShowCampusFilter = "ShowCampusFilter";
             public const string DefaultCampus = "DefaultCampus";
+            public const string EnableSelection = "EnableSelection";
         }
 
         #region Fields
@@ -531,17 +537,12 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                         Attendance = a,
                         AttendanceOccurrence = a.Occurrence,
                         Campus = a.Campus,
-                        CampusName = a.Campus.Name,
                         Schedule = a.Occurrence.Schedule,
-                        ScheduleName = a.Occurrence.Schedule.Name,
                         Group = a.Occurrence.Group,
-                        GroupName = a.Occurrence.Group.Name,
                         Location = a.Occurrence.Location,
-                        LocationName = a.Occurrence.Location.Name,
                         Person = a.PersonAlias.Person,
-                        PersonName = a.PersonAlias.Person.NickName + " " + a.PersonAlias.Person.LastName,
                         AttendanceCode = a.AttendanceCode,
-                        AttendanceCodeString = a.AttendanceCode.Code,
+                        SelectedDate = SelectedDate.Value,
                         AdditionalReportItems = allAttendanceQuery
                             .Where( r => r.PersonAliasId.HasValue &&
                                 r.PersonAliasId == a.PersonAliasId &&
@@ -552,27 +553,36 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                                 Attendance = r,
                                 AttendanceOccurrence = r.Occurrence,
                                 Campus = r.Campus,
-                                CampusName = r.Campus.Name,
                                 Schedule = r.Occurrence.Schedule,
-                                ScheduleName = r.Occurrence.Schedule.Name,
                                 Group = r.Occurrence.Group,
-                                GroupName = r.Occurrence.Group.Name,
                                 Location = r.Occurrence.Location,
-                                LocationName = r.Occurrence.Location.Name,
                                 Person = r.PersonAlias.Person,
-                                PersonName = r.PersonAlias.Person.NickName + " " + r.PersonAlias.Person.LastName,
                                 AttendanceCode = r.AttendanceCode,
-                                AttendanceCodeString = r.AttendanceCode.Code
+                                SelectedDate = SelectedDate.Value
                             } )
                             .ToList()
                     } )
                     .ToList();
             }
 
-            if ( GetAttributeValue( AttributeKeys.ShowCampusFilter ).AsBoolean() )
+            if ( GetAttributeValue( AttributeKeys.EnableSelection ).AsBoolean() )
             {
                 gAttendees.Columns[0].Visible = true;
             }
+            else
+            {
+                gAttendees.Columns[0].Visible = false;
+            }
+
+            if ( GetAttributeValue( AttributeKeys.ShowCampusFilter ).AsBoolean() )
+            {
+                gAttendees.Columns[2].Visible = true;
+            }
+            else
+            {
+                gAttendees.Columns[2].Visible = false;
+            }
+
             gAttendees.DataSource = reportItems;
             gAttendees.EntityIdField = "AttendanceId";
             gAttendees.DataBind();
@@ -608,17 +618,12 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             public Attendance Attendance { get; set; }
             public AttendanceOccurrence AttendanceOccurrence { get; set; }
             public Campus Campus { get; set; }
-            public string CampusName { get; set; }
             public Schedule Schedule { get; set; }
-            public string ScheduleName { get; set; }
             public Group Group { get; set; }
-            public string GroupName { get; set; }
             public Location Location { get; set; }
-            public string LocationName { get; set; }
             public Person Person { get; set; }
-            public string PersonName { get; set; }
             public AttendanceCode AttendanceCode { get; set; }
-            public string AttendanceCodeString { get; set; }
+            public DateTime SelectedDate { get; set; }
         }
 
         protected class AttendanceReportItem : AttendanceReportSubItem
