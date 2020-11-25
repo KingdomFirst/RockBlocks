@@ -494,6 +494,8 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             {
                 cblGroups.Items[i].Selected = true;
             }
+
+            SetupGrid();
         }
 
         /// <summary>
@@ -569,6 +571,20 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                             .ToList()
                     } )
                     .ToList();
+            }
+
+            SetupGrid( reportItems );
+        }
+
+        /// <summary>
+        /// Setups the grid.
+        /// </summary>
+        /// <param name="reportItems">The report items.</param>
+        private void SetupGrid( List<AttendanceReportItem> reportItems = null )
+        {
+            if ( reportItems == null )
+            {
+                reportItems = new List<AttendanceReportItem>();
             }
 
             if ( GetAttributeValue( AttributeKeys.EnableSelection ).AsBoolean() )
