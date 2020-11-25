@@ -18,14 +18,19 @@
             <Rock:BootstrapButton ID="btnRunReport" runat="server" Text="Run Report" CssClass="btn btn-primary" OnClick="btnRunReport_Click" />
         </div>
         <div class="col-sm-9">
-            <Rock:Grid runat="server" ID="gAttendees" EmptyDataText="No Attendees Found" AllowSorting="true">
+            <Rock:Grid runat="server" ID="gAttendees" EmptyDataText="No Attendees Found" DataKeyNames="AttendanceId">
                 <Columns>
-                    <Rock:CampusField DataField="Campus" HeaderText="Campus" Visible="false" />
-                    <Rock:RockBoundField DataField="ScheduleName" HeaderText="Schedule" />
-                    <Rock:RockBoundField DataField="GroupName" HeaderText="Group" />
-                    <Rock:RockBoundField DataField="LocationName" HeaderText="Location" />
+                    <Rock:SelectField />
+                    <Rock:RockBoundField DataField="AttendanceId" HeaderText="Attendance Id" Visible="false" />
+                    <Rock:CampusField DataField="Campus" HeaderText="Campus" />
+                    <Rock:RockTemplateField HeaderText="Schedule Name">
+                        <ItemTemplate><%#Eval("Schedule.Name") %></ItemTemplate>
+                    </Rock:RockTemplateField>
+                    <Rock:RockBoundField DataField="Schedule" HeaderText="Schedule" />
+                    <Rock:RockBoundField DataField="Group" HeaderText="Group" />
+                    <Rock:RockBoundField DataField="Location" HeaderText="Location" />
                     <Rock:PersonField DataField="Person" HeaderText="Person" />
-                    <Rock:RockBoundField DataField="AttendanceCodeString" HeaderText="Attendance Code" />
+                    <Rock:RockBoundField DataField="AttendanceCode" HeaderText="Attendance Code" />
                     <Rock:RockTemplateField HeaderText="Multiple Check-Ins">
                         <ItemTemplate><%#(((List<AttendanceReportSubItem>)Eval("AdditionalReportItems")).Any()) ? "Yes" : ""%></ItemTemplate>
                     </Rock:RockTemplateField>
