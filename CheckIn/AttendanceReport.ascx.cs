@@ -27,6 +27,7 @@ using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI;
+using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.rocks_kfs.CheckIn
 {
@@ -150,6 +151,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             _rockContext = new RockContext();
 
             this.BlockUpdated += Block_BlockUpdated;
+            this.gAttendees.GridRebind += GAttendees_GridRebind;
             this.AddConfigurationUpdateTrigger( upnlContent );
         }
 
@@ -168,11 +170,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                     SelectedDate = RockDateTime.Today;
                     dpDate.SelectedDate = SelectedDate;
                 }
-                SetCampusFilterVisibility();
-                LoadCheckInConfigurationGroupTypes();
-                LoadCheckInAreas();
-                LoadSchedules();
-                GetAttendees();
+                SetupEverything();
             }
         }
 
@@ -181,17 +179,23 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         #region Events
 
         /// <summary>
+        /// Handles the GridRebind event of the gAttendees control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="GridRebindEventArgs"/> instance containing the event data.</param>
+        private void GAttendees_GridRebind( object sender, GridRebindEventArgs e )
+        {
+            GetAttendees();
+        }
+
+        /// <summary>
         /// Handles the BlockUpdated event of the control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
-            SetCampusFilterVisibility();
-            LoadSchedules();
-            LoadCheckInConfigurationGroupTypes();
-            ddlCheckInConfiguration.SelectedValue = GetDefaultGroupTypeId().ToString();
-            LoadCheckInAreas();
+            SetupEverything();
         }
 
         /// <summary>
@@ -281,6 +285,15 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         #endregion
 
         #region Methods
+
+        private void SetupEverything()
+        {
+            SetCampusFilterVisibility();
+            LoadSchedules();
+            LoadCheckInConfigurationGroupTypes();
+            LoadCheckInAreas();
+            GetAttendees();
+        }
 
         /// <summary>
         /// Sets the campus filter visibility.
@@ -472,30 +485,96 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         /// </summary>
         private void GetAttendees()
         {
-            var attendance = new List<Attendance>();
+            var reportItems = new List<AttendanceReportItem>();
 
             var selectedGroups = cblGroups.SelectedValues.AsIntegerList();
 
             if ( selectedGroups.Count > 0 )
             {
-                var occurrences = GetOccurrencesQuery()
-                    .Where( o => selectedGroups.Contains( o.GroupId.Value ) )
+                //var occurrences = GetOccurrencesQuery()
+                //    .Where( o => selectedGroups.Contains( o.GroupId.Value ) )
+                //    .ToList();
+
+                var todaysOccurrenceIds = GetOccurrencesQuery( false )
+                    .Select( o => o.Id )
                     .ToList();
+
+                var allAttendanceQuery = new AttendanceService( _rockContext )
+                    .Queryable()
+                    .AsNoTracking()
+                    .Where( a => todaysOccurrenceIds.Contains( a.OccurrenceId ) )
+                    .OrderBy( a => a.Occurrence.Group.Order )
+                    .ThenBy( a => a.Occurrence.Group.Name )
+                    .ThenBy( a => a.Occurrence.Location.Name )
+                    .ThenBy( a => a.PersonAlias.Person.PrimaryFamily.Name )
+                    .ThenByDescending( a => a.PersonAlias.Person.BirthDate )
+                    .ThenBy( a => a.PersonAlias.Person.NickName );
 
                 var occurrenceIds = GetOccurrencesQuery()
                     .Where( o => selectedGroups.Contains( o.GroupId.Value ) )
                     .Select( o => o.Id )
                     .ToList();
 
-                attendance = new AttendanceService( _rockContext )
+                reportItems = new AttendanceService( _rockContext )
                     .Queryable()
                     .AsNoTracking()
                     .Where( a => occurrenceIds.Contains( a.OccurrenceId ) )
+                    .OrderBy( a => a.Occurrence.Group.Order )
+                    .ThenBy( a => a.Occurrence.Group.Name )
+                    .ThenBy( a => a.Occurrence.Location.Name )
+                    .ThenBy( a => a.PersonAlias.Person.PrimaryFamily.Name )
+                    .ThenByDescending( a => a.PersonAlias.Person.BirthDate )
+                    .ThenBy( a => a.PersonAlias.Person.NickName )
+                    .Select( a => new AttendanceReportItem
+                    {
+                        AttendanceId = a.Id,
+                        Attendance = a,
+                        AttendanceOccurrence = a.Occurrence,
+                        Campus = a.Campus,
+                        CampusName = a.Campus.Name,
+                        Schedule = a.Occurrence.Schedule,
+                        ScheduleName = a.Occurrence.Schedule.Name,
+                        Group = a.Occurrence.Group,
+                        GroupName = a.Occurrence.Group.Name,
+                        Location = a.Occurrence.Location,
+                        LocationName = a.Occurrence.Location.Name,
+                        Person = a.PersonAlias.Person,
+                        PersonName = a.PersonAlias.Person.NickName + " " + a.PersonAlias.Person.LastName,
+                        AttendanceCode = a.AttendanceCode,
+                        AttendanceCodeString = a.AttendanceCode.Code,
+                        AdditionalReportItems = allAttendanceQuery
+                            .Where( r => r.PersonAliasId.HasValue &&
+                                r.PersonAliasId == a.PersonAliasId &&
+                                r.Id != a.Id )
+                            .Select( r => new AttendanceReportSubItem
+                            {
+                                AttendanceId = r.Id,
+                                Attendance = r,
+                                AttendanceOccurrence = r.Occurrence,
+                                Campus = r.Campus,
+                                CampusName = r.Campus.Name,
+                                Schedule = r.Occurrence.Schedule,
+                                ScheduleName = r.Occurrence.Schedule.Name,
+                                Group = r.Occurrence.Group,
+                                GroupName = r.Occurrence.Group.Name,
+                                Location = r.Occurrence.Location,
+                                LocationName = r.Occurrence.Location.Name,
+                                Person = r.PersonAlias.Person,
+                                PersonName = r.PersonAlias.Person.NickName + " " + r.PersonAlias.Person.LastName,
+                                AttendanceCode = r.AttendanceCode,
+                                AttendanceCodeString = r.AttendanceCode.Code
+                            } )
+                            .ToList()
+                    } )
                     .ToList();
             }
 
-            gAttendees.DataSource = attendance;
-            gAttendees.AutoGenerateColumns = true;
+            if ( GetAttributeValue( AttributeKeys.ShowCampusFilter ).AsBoolean() )
+            {
+                gAttendees.Columns[0].Visible = true;
+            }
+            gAttendees.DataSource = reportItems;
+            gAttendees.EntityIdField = "AttendanceId";
             gAttendees.DataBind();
         }
 
@@ -503,7 +582,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         /// Gets the occurrences query.
         /// </summary>
         /// <returns></returns>
-        private IQueryable<AttendanceOccurrence> GetOccurrencesQuery()
+        private IQueryable<AttendanceOccurrence> GetOccurrencesQuery( bool includeSchedule = true )
         {
             // get the occurrences for SelectedDate with Groups
             var occurrenceQuery = new AttendanceOccurrenceService( _rockContext )
@@ -511,8 +590,8 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                 .AsNoTracking()
                 .Where( o => o.OccurrenceDate == SelectedDate.Value && o.GroupId.HasValue );
 
-            // if filtering by campus
-            if ( SelectedSchedule.IsNotNullOrWhiteSpace() )
+            // if filtering by schedule
+            if ( includeSchedule && SelectedSchedule.IsNotNullOrWhiteSpace() )
             {
                 var scheduleId = SelectedSchedule.AsInteger();
                 occurrenceQuery = occurrenceQuery.Where( o => o.ScheduleId.HasValue && o.ScheduleId.Value == scheduleId );
@@ -522,5 +601,29 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         }
 
         #endregion
+
+        protected class AttendanceReportSubItem
+        {
+            public int AttendanceId { get; set; }
+            public Attendance Attendance { get; set; }
+            public AttendanceOccurrence AttendanceOccurrence { get; set; }
+            public Campus Campus { get; set; }
+            public string CampusName { get; set; }
+            public Schedule Schedule { get; set; }
+            public string ScheduleName { get; set; }
+            public Group Group { get; set; }
+            public string GroupName { get; set; }
+            public Location Location { get; set; }
+            public string LocationName { get; set; }
+            public Person Person { get; set; }
+            public string PersonName { get; set; }
+            public AttendanceCode AttendanceCode { get; set; }
+            public string AttendanceCodeString { get; set; }
+        }
+
+        protected class AttendanceReportItem : AttendanceReportSubItem
+        {
+            public List<AttendanceReportSubItem> AdditionalReportItems { get; set; }
+        }
     }
 }
