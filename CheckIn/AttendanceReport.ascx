@@ -16,14 +16,11 @@
                 <Columns>
                     <Rock:SelectField />
                     <Rock:RockBoundField DataField="AttendanceId" HeaderText="Attendance Id" Visible="false" />
-                    <Rock:CampusField DataField="Campus" HeaderText="Campus" />
-                    <Rock:RockTemplateField HeaderText="Schedule Name">
-                        <ItemTemplate><%#Eval("Schedule.Name") %></ItemTemplate>
-                    </Rock:RockTemplateField>
-                    <Rock:RockBoundField DataField="Schedule" HeaderText="Schedule" />
-                    <Rock:RockBoundField DataField="Group" HeaderText="Group" />
-                    <Rock:RockBoundField DataField="Location" HeaderText="Location" />
-                    <Rock:PersonField DataField="Person" HeaderText="Person" />
+                    <Rock:RockBoundField DataField="CampusName" HeaderText="Campus" />
+                    <Rock:RockBoundField DataField="ScheduleName" HeaderText="Schedule" />
+                    <Rock:RockBoundField DataField="GroupName" HeaderText="Group" />
+                    <Rock:RockBoundField DataField="LocationName" HeaderText="Location" />
+                    <Rock:RockBoundField DataField="PersonName" HeaderText="Person" />
                     <Rock:RockBoundField DataField="AttendanceCode" HeaderText="Attendance Code" />
                     <Rock:RockTemplateField HeaderText="Multiple Check-Ins">
                         <ItemTemplate><%#(((List<AttendanceReportSubItem>)Eval("AdditionalReportItems")).Any()) ? "Yes" : ""%></ItemTemplate>
