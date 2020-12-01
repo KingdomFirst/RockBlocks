@@ -2,8 +2,9 @@
 
 # Attendance Report
 
-*Tested/Supported in Rock version: 10.2-11.3  
-*Released: 12/1/2020  
+*Tested/Supported in Rock version: 10.2-11.3*  
+
+*Released: 12/1/2020*  
 
 ## Summary
 
@@ -49,7 +50,7 @@ The block will need to be manually added to wherever you wish for it to be used.
 
 **Merge Templates**
 
-A sample merge template is included in "~/Plugins/rocks_kfs/Checkin/AttendanceReports", it will need to be registered in your General Settings > Merge Templates (~/page/370)
+A sample merge template is included in "/Plugins/rocks_kfs/Checkin/AttendanceReports", it will need to be registered in your General Settings > Merge Templates (/page/370)
 
 *Preview*
 
