@@ -252,7 +252,7 @@ FROM NewGroupMembers
 
 EXEC(@cmd)
 
-RAISERROR('Adding/Updated attendance...', 0, 10) WITH NOWAIT;
+RAISERROR('Adding/Updating attendance...', 0, 10) WITH NOWAIT;
 WAITFOR DELAY '00:00:01';
 
 -- insert to attendanceOccurrence
@@ -261,8 +261,9 @@ SELECT @cmd = '
 SELECT t.GroupID,
 	CAST(t.AttendanceTimestamp AS DATE) as OccurrenceDate
 FROM _rocks_kfs_peopleCsvTemp t
+JOIN [Group] g ON t.[GroupID] = g.[Id]
 LEFT OUTER JOIN AttendanceOccurrence ao ON ao.GroupId = t.GroupID AND CAST(ao.OccurrenceDate AS DATE) = CAST(t.AttendanceTimestamp AS DATE)
-WHERE ao.[Id] IS NULL
+WHERE ao.[Id] IS NULL AND t.GroupID IS NOT NULL AND t.AttendanceTimestamp IS NOT NULL
 )
 INSERT AttendanceOccurrence( GroupID, OccurrenceDate, [Guid], CreatedDateTime, ModifiedDateTime )
 SELECT GroupID, OccurrenceDate, NEWID(), GETDATE(), GETDATE()
