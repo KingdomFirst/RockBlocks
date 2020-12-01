@@ -362,8 +362,10 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                 schedules = new ScheduleService( rockContext )
                     .Queryable()
                     .AsNoTracking()
-                    .Where( s => s.CategoryId.HasValue && categoryIds.Contains( s.CategoryId.Value ) )
+                    .Where( s => s.CategoryId.HasValue && ( categoryIds.Contains( s.CategoryId.Value ) || categoryIds.Count == 0 ) && s.Name != "" )
                     .Distinct()
+                    .OrderBy( s => s.Category.Name )
+                    .ThenBy( s => s.Name )
                     .ToDictionary( k => k.Id, v => v.Name );
             }
 
