@@ -280,7 +280,7 @@ SELECT ao.Id as OccurrenceId,
 FROM _rocks_kfs_peopleCsvTemp t
 JOIN [PersonAlias] pa ON t.PersonId = pa.PersonId
 JOIN AttendanceOccurrence ao ON ao.GroupId = t.GroupID AND CAST(ao.OccurrenceDate AS DATE) = CAST(t.AttendanceTimestamp AS DATE)
-LEFT OUTER JOIN [Attendance] a ON a.PersonAliasId = pa.Id
+LEFT OUTER JOIN [Attendance] a ON a.PersonAliasId = pa.Id AND ao.Id = a.OccurrenceId
 WHERE a.[Id] IS NULL
 )
 INSERT Attendance( OccurrenceId, StartDateTime, PersonAliasId, DidAttend, [Guid], CreatedDateTime, ModifiedDateTime )
