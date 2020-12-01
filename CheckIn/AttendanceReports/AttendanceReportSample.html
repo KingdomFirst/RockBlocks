@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Attendance Report</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+        /*
+            Bootstrap Print CSS https://gist.github.com/donnierayjones/6fd9802d992b2d8d6cfd
+            Copyright (C) 2016 Donnie Ray Jones
+
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and associated documentation files (the
+            "Software"), to deal in the Software without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Software, and to
+            permit persons to whom the Software is furnished to do so, subject to
+            the following conditions:
+
+            The above copyright notice and this permission notice shall be included
+            in all copies or substantial portions of the Software.
+
+            THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+            OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+            MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+            IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+            CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+            TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+            SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+        */
+        @media print {
+            .col-sm-1, .col-sm-2, .col-sm-3, .col-sm-4, .col-sm-5, .col-sm-6, .col-sm-7, .col-sm-8, .col-sm-9, .col-sm-10, .col-sm-11, .col-sm-12 {
+                float: left;
+            }
+
+            .col-sm-12 {
+                width: 100%;
+            }
+
+            .col-sm-11 {
+                width: 91.66666667%;
+            }
+
+            .col-sm-10 {
+                width: 83.33333333%;
+            }
+
+            .col-sm-9 {
+                width: 75%;
+            }
+
+            .col-sm-8 {
+                width: 66.66666667%;
+            }
+
+            .col-sm-7 {
+                width: 58.33333333%;
+            }
+
+            .col-sm-6 {
+                width: 50%;
+            }
+
+            .col-sm-5 {
+                width: 41.66666667%;
+            }
+
+            .col-sm-4 {
+                width: 33.33333333%;
+            }
+
+            .col-sm-3 {
+                width: 25%;
+            }
+
+            .col-sm-2 {
+                width: 16.66666667%;
+            }
+
+            .col-sm-1 {
+                width: 8.33333333%;
+            }
+
+            .col-sm-pull-12 {
+                right: 100%;
+            }
+
+            .col-sm-pull-11 {
+                right: 91.66666667%;
+            }
+
+            .col-sm-pull-10 {
+                right: 83.33333333%;
+            }
+
+            .col-sm-pull-9 {
+                right: 75%;
+            }
+
+            .col-sm-pull-8 {
+                right: 66.66666667%;
+            }
+
+            .col-sm-pull-7 {
+                right: 58.33333333%;
+            }
+
+            .col-sm-pull-6 {
+                right: 50%;
+            }
+
+            .col-sm-pull-5 {
+                right: 41.66666667%;
+            }
+
+            .col-sm-pull-4 {
+                right: 33.33333333%;
+            }
+
+            .col-sm-pull-3 {
+                right: 25%;
+            }
+
+            .col-sm-pull-2 {
+                right: 16.66666667%;
+            }
+
+            .col-sm-pull-1 {
+                right: 8.33333333%;
+            }
+
+            .col-sm-pull-0 {
+                right: auto;
+            }
+
+            .col-sm-push-12 {
+                left: 100%;
+            }
+
+            .col-sm-push-11 {
+                left: 91.66666667%;
+            }
+
+            .col-sm-push-10 {
+                left: 83.33333333%;
+            }
+
+            .col-sm-push-9 {
+                left: 75%;
+            }
+
+            .col-sm-push-8 {
+                left: 66.66666667%;
+            }
+
+            .col-sm-push-7 {
+                left: 58.33333333%;
+            }
+
+            .col-sm-push-6 {
+                left: 50%;
+            }
+
+            .col-sm-push-5 {
+                left: 41.66666667%;
+            }
+
+            .col-sm-push-4 {
+                left: 33.33333333%;
+            }
+
+            .col-sm-push-3 {
+                left: 25%;
+            }
+
+            .col-sm-push-2 {
+                left: 16.66666667%;
+            }
+
+            .col-sm-push-1 {
+                left: 8.33333333%;
+            }
+
+            .col-sm-push-0 {
+                left: auto;
+            }
+
+            .col-sm-offset-12 {
+                margin-left: 100%;
+            }
+
+            .col-sm-offset-11 {
+                margin-left: 91.66666667%;
+            }
+
+            .col-sm-offset-10 {
+                margin-left: 83.33333333%;
+            }
+
+            .col-sm-offset-9 {
+                margin-left: 75%;
+            }
+
+            .col-sm-offset-8 {
+                margin-left: 66.66666667%;
+            }
+
+            .col-sm-offset-7 {
+                margin-left: 58.33333333%;
+            }
+
+            .col-sm-offset-6 {
+                margin-left: 50%;
+            }
+
+            .col-sm-offset-5 {
+                margin-left: 41.66666667%;
+            }
+
+            .col-sm-offset-4 {
+                margin-left: 33.33333333%;
+            }
+
+            .col-sm-offset-3 {
+                margin-left: 25%;
+            }
+
+            .col-sm-offset-2 {
+                margin-left: 16.66666667%;
+            }
+
+            .col-sm-offset-1 {
+                margin-left: 8.33333333%;
+            }
+
+            .col-sm-offset-0 {
+                margin-left: 0%;
+            }
+
+            .visible-xs {
+                display: none !important;
+            }
+
+            .hidden-xs {
+                display: block !important;
+            }
+
+            table.hidden-xs {
+                display: table;
+            }
+
+            tr.hidden-xs {
+                display: table-row !important;
+            }
+
+            th.hidden-xs,
+            td.hidden-xs {
+                display: table-cell !important;
+            }
+
+            .hidden-xs.hidden-print {
+                display: none !important;
+            }
+
+            .hidden-sm {
+                display: none !important;
+            }
+
+            .visible-sm {
+                display: block !important;
+            }
+
+            table.visible-sm {
+                display: table;
+            }
+
+            tr.visible-sm {
+                display: table-row !important;
+            }
+
+            th.visible-sm,
+            td.visible-sm {
+                display: table-cell !important;
+            }
+        }
+
+        @media all {
+            .page-break {
+                display: none;
+            }
+
+            .row {
+                margin-bottom: 4px;
+            }
+        }
+
+        @media print {
+            .page-break {
+                display: block;
+                page-break-before: always;
+            }
+
+            h1 {
+                font-size: 14px;
+            }
+
+            h2 {
+                font-size: 13px;
+            }
+
+            h3 {
+                font-size: 12px;
+            }
+
+            h4 {
+                font-size: 11px;
+            }
+
+            h5 {
+                font-size: 10px;
+            }
+
+            body {
+                font-size: 10px;
+                line-height:12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    {%- assign currentOccurrenceId = 0 -%}
+    {%- assign previousOccurrenceId = 0 -%}
+    <div class="container">
+        {%- for row in Rows -%}
+        {%- assign rowJson = row | ToJSON -%}
+        {%- assign realRow = rowJson | FromJSON -%}
+        {%- assign currentOccurrenceId = realRow.AttendanceOccurrenceId -%}
+        {%- if previousOccurrenceId > 0 -%}
+        {%- if previousOccurrenceId != currentOccurrenceId -%}
+        <div class="page-break"></div>
+        <h1>{{ row.GroupName }} - {{ row.LocationName }} | {{ row.SelectedDate | Date:'M/d/yyyy' }} {{ row.ScheduleName }}</h1>
+        {%- else -%}
+        <hr />
+        {%- endif -%}
+        {%- else -%}
+        <h1>{{ row.GroupName }} - {{ row.LocationName }} | {{ row.SelectedDate | Date:'M/d/yyyy' }} {{ row.ScheduleName }}</h1>
+        {%- endif -%}
+        {%- assign previousOccurrenceId = realRow.AttendanceOccurrenceId -%}
+        {%- assign person = realRow.PersonAliasId | PersonByAliasId -%}
+        <div id="realRow.AttendanceId">
+            <h3>{{ person.FullName }}</h3>
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm-2">{% assign connectionStatus = person.ConnectionStatusValueId | FromCache:'DefinedValue' %}{{ connectionStatus.Value }}</div>
+                    <div class="col-sm-2">{{ person.Age }} ({{ person.BirthDate | Date:'M/d/yyyy' }})</div>
+                    <div class="col-sm-2">{{ person.Gender }}</div>
+                    <div class="col-sm-2">{{ person.GradeFormatted }}</div>
+                    <div class="col-sm-2 col-sm-offset-2">Code: {{ realRow.AttendanceCode -}}</div>
+                </div>
+                <div class="row">
+                    {%- assign allergy = person | Attribute:'Allergy' -%}
+                    {%- if allergy != '' -%}
+                    <div class="col-sm-4"><label>Allergy:</label> {{ allergy }}</div>
+                    {%- endif -%}
+                    {%- assign legalNotes = person | Attribute:'LegalNotes' -%}
+                    {%- if legalNotes != '' -%}
+                    <div class="col-sm-4"><label>Legal Notes:</label> {{ legalNotes }}</div>
+                    {%- endif -%}
+                    {%- assign medicalNote = person | Attribute:'MedicalNote' -%}
+                    {%- if medicalNote != '' -%}
+                    <div class="col-sm-4"><label>Medical Notes:</label> {{ medicalNote }}</div>
+                    {%- endif -%}
+                </div>
+                <div class="row">
+                    <div class="col-sm-6">
+                        <label>Parents:</label>
+                        {%- assign parents = person | Parents -%}
+                        {%- for parent in parents -%}
+                        {% assign mobile = parent | PhoneNumber:'Mobile' %}
+                        <div class="item">{{ parent.FullName }}: {% if mobile == null %}No Mobile Number{% elseif mobile != '' %}{{ mobile }}{% else %}No Mobile Number{% endif %}</div>
+                        {%- endfor -%}
+                    </div>
+                    {%- assign additionalCheckins = realRow.AdditionalReportItems | Size -%}
+                    {%- if additionalCheckins > 0 -%}
+                    <div class="col-sm-6">
+                        <label>Additional Check-Ins:</label>
+                        {%- for subrow in realRow.AdditionalReportItems -%}
+                        <div class="item">{{ row.GroupName }} - {{ row.LocationName }} | {{ row.SelectedDate | Date:'M/d/yyyy' }} {{ row.ScheduleName }}</div>
+                        {%- endfor -%}
+                    </div>
+                    {%- endif -%}
+                </div>
+            </div>
+        </div>
+        {%- endfor -%}
+    </div>
+</body>
+
+</html>
