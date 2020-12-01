@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Attendance Report</title>
+    <style></style>
+</head>
+
+<body>
+    <ul>
+        {%- for row in Rows -%}
+        {%- assign rowJson = row | ToJSON -%}
+        {%- assign realRow = rowJson | FromJSON -%}
+        <li>
+            Row
+            <ul>
+                <li>DateTime SelectedDate: {{ realRow.SelectedDate -}}</li>
+                <li>int AttendanceId: {{ realRow.AttendanceId -}}</li>
+                <li>int AttendanceOccurrenceId: {{ realRow.AttendanceOccurrenceId -}}</li>
+                <li>int? CampusId: {{ realRow.CampusId -}}</li>
+                <li>string CampusName: {{ realRow.CampusName -}}</li>
+                <li>int? ScheduleId: {{ realRow.ScheduleId -}}</li>
+                <li>string ScheduleName: {{ realRow.ScheduleName -}}</li>
+                <li>int? GroupId: {{ realRow.GroupId -}}</li>
+                <li>string GroupName: {{ realRow.GroupName -}}</li>
+                <li>int? LocationId: {{ realRow.LocationId -}}</li>
+                <li>string LocationName: {{ realRow.LocationName -}}</li>
+                <li>int? PersonAliasId: {{ realRow.PersonAliasId -}}</li>
+                <li>string PersonName: {{ realRow.PersonName -}}</li>
+                <li>string AttendanceCode: {{ realRow.AttendanceCode -}}</li>
+                <li>
+                    AdditionalReportItems:
+                    <ul>
+                        {%- for subrow in realRow.AdditionalReportItems -%}
+                        <li>DateTime SelectedDate: {{ subrow.SelectedDate -}}</li>
+                        <li>int AttendanceId: {{ subrow.AttendanceId -}}</li>
+                        <li>int AttendanceOccurrenceId: {{ subrow.AttendanceOccurrenceId -}}</li>
+                        <li>int? CampusId: {{ subrow.CampusId -}}</li>
+                        <li>string CampusName: {{ subrow.CampusName -}}</li>
+                        <li>int? ScheduleId: {{ subrow.ScheduleId -}}</li>
+                        <li>string ScheduleName: {{ subrow.ScheduleName -}}</li>
+                        <li>int? GroupId: {{ subrow.GroupId -}}</li>
+                        <li>string GroupName: {{ subrow.GroupName -}}</li>
+                        <li>int? LocationId: {{ subrow.LocationId -}}</li>
+                        <li>string LocationName: {{ subrow.LocationName -}}</li>
+                        <li>int? PersonAliasId: {{ subrow.PersonAliasId -}}</li>
+                        <li>string PersonName: {{ subrow.PersonName -}}</li>
+                        <li>string AttendanceCode: {{ subrow.AttendanceCode -}}</li>
+                        {%- endfor -%}
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        {%- endfor -%}
+    </ul>
+</body>
+
+</html>
