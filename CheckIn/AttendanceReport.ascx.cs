@@ -48,9 +48,8 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
     [GroupTypeField(
         name: "Default Check-In Group Type",
         description: "The default Check-In Configuration when the page loads.",
-        required: true,
+        required: false,
         groupTypePurposeValueGuid: Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_TEMPLATE,
-        defaultGroupTypeGuid: Rock.SystemGuid.GroupType.GROUPTYPE_WEEKLY_SERVICE_CHECKIN_AREA,
         order: 0,
         key: AttributeKeys.DefaultCheckInGroupType )]
     [CategoryField(
@@ -262,7 +261,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         {
             if ( ddlCheckInConfiguration.SelectedValue.IsNullOrWhiteSpace() )
             {
-                ddlCheckInConfiguration.SelectedValue = GetDefaultGroupTypeIdFromBlockSettings().ToString();
+                ddlCheckInConfiguration.SelectedValue = GetDefaultGroupTypeIdFromBlockSettings();
             }
 
             CheckInConfigurationTypeId = ddlCheckInConfiguration.SelectedValue;
@@ -376,10 +375,16 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         /// Gets the default group type identifier from block settings.
         /// </summary>
         /// <returns></returns>
-        private int GetDefaultGroupTypeIdFromBlockSettings()
+        private string GetDefaultGroupTypeIdFromBlockSettings()
         {
-            var guid = GetAttributeValue( AttributeKeys.DefaultCheckInGroupType ).AsGuid();
-            return new GroupTypeService( _rockContext ).Get( guid ).Id;
+            var guid = GetAttributeValue( AttributeKeys.DefaultCheckInGroupType ).AsGuidOrNull();
+
+            if ( guid.HasValue )
+            {
+                return GroupTypeCache.Get( guid.Value ).Id.ToString();
+            }
+
+            return string.Empty;
         }
 
         /// <summary>
@@ -396,7 +401,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                 .OrderBy( c => c.Order )
                 .ThenBy( c => c.Name )
                 .ToList();
-            ddlCheckInConfiguration.SelectedValue = GetDefaultGroupTypeIdFromBlockSettings().ToString();
+            ddlCheckInConfiguration.SelectedValue = GetDefaultGroupTypeIdFromBlockSettings();
             CheckInConfigurationTypeId = ddlCheckInConfiguration.SelectedValue;
         }
 
