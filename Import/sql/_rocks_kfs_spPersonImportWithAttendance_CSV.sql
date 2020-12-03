@@ -129,7 +129,7 @@ SELECT
         WHEN @StatusGroupID = 1 AND @StatusAttendanceTimestamp = 1 THEN ', CONVERT(INT, GroupID), AttendanceTimestamp'
         WHEN @StatusGroupID = 1 AND @StatusAttendanceTimestamp = 0 THEN ', CONVERT(INT, GroupID), NULL'
         WHEN @StatusGroupID = 0 AND @StatusAttendanceTimestamp = 1 THEN ', NULL, AttendanceTimestamp'
-        ELSE 'NULL, NULL'
+        ELSE ', NULL, NULL'
     END
     +'
 FROM personData fd
@@ -263,7 +263,7 @@ SELECT t.GroupID,
 FROM _rocks_kfs_peopleCsvTemp t
 JOIN [Group] g ON t.[GroupID] = g.[Id]
 LEFT OUTER JOIN AttendanceOccurrence ao ON ao.GroupId = t.GroupID AND CAST(ao.OccurrenceDate AS DATE) = CAST(t.AttendanceTimestamp AS DATE)
-WHERE ao.[Id] IS NULL AND t.GroupID IS NOT NULL AND t.AttendanceTimestamp IS NOT NULL
+WHERE ao.[Id] IS NULL AND t.AttendanceTimestamp IS NOT NULL
 )
 INSERT AttendanceOccurrence( GroupID, OccurrenceDate, [Guid], CreatedDateTime, ModifiedDateTime )
 SELECT GroupID, OccurrenceDate, NEWID(), GETDATE(), GETDATE()
@@ -285,7 +285,7 @@ LEFT OUTER JOIN [Attendance] a ON a.PersonAliasId = pa.Id AND ao.Id = a.Occurren
 WHERE a.[Id] IS NULL
 )
 INSERT Attendance( OccurrenceId, StartDateTime, PersonAliasId, DidAttend, [Guid], CreatedDateTime, ModifiedDateTime )
-SELECT DISTINCT OccurrenceId, AttendanceTimestamp, PersonAliasId, 1, NEWID(), GETDATE(), GETDATE()
+SELECT OccurrenceId, AttendanceTimestamp, PersonAliasId, 1, NEWID(), GETDATE(), GETDATE()
 FROM NewAttendance GROUP BY OccurrenceId, AttendanceTimestamp, PersonAliasId
 ';
 
@@ -316,4 +316,3 @@ RAISERROR(@message, 0, 10) WITH NOWAIT;
 WAITFOR DELAY '00:00:01';
 
 COMMIT TRANSACTION
-
