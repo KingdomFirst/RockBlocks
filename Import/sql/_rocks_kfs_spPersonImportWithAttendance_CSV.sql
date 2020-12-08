@@ -99,6 +99,7 @@ DECLARE @HasGenderCol INT
 DECLARE @HasConnectionStatusCol INT
 DECLARE @HasGroupIdCol INT
 DECLARE @HasAttendanceTimestampCol INT
+DECLARE @StatusString VARCHAR(max)
 
 -- Populate Temp Table
 SELECT @cmd = '
@@ -307,6 +308,11 @@ FROM NewGroupMembers
 
 EXEC(@cmd)
 
+SELECT @StatusString = CONCAT(@@RowCount,' Group Members Added.')
+
+RAISERROR(@StatusString, 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
+
 RAISERROR('Adding/Updating attendance...', 0, 10) WITH NOWAIT;
 WAITFOR DELAY '00:00:01';
 
@@ -345,6 +351,10 @@ FROM NewAttendance GROUP BY OccurrenceId, AttendanceTimestamp, PersonAliasId
 ';
 
 EXEC(@cmd)
+SELECT @StatusString = CONCAT(@@RowCount, ' Attendance Records Added.')
+
+RAISERROR(@StatusString, 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
 
 /* =================================
 Cleanup table post processing
