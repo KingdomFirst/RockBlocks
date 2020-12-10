@@ -7,8 +7,13 @@
             <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" IncludeInactive="false" AutoPostBack="true" OnSelectedIndexChanged="cpCampus_SelectedIndexChanged" />
             <Rock:RockDropDownList ID="ddlSchedule" runat="server" Label="Schedule" AutoPostBack="true" OnSelectedIndexChanged="ddlSchedule_SelectedIndexChanged" />
             <Rock:GroupTypePicker ID="ddlCheckInConfiguration" runat="server" Label="Check-In Type" AutoPostBack="true" OnSelectedIndexChanged="ddlCheckInConfiguration_SelectedIndexChanged" />
-            <Rock:GroupTypePicker ID="ddlCheckInArea" runat="server" Label="Check-In Area" AutoPostBack="true" OnSelectedIndexChanged="ddlCheckInArea_SelectedIndexChanged" />
-            <Rock:RockCheckBoxList ID="cblGroups" runat="server" Label="Check-In Groups" EmptyListMessage="No Groups Found" />
+            <asp:Repeater ID="rptGroups" runat="server" OnItemDataBound="BindItem">
+                <ItemTemplate>
+                    <label><%# DataBinder.Eval(Container.DataItem, "Name") %></label>
+                    <Rock:RockCheckBoxList ID="cblGroups" runat="server" EmptyListMessage="No Groups with Attendance" />
+                </ItemTemplate>
+            </asp:Repeater>
+            <br />
             <Rock:BootstrapButton ID="btnRunReport" runat="server" Text="Run Report" CssClass="btn btn-primary" OnClick="btnRunReport_Click" />
         </div>
         <div class="col-sm-9">
