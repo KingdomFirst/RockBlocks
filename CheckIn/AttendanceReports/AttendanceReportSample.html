@@ -385,7 +385,7 @@
                     <div class="col-sm-6">
                         <label>Additional Check-Ins:</label>
                         {%- for subrow in realRow.AdditionalReportItems -%}
-                        <div class="item">{{ row.GroupName }} - {{ row.LocationName }} | {{ row.SelectedDate | Date:'M/d/yyyy' }} {{ row.ScheduleName }}</div>
+                        <div class="item">{{ subrow.GroupName }} - {{ subrow.LocationName }} | {{ subrow.SelectedDate | Date:'M/d/yyyy' }} {{ subrow.ScheduleName }}</div>
                         {%- endfor -%}
                     </div>
                     {%- endif -%}
