@@ -104,7 +104,6 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         public DateTime? SelectedDate;
         public string SelectedCampus;
         public string CheckInConfigurationTypeId;
-        public string CheckInAreaTypeId;
         public string SelectedSchedule;
 
         public Dictionary<int, string> Schedules
@@ -128,7 +127,6 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             SelectedDate = ViewState["SelectedDate"] as DateTime?;
             SelectedCampus = ViewState["SelectedCampus"] as string;
             CheckInConfigurationTypeId = ViewState["CheckInConfigurationTypeId"] as string;
-            CheckInAreaTypeId = ViewState["CheckInAreaTypeId"] as string;
             SelectedSchedule = ViewState["SelectedSchedule"] as string;
         }
 
@@ -143,7 +141,6 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             ViewState["SelectedDate"] = dpDate.SelectedDate;
             ViewState["SelectedCampus"] = cpCampus.SelectedValue;
             ViewState["CheckInConfigurationTypeId"] = ddlCheckInConfiguration.SelectedValue;
-            ViewState["CheckInAreaTypeId"] = ddlCheckInArea.SelectedValue;
             ViewState["SelectedSchedule"] = ddlSchedule.SelectedValue;
 
             return base.SaveViewState();
@@ -215,11 +212,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         protected void cpCampus_SelectedIndexChanged( object sender, EventArgs e )
         {
             SelectedCampus = cpCampus.SelectedValue;
-
-            if ( CheckInAreaTypeId.IsNotNullOrWhiteSpace() )
-            {
-                LoadCheckInGroupsCheckBoxes();
-            }
+            LoadCheckInAreasDropdown();
         }
 
         /// <summary>
@@ -230,11 +223,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         protected void dpDate_SelectDate( object sender, EventArgs e )
         {
             SelectedDate = dpDate.SelectedDate;
-
-            if ( CheckInAreaTypeId.IsNotNullOrWhiteSpace() )
-            {
-                LoadCheckInGroupsCheckBoxes();
-            }
+            LoadCheckInAreasDropdown();
         }
 
         /// <summary>
@@ -245,11 +234,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         protected void ddlSchedule_SelectedIndexChanged( object sender, EventArgs e )
         {
             SelectedSchedule = ddlSchedule.SelectedValue;
-
-            if ( CheckInAreaTypeId.IsNotNullOrWhiteSpace() )
-            {
-                LoadCheckInGroupsCheckBoxes();
-            }
+            LoadCheckInAreasDropdown();
         }
 
         /// <summary>
@@ -265,20 +250,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             }
 
             CheckInConfigurationTypeId = ddlCheckInConfiguration.SelectedValue;
-            CheckInAreaTypeId = null;
             LoadCheckInAreasDropdown();
-            LoadCheckInGroupsCheckBoxes();
-        }
-
-        /// <summary>
-        /// Handles the SelectedIndexChanged event of the ddlCheckInArea control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void ddlCheckInArea_SelectedIndexChanged( object sender, EventArgs e )
-        {
-            CheckInAreaTypeId = ddlCheckInArea.SelectedValue;
-            LoadCheckInGroupsCheckBoxes();
         }
 
         /// <summary>
@@ -411,19 +383,45 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         private void LoadCheckInAreasDropdown()
         {
             var checkinFilterId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_FILTER ).Id;
-            ddlCheckInArea.GroupTypes = new GroupTypeService( _rockContext )
+            var areas = new GroupTypeService( _rockContext )
                 .GetAllAssociatedDescendentsOrdered( CheckInConfigurationTypeId.AsInteger() )
                 .Where( t => !t.GroupTypePurposeValueId.HasValue || ( t.GroupTypePurposeValueId.HasValue && t.GroupTypePurposeValueId != checkinFilterId ) )
                 .Distinct()
                 .OrderBy( a => a.Order )
                 .ThenBy( a => a.Name )
                 .ToList();
+
+            rptGroups.DataSource = areas;
+            rptGroups.DataBind();
+        }
+
+        /// <summary>
+        /// Binds the item.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="args">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
+        protected void BindItem( object sender, RepeaterItemEventArgs args )
+        {
+            if ( args.Item.ItemType == ListItemType.Item || args.Item.ItemType == ListItemType.AlternatingItem )
+            {
+                GroupType area = ( GroupType ) args.Item.DataItem;
+                RockCheckBoxList rockCheckBoxList = ( RockCheckBoxList ) args.Item.FindControl( "cblGroups" );
+                rockCheckBoxList.DataSource = LoadCheckInGroupsCheckBoxes( area.Id );
+                rockCheckBoxList.DataTextField = "Value";
+                rockCheckBoxList.DataValueField = "Key";
+                rockCheckBoxList.DataBind();
+
+                for ( int i = 0; i < rockCheckBoxList.Items.Count; i++ )
+                {
+                    rockCheckBoxList.Items[i].Selected = true;
+                }
+            }
         }
 
         /// <summary>
         /// Loads the check in groups check boxes.
         /// </summary>
-        private void LoadCheckInGroupsCheckBoxes()
+        private Dictionary<int, string> LoadCheckInGroupsCheckBoxes( int checkinAreaTypeId )
         {
             var items = new Dictionary<int, string>();
 
@@ -463,7 +461,6 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                         .ToList();
 
                     // get the group types
-                    var checkinAreaTypeId = CheckInAreaTypeId.AsInteger();
                     var checkinFilterId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_FILTER ).Id;
                     var groupTypeIds = new GroupTypeService( _rockContext )
                         .GetAllAssociatedDescendentsOrdered( checkinAreaTypeId )
@@ -491,18 +488,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                 }
             }
 
-            cblGroups.Items.Clear();
-            cblGroups.DataSource = items;
-            cblGroups.DataTextField = "Value";
-            cblGroups.DataValueField = "Key";
-            cblGroups.DataBind();
-
-            for ( int i = 0; i < cblGroups.Items.Count; i++ )
-            {
-                cblGroups.Items[i].Selected = true;
-            }
-
-            SetupGrid();
+            return items;
         }
 
         /// <summary>
@@ -512,7 +498,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         {
             var reportItems = new List<AttendanceReportItem>();
 
-            var selectedGroups = cblGroups.SelectedValues.AsIntegerList();
+            var selectedGroups = GetSelectedGroups();
 
             if ( selectedGroups.Count > 0 )
             {
@@ -589,6 +575,23 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             }
 
             SetupGrid( reportItems );
+        }
+
+        /// <summary>
+        /// Gets the selected groups.
+        /// </summary>
+        /// <returns></returns>
+        private List<int> GetSelectedGroups()
+        {
+            var groups = new List<int>();
+
+            foreach ( RepeaterItem item in rptGroups.Items )
+            {
+                RockCheckBoxList rockCheckBoxList = ( RockCheckBoxList ) item.FindControl( "cblGroups" );
+                groups.AddRange( rockCheckBoxList.SelectedValues.AsIntegerList() );
+            }
+
+            return groups;
         }
 
         /// <summary>
