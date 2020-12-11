@@ -540,10 +540,49 @@ namespace RockWeb.Plugins.rocks_kfs.Core
         {
             if ( _definedType != null )
             {
-                var queryable = new DefinedValueService( new RockContext() ).Queryable().Where( a => a.DefinedTypeId == _definedType.Id ).OrderBy( a => a.Order );
-                var result = queryable.ToList();
+                var rockContext = new RockContext();
+                var definedValueService = new DefinedValueService( rockContext );
+                var qry = definedValueService.Queryable().Where( a => a.DefinedTypeId == _definedType.Id );
 
-                gDefinedValues.DataSource = result;
+                string value = tbValue.Text;
+                if ( !string.IsNullOrWhiteSpace( value ) )
+                {
+                    qry = qry.Where( dv => dv.Value.StartsWith( value ) );
+                }
+
+                string desc = tbDescription.Text;
+                if ( !string.IsNullOrWhiteSpace( desc ) )
+                {
+                    qry = qry.Where( dv => dv.Description.StartsWith( desc ) );
+                }
+
+                qry = qry.Where( dv => dv.IsActive.Equals( cbActive.Checked ) );
+
+                // Filter query by any configured attribute filters
+                if ( AvailableAttributes != null && AvailableAttributes.Any() )
+                {
+                    var attributeValueService = new AttributeValueService( rockContext );
+                    var parameterExpression = attributeValueService.ParameterExpression;
+
+                    foreach ( var attribute in AvailableAttributes )
+                    {
+                        var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                        qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, definedValueService, Rock.Reporting.FilterMode.SimpleFilter );
+                    }
+                }
+                IQueryable<DefinedValue> result = null;
+
+                var sortProperty = gDefinedValues.SortProperty;
+                if ( sortProperty != null )
+                {
+                    result = qry.Sort( sortProperty );
+                }
+                else
+                {
+                    result = qry.OrderBy( dv => dv.Order );
+                }
+
+                gDefinedValues.DataSource = result.ToList();
                 gDefinedValues.DataBind();
             }
         }
