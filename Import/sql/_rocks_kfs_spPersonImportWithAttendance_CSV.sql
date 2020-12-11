@@ -177,7 +177,7 @@ SELECT '+
         ELSE '0, '
     END +
     CASE 
-        WHEN @HasConnectionStatusCol = 1 THEN 'ConnectionStatusId, '
+        WHEN @HasConnectionStatusCol = 1 THEN 'CASE WHEN NULLIF(LTRIM([ConnectionStatusId]), '''') IS NULL THEN 66 ELSE ConnectionStatusId END, '
         ELSE '66, '
     END
     +' NEWID()'+
@@ -240,7 +240,7 @@ SELECT @cmd = '
     WHERE p.[Id] IS NULL
 )
 INSERT Person (FirstName, NickName, LastName, BirthDate, BirthDay, BirthMonth, BirthYear, Email, Gender, ForeignGuid, CreatedDateTime, ModifiedDateTime, IsSystem, RecordTypeValueId, RecordStatusValueId, ConnectionStatusValueId, IsDeceased, IsEmailActive, Guid, EmailPreference, CommunicationPreference)
-SELECT FirstName, FirstName, LastName, BirthDate, BirthDay, BirthMonth, BirthYear, Email, Gender, ForeignGuid, GETDATE(), GETDATE(), 0, ' + CONVERT(VARCHAR(20), @PersonRecordTypeId) + ', ' + CONVERT(VARCHAR(20), @ActiveRecordStatusId) + ', ConnectionStatusId, 0, 1, NEWID(), 0, 1
+SELECT FirstName, FirstName, LastName, BirthDate, BirthDay, BirthMonth, BirthYear, Email, Gender, ForeignGuid, GETDATE(), GETDATE(), 0, ' + CONVERT(VARCHAR(20), @PersonRecordTypeId) + ', ' + CONVERT(VARCHAR(20), @ActiveRecordStatusId) + ', ConnectionStatusId, 0, CASE WHEN NULLIF(LTRIM([Email]), '''') IS NULL THEN 0 ELSE 1 END, NEWID(), 0, 1
 FROM NewPeople
 ';
 
@@ -309,6 +309,27 @@ FROM NewGroupMembers
 EXEC(@cmd)
 
 SELECT @StatusString = CONCAT(@@RowCount,' Group Members Added.')
+
+RAISERROR(@StatusString, 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
+
+RAISERROR('Updating Group Members...', 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
+
+-- insert to group
+SELECT @cmd = '
+UPDATE [GroupMember] 
+SET IsArchived = 0, ModifiedDateTime = GETDATE(), ArchivedDateTime = null, ArchivedByPersonAliasId = null
+FROM _rocks_kfs_peopleCsvTemp t
+LEFT OUTER JOIN [GroupMember] gm ON t.[PersonId] = gm.[PersonId] and gm.[GroupID] = t.GroupID
+JOIN [Group] g ON t.[GroupID] = g.[Id]
+JOIN [GroupType] gt ON g.[GroupTypeId] = gt.[Id]
+WHERE gm.[Id] IS NOT NULL AND gm.IsArchived = 1
+';
+
+EXEC(@cmd)
+
+SELECT @StatusString = CONCAT(@@RowCount,' Group Members Unarchived.')
 
 RAISERROR(@StatusString, 0, 10) WITH NOWAIT;
 WAITFOR DELAY '00:00:01';
