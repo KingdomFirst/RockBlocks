@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="DefinedValueList.ascx.cs" Inherits="RockWeb.Blocks.Core" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="DefinedValueList.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Core.DefinedValueList" %>
 
 <asp:UpdatePanel ID="upnlSettings" runat="server">
     <ContentTemplate>
@@ -15,11 +15,17 @@
                     <asp:Panel ID="pnlValues" runat="server">
                         <Rock:ModalAlert ID="mdGridWarningValues" runat="server" />
                         <div class="grid grid-panel">
-                            <Rock:Grid ID="gDefinedValues" runat="server" AllowPaging="true" DisplayType="Full" OnRowSelected="gDefinedValues_Edit" AllowSorting="False">
+                            <Rock:GridFilter ID="gfDefinedValues" runat="server" OnClearFilterClick="gfDefinedValues_ClearFilterClick">
+                                <Rock:RockTextBox ID="tbValue" runat="server" Label="Value"></Rock:RockTextBox>
+                                <Rock:RockTextBox ID="tbDescription" runat="server" Label="Description"></Rock:RockTextBox>
+                                <Rock:RockCheckBox ID="cbActive" runat="server" Label="Active" Checked="true" />
+                                <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
+                            </Rock:GridFilter>
+                            <Rock:Grid ID="gDefinedValues" runat="server" AllowPaging="true" DisplayType="Full" OnRowSelected="gDefinedValues_Edit" AllowSorting="True">
                                 <Columns>
-                                    <Rock:ReorderField />
-                                    <Rock:RockBoundField DataField="Value" HeaderText="Value" />
-                                    <Rock:RockBoundField DataField="Description" HeaderText="Description" />
+                                    <Rock:RockBoundField DataField="Order" HeaderText="Order" SortExpression="Order" />
+                                    <Rock:RockBoundField DataField="Value" HeaderText="Value" SortExpression="Value" />
+                                    <Rock:RockBoundField DataField="Description" HeaderText="Description" SortExpression="Description" />
                                     <Rock:BoolField DataField="IsActive" HeaderText="Active" />
                                 </Columns>
                             </Rock:Grid>

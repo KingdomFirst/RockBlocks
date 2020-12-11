@@ -14,9 +14,22 @@
 // limitations under the License.
 // </copyright>
 //
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * Added filters to Grid
+// * Added sorting to Grid
+// * Removed reordering due to sorting
+// </notice>
+//
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Web.UI.WebControls;
+using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
 using Rock.Constants;
@@ -27,14 +40,14 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Blocks.Core
+namespace RockWeb.Plugins.rocks_kfs.Core
 {
     /// <summary>
     /// User controls for managing defined values
     /// </summary>
     [DisplayName( "Defined Value List" )]
-    [Category( "Core" )]
-    [Description( "Block for viewing values for a defined type." )]
+    [Category( "KFS > Core" )]
+    [Description( "Block for viewing values for a defined type with filters." )]
 
     [DefinedTypeField( "Defined Type",
         Description = "If a Defined Type is set, only its Defined Values will be displayed (regardless of the querystring parameters).",
@@ -51,6 +64,19 @@ namespace RockWeb.Blocks.Core
         #region Private Variables
 
         private DefinedType _definedType = null;
+        private bool _canEdit = false;
+
+        #endregion
+
+        #region Public Variables
+
+        /// <summary>
+        /// Gets or sets the available attributes.
+        /// </summary>
+        /// <value>
+        /// The available attributes.
+        /// </value>
+        public List<AttributeCache> AvailableAttributes { get; set; }
 
         #endregion
 
@@ -74,21 +100,17 @@ namespace RockWeb.Blocks.Core
 
             if ( _definedType != null )
             {
+                gfDefinedValues.ApplyFilterClick += gfDefinedValues_ApplyFilterClick;
+                gfDefinedValues.DisplayFilterValue += gfDefinedValues_DisplayFilterValue;
+
                 gDefinedValues.DataKeyNames = new string[] { "Id" };
                 gDefinedValues.Actions.ShowAdd = true;
                 gDefinedValues.Actions.AddClick += gDefinedValues_Add;
                 gDefinedValues.GridRebind += gDefinedValues_GridRebind;
-                gDefinedValues.GridReorder += gDefinedValues_GridReorder;
 
-                bool canAddEditDelete = IsUserAuthorized( Authorization.EDIT );
-                gDefinedValues.Actions.ShowAdd = canAddEditDelete;
-                gDefinedValues.IsDeleteEnabled = canAddEditDelete;
-
-                AddAttributeColumns();
-
-                var deleteField = new DeleteField();
-                gDefinedValues.Columns.Add( deleteField );
-                deleteField.Click += gDefinedValues_Delete;
+                _canEdit = IsUserAuthorized( Authorization.EDIT );
+                gDefinedValues.Actions.ShowAdd = _canEdit;
+                gDefinedValues.IsDeleteEnabled = _canEdit;
 
                 modalValue.SaveClick += btnSaveValue_Click;
                 modalValue.OnCancelScript = string.Format( "$('#{0}').val('');", hfDefinedValueId.ClientID );
@@ -134,6 +156,7 @@ namespace RockWeb.Blocks.Core
             {
                 if ( _definedType != null )
                 {
+                    SetFilter();
                     ShowDetail();
                 }
                 else
@@ -141,6 +164,32 @@ namespace RockWeb.Blocks.Core
                     pnlList.Visible = false;
                 }
             }
+        }
+
+        /// <summary>
+        /// Restores the view-state information from a previous user control request that was saved by the <see cref="M:System.Web.UI.UserControl.SaveViewState" /> method.
+        /// </summary>
+        /// <param name="savedState">An <see cref="T:System.Object" /> that represents the user control state to be restored.</param>
+        protected override void LoadViewState( object savedState )
+        {
+            base.LoadViewState( savedState );
+
+            AvailableAttributes = ViewState["AvailableAttributes"] as List<AttributeCache>;
+
+            AddAttributeColumns();
+        }
+
+        /// <summary>
+        /// Saves any user control view-state changes that have occurred since the last page postback.
+        /// </summary>
+        /// <returns>
+        /// Returns the user control's current view state. If there is no view state associated with the control, it returns null.
+        /// </returns>
+        protected override object SaveViewState()
+        {
+            ViewState["AvailableAttributes"] = AvailableAttributes;
+
+            return base.SaveViewState();
         }
 
         #endregion
@@ -158,6 +207,7 @@ namespace RockWeb.Blocks.Core
 
             if ( _definedType != null )
             {
+                SetFilter();
                 ShowDetail();
             }
             else
@@ -212,6 +262,81 @@ namespace RockWeb.Blocks.Core
             }
 
             BindDefinedValuesGrid();
+        }
+
+        protected void gfDefinedValues_DisplayFilterValue( object sender, Rock.Web.UI.Controls.GridFilter.DisplayFilterValueArgs e )
+        {
+
+            if ( AvailableAttributes != null )
+            {
+                var attribute = AvailableAttributes.FirstOrDefault( a => MakeKeyUniqueToType( a.Key ) == e.Key );
+                if ( attribute != null )
+                {
+                    try
+                    {
+                        var values = JsonConvert.DeserializeObject<List<string>>( e.Value );
+                        e.Value = attribute.FieldType.Field.FormatFilterValues( attribute.QualifierValues, values );
+                        return;
+                    }
+                    catch { }
+                }
+            }
+
+            if ( e.Key == MakeKeyUniqueToType( "Value" ) )
+            {
+                return;
+            }
+            else if ( e.Key == MakeKeyUniqueToType( "Description" ) )
+            {
+                return;
+            }
+            else if ( e.Key == MakeKeyUniqueToType( "Active" ) )
+            {
+                return;
+            }
+            else
+            {
+                e.Value = string.Empty;
+            }
+        }
+
+        protected void gfDefinedValues_ApplyFilterClick( object sender, EventArgs e )
+        {
+            gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( "Value" ), "Value", tbValue.Text );
+            gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( "Description" ), "Description", tbDescription.Text );
+            gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( "Active" ), "Active", cbActive.Checked.ToString() );
+
+            if ( AvailableAttributes != null )
+            {
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    if ( filterControl != null )
+                    {
+                        try
+                        {
+                            var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                            gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( attribute.Key ), attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                        }
+                        catch { }
+                    }
+                }
+            }
+
+            BindDefinedValuesGrid();
+        }
+
+        /// <summary>
+        /// Handles the ClearFilterClick event of the rFilter control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void gfDefinedValues_ClearFilterClick( object sender, EventArgs e )
+        {
+            gfDefinedValues.DeleteUserPreferences();
+            cbActive.Checked = true;
+            gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( "Active" ), "Active", cbActive.Checked.ToString() );
+            SetFilter();
         }
 
         /// <summary>
@@ -293,6 +418,7 @@ namespace RockWeb.Blocks.Core
             pnlList.Visible = true;
 
             hfDefinedTypeId.SetValue( _definedType.Id );
+
             BindDefinedValuesGrid();
         }
 
@@ -306,21 +432,27 @@ namespace RockWeb.Blocks.Core
             BindDefinedValuesGrid();
         }
 
-        /// <summary>
-        /// Handles the GridReorder event of the gDefinedValues control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="GridReorderEventArgs"/> instance containing the event data.</param>
-        private void gDefinedValues_GridReorder( object sender, GridReorderEventArgs e )
+        private void BindAttributes()
         {
-            int definedTypeId = hfDefinedTypeId.ValueAsInt();
-
-            var rockContext = new RockContext();
-            var definedValueService = new DefinedValueService( rockContext );
-            var definedValues = definedValueService.Queryable().Where( a => a.DefinedTypeId == definedTypeId ).OrderBy( a => a.Order ).ThenBy( a => a.Value );
-            var changedIds = definedValueService.Reorder( definedValues.ToList(), e.OldIndex, e.NewIndex );
-            rockContext.SaveChanges();
-            BindDefinedValuesGrid();
+            // Parse the attribute filters
+            AvailableAttributes = new List<AttributeCache>();
+            if ( _definedType != null )
+            {
+                int entityTypeId = new DefinedValue().TypeId;
+                string qualifier = _definedType.Id.ToString();
+                foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
+                    .Where( a =>
+                        a.EntityTypeId == entityTypeId &&
+                        a.IsGridColumn &&
+                        a.EntityTypeQualifierColumn.Equals( "DefinedTypeId", StringComparison.OrdinalIgnoreCase ) &&
+                        a.EntityTypeQualifierValue.Equals( qualifier ) )
+                    .OrderByDescending( a => a.EntityTypeQualifierColumn )
+                    .ThenBy( a => a.Order )
+                    .ThenBy( a => a.Name ) )
+                {
+                    AvailableAttributes.Add( AttributeCache.Get( attributeModel ) );
+                }
+            }
         }
 
         /// <summary>
@@ -334,20 +466,44 @@ namespace RockWeb.Blocks.Core
                 gDefinedValues.Columns.Remove( column );
             }
 
-            if ( _definedType != null )
+            // Clear the filter controls
+            phAttributeFilters.Controls.Clear();
+
+            if ( AvailableAttributes != null )
             {
-                // Add attribute columns
-                int entityTypeId = new DefinedValue().TypeId;
-                string qualifier = _definedType.Id.ToString();
-                foreach ( var attribute in new AttributeService( new RockContext() ).Queryable()
-                    .Where( a =>
-                        a.EntityTypeId == entityTypeId &&
-                        a.IsGridColumn &&
-                        a.EntityTypeQualifierColumn.Equals( "DefinedTypeId", StringComparison.OrdinalIgnoreCase ) &&
-                        a.EntityTypeQualifierValue.Equals( qualifier ) )
-                    .OrderBy( a => a.Order )
-                    .ThenBy( a => a.Name ) )
+                foreach ( var attribute in AvailableAttributes )
                 {
+                    var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
+                    if ( control != null )
+                    {
+                        if ( control is IRockControl )
+                        {
+                            var rockControl = ( IRockControl ) control;
+                            rockControl.Label = attribute.Name;
+                            rockControl.Help = attribute.Description;
+                            phAttributeFilters.Controls.Add( control );
+                        }
+                        else
+                        {
+                            var wrapper = new RockControlWrapper();
+                            wrapper.ID = control.ID + "_wrapper";
+                            wrapper.Label = attribute.Name;
+                            wrapper.Controls.Add( control );
+                            phAttributeFilters.Controls.Add( wrapper );
+                        }
+                    }
+
+                    string savedValue = gfDefinedValues.GetUserPreference( MakeKeyUniqueToType( attribute.Key ) );
+                    if ( !string.IsNullOrWhiteSpace( savedValue ) )
+                    {
+                        try
+                        {
+                            var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
+                            attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
+                        }
+                        catch { }
+                    }
+
                     string dataFieldExpression = attribute.Key;
                     bool columnExists = gDefinedValues.Columns.OfType<AttributeField>().FirstOrDefault( a => a.DataField.Equals( dataFieldExpression ) ) != null;
                     if ( !columnExists )
@@ -367,6 +523,13 @@ namespace RockWeb.Blocks.Core
                         gDefinedValues.Columns.Add( boundField );
                     }
                 }
+            }
+
+            if ( _canEdit )
+            {
+                var deleteField = new DeleteField();
+                gDefinedValues.Columns.Add( deleteField );
+                deleteField.Click += gDefinedValues_Delete;
             }
         }
 
@@ -429,6 +592,28 @@ namespace RockWeb.Blocks.Core
             avcDefinedValueAttributes.AddEditControls( definedValue );
 
             modalValue.Show();
+        }
+
+        private string MakeKeyUniqueToType( string key )
+        {
+            if ( _definedType != null )
+            {
+                return string.Format( "{0}-{1}", _definedType.Id, key );
+            }
+            return key;
+        }
+
+        /// <summary>
+        /// Binds the filter.
+        /// </summary>
+        private void SetFilter()
+        {
+            BindAttributes();
+            AddAttributeColumns();
+
+            tbValue.Text = gfDefinedValues.GetUserPreference( MakeKeyUniqueToType( "Name" ) );
+            tbDescription.Text = gfDefinedValues.GetUserPreference( MakeKeyUniqueToType( "Status" ) );
+            cbActive.Checked = gfDefinedValues.GetUserPreference( MakeKeyUniqueToType( "Active" ) ).AsBoolean();
         }
 
         #endregion
