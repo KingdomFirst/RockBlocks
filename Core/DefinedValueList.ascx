@@ -18,7 +18,11 @@
                             <Rock:GridFilter ID="gfDefinedValues" runat="server" OnClearFilterClick="gfDefinedValues_ClearFilterClick">
                                 <Rock:RockTextBox ID="tbValue" runat="server" Label="Value"></Rock:RockTextBox>
                                 <Rock:RockTextBox ID="tbDescription" runat="server" Label="Description"></Rock:RockTextBox>
-                                <Rock:RockCheckBox ID="cbActive" runat="server" Label="Active" Checked="true" />
+                                <Rock:RockDropDownList ID="ddlActive" runat="server" Label="Active Status">
+                                    <asp:ListItem Text="[All]" Value=""></asp:ListItem>
+                                    <asp:ListItem Text="Active" Value="active"></asp:ListItem>
+                                    <asp:ListItem Text="Inactive" Value="inactive"></asp:ListItem>
+                                </Rock:RockDropDownList>
                                 <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
                             </Rock:GridFilter>
                             <Rock:Grid ID="gDefinedValues" runat="server" AllowPaging="true" DisplayType="Full" OnRowSelected="gDefinedValues_Edit" AllowSorting="True">

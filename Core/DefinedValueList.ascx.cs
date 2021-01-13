@@ -304,7 +304,7 @@ namespace RockWeb.Plugins.rocks_kfs.Core
         {
             gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( "Value" ), "Value", tbValue.Text );
             gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( "Description" ), "Description", tbDescription.Text );
-            gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( "Active" ), "Active", cbActive.Checked.ToString() );
+            gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( "Active" ), "Active", ddlActive.SelectedValue );
 
             if ( AvailableAttributes != null )
             {
@@ -334,8 +334,6 @@ namespace RockWeb.Plugins.rocks_kfs.Core
         protected void gfDefinedValues_ClearFilterClick( object sender, EventArgs e )
         {
             gfDefinedValues.DeleteUserPreferences();
-            cbActive.Checked = true;
-            gfDefinedValues.SaveUserPreference( MakeKeyUniqueToType( "Active" ), "Active", cbActive.Checked.ToString() );
             SetFilter();
         }
 
@@ -556,7 +554,10 @@ namespace RockWeb.Plugins.rocks_kfs.Core
                     qry = qry.Where( dv => dv.Description.StartsWith( desc ) );
                 }
 
-                qry = qry.Where( dv => dv.IsActive.Equals( cbActive.Checked ) );
+                if ( !string.IsNullOrWhiteSpace( ddlActive.SelectedValue ) )
+                {
+                    qry = qry.Where( dv => dv.IsActive.Equals( ddlActive.SelectedValue == "active" ) );
+                }
 
                 // Filter query by any configured attribute filters
                 if ( AvailableAttributes != null && AvailableAttributes.Any() )
@@ -652,7 +653,7 @@ namespace RockWeb.Plugins.rocks_kfs.Core
 
             tbValue.Text = gfDefinedValues.GetUserPreference( MakeKeyUniqueToType( "Name" ) );
             tbDescription.Text = gfDefinedValues.GetUserPreference( MakeKeyUniqueToType( "Status" ) );
-            cbActive.Checked = gfDefinedValues.GetUserPreference( MakeKeyUniqueToType( "Active" ) ).AsBoolean();
+            ddlActive.SelectedValue = gfDefinedValues.GetUserPreference( MakeKeyUniqueToType( "Active" ) );
         }
 
         #endregion
