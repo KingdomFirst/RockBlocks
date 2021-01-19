@@ -55,10 +55,15 @@ SELECT @Status = COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
 WHERE [TABLE_NAME] = ''' + @ImportTable + '''
    AND COLUMN_NAME = ''Email''
 
-IF @Status < 1 
+DECLARE @Status2 INT
+SELECT @Status2 = COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
+WHERE [TABLE_NAME] = ''' + @ImportTable + '''
+   AND COLUMN_NAME = ''BirthDate''
+
+IF @Status < 1 AND @Status2 < 1
 BEGIN 
     RAISERROR(''Table does not contain the correct column definitions:'', 0, 10) WITH NOWAIT;
-    RAISERROR(''FirstName,LastName,BirthDate,Email,ConnectionStatusId,GroupID,AttendanceTimestamp,Gender'', 0, 10) WITH NOWAIT;
+    RAISERROR(''FirstName,LastName,Email,BirthDate,ConnectionStatusId,GroupID,AttendanceTimestamp,Gender'', 0, 10) WITH NOWAIT;
     WAITFOR DELAY ''00:00:01'';
 END
 ';
@@ -88,17 +93,54 @@ CREATE TABLE _rocks_kfs_peopleCsvTemp (
 	PersonId INT
 );
 
-DECLARE @StatusGroupID INT
-DECLARE @StatusAttendanceTimestamp INT
+DECLARE @HasEmailCol INT
+DECLARE @HasBirthDateCol INT
+DECLARE @HasGenderCol INT
+DECLARE @HasConnectionStatusCol INT
+DECLARE @HasGroupIdCol INT
+DECLARE @HasAttendanceTimestampCol INT
+DECLARE @StatusString VARCHAR(max)
 
 -- Populate Temp Table
+SELECT @cmd = '
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+WHERE [TABLE_NAME] = ''' + @ImportTable + '''
+   AND COLUMN_NAME = ''Email''
+';
+EXEC(@cmd)
+SET @HasEmailCol = @@ROWCOUNT
+
+SELECT @cmd = '
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+WHERE [TABLE_NAME] = ''' + @ImportTable + '''
+   AND COLUMN_NAME = ''BirthDate''
+';
+EXEC(@cmd)
+SET @HasBirthDateCol = @@ROWCOUNT
+
+SELECT @cmd = '
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+WHERE [TABLE_NAME] = ''' + @ImportTable + '''
+   AND COLUMN_NAME = ''Gender''
+';
+EXEC(@cmd)
+SET @HasGenderCol = @@ROWCOUNT
+
+SELECT @cmd = '
+SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+WHERE [TABLE_NAME] = ''' + @ImportTable + '''
+   AND COLUMN_NAME = ''ConnectionStatusId''
+';
+EXEC(@cmd)
+SET @HasConnectionStatusCol = @@ROWCOUNT
+
 SELECT @cmd = '
 SELECT * FROM INFORMATION_SCHEMA.COLUMNS
 WHERE [TABLE_NAME] = ''' + @ImportTable + '''
    AND COLUMN_NAME = ''GroupID''
 ';
 EXEC(@cmd)
-SET @StatusGroupID = @@ROWCOUNT
+SET @HasGroupIdCol = @@ROWCOUNT
 
 SELECT @cmd = '
 SELECT * FROM INFORMATION_SCHEMA.COLUMNS
@@ -106,29 +148,43 @@ WHERE [TABLE_NAME] = ''' + @ImportTable + '''
    AND COLUMN_NAME = ''AttendanceTimestamp''
 ';
 EXEC(@cmd)
-SET @StatusAttendanceTimestamp = @@ROWCOUNT
+SET @HasAttendanceTimestampCol = @@ROWCOUNT
 
 -- Populate Temp Table
 SELECT @cmd = '
 ;WITH personData AS (
     SELECT * FROM ' + QUOTENAME(@ImportTable) +
 ')
-INSERT _rocks_kfs_peopleCsvTemp (FirstName, LastName, BirthDate, Email, Gender, ForeignGuid, GroupID, AttendanceTimestamp)
-SELECT 
-    CASE WHEN NULLIF(LTRIM([FirstName]), '''') IS NULL THEN RIGHT(Email, LEN(Email) - CHARINDEX(''@'', email)) ELSE [FirstName] END,
-	CASE WHEN NULLIF(LTRIM([LastName]), '''') IS NULL THEN LEFT(Email, LEN(Email) - CHARINDEX(''@'', email)) ELSE [LastName] END,
-    CONVERT(DATE, BirthDate),
-	Email,
+INSERT _rocks_kfs_peopleCsvTemp (FirstName, LastName, Email, BirthDate, Gender, ConnectionStatusId, ForeignGuid, GroupID, AttendanceTimestamp)
+SELECT '+
+    CASE 
+        WHEN @HasEmailCol = 1 THEN
+            'CASE WHEN NULLIF(LTRIM([FirstName]), '''') IS NULL THEN RIGHT(Email, LEN(Email) - CHARINDEX(''@'', email)) ELSE [FirstName] END,
+	         CASE WHEN NULLIF(LTRIM([LastName]), '''') IS NULL THEN LEFT(Email, LEN(Email) - CHARINDEX(''@'', email)) ELSE [LastName] END, 
+	         Email, '
+        ELSE '[FirstName], [LastName], '''', '
+    END +
+    CASE 
+        WHEN @HasBirthDateCol = 1 THEN 'CASE WHEN LTRIM(BirthDate) != '''' THEN CONVERT(DATE, BirthDate) ELSE NULL END, '
+        ELSE 'NULL, '
+    END +
+    CASE 
+        WHEN @HasGenderCol = 1 THEN 'CASE
+                WHEN Gender = ''Female'' THEN 2
+                WHEN Gender = ''Male'' THEN 1
+                ELSE 0
+            END AS Gender, '
+        ELSE '0, '
+    END +
+    CASE 
+        WHEN @HasConnectionStatusCol = 1 THEN 'CASE WHEN NULLIF(LTRIM([ConnectionStatusId]), '''') IS NULL THEN 66 ELSE ConnectionStatusId END, '
+        ELSE '66, '
+    END
+    +' NEWID()'+
     CASE
-        WHEN Gender = ''Female'' THEN 2
-        WHEN Gender = ''Male'' THEN 1
-        ELSE 0
-    END AS Gender,
-	NEWID()'+
-    CASE
-        WHEN @StatusGroupID = 1 AND @StatusAttendanceTimestamp = 1 THEN ', CONVERT(INT, GroupID), AttendanceTimestamp'
-        WHEN @StatusGroupID = 1 AND @StatusAttendanceTimestamp = 0 THEN ', CONVERT(INT, GroupID), NULL'
-        WHEN @StatusGroupID = 0 AND @StatusAttendanceTimestamp = 1 THEN ', NULL, AttendanceTimestamp'
+        WHEN @HasGroupIdCol = 1 AND @HasAttendanceTimestampCol = 1 THEN ', CONVERT(INT, GroupID), AttendanceTimestamp'
+        WHEN @HasGroupIdCol = 1 AND @HasAttendanceTimestampCol = 0 THEN ', CONVERT(INT, GroupID), NULL'
+        WHEN @HasGroupIdCol = 0 AND @HasAttendanceTimestampCol = 1 THEN ', NULL, AttendanceTimestamp'
         ELSE ', NULL, NULL'
     END
     +'
@@ -144,7 +200,7 @@ DECLARE @Status NVARCHAR(1000)
 ), RockMatch AS (
     SELECT missingPeople = STUFF( (SELECT '','' + fd.[FirstName] + '' '' + fd.[LastName] FROM personData fd
     LEFT JOIN Person p
-        ON p.Email = fd.Email OR p.BirthDate = fd.BirthDate
+        ON (p.Email = fd.Email OR p.BirthDate = fd.BirthDate)
         AND p.LastName = RTRIM(LTRIM(fd.[LastName]))
         AND (p.FirstName = RTRIM(LTRIM(fd.[FirstName]))
             OR p.NickName = RTRIM(LTRIM(fd.[FirstName])))
@@ -177,14 +233,14 @@ SELECT @cmd = '
 		fd.ForeignGuid
     FROM personData fd
     LEFT JOIN Person p
-		ON p.Email = fd.Email
+		ON (p.Email = fd.Email OR p.BirthDate = fd.BirthDate)
 		AND p.LastName = RTRIM(LTRIM(fd.[LastName]))
 		AND (p.FirstName = RTRIM(LTRIM(fd.[FirstName]))
 			OR p.NickName = RTRIM(LTRIM(fd.[FirstName])))
     WHERE p.[Id] IS NULL
 )
 INSERT Person (FirstName, NickName, LastName, BirthDate, BirthDay, BirthMonth, BirthYear, Email, Gender, ForeignGuid, CreatedDateTime, ModifiedDateTime, IsSystem, RecordTypeValueId, RecordStatusValueId, ConnectionStatusValueId, IsDeceased, IsEmailActive, Guid, EmailPreference, CommunicationPreference)
-SELECT FirstName, FirstName, LastName, BirthDate, BirthDay, BirthMonth, BirthYear, Email, Gender, ForeignGuid, GETDATE(), GETDATE(), 0, ' + CONVERT(VARCHAR(20), @PersonRecordTypeId) + ', ' + CONVERT(VARCHAR(20), @ActiveRecordStatusId) + ', ConnectionStatusId, 0, 1, NEWID(), 0, 1
+SELECT FirstName, FirstName, LastName, BirthDate, BirthDay, BirthMonth, BirthYear, Email, Gender, ForeignGuid, GETDATE(), GETDATE(), 0, ' + CONVERT(VARCHAR(20), @PersonRecordTypeId) + ', ' + CONVERT(VARCHAR(20), @ActiveRecordStatusId) + ', ConnectionStatusId, 0, CASE WHEN NULLIF(LTRIM([Email]), '''') IS NULL THEN 0 ELSE 1 END, NEWID(), 0, 1
 FROM NewPeople
 ';
 
@@ -252,6 +308,32 @@ FROM NewGroupMembers
 
 EXEC(@cmd)
 
+SELECT @StatusString = CONCAT(@@RowCount,' Group Members Added.')
+
+RAISERROR(@StatusString, 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
+
+RAISERROR('Updating Group Members...', 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
+
+-- insert to group
+SELECT @cmd = '
+UPDATE [GroupMember] 
+SET IsArchived = 0, ModifiedDateTime = GETDATE(), ArchivedDateTime = null, ArchivedByPersonAliasId = null
+FROM _rocks_kfs_peopleCsvTemp t
+LEFT OUTER JOIN [GroupMember] gm ON t.[PersonId] = gm.[PersonId] and gm.[GroupID] = t.GroupID
+JOIN [Group] g ON t.[GroupID] = g.[Id]
+JOIN [GroupType] gt ON g.[GroupTypeId] = gt.[Id]
+WHERE gm.[Id] IS NOT NULL AND gm.IsArchived = 1
+';
+
+EXEC(@cmd)
+
+SELECT @StatusString = CONCAT(@@RowCount,' Group Members Unarchived.')
+
+RAISERROR(@StatusString, 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
+
 RAISERROR('Adding/Updating attendance...', 0, 10) WITH NOWAIT;
 WAITFOR DELAY '00:00:01';
 
@@ -290,6 +372,10 @@ FROM NewAttendance GROUP BY OccurrenceId, AttendanceTimestamp, PersonAliasId
 ';
 
 EXEC(@cmd)
+SELECT @StatusString = CONCAT(@@RowCount, ' Attendance Records Added.')
+
+RAISERROR(@StatusString, 0, 10) WITH NOWAIT;
+WAITFOR DELAY '00:00:01';
 
 /* =================================
 Cleanup table post processing
