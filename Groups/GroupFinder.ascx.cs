@@ -1211,9 +1211,29 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field;
 
                 var filterValues = field.GetFilterValues( dowFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
-                var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyDayOfWeek", typeof( DayOfWeek? ) );
+                //var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyDayOfWeek", typeof( DayOfWeek? ) );
+                //groupQry = groupQry.Where( groupParameterExpression, expression, null );
+                //Commented out property filter to have a custom DOW filter for iCalendarContent search.
                 _filterValues.Add( "FilterDow", filterValues.AsDelimited( "^" ) );
-                groupQry = groupQry.Where( groupParameterExpression, expression, null );
+
+                string formattedValue = string.Empty;
+                string searchStr = string.Empty;
+                if ( filterValues.Count > 1 )
+                {
+                    int? intValue = filterValues[1].AsIntegerOrNull();
+                    if ( intValue.HasValue )
+                    {
+                        System.DayOfWeek dayOfWeek = ( System.DayOfWeek ) intValue.Value;
+                        formattedValue = dayOfWeek.ConvertToString();
+                        searchStr = formattedValue.Left( 2 ).ToUpper();
+                        groupQry = groupQry.Where( g =>
+                             ( g.Schedule.WeeklyDayOfWeek.HasValue &&
+                             g.Schedule.WeeklyDayOfWeek.Value == dayOfWeek ) ||
+                             ( g.Schedule.iCalendarContent.Substring( g.Schedule.iCalendarContent.IndexOf( "BYDAY=" ), 20 ).Contains( searchStr ) ) );
+                        //   ( g.Schedule.iCalendarContent.Substring( SqlFunctions.CharIndex( g.Schedule.iCalendarContent, "BYDAY=" ).Value, SqlFunctions.CharIndex( g.Schedule.iCalendarContent,"BYDAY=" ).Value - SqlFunctions.CharIndex( g.Schedule.iCalendarContent, ";", SqlFunctions.CharIndex( g.Schedule.iCalendarContent, "BYDAY=" ) ).Value ).Contains( searchStr ) ) );
+
+                    }
+                }
             }
 
             var timeFilterControl = phFilterControls.FindControl( "filter_time" );
