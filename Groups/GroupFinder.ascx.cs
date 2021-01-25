@@ -27,6 +27,7 @@
 // * Added Collapsible filters
 // * Added Custom Sorting based on Attribute Filter
 // * Added ability to hide attribute values from the search panel
+// * Added Custom Schedule Support to DOW Filters
 // </notice>
 //
 using System;
@@ -1196,12 +1197,16 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var dows = new List<DayOfWeek>();
                 dowsFilterControl.SelectedValuesAsInt.ForEach( i => dows.Add( ( DayOfWeek ) i ) );
 
+                var dowsStr = new List<string>();
+                dowsFilterControl.SelectedNames.ForEach( s => dowsStr.Add( s.Left( 2 ).ToUpper() ) );
+
                 if ( dows.Any() )
                 {
                     _filterValues.Add( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited( "^" ) );
                     groupQry = groupQry.Where( g =>
-                        g.Schedule.WeeklyDayOfWeek.HasValue &&
-                        dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) );
+                        (g.Schedule.WeeklyDayOfWeek.HasValue &&
+                        dows.Contains( g.Schedule.WeeklyDayOfWeek.Value )) ||
+                        (dowsStr.Any(s => g.Schedule.iCalendarContent.Substring( g.Schedule.iCalendarContent.IndexOf( "BYDAY=" ), 20 ).Contains( s ) ) ) );
                 }
             }
 
@@ -1230,8 +1235,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                              ( g.Schedule.WeeklyDayOfWeek.HasValue &&
                              g.Schedule.WeeklyDayOfWeek.Value == dayOfWeek ) ||
                              ( g.Schedule.iCalendarContent.Substring( g.Schedule.iCalendarContent.IndexOf( "BYDAY=" ), 20 ).Contains( searchStr ) ) );
-                        //   ( g.Schedule.iCalendarContent.Substring( SqlFunctions.CharIndex( g.Schedule.iCalendarContent, "BYDAY=" ).Value, SqlFunctions.CharIndex( g.Schedule.iCalendarContent,"BYDAY=" ).Value - SqlFunctions.CharIndex( g.Schedule.iCalendarContent, ";", SqlFunctions.CharIndex( g.Schedule.iCalendarContent, "BYDAY=" ) ).Value ).Contains( searchStr ) ) );
-
                     }
                 }
             }
