@@ -27,6 +27,7 @@
 // * Added Collapsible filters
 // * Added Custom Sorting based on Attribute Filter
 // * Added ability to hide attribute values from the search panel
+// * Added Custom Schedule Support to DOW Filters
 // </notice>
 //
 using System;
@@ -132,13 +133,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     {% endif %}
 {% endif %}
 ", "CustomSetting" )]
-    [BooleanField( "Map Info Debug", "", false, "CustomSetting" )]
 
     // Lava Output Settings
     [BooleanField( "Show Lava Output", "", false, "CustomSetting" )]
     [CodeEditorField( "Lava Output", "", CodeEditorMode.Lava, CodeEditorTheme.Rock, 200, false, @"
 ", "CustomSetting" )]
-    [BooleanField( "Lava Output Debug", "", false, "CustomSetting" )]
 
     // Grid Settings
     [BooleanField( "Show Grid", "", false, "CustomSetting" )]
@@ -151,6 +150,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Attribute Columns", "", false, true, "", "CustomSetting" )]
     [BooleanField( "Sort By Distance", "", false, "CustomSetting" )]
     [TextField( "Page Sizes", "To show a dropdown of page sizes, enter a comma delimited list of page sizes. For example: 10,20 will present a drop down with 10,20,All as options with the default as 10", false, "", "CustomSetting" )]
+    [BooleanField( "Include Pending", "", true, "CustomSetting" )]
 
     #endregion Block Attributes
 
@@ -452,7 +452,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( "HideAttributeValues", cblAttributeHiddenOptions.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
 
             SetAttributeValue( "ShowMap", cbShowMap.Checked.ToString() );
-            SetAttributeValue( "MapStyle", ddlMapStyle.SelectedValue );
+            SetAttributeValue( "MapStyle", dvpMapStyle.SelectedValue );
             SetAttributeValue( "MapHeight", nbMapHeight.Text );
             SetAttributeValue( "ShowFence", cbShowFence.Checked.ToString() );
             SetAttributeValue( "PolygonColors", vlPolygonColors.Value );
@@ -471,6 +471,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( "ShowCount", cbShowCount.Checked.ToString() );
             SetAttributeValue( "ShowAge", cbShowAge.Checked.ToString() );
             SetAttributeValue( "AttributeColumns", cblGridAttributes.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
+            SetAttributeValue( "IncludePending", cbIncludePending.Checked.ToString() );
 
             var ppFieldType = new PageReferenceFieldType();
             SetAttributeValue( "GroupDetailPage", ppFieldType.GetEditValue( ppGroupDetailPage, null ) );
@@ -581,7 +582,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             var rockContext = new RockContext();
             var groupTypes = new GroupTypeService( rockContext )
-                .Queryable().AsNoTracking().ToList();
+                .Queryable().AsNoTracking().OrderBy( t => t.Order ).ToList();
 
             BindGroupType( gtpGroupType, groupTypes, "GroupType" );
             BindGroupType( gtpGeofenceGroupType, groupTypes, "GeofencedGroupType" );
@@ -601,6 +602,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             else if ( scheduleFilters.Contains( "Days" ) )
             {
                 rblFilterDOW.SetValue( "Days" );
+            }
+            else
+            {
+                rblFilterDOW.SelectedIndex = 0;
             }
 
             cbFilterTimeOfDay.Checked = scheduleFilters.Contains( "Time" );
@@ -644,8 +649,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cbPostalCode.Checked = GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean();
 
             cbShowMap.Checked = GetAttributeValue( "ShowMap" ).AsBoolean();
-            ddlMapStyle.BindToDefinedType( DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.MAP_STYLES.AsGuid() ) );
-            ddlMapStyle.SetValue( GetAttributeValue( "MapStyle" ) );
+            dvpMapStyle.DefinedTypeId = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.MAP_STYLES.AsGuid() ).Id;
+            dvpMapStyle.SetValue( GetAttributeValue( "MapStyle" ) );
             nbMapHeight.Text = GetAttributeValue( "MapHeight" );
             cbShowFence.Checked = GetAttributeValue( "ShowFence" ).AsBoolean();
             vlPolygonColors.Value = GetAttributeValue( "PolygonColors" );
@@ -671,6 +676,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     li.Selected = true;
                 }
             }
+            cbIncludePending.Checked = GetAttributeValue( "IncludePending" ).AsBoolean();
 
             var ppFieldType = new PageReferenceFieldType();
             ppFieldType.SetEditValue( ppGroupDetailPage, null, GetAttributeValue( "GroupDetailPage" ) );
@@ -950,7 +956,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 else
                 {
                     cblCampus.Visible = true;
-                    cblCampus.DataSource = CampusCache.All().Where( c => c.IsActive == true );
+                    cblCampus.DataSource = CampusCache.All( includeInactive: false );
                     cblCampus.DataBind();
                     if ( hideFilters.Contains( "filter_campus" ) )
                     {
@@ -1169,6 +1175,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             gGroups.Columns[3].Visible = GetAttributeValue( "ShowCount" ).AsBoolean();
             gGroups.Columns[4].Visible = GetAttributeValue( "ShowAge" ).AsBoolean();
 
+            var includePending = GetAttributeValue( "IncludePending" ).AsBoolean();
             bool showProximity = GetAttributeValue( "ShowProximity" ).AsBoolean();
             gGroups.Columns[6].Visible = showProximity;  // Distance
 
@@ -1196,12 +1203,16 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var dows = new List<DayOfWeek>();
                 dowsFilterControl.SelectedValuesAsInt.ForEach( i => dows.Add( ( DayOfWeek ) i ) );
 
+                var dowsStr = new List<string>();
+                dowsFilterControl.SelectedNames.ForEach( s => dowsStr.Add( s.Left( 2 ).ToUpper() ) );
+
                 if ( dows.Any() )
                 {
                     _filterValues.Add( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited( "^" ) );
                     groupQry = groupQry.Where( g =>
-                        g.Schedule.WeeklyDayOfWeek.HasValue &&
-                        dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) );
+                        ( g.Schedule.WeeklyDayOfWeek.HasValue &&
+                        dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) ) ||
+                        ( dowsStr.Any( s => g.Schedule.iCalendarContent.Substring( g.Schedule.iCalendarContent.IndexOf( "BYDAY=" ), 20 ).Contains( s ) ) ) );
                 }
             }
 
@@ -1211,9 +1222,27 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field;
 
                 var filterValues = field.GetFilterValues( dowFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
-                var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyDayOfWeek", typeof( DayOfWeek? ) );
+                //var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyDayOfWeek", typeof( DayOfWeek? ) );
+                //groupQry = groupQry.Where( groupParameterExpression, expression, null );
+                //Commented out property filter to have a custom DOW filter for iCalendarContent search.
                 _filterValues.Add( "FilterDow", filterValues.AsDelimited( "^" ) );
-                groupQry = groupQry.Where( groupParameterExpression, expression, null );
+
+                string formattedValue = string.Empty;
+                string searchStr = string.Empty;
+                if ( filterValues.Count > 1 )
+                {
+                    int? intValue = filterValues[1].AsIntegerOrNull();
+                    if ( intValue.HasValue )
+                    {
+                        System.DayOfWeek dayOfWeek = ( System.DayOfWeek ) intValue.Value;
+                        formattedValue = dayOfWeek.ConvertToString();
+                        searchStr = formattedValue.Left( 2 ).ToUpper();
+                        groupQry = groupQry.Where( g =>
+                             ( g.Schedule.WeeklyDayOfWeek.HasValue &&
+                             g.Schedule.WeeklyDayOfWeek.Value == dayOfWeek ) ||
+                             ( g.Schedule.iCalendarContent.Substring( g.Schedule.iCalendarContent.IndexOf( "BYDAY=" ), 20 ).Contains( searchStr ) ) );
+                    }
+                }
             }
 
             var timeFilterControl = phFilterControls.FindControl( "filter_time" );
@@ -1559,9 +1588,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     Template template = Template.Parse( GetAttributeValue( "MapInfo" ) );
 
-                    bool showDebug = UserCanEdit && GetAttributeValue( "MapInfoDebug" ).AsBoolean();
-                    lMapInfoDebug.Visible = showDebug;
-
                     // Add mapitems for all the remaining valid group locations
                     var groupMapItems = new List<MapItem>();
                     foreach ( var gl in groupLocations )
@@ -1598,12 +1624,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             mergeFields.Add( "AllowedActions", securityActions );
 
                             string infoWindow = template.Render( Hash.FromDictionary( mergeFields ) );
-
-                            if ( showDebug )
-                            {
-                                lMapInfoDebug.Text = mergeFields.lavaDebugInfo( null, "<span class='label label-info'>Lava used for the map window.</span>", string.Empty );
-                                showDebug = false;
-                            }
 
                             // Add a map item for group
                             var mapItem = new FinderMapItem( gl.Location );
@@ -1670,13 +1690,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 lLavaOverview.Text = template.ResolveMergeFields( mergeFields );
 
-                bool showDebug = UserCanEdit && GetAttributeValue( "LavaOutputDebug" ).AsBoolean();
-                lLavaOutputDebug.Visible = showDebug;
-                if ( showDebug )
-                {
-                    lLavaOutputDebug.Text = mergeFields.lavaDebugInfo( null, "<span class='label label-info'>Lava used for the summary info.</span>" );
-                }
-
                 pnlLavaOutput.Visible = true;
             }
             else
@@ -1696,7 +1709,20 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 // Bind the grid
                 gGroups.DataSource = groups.Select( g =>
                 {
-                    var qryMembers = new GroupMemberService( rockContext ).Queryable().Where( a => a.GroupId == g.Id );
+                    var qryMembers = new GroupMemberService( rockContext )
+                        .Queryable()
+                        .Where( a => a.GroupId == g.Id );
+
+                    if ( includePending )
+                    {
+                        qryMembers = qryMembers.Where( m => m.GroupMemberStatus == GroupMemberStatus.Active
+                            || m.GroupMemberStatus == GroupMemberStatus.Pending );
+                    }
+                    else
+                    {
+                        qryMembers = qryMembers.Where( m => m.GroupMemberStatus == GroupMemberStatus.Active );
+                    }
+
                     var groupType = GroupTypeCache.Get( g.GroupTypeId );
 
                     return new
@@ -1858,11 +1884,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
         var mapStyle = {3};
 
-        var pinShadow = new google.maps.MarkerImage('//chart.googleapis.com/chart?chst=d_map_pin_shadow',
-            new google.maps.Size(40, 37),
-            new google.maps.Point(0, 0),
-            new google.maps.Point(12, 35));
-
         var polygonColorIndex = 0;
         var polygonColors = [{5}];
 
@@ -1939,10 +1960,15 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     color = 'FE7569'
                 }}
 
-                var pinImage = new google.maps.MarkerImage('//chart.googleapis.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|' + color,
-                    new google.maps.Size(21, 34),
-                    new google.maps.Point(0,0),
-                    new google.maps.Point(10, 34));
+                var pinImage = {{
+                    path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
+                    fillColor: '#' + color,
+                    fillOpacity: 1,
+                    strokeColor: '#000',
+                    strokeWeight: 1,
+                    scale: 1,
+                    labelOrigin: new google.maps.Point(0,-28)
+                }};
 
                 marker = new google.maps.Marker({{
                     id: mapItem.EntityId,
@@ -1950,8 +1976,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     map: map,
                     title: htmlDecode(mapItem.Name),
                     icon: pinImage,
-                    shadow: pinShadow,
-                    info_window: mapItem.InfoWindow
+                    info_window: mapItem.InfoWindow,
+                    label: String.fromCharCode(9679)
                 }});
 
                 items.push(marker);
