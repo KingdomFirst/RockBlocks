@@ -62,12 +62,10 @@
                         <div id="map_wrapper">
                             <div id="map_canvas" class="mapping"></div>
                         </div>
-                        <asp:Literal ID="lMapInfoDebug" runat="server" />
                     </asp:Panel>
 
                     <asp:Panel ID="pnlLavaOutput" runat="server" CssClass="margin-v-sm">
                         <asp:Literal ID="lLavaOverview" runat="server" />
-                        <asp:Literal ID="lLavaOutputDebug" runat="server" />
                     </asp:Panel>
 
                     <asp:Panel ID="pnlGrid" runat="server" CssClass="margin-v-sm">
@@ -152,7 +150,7 @@
                                     <div class="col-md-6">
                                         <Rock:RockCheckBox ID="cbShowMap" runat="server" Label="Map" Text="Yes"
                                             Help="Should a map be displayed that shows the location of each group?" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockDropDownList ID="ddlMapStyle" runat="server" Label="Map Style"
+                                        <Rock:DefinedValuePicker ID="dvpMapStyle" runat="server" Label="Map Style"
                                             Help="The map theme that should be used for styling the map." ValidationGroup="GroupFinderSettings" />
                                         <Rock:NumberBox ID="nbMapHeight" runat="server" Label="Map Height"
                                             Help="The pixel height to use for the map." ValidationGroup="GroupFinderSettings" />
@@ -201,9 +199,11 @@
                                         <Rock:RockCheckBox ID="cbShowDescription" runat="server" Label="Show Description" Text="Yes"
                                             Help="Should the description for each group be displayed?" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBox ID="cbShowCount" runat="server" Label="Show Member Count" Text="Yes"
-                                            Help="Should the number of members in each group be displayed in the result grid?" ValidationGroup="GroupFinderSettings" />
+                                            Help="Should the number of active members in each group be displayed in the result grid?" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBox ID="cbShowAge" runat="server" Label="Show Average Age" Text="Yes"
-                                            Help="Should the average group member age be displayed for each group in the result grid?" ValidationGroup="GroupFinderSettings" />
+                                            Help="Should the average active group member age be displayed for each group in the result grid?" ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockCheckBox ID="cbIncludePending" runat="server" Label="Include Pending" Text="Yes"
+                                            Help="Should Pending members be included in the member count and average age calculations?" ValidationGroup="GroupFinderSettings" />
                                     </div>
                                     <div class="col-md-6">
                                         <Rock:RockCheckBox ID="cbShowCampus" runat="server" Label="Show Campus" Text="Yes"
