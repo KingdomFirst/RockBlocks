@@ -150,7 +150,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Attribute Columns", "", false, true, "", "CustomSetting" )]
     [BooleanField( "Sort By Distance", "", false, "CustomSetting" )]
     [TextField( "Page Sizes", "To show a dropdown of page sizes, enter a comma delimited list of page sizes. For example: 10,20 will present a drop down with 10,20,All as options with the default as 10", false, "", "CustomSetting" )]
-	[BooleanField( "Include Pending", "", true, "CustomSetting" )]
+    [BooleanField( "Include Pending", "", true, "CustomSetting" )]
 
     #endregion Block Attributes
 
@@ -965,9 +965,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     }
                 }
                 cblCampus.Label = GetAttributeValue( "CampusLabel" );
-                cblCampus.Visible = true;
-                cblCampus.DataSource = CampusCache.All( includeInactive: false );
-                cblCampus.DataBind();
             }
             else
             {
@@ -1213,9 +1210,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     _filterValues.Add( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited( "^" ) );
                     groupQry = groupQry.Where( g =>
-                        (g.Schedule.WeeklyDayOfWeek.HasValue &&
-                        dows.Contains( g.Schedule.WeeklyDayOfWeek.Value )) ||
-                        (dowsStr.Any(s => g.Schedule.iCalendarContent.Substring( g.Schedule.iCalendarContent.IndexOf( "BYDAY=" ), 20 ).Contains( s ) ) ) );
+                        ( g.Schedule.WeeklyDayOfWeek.HasValue &&
+                        dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) ) ||
+                        ( dowsStr.Any( s => g.Schedule.iCalendarContent.Substring( g.Schedule.iCalendarContent.IndexOf( "BYDAY=" ), 20 ).Contains( s ) ) ) );
                 }
             }
 
