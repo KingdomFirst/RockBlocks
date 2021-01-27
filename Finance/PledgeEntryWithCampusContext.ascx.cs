@@ -69,7 +69,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
     <a href='~/page/186?PledgeId={{ FinancialPledge.Id  }}' class='btn btn-default' >Setup a Giving Profile</a>
 </p>
 " )]
-    [SystemEmailField( "Confirmation Email Template", "Email template to use after submitting a new pledge. Leave blank to not send an email.", false, "", Order = 10 )]
+    [SystemCommunicationField( "Confirmation Email Template", "Communication template to use after submitting a new pledge. Leave blank to not send an email.", false, "", Order = 10 )]
     [BooleanField( "Enable Debug", "Outputs the object graph to help create your liquid syntax.", false, Order = 11 )]
     [GroupTypeField( "Select Group Type", "Optional Group Type that if selected will display a selection of groups that current user belongs to that can then be associated with the pledge", false, "", "", 12 )]
     [BooleanField( "Use Campus Context", "If true, then child funds will be evaluated and the first fund encountered with current campus context will be targeted.  Useful for annual campaigns where pledging needs to be campus specific.", DefaultValue = "false", Order = 13 )]
@@ -229,7 +229,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
                 if ( confirmationEmailTemplateGuid.HasValue )
                 {
                     var emailMessage = new RockEmailMessage( confirmationEmailTemplateGuid.Value );
-                    emailMessage.AddRecipient( new RecipientData( person.Email, mergeFields ) );
+                    emailMessage.AddRecipient( new RockEmailMessageRecipient( person, mergeFields ) );
                     emailMessage.AppRoot = ResolveRockUrl( "~/" );
                     emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
                     emailMessage.Send();
