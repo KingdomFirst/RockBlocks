@@ -62,9 +62,9 @@ namespace RockWeb.Plugins.rocks_kfs.Security
     [TextField( "Success Caption", "", false, "{0}, Your account has been created", "Captions", 5 )]
     [LinkedPage( "Confirmation Page", "Page for user to confirm their account (if blank will use 'ConfirmAccount' page route)", false, "", "Pages", 6 )]
     [LinkedPage( "Login Page", "Page to navigate to when user elects to login (if blank will use 'Login' page route)", false, "", "Pages", 7 )]
-    [SystemEmailField( "Forgot Username", "Forgot Username Email Template", false, Rock.SystemGuid.SystemEmail.SECURITY_FORGOT_USERNAME, "Email Templates", 8, "ForgotUsernameTemplate" )]
-    [SystemEmailField( "Confirm Account", "Confirm Account Email Template", false, Rock.SystemGuid.SystemEmail.SECURITY_CONFIRM_ACCOUNT, "Email Templates", 9, "ConfirmAccountTemplate" )]
-    [SystemEmailField( "Account Created", "Account Created Email Template", false, Rock.SystemGuid.SystemEmail.SECURITY_ACCOUNT_CREATED, "Email Templates", 10, "AccountCreatedTemplate" )]
+    [SystemCommunicationField( "Forgot Username", "Forgot Username Communication Template", false, Rock.SystemGuid.SystemCommunication.SECURITY_FORGOT_USERNAME, "Email Templates", 8, "ForgotUsernameTemplate" )]
+    [SystemCommunicationField( "Confirm Account", "Confirm Account Communication Template", false, Rock.SystemGuid.SystemCommunication.SECURITY_CONFIRM_ACCOUNT, "Email Templates", 9, "ConfirmAccountTemplate" )]
+    [SystemCommunicationField( "Account Created", "Account Created Communication Template", false, Rock.SystemGuid.SystemCommunication.SECURITY_ACCOUNT_CREATED, "Email Templates", 10, "AccountCreatedTemplate" )]
     [DefinedValueField( "2E6540EA-63F0-40FE-BE50-F2A84735E600", "Connection Status", "The connection status to use for new individuals (default: 'Web Prospect'.)", true, false, "368DD475-242C-49C4-A42C-7278BE690CC2", order: 11 )]
     [DefinedValueField( "8522BADD-2871-45A5-81DD-C76DA07E2E7E", "Record Status", "The record status to use for new individuals (default: 'Pending'.)", true, false, "283999EC-7346-42E3-B807-BCE9B2BABB49", order: 12 )]
     [BooleanField( "Show Address", "Allows hiding the address field.", false, order: 13 )]
@@ -500,7 +500,7 @@ namespace RockWeb.Plugins.rocks_kfs.Security
                 mergeObjects.Add( "Results", results.ToArray() );
 
                 var emailMessage = new RockEmailMessage( GetAttributeValue( "ForgotUsernameTemplate" ).AsGuid() );
-                emailMessage.AddRecipient( new RecipientData( person.Email, mergeObjects ) );
+                emailMessage.AddRecipient( new RockEmailMessageRecipient( person, mergeObjects ) );
                 emailMessage.AppRoot = ResolveRockUrl( "~/" );
                 emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
                 emailMessage.CreateCommunicationRecord = false;
@@ -539,7 +539,7 @@ namespace RockWeb.Plugins.rocks_kfs.Security
                 mergeObjects.Add( "User", user );
 
                 var emailMessage = new RockEmailMessage( GetAttributeValue( "ConfirmAccountTemplate" ).AsGuid() );
-                emailMessage.AddRecipient( new RecipientData( person.Email, mergeObjects ) );
+                emailMessage.AddRecipient( new RockEmailMessageRecipient( person, mergeObjects ) );
                 emailMessage.AppRoot = ResolveRockUrl( "~/" );
                 emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
                 emailMessage.CreateCommunicationRecord = false;
@@ -583,7 +583,7 @@ namespace RockWeb.Plugins.rocks_kfs.Security
                         mergeObjects.Add( "User", user );
 
                         var emailMessage = new RockEmailMessage( GetAttributeValue( "AccountCreatedTemplate" ).AsGuid() );
-                        emailMessage.AddRecipient( new RecipientData( person.Email, mergeObjects ) );
+                        emailMessage.AddRecipient( new RockEmailMessageRecipient( person, mergeObjects ) );
                         emailMessage.AppRoot = ResolveRockUrl( "~/" );
                         emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
                         emailMessage.CreateCommunicationRecord = false;
