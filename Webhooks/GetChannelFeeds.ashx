@@ -63,14 +63,35 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
             request = context.Request;
             response = context.Response;
 
-            RockContext rockContext = new RockContext();
-
-            if ( request.HttpMethod != "GET" )
+            string cacheKey = "Rock:GetChannelFeed:" + request.RawUrl;
+            var contentCache = RockCache.Get( cacheKey );
+            var mimeTypeCache = RockCache.Get( cacheKey + ":MimeType" );
+            if ( mimeTypeCache != null && contentCache != null )
             {
-                response.Write( "Invalid request type." );
+                response.ContentType = ( string ) mimeTypeCache;
+                response.Write( ( string ) contentCache );
                 response.StatusCode = 200;
                 return;
             }
+
+            if ( request.HttpMethod != "GET" && request.HttpMethod != "HEAD" )
+            {
+                response.TrySkipIisCustomErrors = true;
+                response.StatusCode = 405;
+                response.Headers.Add( "Allow", "GET" );
+                response.Write( "Invalid request method." );
+                return;
+            }
+
+            if ( request.QueryString["ChannelId"] == null )
+            {
+                response.TrySkipIisCustomErrors = true;
+                response.StatusCode = 400;
+                response.Write( "A ChannelId is required." );
+                return;
+            }
+
+            RockContext rockContext = new RockContext();
 
             if ( request.QueryString["ChannelId"] != null )
             {
@@ -164,7 +185,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                         int.TryParse( request.QueryString["Count"], out rssItemLimit );
                     }
                     ContentChannelItemService contentService = new ContentChannelItemService( rockContext );
-                    var finalContent = contentService.Queryable( "ContentChannelType" ).Where(c => c == null);
+                    var finalContent = contentService.Queryable( "ContentChannelType" ).Where( c => c == null );
                     foreach ( var channel in channels )
                     {
                         // get channel items
@@ -231,7 +252,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                                 childrentoAdd.Add( newchild );
                             }
                             item.ChildItems.Clear();
-                            foreach(var child in childrentoAdd)
+                            foreach ( var child in childrentoAdd )
                             {
                                 item.ChildItems.Add( child );
                             }
@@ -255,6 +276,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
 
                     mergeFields.Add( "RockVersion", Rock.VersionInfo.VersionInfo.GetRockProductVersionNumber() );
 
+                    var outputContent = rssTemplate.ResolveMergeFields( mergeFields );
                     // show debug info
                     if ( request.QueryString["EnableDebug"] != null )
                     {
@@ -267,7 +289,18 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     }
                     else
                     {
-                        response.Write( rssTemplate.ResolveMergeFields( mergeFields ) );
+                        response.Write( outputContent );
+
+                        var cacheDuration = dvRssTemplate.GetAttributeValue( "CacheDuration" ).AsInteger();
+                        if ( cacheDuration > 0 )
+                        {
+                            var expiration = RockDateTime.Now.AddMinutes( cacheDuration );
+                            if ( expiration > RockDateTime.Now )
+                            {
+                                RockCache.AddOrUpdate( cacheKey + ":MimeType", null, response.ContentType, expiration );
+                                RockCache.AddOrUpdate( cacheKey, null, outputContent, expiration );
+                            };
+                        }
                     }
                 }
                 else
