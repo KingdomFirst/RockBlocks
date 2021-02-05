@@ -282,7 +282,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     {
                         response.Write( mergeFields.lavaDebugInfo() );
                         response.Write( "<pre>" );
-                        response.Write( WebUtility.HtmlEncode( rssTemplate.ResolveMergeFields( mergeFields ) ) );
+                        response.Write( WebUtility.HtmlEncode( outputContent ) );
                         response.Write( "</pre>" );
                         response.Write( "</body>" );
                         response.Write( "</html" );
