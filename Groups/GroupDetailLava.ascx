@@ -31,12 +31,34 @@
                 </div>
             </div>
 
-            <asp:Panel ID="pnlSchedule" runat="server" Visible="false" CssClass="row">
+            <%--<asp:Panel ID="pnlSchedule" runat="server" Visible="false" CssClass="row">
                 <div class="col-sm-6">
                     <Rock:DayOfWeekPicker ID="dowWeekly" runat="server" CssClass="input-width-md" Label="Day of the Week" />
                 </div>
                 <div class="col-sm-6">
                     <Rock:TimePicker ID="timeWeekly" runat="server" Label="Time of Day" />
+                </div>
+            </asp:Panel>--%>
+            <asp:Panel ID="pnlSchedule" runat="server" Visible="false">
+                <div class="row">
+                    <div class="col-md-6">
+                        <Rock:RockRadioButtonList ID="rblScheduleSelect" runat="server" Label="Group Schedule" CssClass="margin-b-sm" OnSelectedIndexChanged="rblScheduleSelect_SelectedIndexChanged" AutoPostBack="true" RepeatDirection="Horizontal" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <Rock:DayOfWeekPicker ID="dowWeekly" runat="server" CssClass="input-width-md" Visible="false" Label="Day of the Week" />
+                            </div>
+                            <div class="col-sm-6">
+                                <Rock:TimePicker ID="timeWeekly" runat="server" Visible="false" Label="Time of Day" />
+                            </div>
+                        </div>
+                        <Rock:SchedulePicker ID="spSchedule" runat="server" AllowMultiSelect="false" Visible="false" Label="Named Schedule" />
+                        <asp:HiddenField ID="hfUniqueScheduleId" runat="server" />
+                        <Rock:ScheduleBuilder ID="sbSchedule" runat="server" ShowDuration="false" ShowScheduleFriendlyTextAsToolTip="true" Visible="false" Label="Custom Schedule" />
+                    </div>
                 </div>
             </asp:Panel>
 
