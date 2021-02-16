@@ -712,7 +712,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var groupType = GroupTypeCache.Get( gtpGroupType.SelectedGroupTypeId.Value );
                 if ( groupType != null )
                 {
-                    bool hasWeeklyschedule = ( groupType.AllowedScheduleTypes & ScheduleType.Weekly ) == ScheduleType.Weekly;
+                    bool hasWeeklyschedule = ( groupType.AllowedScheduleTypes & ScheduleType.Weekly ) == ScheduleType.Weekly || ( groupType.AllowedScheduleTypes & ScheduleType.Custom ) == ScheduleType.Weekly;
                     rblFilterDOW.Visible = hasWeeklyschedule;
                     cbFilterTimeOfDay.Visible = hasWeeklyschedule;
                     if ( hasWeeklyschedule )
@@ -918,6 +918,15 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             // Clear attribute filter controls and recreate
             phFilterControls.Controls.Clear();
             phFilterControlsCollapsed.Controls.Clear();
+
+            nbPostalCode.Label = GetAttributeValue( "PostalCodeLabel" );
+            nbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( "PostalCodeLabel" ) );
+            if ( hideFilters.Contains( "filter_postalcode" ) )
+            {
+                pnlSearch.Controls.Remove( nbPostalCode );
+                phFilterControlsCollapsed.Controls.Add( nbPostalCode );
+            }
+
             var scheduleFilters = GetAttributeValue( "ScheduleFilters" ).SplitDelimitedValues().ToList();
             if ( scheduleFilters.Contains( "Days" ) )
             {
@@ -978,14 +987,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 ddlCampus.Visible = false;
                 cblCampus.Visible = false;
-            }
-
-            nbPostalCode.Label = GetAttributeValue( "PostalCodeLabel" );
-            nbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( "PostalCodeLabel" ) );
-            if ( hideFilters.Contains( "filter_postalcode" ) )
-            {
-                pnlSearch.Controls.Remove( nbPostalCode );
-                phFilterControlsCollapsed.Controls.Add( nbPostalCode );
             }
 
             btnFilter.InnerHtml = btnFilter.InnerHtml.Replace( "[Filter] ", GetAttributeValue( "FilterLabel" ) + " " );
