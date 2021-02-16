@@ -28,6 +28,7 @@
 // * Added Custom Sorting based on Attribute Filter
 // * Added ability to hide attribute values from the search panel
 // * Added Custom Schedule Support to DOW Filters
+// * Added Keyword search to search name or description of groups
 // </notice>
 //
 using System;
@@ -89,9 +90,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [TextField( "DayOfWeekLabel", "", true, "Day of Week", "CustomSetting" )]
     [TextField( "ScheduleFilters", "", false, "", "CustomSetting" )]
     [TextField( "PostalCodeLabel", "", true, "Zip Code", "CustomSetting" )]
+    [TextField( "KeywordLabel", "", true, "Keyword", "CustomSetting" )]
     [TextField( "FilterLabel", "", true, "Filter", "CustomSetting" )]
     [TextField( "MoreFiltersLabel", "", true, "More Filters", "CustomSetting" )]
     [BooleanField( "Display Campus Filter", "", false, "CustomSetting" )]
+    [BooleanField( "Display Keyword Search", "", false, "CustomSetting" )]
     [BooleanField( "Enable Campus Context", "", false, "CustomSetting" )]
     [BooleanField( "Hide Overcapacity Groups", "When set to true, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden.", true )]
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Attribute Filters", "", false, true, "", "CustomSetting" )]
@@ -431,7 +434,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( "TimeOfDayLabel", tbTimeOfDayLabel.Text );
             SetAttributeValue( "CampusLabel", tbCampusLabel.Text );
             SetAttributeValue( "PostalCodeLabel", tbPostalCodeLabel.Text );
+            SetAttributeValue( "KeywordLabel", tbKeywordLabel.Text );
             SetAttributeValue( "EnablePostalCodeSearch", cbPostalCode.Checked.ToString() );
+            SetAttributeValue( "DisplayKeywordSearch", cbKeyword.Checked.ToString() );
             SetAttributeValue( "FilterLabel", tbFilterLabel.Text );
             SetAttributeValue( "MoreFiltersLabel", tbMoreFiltersLabel.Text );
 
@@ -591,6 +596,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             tbDayOfWeekLabel.Text = GetAttributeValue( "DayOfWeekLabel" );
             tbTimeOfDayLabel.Text = GetAttributeValue( "TimeOfDayLabel" );
             tbPostalCodeLabel.Text = GetAttributeValue( "PostalCodeLabel" );
+            tbKeywordLabel.Text = GetAttributeValue( "KeywordLabel" );
             tbFilterLabel.Text = GetAttributeValue( "FilterLabel" );
             tbMoreFiltersLabel.Text = GetAttributeValue( "MoreFiltersLabel" );
 
@@ -647,6 +653,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cbFilterCampus.Checked = GetAttributeValue( "DisplayCampusFilter" ).AsBoolean();
             cbCampusContext.Checked = GetAttributeValue( "EnableCampusContext" ).AsBoolean();
             cbPostalCode.Checked = GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean();
+            cbKeyword.Checked = GetAttributeValue( "DisplayKeywordSearch" ).AsBoolean();
 
             cbShowMap.Checked = GetAttributeValue( "ShowMap" ).AsBoolean();
             dvpMapStyle.DefinedTypeId = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.MAP_STYLES.AsGuid() ).Id;
@@ -715,6 +722,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     }
                     cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
                     cblInitialLoadFilters.Items.Add( new ListItem( "PostalCode", "filter_postalcode" ) );
+                    cblInitialLoadFilters.Items.Add( new ListItem( "Keyword", "filter_keyword" ) );
 
                     var group = new Group();
                     group.GroupTypeId = groupType.Id;
@@ -993,6 +1001,21 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     {
                         AddFilterControl( control, attribute.Name, attribute.Description, hideFilters.Contains( attribute.Guid.ToString() ) );
                     }
+                }
+            }
+
+            if ( GetAttributeValue( "DisplayKeywordSearch" ).AsBoolean() )
+            {
+                var tbKeyword = new RockTextBox();
+                tbKeyword.Label = GetAttributeValue( "KeywordLabel" );
+                tbKeyword.ID = "filter_keyword";
+                if ( hideFilters.Contains( "filter_keyword" ) )
+                {
+                    phFilterControlsCollapsed.Controls.Add( tbKeyword );
+                }
+                else
+                {
+                    phFilterControls.Controls.Add( tbKeyword );
                 }
             }
 
@@ -1275,6 +1298,15 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     _filterValues.Add( "FilterCampus", searchCampuses.AsDelimited( "^" ) );
                     groupQry = groupQry.Where( c => searchCampuses.Contains( c.CampusId ?? -1 ) );
+                }
+            }
+
+            if ( GetAttributeValue( "DisplayKeywordSearch" ).AsBoolean() )
+            {
+                var tbKeyword = ( RockTextBox ) phFilterControls.FindControl( "filter_keyword" ) ?? ( RockTextBox ) phFilterControlsCollapsed.FindControl( "filter_keyword" );
+                if ( tbKeyword != null && tbKeyword.Text.IsNotNullOrWhiteSpace() )
+                {
+                    groupQry = groupQry.Where( g => g.Name.Contains( tbKeyword.Text ) || g.Description.Contains( tbKeyword.Text ) );
                 }
             }
 
