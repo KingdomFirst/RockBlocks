@@ -4,6 +4,10 @@
     <ContentTemplate>
 
         <asp:Panel ID="pnlGroupView" runat="server">
+            <div class="communication-preference pull-right" runat="server" id="dCommunicationsPreference">
+                <span>Your communication preference:&nbsp;</span><Rock:Toggle ID="tglCommunicationPreference" CssClass="pull-right" runat="server" OnText="SMS" OffText="Email" ButtonSizeCssClass="btn-xs" OnCssClass="btn-info" OffCssClass="btn-info" OnCheckedChanged="tglCommunicationPreference_CheckedChanged" />
+            </div>
+
             <asp:Literal ID="lContent" runat="server"></asp:Literal>
 
             <asp:Literal ID="lDebug" runat="server"></asp:Literal>
@@ -20,8 +24,30 @@
                     <Rock:DataTextBox ID="tbName" runat="server" SourceTypeName="Rock.Model.Group, Rock" PropertyName="Name" />
                 </div>
                 <div class="col-md-6">
-                    <Rock:RockCheckBox ID="cbIsActive" runat="server" Text="Active" />
+                    <Rock:RockCheckBox ID="cbIsActive" runat="server" Text="Active" CssClass="js-isactivegroup" />
                     <Rock:RockCheckBox ID="cbIsPublic" runat="server" Text="Public" />
+                </div>
+            </div>
+
+            <div class="row js-inactivateoptions">
+                <div class="col-md-6 pull-right">
+                    <%-- Inactive Reason ddl this isn't a defined value picker since the values can be filtered by group type --%>
+                    <Rock:RockDropDownList ID="ddlInactiveReason" runat="server" Visible="false" Label="Inactive Reason" />
+                </div>
+            </div>
+
+            <div class="row js-inactivateoptions">
+                <div class="col-md-6 pull-right">
+                    <%-- Inactive note multi line --%>
+                    <Rock:DataTextBox ID="tbInactiveNote" runat="server" SourceTypeName="Rock.Model.Group, Rock" PropertyName="InactiveReasonNote" TextMode="MultiLine" Rows="4" Visible="false" Label="Inactive Note" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 pull-right">
+                    <%-- Inactivate child groups checkbox --%>
+                    <Rock:RockCheckBox ID="cbInactivateChildGroups" runat="server" Text="Inactivate Child Groups" ContainerCssClass="js-inactivatechildgroups" Style="display: none" />
+                    <Rock:HiddenFieldWithClass ID="hfHasChildGroups" runat="server" CssClass="js-haschildgroups" />
                 </div>
             </div>
 
@@ -31,12 +57,25 @@
                 </div>
             </div>
 
-            <asp:Panel ID="pnlSchedule" runat="server" Visible="false" CssClass="row">
-                <div class="col-sm-6">
-                    <Rock:DayOfWeekPicker ID="dowWeekly" runat="server" CssClass="input-width-md" Label="Day of the Week" />
+            <asp:Panel ID="pnlSchedule" runat="server" Visible="false">
+                <div class="row">
+                    <div class="col-md-6">
+                        <Rock:RockRadioButtonList ID="rblScheduleSelect" runat="server" Label="Group Schedule" CssClass="margin-b-sm" OnSelectedIndexChanged="rblScheduleSelect_SelectedIndexChanged" AutoPostBack="true" RepeatDirection="Horizontal" />
+                    </div>
                 </div>
-                <div class="col-sm-6">
-                    <Rock:TimePicker ID="timeWeekly" runat="server" Label="Time of Day" />
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <Rock:DayOfWeekPicker ID="dowWeekly" runat="server" CssClass="input-width-md" Visible="false" Label="Day of the Week" />
+                            </div>
+                            <div class="col-sm-6">
+                                <Rock:TimePicker ID="timeWeekly" runat="server" Visible="false" Label="Time of Day" />
+                            </div>
+                        </div>
+                        <asp:HiddenField ID="hfUniqueScheduleId" runat="server" />
+                        <Rock:ScheduleBuilder ID="sbSchedule" runat="server" ShowDuration="false" ShowScheduleFriendlyTextAsToolTip="true" Visible="false" Label="Custom Schedule" />
+                    </div>
                 </div>
             </asp:Panel>
 
@@ -108,9 +147,15 @@
                 <asp:Panel ID="pnlGroupMemberRole" runat="server" CssClass="col-md-6">
                     <Rock:RockDropDownList runat="server" ID="ddlGroupRole" DataTextField="Name" DataValueField="Id" Label="Role" Required="true" />
                 </asp:Panel>
-                <asp:Panel ID="pnlGroupMemberAttributes" runat="server" CssClass="col-md-6">
-                    <Rock:DynamicPlaceHolder ID="phGroupMemberAttributes" runat="server" />
-                </asp:Panel>
+                <div class="col-md-6">
+                    <Rock:RockRadioButtonList ID="rblCommunicationPreference" runat="server" RepeatDirection="Horizontal" Label="Communication Preference">
+                        <asp:ListItem Text="Email" Value="1" />
+                        <asp:ListItem Text="SMS" Value="2" />
+                    </Rock:RockRadioButtonList>
+                    <asp:Panel ID="pnlGroupMemberAttributes" runat="server">
+                        <Rock:DynamicPlaceHolder ID="phGroupMemberAttributes" runat="server" />
+                    </asp:Panel>
+                </div>
             </div>
 
             <div class="actions">
@@ -128,5 +173,51 @@
             </Content>
         </Rock:ModalDialog>
 
+        <script>
+            Sys.Application.add_load(function () {
+                function setIsActiveControls(activeCheckbox) {
+                    // if isactive was toggled from Active to Inactive and the group has child groups, show the inactivate child groups checkbox
+                    var hasChildren = $('.js-haschildgroups').val();
+                    var rfvId = "<%= ddlInactiveReason.ClientID %>" + "_rfv";
+
+                    if ($(activeCheckbox).is(':checked')) {
+                        $('.js-inactivateoptions').hide();
+                        $('.js-inactivatechildgroups').hide();
+                        enableRequiredField(rfvId, false);
+                    }
+                    else {
+                        $('.js-inactivateoptions').show();
+                        enableRequiredField(rfvId, true);
+
+                        if (hasChildren === "true") {
+                            $('.js-inactivatechildgroups').show();
+                        }
+                    }
+                }
+
+                function enableRequiredField(validatorId, enable) {
+                    var jqObj = $('#' + validatorId);
+                    if (jqObj != null) {
+                        var domObj = jqObj.get(0);
+                        if (domObj != null) {
+                            console.log(validatorId + ': found');
+                            ValidatorEnable(domObj, enable);
+                        } else {
+                            console.log(validatorId + ': NOT found');
+                        }
+                    }
+                }
+
+                $('.js-isactivegroup').on('click', function () {
+                    setIsActiveControls(this);
+                });
+
+                $('.js-isactivegroup').each(function (i) {
+                    setIsActiveControls(this);
+                });
+
+            });
+
+        </script>
     </ContentTemplate>
 </asp:UpdatePanel>
