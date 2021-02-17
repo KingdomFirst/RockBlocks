@@ -73,7 +73,6 @@
                                 <Rock:TimePicker ID="timeWeekly" runat="server" Visible="false" Label="Time of Day" />
                             </div>
                         </div>
-                        <Rock:SchedulePicker ID="spSchedule" runat="server" AllowMultiSelect="false" Visible="false" Label="Named Schedule" />
                         <asp:HiddenField ID="hfUniqueScheduleId" runat="server" />
                         <Rock:ScheduleBuilder ID="sbSchedule" runat="server" ShowDuration="false" ShowScheduleFriendlyTextAsToolTip="true" Visible="false" Label="Custom Schedule" />
                     </div>
