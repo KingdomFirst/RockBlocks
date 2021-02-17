@@ -1345,7 +1345,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         {
             dowWeekly.Visible = false;
             timeWeekly.Visible = false;
-            spSchedule.Visible = false;
             sbSchedule.Visible = false;
 
             if ( !string.IsNullOrWhiteSpace( rblScheduleSelect.SelectedValue ) )
@@ -1369,12 +1368,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             sbSchedule.Visible = true;
                             break;
                         }
-
-                    case ScheduleType.Named:
-                        {
-                            spSchedule.Visible = true;
-                            break;
-                        }
                 }
             }
         }
@@ -1391,15 +1384,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 dowWeekly.SelectedDayOfWeek = null;
                 timeWeekly.SelectedTime = null;
                 sbSchedule.iCalendarContent = string.Empty;
-                spSchedule.SetValue( null );
 
                 if ( group.Schedule != null )
                 {
                     switch ( group.Schedule.ScheduleType )
                     {
-                        case ScheduleType.Named:
-                            spSchedule.SetValue( group.Schedule );
-                            break;
                         case ScheduleType.Custom:
                             hfUniqueScheduleId.Value = group.Schedule.Id.ToString();
                             sbSchedule.iCalendarContent = group.Schedule.iCalendarContent;
@@ -1414,30 +1403,34 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             }
 
             pnlSchedule.Visible = false;
-            rblScheduleSelect.Items.Clear();
 
-            ListItem liNone = new ListItem( "None", "0" );
-            liNone.Selected = group != null && ( group.Schedule == null || group.Schedule.ScheduleType == ScheduleType.None );
-            rblScheduleSelect.Items.Add( liNone );
-
-            var groupType = new GroupTypeService( rockContext ).Get( group.GroupTypeId );
-            if ( groupType != null && ( groupType.AllowedScheduleTypes & ScheduleType.Weekly ) == ScheduleType.Weekly )
+            if ( group.Schedule == null || group.Schedule.ScheduleType != ScheduleType.Named )
             {
-                ListItem li = new ListItem( "Weekly", "1" );
-                li.Selected = group != null && group.Schedule != null && group.Schedule.ScheduleType == ScheduleType.Weekly;
-                rblScheduleSelect.Items.Add( li );
-                pnlSchedule.Visible = true;
-            }
+                rblScheduleSelect.Items.Clear();
 
-            if ( groupType != null && ( groupType.AllowedScheduleTypes & ScheduleType.Custom ) == ScheduleType.Custom )
-            {
-                ListItem li = new ListItem( "Custom", "2" );
-                li.Selected = group != null && group.Schedule != null && group.Schedule.ScheduleType == ScheduleType.Custom;
-                rblScheduleSelect.Items.Add( li );
-                pnlSchedule.Visible = true;
-            }
+                ListItem liNone = new ListItem( "None", "0" );
+                liNone.Selected = group != null && ( group.Schedule == null || group.Schedule.ScheduleType == ScheduleType.None );
+                rblScheduleSelect.Items.Add( liNone );
 
-            SetScheduleDisplay();
+                var groupType = new GroupTypeService( rockContext ).Get( group.GroupTypeId );
+                if ( groupType != null && ( groupType.AllowedScheduleTypes & ScheduleType.Weekly ) == ScheduleType.Weekly )
+                {
+                    ListItem li = new ListItem( "Weekly", "1" );
+                    li.Selected = group != null && group.Schedule != null && group.Schedule.ScheduleType == ScheduleType.Weekly;
+                    rblScheduleSelect.Items.Add( li );
+                    pnlSchedule.Visible = true;
+                }
+
+                if ( groupType != null && ( groupType.AllowedScheduleTypes & ScheduleType.Custom ) == ScheduleType.Custom )
+                {
+                    ListItem li = new ListItem( "Custom", "2" );
+                    li.Selected = group != null && group.Schedule != null && group.Schedule.ScheduleType == ScheduleType.Custom;
+                    rblScheduleSelect.Items.Add( li );
+                    pnlSchedule.Visible = true;
+                }
+
+                SetScheduleDisplay();
+            }
         }
 
         ////
