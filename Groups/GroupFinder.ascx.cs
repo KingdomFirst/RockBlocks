@@ -712,7 +712,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var groupType = GroupTypeCache.Get( gtpGroupType.SelectedGroupTypeId.Value );
                 if ( groupType != null )
                 {
-                    bool hasWeeklyschedule = ( groupType.AllowedScheduleTypes & ScheduleType.Weekly ) == ScheduleType.Weekly || ( groupType.AllowedScheduleTypes & ScheduleType.Custom ) == ScheduleType.Weekly;
+                    bool hasWeeklyschedule = ( groupType.AllowedScheduleTypes & ScheduleType.Weekly ) == ScheduleType.Weekly || ( groupType.AllowedScheduleTypes & ScheduleType.Custom ) == ScheduleType.Custom;
                     rblFilterDOW.Visible = hasWeeklyschedule;
                     cbFilterTimeOfDay.Visible = hasWeeklyschedule;
                     if ( hasWeeklyschedule )
