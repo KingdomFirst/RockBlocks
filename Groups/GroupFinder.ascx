@@ -109,6 +109,7 @@
                                         <Rock:RockTextBox ID="tbTimeOfDayLabel" runat="server" Label="Time of Day Filter Label" Help="The text above the time of day filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbCampusLabel" runat="server" Label="Campus Filter Label" Help="The text above the campus filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbPostalCodeLabel" runat="server" Label="Postal Code Label" Help="The text above the postal code filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockTextBox ID="tbKeywordLabel" runat="server" Label="Keyword Label" Help="The text above the Keyword filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbFilterLabel" runat="server" Label="Filter Button Text" Help="When using collapsible filters what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbMoreFiltersLabel" runat="server" Label="More Filters Button Text" Help="When using initial load hidden filters what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                     </div>
@@ -127,6 +128,8 @@
                                             Help="If the page has a campus context its value will be used as a filter" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBox ID="cbPostalCode" runat="server" Label="Enable Postal Code Search" Text="Yes"
                                             Help="Set to true to enable simple Postal code search instead of full address." ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockCheckBox ID="cbKeyword" runat="server" Label="Display Keyword Filter" Text="Yes"
+                                            Help="Display the Keyword filter" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblAttributes" runat="server" Label="Display Attribute Filters" RepeatDirection="Horizontal"
                                             Help="The group attributes that should be available for user to filter results by." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblInitialLoadFilters" runat="server" Label="Hide Filters on Initial Load" RepeatDirection="Horizontal"

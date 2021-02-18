@@ -1,8 +1,8 @@
 ## KFS Custom Group Finder
 
-*Tested/Supported in Rock version: 9.0-10.2*
+*Tested/Supported in Rock version: 9.0-12*
 *Released: 9/26/2019*
-*Updated: 7/7/2020*
+*Updated: 2/18/2021*
 
 Our Group finder is a significantly modified version of the core Rock version. Including but not limited to these features:
 
@@ -14,6 +14,8 @@ Our Group finder is a significantly modified version of the core Rock version. I
 - Added Collapsible filters
 - Added Custom Sorting based on Attribute Filter
 - Added ability to hide attribute values from the search panel
+- Added Custom Schedule Support to DOW Filters
+- Added Keyword search to search name or description of groups
 
 
 
