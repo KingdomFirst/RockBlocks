@@ -233,7 +233,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                             IsActive = true,
                             CreatedByPersonAliasId = CurrentPersonAlias.Id,
                             CreatedDateTime = RockDateTime.Now,
-                            Description = EbEvent.Description.Text != null ? EbEvent.Description.Text : "",
+                            Description = EbEvent.Summary != null ? EbEvent.Summary : "",
                             Name = string.Format( "{0} - {1}", EbEvent.Start.Local, EbEvent.Name.Text.ToString() ),
                             ParentGroupId = parentGroup.Id,
                             GroupTypeId = groupType.Id
