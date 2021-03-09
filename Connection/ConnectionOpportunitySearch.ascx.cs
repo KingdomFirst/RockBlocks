@@ -121,13 +121,13 @@ namespace RockWeb.Plugins.rocks_kfs.Connection
         DefaultValue = "Campuses",
         Order = 10,
         Key = AttributeKey.CampusLabel )]
-    [TextField( "Attribute One Key",
+    [TextField( "Dropdown Attribute One Key",
         Description = "Specify an attribute to use for as a Dropdown List after the search panel. You should use this in combination with 'Show Search = false'. ",
-        IsRequired=false,
+        IsRequired = false,
         DefaultValue = "",
         Order = 11,
         Key = AttributeKey.AttributeOneKey )]
-    [TextField( "Attribute Two Key",
+    [TextField( "Dropdown Attribute Two Key",
         Description = "Specify an additional attribute to use for as a Dropdown List after the search panel. You should use this in combination with 'Show Search = false'. ",
         IsRequired = false,
         DefaultValue = "",
@@ -632,7 +632,10 @@ namespace RockWeb.Plugins.rocks_kfs.Connection
                         var theseControls = phAttributeOne.Controls[0] as DropDownList;
                         DropDownList ddl = new DropDownList();
                         string[] theseValues = AttributeOne.QualifierValues.Values.ElementAt( 0 ).Value.Split( ',' );
-
+                        if ( theseValues.Count() == 1 && theseValues[0] == "rb" )
+                        {
+                            theseValues = AttributeOne.QualifierValues.Values.ElementAt( 1 ).Value.Split( ',' );
+                        }
                         foreach ( string nameValue in theseValues )
                         {
                             string[] nameAndValue = nameValue.Split( new char[] { '^' } );
@@ -680,6 +683,10 @@ namespace RockWeb.Plugins.rocks_kfs.Connection
                         var theseControls = phAttributeTwo.Controls[0] as DropDownList;
                         DropDownList ddl = new DropDownList();
                         string[] theseValues = AttributeTwo.QualifierValues.Values.ElementAt( 0 ).Value.Split( ',' );
+                        if ( theseValues.Count() == 1 && theseValues[0] == "rb" )
+                        {
+                            theseValues = AttributeTwo.QualifierValues.Values.ElementAt( 1 ).Value.Split( ',' );
+                        }
 
                         foreach ( string nameValue in theseValues )
                         {
