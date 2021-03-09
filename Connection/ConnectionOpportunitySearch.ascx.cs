@@ -20,6 +20,7 @@
 //
 // Modification (including but not limited to):
 // * Displays search filters as drop downs even if multiple mode enabled on attribute
+// * Added capability to search summary and details with the name filter and customize the label for the textbox.
 // </notice>
 //
 using System;
@@ -133,6 +134,18 @@ namespace RockWeb.Plugins.rocks_kfs.Connection
         DefaultValue = "",
         Order = 12,
         Key = AttributeKey.AttributeTwoKey )]
+    [TextField(
+        "Name Filter Label",
+        IsRequired = true,
+        DefaultValue = "Name",
+        Order = 13,
+        Key = AttributeKey.NameLabel )]
+    [BooleanField(
+        "Search Summary and Details with Name Filter",
+        Description = "Determines if the 'Name Filter' also searches the summary and details of the opportunities.",
+        DefaultBooleanValue = false,
+        Order = 14,
+        Key = AttributeKey.SearchDescription )]
 
     #endregion Block Attributes
     public partial class OpportunitySearch : Rock.Web.UI.RockBlock
@@ -157,6 +170,8 @@ namespace RockWeb.Plugins.rocks_kfs.Connection
             public const string CampusLabel = "CampusLabel";
             public const string AttributeOneKey = "AttributeOneKey";
             public const string AttributeTwoKey = "AttributeTwoKey";
+            public const string NameLabel = "NameLabel";
+            public const string SearchDescription = "SearchDescription";
         }
 
         #endregion
@@ -284,11 +299,18 @@ namespace RockWeb.Plugins.rocks_kfs.Connection
 
                 if ( GetAttributeValue( AttributeKey.DisplayNameFilter ).AsBoolean() )
                 {
+                    tbSearchName.Label = GetAttributeValue( AttributeKey.NameLabel );
                     if ( !string.IsNullOrWhiteSpace( tbSearchName.Text ) )
                     {
                         searchSelections.Add( "tbSearchName", tbSearchName.Text );
                         var searchTerms = tbSearchName.Text.ToLower().SplitDelimitedValues( true );
-                        qrySearch = qrySearch.Where( o => searchTerms.Any( t => t.Contains( o.Name.ToLower() ) || o.Name.ToLower().Contains( t ) ) );
+                        if ( GetAttributeValue( AttributeKey.SearchDescription ).AsBoolean() ) {
+                            qrySearch = qrySearch.Where( o => searchTerms.Any( t => t.Contains( o.Name.ToLower() ) || o.Name.ToLower().Contains( t ) || t.Contains( o.Summary.ToLower() ) || o.Summary.ToLower().Contains( t ) || t.Contains( o.Description.ToLower() ) || o.Description.ToLower().Contains( t ) ) );
+                        }
+                        else
+                        {
+                            qrySearch = qrySearch.Where( o => searchTerms.Any( t => t.Contains( o.Name.ToLower() ) || o.Name.ToLower().Contains( t ) ) );
+                        }
                     }
                 }
 
