@@ -29,6 +29,7 @@
 // * Added ability to hide attribute values from the search panel
 // * Added Custom Schedule Support to DOW Filters
 // * Added Keyword search to search name or description of groups
+// * Added an additional setting to include Pending members in Over Capacity checking
 // </notice>
 //
 using System;
@@ -97,6 +98,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [BooleanField( "Display Keyword Search", "", false, "CustomSetting" )]
     [BooleanField( "Enable Campus Context", "", false, "CustomSetting" )]
     [BooleanField( "Hide Overcapacity Groups", "When set to true, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden.", true )]
+    [BooleanField( "Overcapacity Groups include Pending", "When set to true, the Hide Overcapacity Groups setting also takes into account pending members.", false )]
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Attribute Filters", "", false, true, "", "CustomSetting" )]
     [AttributeField( Rock.SystemGuid.EntityType.GROUP, "Attribute Custom Sort", "Select an attribute to sort by if a group contains multiple of the selected filter options.", false, false, "", "CustomSetting" )]
     [BooleanField( "Enable Postal Code Search", "", false, "CustomSetting" )]
@@ -1317,9 +1319,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             //    GroupTypeRole. If that role exists and has a MaxCount, check that we haven't met or exceeded it yet.
             if ( GetAttributeValue( "HideOvercapacityGroups" ).AsBoolean() )
             {
+                var includePendingInCapacity = GetAttributeValue( "OvercapacityGroupsincludePending" ).AsBoolean();
                 groupQry = groupQry.Where(
                     g => g.GroupCapacity == null ||
-                    g.Members.Where( m => m.GroupMemberStatus == GroupMemberStatus.Active ).Count() < g.GroupCapacity );
+                    g.Members.Where( m => m.GroupMemberStatus == GroupMemberStatus.Active || ( includePendingInCapacity && m.GroupMemberStatus == GroupMemberStatus.Pending ) ).Count() < g.GroupCapacity );
 
                 groupQry = groupQry.Where( g =>
                      g.GroupType == null ||
@@ -1427,7 +1430,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         personLocation = new LocationService( rockContext )
                         .Get( acAddress.Street1, acAddress.Street2, acAddress.City,
                             acAddress.State, acAddress.PostalCode, acAddress.Country, null, true, false );
-                        if ( personLocation.GeoPoint != null ) mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
+                        if ( personLocation.GeoPoint != null )
+                            mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                     }
 
                     if ( mapCoordinate == null && personLocation == null || ( personLocation != null && personLocation.GeoPoint == null ) )
@@ -1441,7 +1445,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             {
                                 nbPostalCode.Text = personLocation.PostalCode.Substring( 0, 5 );
                             }
-                            if ( personLocation.GeoPoint != null ) mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
+                            if ( personLocation.GeoPoint != null )
+                                mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                         }
                     }
                 }
