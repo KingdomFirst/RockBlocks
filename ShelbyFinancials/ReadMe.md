@@ -36,7 +36,9 @@ Quick Links:
 
 #### Batch to Journal Block
 
-After install, the Shelby Financials Batch to Journal block was added to your Batch Details page. BatchToJournalProperties.png![image](https://user-images.githubusercontent.com/81330042/113193210-53a99500-9225-11eb-9066-85ebd714e6ae.png)
+After install, the Shelby Financials Batch to Journal block was added to your Batch Details page. 
+
+![](https://user-images.githubusercontent.com/81330042/113193210-53a99500-9225-11eb-9066-85ebd714e6ae.png)
 
 
 
