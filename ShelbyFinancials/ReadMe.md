@@ -59,7 +59,7 @@ After install, the Shelby Financials Batch to Journal block was added to your Ba
 
 #### Shelby Financials Batches to Journal Block
 
-BatchesToJournalProperties.png![image](https://user-images.githubusercontent.com/81330042/113193298-6fad3680-9225-11eb-95ef-f61edf9b87a7.png)
+![](https://user-images.githubusercontent.com/81330042/113193298-6fad3680-9225-11eb-95ef-f61edf9b87a7.png)
 
 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1</span>**Name** Block name
@@ -76,7 +76,7 @@ BatchesToJournalProperties.png![image](https://user-images.githubusercontent.com
 
 The export will always create (at a minimum) two lines for a Journal - a debit and a credit line. The Credit and Debit Account attributes are how this is defined. Each of these attributes will need to be set to the Id of the option in your Shelby Financials GL. Only the Attributes that are filled in will be exported.
 
-AccountAttributes.png![image](https://user-images.githubusercontent.com/81330042/113193420-8fdcf580-9225-11eb-8b9b-0fa3d2f90a12.png)
+![](https://user-images.githubusercontent.com/81330042/113193420-8fdcf580-9225-11eb-8b9b-0fa3d2f90a12.png)
 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1</span>**Default Project** Designates the project at the financial account level
 >
@@ -108,7 +108,7 @@ You may want to define the values for the Financial Projects defined type so the
 
 On the Projects page, add a value for each of your organization's Projects. The Value must be the Id from Shelby Financials. Description will be a friendly name for the Project.
 
-Projects.png![image](https://user-images.githubusercontent.com/81330042/113193523-aaaf6a00-9225-11eb-9443-646bbb45c913.png)
+![](https://user-images.githubusercontent.com/81330042/113193523-aaaf6a00-9225-11eb-9443-646bbb45c913.png)
 
 
 
@@ -126,7 +126,7 @@ You can assign Projects to a financial account, a transaction or to a specific a
 
 **To assign a Project to part of a transaction**, as you add the accounts and amounts to the transaction, select the Project from the dropdown list. You can also a project by editing the accounts on an existing transaction.
 
-![1543597303519]TransactionAttribute.png![image](https://user-images.githubusercontent.com/81330042/113193574-bb5fe000-9225-11eb-9319-f69fb0af4a53.png)
+![](https://user-images.githubusercontent.com/81330042/113193574-bb5fe000-9225-11eb-9319-f69fb0af4a53.png)
 
 
 
@@ -134,7 +134,7 @@ You can assign Projects to a financial account, a transaction or to a specific a
 
 On the Batch Detail page, select the Journal Type and enter an Accounting Period for the batch then click the Create Shelby Export button. You will not be able to export a batch if the variance amount is not $0.
 
-ExportBatch.png![image](https://user-images.githubusercontent.com/81330042/113193871-11348800-9226-11eb-9a88-091d43a0ad4f.png)
+![](https://user-images.githubusercontent.com/81330042/113193871-11348800-9226-11eb-9a88-091d43a0ad4f.png)
 
 
 
@@ -142,4 +142,4 @@ ExportBatch.png![image](https://user-images.githubusercontent.com/81330042/11319
 
 To export multiple batches, go to the Shelby GL Export page (Finance > Functions > Shelby GL Export). Select the batches you wish to export, select a Journal Type, enter an Accounting Period and click the Create Shelby Export button.
 
-ExportMultipleBatches.png![image](https://user-images.githubusercontent.com/81330042/113193895-1b568680-9226-11eb-9df7-78b8290b4cd9.png)
+![](https://user-images.githubusercontent.com/81330042/113193895-1b568680-9226-11eb-9df7-78b8290b4cd9.png)
