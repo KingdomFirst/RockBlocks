@@ -2,9 +2,9 @@
 
 
 # Shelby Financials Export
-_Tested/Supported in Rock version:  8.0-12.0_
-_Created:  10/29/2018_
-_Updated:  11/20/2019_
+*Tested/Supported in Rock version:  8.0-12.0*   
+*Created:  10/29/2018*  
+*Updated:  11/20/2019*
 
 ## Summary
 
