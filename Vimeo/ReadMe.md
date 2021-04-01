@@ -10,7 +10,7 @@ _Updated:  8/28/2019_
 
 **This plugin requires a Vimeo Pro or higher account**
 
-This plugin give you 2 ways to sync video items from Vimeo to your Rock install. The first is to sync all of the videos in a Vimeo account to a content channel. This would be used primarily for an initial sync to a new content channel. The second allows you to sync the video information to a specific content channel item. This would be used weekly after the video is uploaded to Vimeo to add the video and information to your website.
+This plugin gives you 2 ways to sync video items from Vimeo to your Rock install. The first is to sync all of the videos in a Vimeo account to a content channel. This would be used primarily for an initial sync to a new content channel. The second allows you to sync the video information to a specific content channel item. This would be used weekly after the video is uploaded to Vimeo to add the video and information to your website.
 
 
 
