@@ -124,7 +124,7 @@ You can assign Projects to a financial account, a transaction or to a specific a
 
 ![](/Images/TransactionAttribute.png)
 
-**To assign a Project to part of a transaction**, as you add the accounts and amounts to the transaction, select the Project from the dropdown list. You can also a project by editing the accounts on an existing transaction.
+**To assign a Project to part of a transaction**, as you add the accounts and amounts to the transaction, select the Project from the dropdown list. You can also assing a project by editing the accounts on an existing transaction.
 
 ![](https://user-images.githubusercontent.com/81330042/113193574-bb5fe000-9225-11eb-9319-f69fb0af4a53.png)
 
