@@ -2,20 +2,21 @@
 
 *Tested/Supported in Rock version: 9.0-12*
 *Released: 9/26/2019*
-*Updated: 2/18/2021*
+*Updated: 3/29/2021*
 
 Our Group finder is a significantly modified version of the core Rock version. Including but not limited to these features:
 
 - Added ability to set default location so when address is enabled a campus can be selected and results auto load.
 - Added single select setting so that multiselect filters will be a drop down.
-- Added ability to set filters by url parameter
-- Added an override setting for PersonGuid mode that enables search options
-- Added postal code search capability
-- Added Collapsible filters
-- Added Custom Sorting based on Attribute Filter
-- Added ability to hide attribute values from the search panel
-- Added Custom Schedule Support to DOW Filters
-- Added Keyword search to search name or description of groups
+- Added ability to set filters by url parameter.
+- Added an override setting for PersonGuid mode that enables search options.
+- Added postal code search capability.
+- Added Collapsible filters.
+- Added Custom Sorting based on Attribute Filter.
+- Added ability to hide attribute values from the search panel.
+- Added Custom Schedule Support to DOW Filters.
+- Added Keyword search to search name or description of groups.
+- Added an additional setting to include Pending members in Over Capacity checking.
 
 
 
