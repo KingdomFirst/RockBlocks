@@ -1226,11 +1226,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     if ( GetAttributeValue( AttributeKey.HighlightMobilePhone ).AsBoolean() )
                     {
                         var hightlightTitle = ( Literal ) e.Item.FindControl( "litHighlightTitle" );
-                        hightlightTitle.Text = $"<h4>{GetAttributeValue( AttributeKey.MobileHighlightTitle )}</h4>";
+                        hightlightTitle.Text = string.Format( "<h4>{0}</h4>", GetAttributeValue( AttributeKey.MobileHighlightTitle ) );
                         hightlightTitle.Visible = true;
 
                         var hightlightText = ( Literal ) e.Item.FindControl( "litHighlightText" );
-                        hightlightText.Text = $"<p>{GetAttributeValue( AttributeKey.MobileHighlightText )}</p>";
+                        hightlightText.Text = string.Format( "<p>{0}</p>", GetAttributeValue( AttributeKey.MobileHighlightText ) );
                         hightlightText.Visible = true;
 
                         phoneNumberContainer.AddCssClass( "well" );
