@@ -65,18 +65,39 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Order = 1 )]
 
     [BooleanField(
+        "Show Title",
+        Key = AttributeKey.ShowTitle,
+        Description = "Whether to show the person's title (e.g. Mr., Mrs. etc...)",
+        DefaultBooleanValue = true,
+        Order = 2 )]
+
+    [BooleanField(
+        "Show Suffix",
+        Key = AttributeKey.ShowSuffix,
+        Description = "Whether to show the person's suffix (e.g. Roman Numerals, Jr., Ph.D., etc...)",
+        DefaultBooleanValue = true,
+        Order = 3 )]
+
+    [BooleanField(
+        "Show Nick Name",
+        Key = AttributeKey.ShowNickName,
+        Description = "Whether to show the person's Nickname in addition to the First Name.",
+        DefaultBooleanValue = true,
+        Order = 4 )]
+
+    [BooleanField(
         "View Only",
         Key = AttributeKey.ViewOnly,
         Description = "Should people be prevented from editing their profile or family records?",
         DefaultBooleanValue = false,
-        Order = 2 )]
+        Order = 5 )]
 
     [BooleanField(
         "Show Family Members",
         Key = AttributeKey.ShowFamilyMembers,
         Description = "Whether family members are shown or not.",
         DefaultBooleanValue = true,
-        Order = 3 )]
+        Order = 6 )]
 
     [GroupLocationTypeField(
         "Address Type",
@@ -85,14 +106,14 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         GroupTypeGuid = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY,
         IsRequired = false,
         DefaultValue = Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME,
-        Order = 4 )]
+        Order = 7 )]
 
     [BooleanField(
         "Show Phone Numbers",
+        Key = AttributeKey.ShowPhoneNumbers,
         Description = "Allows hiding the phone numbers.",
         DefaultBooleanValue = false,
-        Order = 5,
-        Key = AttributeKey.ShowPhoneNumbers )]
+        Order = 8 )]
 
     [DefinedValueField(
         "Phone Types",
@@ -102,7 +123,30 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         AllowMultiple = true,
         DefaultValue = Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME,
-        Order = 6 )]
+        Order = 9 )]
+
+    [BooleanField(
+        "Highlight Mobile Phone",
+        Key = AttributeKey.HighlightMobilePhone,
+        Description = "Determines if the emphasis box should be placed around the mobile number.",
+        DefaultBooleanValue = true,
+        Order = 10 )]
+
+    [TextField(
+        "Mobile Highlight Title",
+        Key = AttributeKey.MobileHighlightTitle,
+        Description = "The text to use for the mobile highlight title (only displayed if Highlight Mobile Phone is selected).",
+        IsRequired = false,
+        DefaultValue = "Help Us Keep You Informed",
+        Order = 11 )]
+
+    [TextField(
+        "Mobile Highlight Text",
+        Description = "The text to use for the mobile highlight text (only displayed if Highlight Mobile Phone is selected).",
+        IsRequired = false,
+        DefaultValue = "Help us keep you in the loop by providing your mobile phone number and opting in for text messages. We'll only send you the most important information at this number.",
+        Order = 12,
+        Key = AttributeKey.MobileHighlightText )]
 
     [DefinedValueField(
         "Required Adult Phone Types",
@@ -111,36 +155,36 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefinedTypeGuid = Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE,
         IsRequired = false,
         AllowMultiple = true,
-        Order = 7 )]
+        Order = 13 )]
 
     [BooleanField(
         "Require Adult Email Address",
         Key = AttributeKey.RequireAdultEmailAddress,
         Description = "Require an email address on adult records",
         DefaultBooleanValue = true,
-        Order = 8 )]
+        Order = 14 )]
 
     [BooleanField(
         "Show Communication Preference",
         Key = AttributeKey.ShowCommunicationPreference,
         Description = "Show the communication preference and allow it to be edited",
         DefaultBooleanValue = true,
-        Order = 9 )]
+        Order = 15 )]
 
     [LinkedPage(
         "Workflow Launch Page",
         Key = AttributeKey.RequestChangesPage,
         Description = "Page used to launch the workflow to make a profile change request",
         IsRequired = false,
-        Order = 10 )]
+        Order = 16 )]
 
     [TextField(
         "Request Changes Text",
+        Key = AttributeKey.RequestChangesText,
         Description = "The text to use for the request changes button (only displayed if there is a 'Workflow Launch Page' configured).",
         IsRequired = false,
         DefaultValue = "Request Additional Changes",
-        Order = 11,
-        Key = AttributeKey.RequestChangesText )]
+        Order = 17 )]
 
     [AttributeField(
         "Family Attributes",
@@ -151,7 +195,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Description = "The family attributes that should be displayed / edited.",
         IsRequired = false,
         AllowMultiple = true,
-        Order = 12 )]
+        Order = 18 )]
 
     [AttributeField(
         "Person Attributes (adults)",
@@ -160,7 +204,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Description = "The person attributes that should be displayed / edited for adults.",
         IsRequired = false,
         AllowMultiple = true,
-        Order = 13 )]
+        Order = 19 )]
 
     [AttributeField(
         "Person Attributes (children)",
@@ -169,14 +213,14 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Description = "The person attributes that should be displayed / edited for children.",
         IsRequired = false,
         AllowMultiple = true,
-        Order = 14 )]
+        Order = 20 )]
 
     [BooleanField(
         "Show Campus Selector",
         Key = AttributeKey.ShowCampusSelector,
         Description = "Allows selection of primary campus.",
         DefaultBooleanValue = false,
-        Order = 15 )]
+        Order = 21 )]
 
     [TextField(
         "Campus Selector Label",
@@ -184,7 +228,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Description = "The label for the campus selector (only effective when \"Show Campus Selector\" is enabled).",
         IsRequired = false,
         DefaultValue = "Campus",
-        Order = 16 )]
+        Order = 22 )]
 
     [BooleanField(
         "Require Gender",
@@ -192,7 +236,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Description = "Controls whether or not the gender field is required.",
         IsRequired = true,
         DefaultBooleanValue = true,
-        Order = 17 )]
+        Order = 23 )]
 
     [CodeEditorField( "View Template",
         Key = AttributeKey.ViewTemplate,
@@ -202,7 +246,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         EditorHeight = 400,
         IsRequired = true,
         DefaultValue = "{% include '~/Assets/Lava/PublicProfile.lava' %}",
-        Order = 18 )]
+        Order = 24 )]
+
     #endregion
 
     public partial class PublicProfileEdit : RockBlock
@@ -211,11 +256,17 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         {
             public const string DefaultConnectionStatus = "DefaultConnectionStatus";
             public const string DisableNameEdit = "DisableNameEdit";
+            public const string ShowTitle = "ShowTitle";
+            public const string ShowSuffix = "ShowSuffix";
+            public const string ShowNickName = "ShowNickName";
             public const string ViewOnly = "ViewOnly";
             public const string ShowFamilyMembers = "ShowFamilyMembers";
             public const string AddressTypeValueGuid = "AddressType";
             public const string ShowPhoneNumbers = "ShowPhoneNumbers";
             public const string PhoneTypeValueGuids = "PhoneNumbers";
+            public const string HighlightMobilePhone = "HighlightMobilePhone";
+            public const string MobileHighlightTitle = "MobileHighlightTitle";
+            public const string MobileHighlightText = "MobileHighlightText";
             public const string RequiredAdultPhoneTypes = "RequiredAdultPhoneTypes";
             public const string RequireAdultEmailAddress = "RequireAdultEmailAddress";
             public const string ShowCommunicationPreference = "ShowCommunicationPreference";
@@ -342,7 +393,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             base.OnInit( e );
             ScriptManager.RegisterStartupScript( ddlGradePicker, ddlGradePicker.GetType(), "grade-selection-" + BlockId.ToString(), ddlGradePicker.GetJavascriptForYearPicker( ypGraduation ), true );
             dvpTitle.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ).Id;
+            dvpTitle.Visible = GetAttributeValue( AttributeKey.ShowTitle ).AsBoolean();
+
             dvpSuffix.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) ).Id;
+            dvpSuffix.Visible = GetAttributeValue( AttributeKey.ShowSuffix ).AsBoolean();
+
+            tbNickName.Visible = GetAttributeValue( AttributeKey.ShowNickName ).AsBoolean();
+
             RockPage.AddCSSLink( "~/Styles/fluidbox.css" );
             RockPage.AddScriptLink( "~/Scripts/imagesloaded.min.js" );
             RockPage.AddScriptLink( "~/Scripts/jquery.fluidbox.min.js" );
@@ -494,7 +551,26 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             .OrderBy( m => m.GroupRole.Order )
                             .ToList();
 
-            mergeFields.Add( MergeFieldKey.FamilyMembers, familyMembers );
+            var orderedMembers = new List<GroupMember>();
+
+            // Add adult males
+            orderedMembers.AddRange( familyMembers
+                .Where( m => m.GroupRole.Guid.Equals( new Guid( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT ) ) &&
+                    m.Person.Gender == Gender.Male )
+                .OrderByDescending( m => m.Person.Age ) );
+
+            // Add adult females
+            orderedMembers.AddRange( familyMembers
+                .Where( m => m.GroupRole.Guid.Equals( new Guid( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT ) ) &&
+                    m.Person.Gender != Gender.Male )
+                .OrderByDescending( m => m.Person.Age ) );
+
+            // Add non-adults
+            orderedMembers.AddRange( familyMembers
+                .Where( m => !m.GroupRole.Guid.Equals( new Guid( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT ) ) )
+                .OrderByDescending( m => m.Person.Age ) );
+
+            mergeFields.Add( MergeFieldKey.FamilyMembers, orderedMembers );
 
             mergeFields.Add( MergeFieldKey.ShowFamilyMembers, GetAttributeValue( AttributeKey.ShowFamilyMembers ).AsBoolean() );
             mergeFields.Add( MergeFieldKey.Families, personFamilies );
@@ -1133,14 +1209,31 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             {
                 pnbPhone.ValidationGroup = BlockValidationGroup;
                 var phoneNumber = e.Item.DataItem as PhoneNumber;
+                HtmlGenericControl phoneNumberContainer = ( HtmlGenericControl ) e.Item.FindControl( "divPhoneNumberContainer" );
+
                 if ( _isEditRecordAdult && ( phoneNumber != null ) )
                 {
                     pnbPhone.Required = _requiredPhoneNumberGuids.Contains( phoneNumber.NumberTypeValue.Guid );
                     if ( pnbPhone.Required )
                     {
                         pnbPhone.RequiredErrorMessage = string.Format( "{0} phone is required", phoneNumber.NumberTypeValue.Value );
-                        HtmlGenericControl phoneNumberContainer = ( HtmlGenericControl ) e.Item.FindControl( "divPhoneNumberContainer" );
                         phoneNumberContainer.AddCssClass( "required" );
+                    }
+                }
+
+                if ( phoneNumber.NumberTypeValue.Guid == Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() )
+                {
+                    if ( GetAttributeValue( AttributeKey.HighlightMobilePhone ).AsBoolean() )
+                    {
+                        var hightlightTitle = ( Literal ) e.Item.FindControl( "litHighlightTitle" );
+                        hightlightTitle.Text = $"<h4>{GetAttributeValue( AttributeKey.MobileHighlightTitle )}</h4>";
+                        hightlightTitle.Visible = true;
+
+                        var hightlightText = ( Literal ) e.Item.FindControl( "litHighlightText" );
+                        hightlightText.Text = $"<p>{GetAttributeValue( AttributeKey.MobileHighlightText )}</p>";
+                        hightlightText.Visible = true;
+
+                        phoneNumberContainer.AddCssClass( "well" );
                     }
                 }
             }
@@ -1174,6 +1267,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 // invalid situation; return and report nothing.
                 return;
             }
+
             hfEditPersonGuid.Value = personGuid.ToString();
             var person = new Person();
 
@@ -1505,7 +1599,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 tbEmail.Required = false;
                 _isEditRecordAdult = false;
             }
-            
+
             avcPersonAttributesAdult.Visible = _isEditRecordAdult;
             avcPersonAttributesChild.Visible = !_isEditRecordAdult;
 
