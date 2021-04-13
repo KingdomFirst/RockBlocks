@@ -5,6 +5,7 @@
 *Tested/Supported in Rock version:  8.0-12.0*   
 *Created:  10/29/2018*  
 *Updated:  11/20/2019*
+*Rock Shop Plugin: https://www.rockrms.com/Plugin/97*
 
 ## Summary
 
