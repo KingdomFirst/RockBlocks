@@ -50,7 +50,7 @@ After install, the Shelby Financials Batch to Journal block was added to your Ba
 
 ![](Images/BatchToJournalProperties.png)
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1</span>**Name** Block name
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Name** Block name
 >
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2</span>**Button Text** Customize the text on the export button
 >
