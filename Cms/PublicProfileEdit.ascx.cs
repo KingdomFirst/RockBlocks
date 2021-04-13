@@ -248,6 +248,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultValue = "{% include '~/Assets/Lava/PublicProfile.lava' %}",
         Order = 24 )]
 
+    [BooleanField( "Impersonation",
+        TrueText = "Allow (only use on an internal page used by staff)",
+        FalseText = "Don't Allow",
+        Description = "Should the current user be able to view and edit other people's transactions?  IMPORTANT: This should only be enabled on an internal page that is secured to trusted users",
+        DefaultValue = "false",
+        Order = 25 )]
+
     #endregion
 
     public partial class PublicProfileEdit : RockBlock
@@ -279,6 +286,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string CampusSelectorLabel = "CampusSelectorLabel";
             public const string RequireGender = "RequireGender";
             public const string ViewTemplate = "ViewTemplate";
+            public const string Impersonation = "Impersonation";
         }
 
         private static class MergeFieldKey
@@ -380,6 +388,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
         #region Properties
 
+        private Person _person = null;
+
         #endregion
 
         #region Base Control Methods
@@ -425,6 +435,23 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     });
 ";
             ScriptManager.RegisterStartupScript( rContactInfo, rContactInfo.GetType(), "sms-number-" + BlockId.ToString(), smsScript, true );
+
+            // If impersonation is allowed, and a valid person key was used, set the target to that person
+            if ( GetAttributeValue( "Impersonation" ).AsBooleanOrNull() ?? false )
+            {
+                string personKey = PageParameter( "Person" );
+                if ( !string.IsNullOrWhiteSpace( personKey ) )
+                {
+                    var rockContext = new RockContext();
+                    _person = new PersonService( rockContext ).GetByUrlEncodedKey( personKey );
+                }
+            }
+
+            if ( _person == null )
+            {
+                _person = CurrentPerson;
+            }
+
         }
 
         /// <summary>
@@ -434,7 +461,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
-            if ( CurrentPerson == null )
+            if ( _person == null )
             {
                 pnlView.Visible = false;
                 pnlEdit.Visible = false;
@@ -517,13 +544,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var attributeValueService = new AttributeValueService( rockContext );
 
             // invalid situation; return and report nothing.
-            if ( CurrentPerson == null )
+            if ( _person == null )
             {
                 return;
             }
 
-            var mergeFields = LavaHelper.GetCommonMergeFields( this.RockPage );
-            var personFamilies = CurrentPerson.GetFamilies();
+            var mergeFields = LavaHelper.GetCommonMergeFields( this.RockPage, _person );
+            var personFamilies = _person.GetFamilies();
             Group selectedFamily;
             var selectedGroupId = hfGroupId.Value.AsIntegerOrNull();
             if ( selectedGroupId.HasValue )
@@ -532,12 +559,12 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
             else
             {
-                selectedFamily = CurrentPerson.GetFamily();
+                selectedFamily = _person.GetFamily();
             }
 
             if ( selectedFamily == null )
             {
-                selectedFamily = CurrentPerson.GetFamily();
+                selectedFamily = _person.GetFamily();
             }
 
             hfGroupId.Value = selectedFamily.Id.ToString();
@@ -546,7 +573,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             var familyMembers = groupMemberService.Queryable()
                             .Where( gm => gm.GroupId == selectedFamily.Id
-                                 && gm.PersonId != CurrentPerson.Id
+                                 && gm.PersonId != _person.Id
                                  && gm.Person.IsDeceased == false )
                             .OrderBy( m => m.GroupRole.Order )
                             .ToList();
@@ -603,7 +630,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             var viewPersonLavaTemplate = GetAttributeValue( AttributeKey.ViewTemplate );
 
-            var viewPersonHtml = viewPersonLavaTemplate.ResolveMergeFields( mergeFields ).ResolveClientIds( upContent.UniqueID );
+            var viewPersonHtml = viewPersonLavaTemplate.ResolveMergeFields( mergeFields, _person ).ResolveClientIds( upContent.UniqueID );
             lViewPersonContent.Visible = true;
             lViewPersonContent.Text = viewPersonHtml;
 
@@ -618,7 +645,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 rblRole.Items.Add( new ListItem( role.Name, role.Id.ToString() ) );
             }
 
-            rblRole.SetValue( CurrentPerson.GetFamilyRole() );
+            rblRole.SetValue( _person.GetFamilyRole() );
         }
 
         /// <summary>
@@ -635,7 +662,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 return false;
             }
 
-            return group.Members.Where( gm => gm.PersonId == CurrentPersonId ).Any();
+            return group.Members.Where( gm => gm.PersonId == _person.Id ).Any();
         }
 
         /// <summary>
@@ -681,7 +708,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void lbEditPerson_Click( object sender, EventArgs e )
         {
-            ShowEditPersonDetails( CurrentPerson.Guid );
+            ShowEditPersonDetails( _person.Guid );
         }
 
         /// <summary>
@@ -761,7 +788,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
 
             // Validate before continuing; either the personGuid or the CurrentPerson must be in the group.
-            if ( !IsValidPersonForGroup( personGuid, CurrentPerson, group ) )
+            if ( !IsValidPersonForGroup( personGuid, _person, group ) )
             {
                 return;
             }
@@ -815,7 +842,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     }
                     else
                     {
-                        groupMember.Person.ConnectionStatusValueId = CurrentPerson.ConnectionStatusValueId;
+                        groupMember.Person.ConnectionStatusValueId = _person.ConnectionStatusValueId;
                     }
 
                     var headOfHousehold = GroupServiceExtensions.HeadOfHousehold( group.Members.AsQueryable() );
@@ -1168,7 +1195,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             if ( wrapTransactionResult )
             {
-                NavigateToCurrentPage();
+                var queryString = new Dictionary<string, string>();
+
+                var personParam = PageParameter( "Person" );
+                if ( !string.IsNullOrWhiteSpace( personParam ) )
+                {
+                    queryString.Add( "Person", personParam );
+                }
+
+                NavigateToPage( RockPage.Guid, queryString );
             }
         }
 
@@ -1380,7 +1415,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     // Use the current person's campus if this a new person
                     if ( personGuid == Guid.Empty )
                     {
-                        cpCampus.SetValue( CurrentPerson.PrimaryCampus );
+                        cpCampus.SetValue( _person.PrimaryCampus );
                     }
                     else
                     {
@@ -1424,7 +1459,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
 
             // Family Attributes
-            if ( person.Id == CurrentPerson.Id )
+            if ( person.Id == _person.Id )
             {
                 List<Guid> familyAttributeGuidList = GetAttributeValue( AttributeKey.FamilyAttributes ).SplitDelimitedValues().AsGuidList();
                 if ( familyAttributeGuidList.Any() )
