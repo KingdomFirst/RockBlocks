@@ -69,7 +69,7 @@ After install, the Shelby Financials Batch to Journal block was added to your Ba
 >
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Button Text** Customize the text for the export button
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4</span>**Months Back** Number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4&nbsp;&nbsp;</span>**Months Back** Number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches
 
 
 
