@@ -54,7 +54,7 @@ After install, the Shelby Financials Batch to Journal block was added to your Ba
 >
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**Button Text** Customize the text on the export button
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3</span>**Close Batch** Control whether the batch gets marked as closed in Rock after export
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Close Batch** Control whether the batch gets marked as closed in Rock after export
 
 
 
