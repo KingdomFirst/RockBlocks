@@ -63,7 +63,7 @@ After install, the Shelby Financials Batch to Journal block was added to your Ba
 ![](https://user-images.githubusercontent.com/81330042/113193298-6fad3680-9225-11eb-95ef-f61edf9b87a7.png)
 
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1</span>**Name** Block name
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Name** Block name
 >
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2</span>**Detail Page** Link to the Financial Batch Details page
 >
