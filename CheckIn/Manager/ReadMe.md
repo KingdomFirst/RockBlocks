@@ -1,7 +1,7 @@
 ![Kingdom First Solutions](https://user-images.githubusercontent.com/81330042/115041371-09b4e600-9e98-11eb-90bf-c119cc4d5a18.png)
 
 
-# Check-in Manager
+# Advanced Check-In Monitor
 _Tested/Supported in Rock Version:  8.0-12.0_    
 _Released:  12/31/2018_   
 _Updated:  3/16/2020_   
