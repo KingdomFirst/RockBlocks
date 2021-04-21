@@ -213,7 +213,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
 
         protected void lbCreateNewRockGroup_Click( object sender, EventArgs e )
         {
-            var eb = rocks.kfs.Eventbrite.Eventbrite.Api( Settings.GetAccessToken() );
+            var eb = rocks.kfs.Eventbrite.Eventbrite.Api( Settings.GetAccessToken(), Settings.GetOrganizationId().ToLong( 0 ) );
             var ebEventToCreate = ddlEventbriteEvents.SelectedValue.AsLong();
             var EbEvent = eb.GetEventById( ebEventToCreate );
             var parentGroupGuid = GetAttributeValue( "NewGroupParent" ).AsGuidOrNull();
@@ -353,7 +353,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
             ddlEventbriteEvents.Items.Clear();
             if ( parentGroupGuid.HasValue && groupTypeGuid.HasValue )
             {
-                var eb = rocks.kfs.Eventbrite.Eventbrite.Api( _accessToken );
+                var eb = rocks.kfs.Eventbrite.Eventbrite.Api( _accessToken, Settings.GetOrganizationId().ToLong( 0 ) );
                 var organizationEvents = eb.GetOrganizationEvents( GetAttributeValue( "NewEventStatuses" ) );
                 if ( organizationEvents != null && organizationEvents.Pagination != null && organizationEvents.Pagination.Has_More_Items )
                 {
@@ -374,6 +374,9 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                         }
                     }
                 }
+                ddlEventbriteEvents.Visible = true;
+                lbCreateNewRockGroup.Visible = true;
+                nbLinkNew.Visible = false;
             }
             else
             {
@@ -383,7 +386,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 nbLinkNew.NotificationBoxType = NotificationBoxType.Info;
                 nbLinkNew.Visible = true;
             }
-            if ( ddlEventbriteEvents.Items.Count == 0 )
+            if ( ddlEventbriteEvents.Items.Count == 0 && !nbLinkNew.Visible )
             {
                 ddlEventbriteEvents.Visible = false;
                 nbLinkNew.Text = "There are currently no events available to link.";
