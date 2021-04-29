@@ -950,13 +950,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         {
                             HiddenField hfPhoneType = item.FindControl( "hfPhoneType" ) as HiddenField;
                             PhoneNumberBox pnbPhone = item.FindControl( "pnbPhone" ) as PhoneNumberBox;
-                            CheckBox cbUnlisted = item.FindControl( "cbUnlisted" ) as CheckBox;
                             CheckBox cbSms = item.FindControl( "cbSms" ) as CheckBox;
 
                             if ( hfPhoneType != null &&
                                 pnbPhone != null &&
-                                cbSms != null &&
-                                cbUnlisted != null )
+                                cbSms != null )
                             {
                                 if ( !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbPhone.Number ) ) )
                                 {
@@ -989,7 +987,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                             smsSelected = cbSms.Checked;
                                         }
 
-                                        phoneNumber.IsUnlisted = cbUnlisted.Checked;
                                         phoneNumberTypeIds.Add( phoneNumberTypeId );
                                     }
                                 }
