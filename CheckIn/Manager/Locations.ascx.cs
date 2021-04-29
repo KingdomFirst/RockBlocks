@@ -2851,12 +2851,13 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
                         }
 
                         var labelPath = string.Format( "~/Cache/{0}_{1}_{2}_{3}.pdf", person.Person.FullName.RemoveSpaces(), personId, locationId, labelGuid );
+                        var labelPathEncoded = string.Format( "~/Cache/{0}_{1}_{2}_{3}.pdf", person.Person.FullName.RemoveSpaces().UrlEncode(), personId, locationId, labelGuid );
 
                         byte[] bytes = memoryStream.ToArray();
                         System.IO.Directory.CreateDirectory( Server.MapPath( "~/Cache" ) );
                         System.IO.File.WriteAllBytes( Server.MapPath( labelPath ), bytes );
                         var embed = "<div class=\"pdfObject\" style=\"width:100%;height:350px;\"><object toolbar=\"true\" id=\"pdfDocument\" width=\"100%\" height=\"100%\" data=\"{0}\" type=\"application/pdf\"><p>It appears you don't have a PDF plugin for this browser. <a href=\"{0}\">click here to download the PDF file.</a></p></object></div>";
-                        litLabel.Text = string.Format( embed, ResolveRockUrlIncludeRoot( labelPath ) );
+                        litLabel.Text = string.Format( embed, ResolveRockUrlIncludeRoot( labelPathEncoded ) );
                         memoryStream.Close();
 
                         responseStream.Close();
