@@ -4,7 +4,7 @@
 # Advanced Check-In Monitor
 _Tested/Supported in Rock Version:  8.0-12.0_    
 _Released:  12/31/2018_   
-_Updated:  3/16/2020_   
+_Updated:  4/26/2021_   
 
 ## Summary
 
@@ -43,13 +43,13 @@ On the check-in manager page, choose the check-in area, group and location that 
 ![Images/PersonOptions](https://user-images.githubusercontent.com/81330042/115042860-7a103700-9e99-11eb-8105-48df431b7246.png)
 
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1</span> **Move All** Allows you to move everyone checked into this location to a new location and/or group. Imagine you have a spill on the carpet in one of your rooms. You want to move all the kids from one room to another so you can clean it up, the move all button gives you an easy way to do that. Your leaders will still have an accurate count and list of who should be in which room. 
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Move All** Allows you to move everyone checked into this location to a new location and/or group. Imagine you have a spill on the carpet in one of your rooms. You want to move all the kids from one room to another so you can clean it up, the move all button gives you an easy way to do that. Your leaders will still have an accurate count and list of who should be in which room. 
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2</span>**View Labels** Allows you to view all the labels that printed when someone checked it. It also gives you the ability to reprint their label with the same security code. This is very helpful when a child rips or spills on their label. You can print another label with the same security code so it will still match the parent's label at pickup. Printing relies on the device having a default printer. 
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**View Labels** Allows you to view all the labels that printed when someone checked it. It also gives you the ability to reprint their label with the same security code. This is very helpful when a child rips or spills on their label. You can print another label with the same security code so it will still match the parent's label at pickup. Printing relies on the device having a default printer. 
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3</span>**Move** Allows you to move just one person to a new location and/or group. 
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Move** Allows you to move just one person to a new location and/or group. 
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4</span>**Checkout** Allows you to checkout the person. 
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4&nbsp;&nbsp;</span>**Checkout** Allows you to checkout the person. 
 
 
 
@@ -71,40 +71,40 @@ On the check-in manager page, choose the check-in area, group and location that 
 
 ![BlockPropertiesGeneral](https://user-images.githubusercontent.com/81330042/115043300-fc98f680-9e99-11eb-98d5-e98bd757d51e.png)
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1</span> **Name** Name for your block instance
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Name** Name for your block instance
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2</span>**Navigation Mode** Navigation and attendance counts can be grouped and displayed by either Group Type or Location. Select whichever makes the most sense for your organization.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**Navigation Mode** Navigation and attendance counts can be grouped and displayed by either Group Type or Location. Select whichever makes the most sense for your organization.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3</span>**Check-in Type** The Check-in Area to display. This value can be overridden by a URL query string.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Check-in Type** The Check-in Area to display. This value can be overridden by a URL query string.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4</span>**Person Page** The page used to display the selected person's details.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4&nbsp;&nbsp;</span>**Person Page** The page used to display the selected person's details.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5</span>**Area Select Page** The page to redirect the user to if a check-in area has not been configured or selected.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5&nbsp;&nbsp;</span>**Area Select Page** The page to redirect the user to if a check-in area has not been configured or selected.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6</span>**Chart Style** Choose your preferred chart style
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6&nbsp;&nbsp;</span>**Chart Style** Choose your preferred chart style
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;7</span>**Search By Code** If enabled, you may enter a security code in the search box and find the corresponding person
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;7&nbsp;&nbsp;</span>**Search By Code** If enabled, you may enter a security code in the search box and find the corresponding person
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;8</span>**Lookback Minutes** The number of minutes the chart will lookback
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;8&nbsp;&nbsp;</span>**Lookback Minutes** The number of minutes the chart will lookback
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;9</span>**Location Active** If enabled, only locations with currently active schedules will be displayed
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;9&nbsp;&nbsp;</span>**Location Active** If enabled, only locations with currently active schedules will be displayed
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;10</span>**Close Occurrence** If KFS Load Balance Locations is being used in the check-in workflow, this will close the occurrence instead of the location
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;10&nbsp;&nbsp;</span>**Close Occurrence** If KFS Load Balance Locations is being used in the check-in workflow, this will close the occurrence instead of the location
 
 
 
 ![BlockPropertiesAttendance](https://user-images.githubusercontent.com/81330042/115043390-15091100-9e9a-11eb-832d-ed4034639765.png)
 
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;11</span>**Show Delete** Indicates if the Delete button should be shown. Attendance records delete from this screen are permanently deleted from the database.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;11&nbsp;&nbsp;</span>**Show Delete** Indicates if the Delete button should be shown. Attendance records delete from this screen are permanently deleted from the database.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;12</span>**Show Checkout** Indicates if the Checkout button should be shown. People checked out will still show as having attended but no longer count toward room totals in check-in manager.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;12&nbsp;&nbsp;</span>**Show Checkout** Indicates if the Checkout button should be shown. People checked out will still show as having attended but no longer count toward room totals in check-in manager.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;13</span>**Show Move** Indicates if the Move buttons should be shown. This setting controls both the individual move button and the move all button.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;13&nbsp;&nbsp;</span>**Show Move** Indicates if the Move buttons should be shown. This setting controls both the individual move button and the move all button.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;14</span>**Include Group Move** Controls if the option to move people to a new group is displayed in the move popup. If set to no, you will only be able to move people to new locations.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;14&nbsp;&nbsp;</span>**Include Group Move** Controls if the option to move people to a new group is displayed in the move popup. If set to no, you will only be able to move people to new locations.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;15</span>**Show Print Label** Indicates if the View Label button is available to view and reprint labels
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;15&nbsp;&nbsp;</span>**Show Print Label** Indicates if the View Label button is available to view and reprint labels
 
 
 
@@ -112,11 +112,10 @@ On the check-in manager page, choose the check-in area, group and location that 
 
 ![BlockPropertiesPrint](https://user-images.githubusercontent.com/81330042/115043507-2fdb8580-9e9a-11eb-9199-001c2a5a25a8.png)
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;16</span> **Show Advanced Print Options** Indicates if the advanced print options should be displayed on the view labels popup
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;16&nbsp;&nbsp;</span>**Show Advanced Print Options** Indicates if the advanced print options should be displayed on the view labels popup
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;17</span>**Print Density** Default print density for a label reprint.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;17&nbsp;&nbsp;</span>**Print Density** Default print density for a label reprint.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;18</span>**Label Width** Default label width for a label reprint. 
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;18&nbsp;&nbsp;</span>**Label Width** Default label width for a label reprint. 
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;19</span>**Label Height** Default label height for a label reprint. 
-
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;19&nbsp;&nbsp;</span>**Label Height** Default label height for a label reprint. 
