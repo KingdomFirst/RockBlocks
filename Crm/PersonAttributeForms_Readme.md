@@ -1,4 +1,5 @@
-![Kingdom First Solutions](Images/KFSBanner.jpg)
+![KFSBanner (4)](https://user-images.githubusercontent.com/81330042/118964662-5a9f7a80-b92d-11eb-88a2-aa5018457f7b.jpg)
+
 
 # Person Attributes Form Advanced Block
 
@@ -61,19 +62,20 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 
 ## Block Settings
 
-![](Images/EditBlock1.png)
+![EditBlock1 (1)](https://user-images.githubusercontent.com/81330042/118964726-6db24a80-b92d-11eb-8e4b-05b12a81410b.png)
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1</span> **Display Progress Bar** Displays a progress bar to the user indicating how far along they are in filling out multiple forms. Not shown when there is only one form.
+
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span> **Display Progress Bar** Displays a progress bar to the user indicating how far along they are in filling out multiple forms. Not shown when there is only one form.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2</span>**Workflow** An optional workflow to launch after the person has filled out all forms.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**Workflow** An optional workflow to launch after the person has filled out all forms.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3</span>**Done Page** An optional page to redirect users to after they have completed all the forms.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Done Page** An optional page to redirect users to after they have completed all the forms.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4</span>**Save Values** Determines if values should be save each time the user progresses to the next form or not saved until the end. An advantage of saving them on each form, saved values can then be used in the header and footer of following forms using Lava.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4&nbsp;&nbsp;</span>**Save Values** Determines if values should be save each time the user progresses to the next form or not saved until the end. An advantage of saving them on each form, saved values can then be used in the header and footer of following forms using Lava.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5</span>**Workflow Entity** The entity that should be used to initiate the workflow. Options are Person, Connection Request, or Group Member. See notes below for details on using Workflow Entities.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5&nbsp;&nbsp;</span>**Workflow Entity** The entity that should be used to initiate the workflow. Options are Person, Connection Request, or Group Member. See notes below for details on using Workflow Entities.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6</span>**Confirmation Text** The message to display after all forms are completed if Done Page is not set.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6&nbsp;&nbsp;</span>**Confirmation Text** The message to display after all forms are completed if Done Page is not set.
 
 **Workflow Entities**
 
@@ -87,44 +89,46 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 
 
 
-![](Images/EditBlock2.png)
+![EditBlock2 (1)](https://user-images.githubusercontent.com/81330042/118964779-815db100-b92d-11eb-9991-cd3e2f996a82.png)
 
 
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;7</span>**Form Title** Each form can have a unique title. {{ Lava }}
+
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;7&nbsp;&nbsp;</span>**Form Title** Each form can have a unique title. {{ Lava }}
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;8</span>**Form Header** An optional HTML header that is unique to each form. {{ Lava }}
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;8&nbsp;&nbsp;</span>**Form Header** An optional HTML header that is unique to each form. {{ Lava }}
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;9</span>**Adding Fields** Each form may have as many fields as you like
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;9&nbsp;&nbsp;</span>**Adding Fields** Each form may have as many fields as you like
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;10</span>**Form Footer** An optional HTML footer that is unique to each form. {{ Lava }}
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;10&nbsp;&nbsp;</span>**Form Footer** An optional HTML footer that is unique to each form. {{ Lava }}
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;11</span>**Fields** The label for each form field. If you would like to reorder field, use the 3 bar handle next to the field label.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;11&nbsp;&nbsp;</span>**Fields** The label for each form field. If you would like to reorder field, use the 3 bar handle next to the field label.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;12</span>**Source** Displays whether this is a Person Field or a Person Attribute
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;12&nbsp;&nbsp;</span>**Source** Displays whether this is a Person Field or a Person Attribute
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;13</span>**Type** Displays the field type for the Person Field or Attribute. This cannot be changed from within this block but it will be helpful for knowing how the field will display on your form.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;13&nbsp;&nbsp;</span>**Type** Displays the field type for the Person Field or Attribute. This cannot be changed from within this block but it will be helpful for knowing how the field will display on your form.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;14</span>**Use Current Value** Shows if the field is set to use the Person's current value for this field.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;14&nbsp;&nbsp;</span>**Use Current Value** Shows if the field is set to use the Person's current value for this field.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;15</span>**Required** Shows if the field is required for form submission.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;15&nbsp;&nbsp;</span>**Required** Shows if the field is required for form submission.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;16</span>**Add Form** You may add as many forms as needed to this block. Forms will display in the order shown.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;16&nbsp;&nbsp;</span>**Add Form** You may add as many forms as needed to this block. Forms will display in the order shown.
 
 
 
 ## Block Properties
 
-![](Images/BlockPropertiesBasic.png)
+![BlockPropertiesBasic (1)](https://user-images.githubusercontent.com/81330042/118964828-90446380-b92d-11eb-8dfa-ed25aa786070.png)
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1</span>**Allow Connection Opportunity** Determines if a URL parameter of OpportunityId should be evaluated when complete. 
+
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Allow Connection Opportunity** Determines if a URL parameter of OpportunityId should be evaluated when complete. 
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2</span>**Allow Group Membership** Determines if a URL parameter of GroupGuid or GroupId should be evaluated when complete
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**Allow Group Membership** Determines if a URL parameter of GroupGuid or GroupId should be evaluated when complete
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3</span>**Enable Passing Group Id** If enabled, allows the passing of the GroupId instead of the GroupGuid
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Enable Passing Group Id** If enabled, allows the passing of the GroupId instead of the GroupGuid
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4</span>**Allowed Group Types** This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4&nbsp;&nbsp;</span>**Allowed Group Types** This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5</span>**Group** Optional group to add the person to. If omitted, the group's Guid should be passed via the query string
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5&nbsp;&nbsp;</span>**Group** Optional group to add the person to. If omitted, the group's Guid should be passed via the query string
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6</span>**Group Member Status** The group member status to use when adding person to group
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6&nbsp;&nbsp;</span>**Group Member Status** The group member status to use when adding person to group
