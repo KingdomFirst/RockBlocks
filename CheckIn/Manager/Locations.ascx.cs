@@ -67,9 +67,9 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
 
     [SecurityAction( "CloseLocations", "The roles and/or users that can close locations." )]
     [CustomRadioListField( "Navigation Mode", "Navigation and attendance counts can be grouped and displayed either by 'Group Type > Group Type (etc) > Group > Location' or by 'location > location (etc).'  Select the navigation hierarchy that is most appropriate for your organization.", "T^Group Type,L^Location,", true, "T", "", 0, "Mode" )]
-    [GroupTypeField( "Check-in Type", "The Check-in Area to display.  This value can also be overridden through the URL query string key (e.g. when navigated to from the Check-in Type selection block).", false, "", "", 1, "GroupTypeTemplate", Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_TEMPLATE )]
-    [LinkedPage( "Person Page", "The page used to display a selected person's details.", order: 2 )]
-    [LinkedPage( "Area Select Page", "The page to redirect user to if area has not be configured or selected.", order: 3 )]
+    [GroupTypeField( "Check-in Type", "The Check-in Area to display.  This value can also be overridden through the URL query string key (e.g. when navigated to from the Check-in Type selection block).", false, "", "", 1, AttributeKey.GroupTypeTemplate, Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_TEMPLATE )]
+    [LinkedPage( "Person Page", "The page used to display a selected person's details.", key: AttributeKey.PersonPage, order: 2 )]
+    [LinkedPage( "Area Select Page", "The page to redirect user to if area has not be configured or selected.", key: AttributeKey.AreaSelectPage, order: 3 )]
     [DefinedValueField( Rock.SystemGuid.DefinedType.CHART_STYLES, "Chart Style", order: 4, defaultValue: Rock.SystemGuid.DefinedValue.CHART_STYLE_ROCK )]
     [BooleanField( "Search By Code", "A flag indicating if security codes should also be evaluated in the search box results.", order: 5 )]
     [IntegerField( "Lookback Minutes", "The number of minutes the chart will lookback.", true, 120, order: 6 )]
@@ -91,6 +91,33 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
 
     public partial class Locations : Rock.Web.UI.RockBlock
     {
+        #region Attribute Keys
+
+        private static class AttributeKey
+        {
+            public const string GroupTypeTemplate = "GroupTypeTemplate";
+            public const string PersonPage = "PersonPage";
+            public const string AreaSelectPage = "AreaSelectPage";
+        }
+
+        #endregion Attribute Keys
+
+        #region Page Parameter Keys
+
+        /// <summary>
+        /// Keys for page parameters
+        /// </summary>
+        private static class PageParameterKey
+        {
+            public const string NavPath = "NavPath";
+            public const string GroupType = "GroupType";
+            public const string Location = "Location";
+            public const string Group = "Group";
+            public const string Area = "Area";
+        }
+
+        #endregion Page Parameter Keys
+
         #region Fields
 
         private string _configuredMode = "L";
@@ -230,16 +257,16 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
                 if ( !Page.IsPostBack )
                 {
                     // Check for navigation path
-                    string requestedNavPath = PageParameter( "NavPath" );
+                    string requestedNavPath = PageParameter( PageParameterKey.NavPath );
                     if ( !string.IsNullOrWhiteSpace( requestedNavPath ) )
                     {
                         CurrentNavPath = requestedNavPath;
                     }
                     else
                     {
-                        int? groupTypeId = PageParameter( "GroupType" ).AsIntegerOrNull();
-                        int? locationId = PageParameter( "Location" ).AsIntegerOrNull();
-                        int? groupId = PageParameter( "Group" ).AsIntegerOrNull();
+                        int? groupTypeId = PageParameter( PageParameterKey.GroupType ).AsIntegerOrNull();
+                        int? locationId = PageParameter( PageParameterKey.Location ).AsIntegerOrNull();
+                        int? groupId = PageParameter( PageParameterKey.Group ).AsIntegerOrNull();
                         if ( groupTypeId.HasValue || locationId.HasValue || groupId.HasValue )
                         {
                             CurrentNavPath = BuildCurrentPath( groupTypeId, locationId, groupId );
@@ -802,7 +829,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
                 {
                     var parms = new Dictionary<string, string>();
                     parms.Add( "Person", e.EventArgument.Substring( 1 ) );
-                    NavigateToLinkedPage( "PersonPage", parms );
+                    NavigateToLinkedPage( AttributeKey.PersonPage, parms );
                 }
                 else
                 {
@@ -1503,29 +1530,20 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
                     validLocationIdsFiltered = validLocationids;
                 }
 
-                var groupTypeTemplateGuid = PageParameter( "Area" ).AsGuidOrNull();
-                if ( !groupTypeTemplateGuid.HasValue )
-                {
-                    groupTypeTemplateGuid = this.GetAttributeValue( "GroupTypeTemplate" ).AsGuidOrNull();
-                }
+                Guid? groupTypeTemplateGuid = GetSelectedAreaGuid();
 
                 if ( !groupTypeTemplateGuid.HasValue )
                 {
-                    // Check to see if a specific group was specified
-                    Guid? guid = Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_TEMPLATE.AsGuid();
-                    int? groupId = PageParameter( "Group" ).AsIntegerOrNull();
-                    if ( groupId.HasValue && guid.HasValue )
+                    if ( string.IsNullOrWhiteSpace( PageParameter( PageParameterKey.Area ) ) )
                     {
-                        var group = new GroupService( rockContext ).Get( groupId.Value );
-                        if ( group != null && group.GroupType != null )
-                        {
-                            var groupType = GetParentPurposeGroupType( group.GroupType, guid.Value );
-                            if ( groupType != null )
-                            {
-                                groupTypeTemplateGuid = groupType.Guid;
-                            }
-                        }
+                        // If could not determine area and did not come from are select, redirect to area select page
+                        NavigateToLinkedPage( AttributeKey.AreaSelectPage );
                     }
+
+                    nbWarning.Text = "Please select a valid Check-in type in the block settings.";
+                    nbWarning.Visible = true;
+                    pnlContent.Visible = false;
+                    return null;
                 }
 
                 if ( groupTypeTemplateGuid.HasValue )
@@ -1716,10 +1734,10 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
                 }
                 else
                 {
-                    if ( string.IsNullOrWhiteSpace( PageParameter( "Area" ) ) )
+                    if ( string.IsNullOrWhiteSpace( PageParameter( PageParameterKey.Area ) ) )
                     {
                         // If could not determine area and did not come from are select, redirect to area select page
-                        NavigateToLinkedPage( "AreaSelectPage" );
+                        NavigateToLinkedPage( AttributeKey.AreaSelectPage );
                     }
 
                     nbWarning.Text = "Please select a valid Check-in type in the block settings.";
@@ -1731,31 +1749,45 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
             return null;
         }
 
-        public GroupType GetParentPurposeGroupType( GroupType groupType, Guid purposeGuid )
+        /// <summary>
+        /// Gets the selected area unique identifier.
+        /// </summary>
+        /// <returns></returns>
+        private Guid? GetSelectedAreaGuid()
         {
-            if ( groupType != null &&
-                groupType.GroupTypePurposeValue != null &&
-                groupType.GroupTypePurposeValue.Guid.Equals( purposeGuid ) )
+            var groupTypeTemplateGuid = PageParameter( PageParameterKey.Area ).AsGuidOrNull();
+
+            if ( !groupTypeTemplateGuid.HasValue )
             {
-                return groupType;
+                // Next check if there is an Area cookie (this is usually what would happen)
+                groupTypeTemplateGuid = CheckinManagerHelper.GetCheckinManagerConfigurationFromCookie().CheckinAreaGuid;
             }
 
-            foreach ( var parentGroupType in groupType.ParentGroupTypes )
+            if ( !groupTypeTemplateGuid.HasValue )
             {
-                // skip if parent group type and current group type are the same (a situation that should not be possible) to prevent stack overflow
-                if ( groupType.Id == parentGroupType.Id )
-                {
-                    continue;
-                }
+                groupTypeTemplateGuid = this.GetAttributeValue( AttributeKey.GroupTypeTemplate ).AsGuidOrNull();
+            }
 
-                var testGroupType = GetParentPurposeGroupType( parentGroupType, purposeGuid );
-                if ( testGroupType != null )
+            if ( !groupTypeTemplateGuid.HasValue )
+            {
+                // Check to see if a specific group was specified
+                int? groupId = PageParameter( PageParameterKey.Group ).AsIntegerOrNull();
+                if ( groupId.HasValue )
                 {
-                    return testGroupType;
+                    var groupTypeId = new GroupService( new RockContext() ).GetSelect( groupId.Value, s => s.GroupTypeId );
+                    var groupType = GroupTypeCache.Get( groupTypeId );
+                    if ( groupType != null )
+                    {
+                        var parentGroupType = groupType.GetCheckInConfigurationType();
+                        if ( parentGroupType != null )
+                        {
+                            groupTypeTemplateGuid = parentGroupType.Guid;
+                        }
+                    }
                 }
             }
 
-            return null;
+            return groupTypeTemplateGuid;
         }
 
         private DateTime GetCampusTime()
