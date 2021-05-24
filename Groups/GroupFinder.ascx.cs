@@ -30,6 +30,7 @@
 // * Added Custom Schedule Support to DOW Filters
 // * Added Keyword search to search name or description of groups
 // * Added an additional setting to include Pending members in Over Capacity checking
+// * Added a setting to override groups Is Public setting to show on the finder.
 // </notice>
 //
 using System;
@@ -78,6 +79,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [BooleanField( "Single Select Campus Filter", "When set to true, the campus filter will be a drop down instead of checkbox.", false, key: "SingleSelectFilters" )]
     [BooleanField( "Allow Search in PersonGuid Mode", "When set to true PersonGuid mode will allow you to change filters and search in that mode for that person.", false, key: "AllowSearchPersonGuid" )]
     [BooleanField( "Collapse Filters on Search", "When set to true, all filters will be collapsed into a single 'Filters' dropdown.", false )]
+    [BooleanField( "Show All Groups", "When set to true, all groups will show including those without Is Public being set to true.", false )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page", "The page to navigate to for group details.", false, "", "CustomSetting" )]
@@ -1216,9 +1218,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             // Get query of groups of the selected group type
             var rockContext = new RockContext();
             var groupService = new GroupService( rockContext );
+            var showAllGroups = GetAttributeValue( "ShowAllGroups" ).AsBoolean();
             var groupQry = groupService
                 .Queryable( "GroupLocations.Location" )
-                .Where( g => g.IsActive && g.GroupType.Guid.Equals( groupTypeGuid.Value ) && g.IsPublic );
+                .Where( g => g.IsActive && g.GroupType.Guid.Equals( groupTypeGuid.Value ) && ( showAllGroups || g.IsPublic ) );
 
             var groupParameterExpression = groupService.ParameterExpression;
             var schedulePropertyExpression = Expression.Property( groupParameterExpression, "Schedule" );
