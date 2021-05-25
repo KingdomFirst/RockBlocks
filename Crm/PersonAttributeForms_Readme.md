@@ -1,7 +1,10 @@
-![KFSBanner (4)](https://user-images.githubusercontent.com/81330042/118964662-5a9f7a80-b92d-11eb-88a2-aa5018457f7b.jpg)
-
+![KFSBanner (4)](https://user-images.githubusercontent.com/81330042/119151885-68302f80-ba15-11eb-94b7-62dd81d8ae50.jpg)
 
 # Person Attributes Form Advanced Block
+*Tested/Supported in Rock version:  8.0-12.0*   
+*Created:  11/20/2018*  
+*Updated:  6/11/2020*   
+*Rock Shop Plugin: https://www.rockrms.com/Plugin/101*
 
 ## Summary
 
@@ -62,7 +65,7 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 
 ## Block Settings
 
-![EditBlock1 (1)](https://user-images.githubusercontent.com/81330042/118964726-6db24a80-b92d-11eb-8e4b-05b12a81410b.png)
+![EditBlock1 (2)](https://user-images.githubusercontent.com/81330042/119155863-3b7e1700-ba19-11eb-979f-b5db785723e5.png)
 
 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span> **Display Progress Bar** Displays a progress bar to the user indicating how far along they are in filling out multiple forms. Not shown when there is only one form.
@@ -76,7 +79,6 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5&nbsp;&nbsp;</span>**Workflow Entity** The entity that should be used to initiate the workflow. Options are Person, Connection Request, or Group Member. See notes below for details on using Workflow Entities.
 >
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6&nbsp;&nbsp;</span>**Confirmation Text** The message to display after all forms are completed if Done Page is not set.
-
 **Workflow Entities**
 
 - If the block is passed a valid Connection Opportunity Id in the URL, a new Connection Request will be created in that opportunity when the form is completed. You can use that new Connection Request as the Workflow Entity.
@@ -89,7 +91,7 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 
 
 
-![EditBlock2 (1)](https://user-images.githubusercontent.com/81330042/118964779-815db100-b92d-11eb-9991-cd3e2f996a82.png)
+![EditBlock2 (2)](https://user-images.githubusercontent.com/81330042/119156086-80a24900-ba19-11eb-8346-0b4e85ccf7ac.png)
 
 
 
@@ -115,10 +117,9 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;16&nbsp;&nbsp;</span>**Add Form** You may add as many forms as needed to this block. Forms will display in the order shown.
 
 
-
 ## Block Properties
 
-![BlockPropertiesBasic (1)](https://user-images.githubusercontent.com/81330042/118964828-90446380-b92d-11eb-8dfa-ed25aa786070.png)
+![BlockPropertiesBasic (2)](https://user-images.githubusercontent.com/81330042/119156302-b8a98c00-ba19-11eb-84c7-89749243a2dc.png)
 
 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Allow Connection Opportunity** Determines if a URL parameter of OpportunityId should be evaluated when complete. 
