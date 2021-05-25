@@ -1,7 +1,10 @@
 ![KFSBanner (4)](https://user-images.githubusercontent.com/81330042/118964662-5a9f7a80-b92d-11eb-88a2-aa5018457f7b.jpg)
 
-
 # Person Attributes Form Advanced Block
+*Tested/Supported in Rock version:  8.0-12.0*   
+*Created:  11/20/2018*  
+*Updated:  6/11/2020*   
+*Rock Shop Plugin: https://www.rockrms.com/Plugin/101*
 
 ## Summary
 
@@ -76,7 +79,6 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5&nbsp;&nbsp;</span>**Workflow Entity** The entity that should be used to initiate the workflow. Options are Person, Connection Request, or Group Member. See notes below for details on using Workflow Entities.
 >
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6&nbsp;&nbsp;</span>**Confirmation Text** The message to display after all forms are completed if Done Page is not set.
-
 **Workflow Entities**
 
 - If the block is passed a valid Connection Opportunity Id in the URL, a new Connection Request will be created in that opportunity when the form is completed. You can use that new Connection Request as the Workflow Entity.
@@ -113,7 +115,6 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;15&nbsp;&nbsp;</span>**Required** Shows if the field is required for form submission.
 >
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;16&nbsp;&nbsp;</span>**Add Form** You may add as many forms as needed to this block. Forms will display in the order shown.
-
 
 
 ## Block Properties
