@@ -1,4 +1,4 @@
-![KFSBanner (4)](https://user-images.githubusercontent.com/81330042/119151885-68302f80-ba15-11eb-94b7-62dd81d8ae50.jpg)
+![KFSBanner (4)](https://user-images.githubusercontent.com/81330042/118964662-5a9f7a80-b92d-11eb-88a2-aa5018457f7b.jpg)
 
 # Person Attributes Form Advanced Block
 *Tested/Supported in Rock version:  8.0-12.0*   
@@ -65,7 +65,7 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 
 ## Block Settings
 
-![EditBlock1 (2)](https://user-images.githubusercontent.com/81330042/119155863-3b7e1700-ba19-11eb-979f-b5db785723e5.png)
+![EditBlock1 (1)](https://user-images.githubusercontent.com/81330042/118964726-6db24a80-b92d-11eb-8e4b-05b12a81410b.png)
 
 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span> **Display Progress Bar** Displays a progress bar to the user indicating how far along they are in filling out multiple forms. Not shown when there is only one form.
@@ -91,7 +91,7 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 
 
 
-![EditBlock2 (2)](https://user-images.githubusercontent.com/81330042/119156086-80a24900-ba19-11eb-8346-0b4e85ccf7ac.png)
+![EditBlock2 (1)](https://user-images.githubusercontent.com/81330042/118964779-815db100-b92d-11eb-9991-cd3e2f996a82.png)
 
 
 
@@ -119,7 +119,7 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 
 ## Block Properties
 
-![BlockPropertiesBasic (2)](https://user-images.githubusercontent.com/81330042/119156302-b8a98c00-ba19-11eb-84c7-89749243a2dc.png)
+![BlockPropertiesBasic (1)](https://user-images.githubusercontent.com/81330042/118964828-90446380-b92d-11eb-8dfa-ed25aa786070.png)
 
 
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Allow Connection Opportunity** Determines if a URL parameter of OpportunityId should be evaluated when complete. 
