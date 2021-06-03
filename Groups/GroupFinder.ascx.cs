@@ -504,7 +504,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnSearch_Click( object sender, EventArgs e )
         {
-            btnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
+            pnlBtnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
             ShowResults();
         }
 
@@ -520,7 +520,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             BuildDynamicControls();
 
             pnlSearch.CssClass = "";
-            btnFilter.Visible = false;
+            pnlBtnFilter.Visible = false;
 
             pnlMap.Visible = false;
             pnlLavaOutput.Visible = false;
@@ -1026,7 +1026,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             btnFilterControls.Attributes["data-target"] = string.Format( "#{0}", pnlHiddenFilterControls.ClientID );
             btnFilterControls.Attributes["aria-controls"] = pnlHiddenFilterControls.ClientID;
-            btnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
+            pnlBtnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
 
             // Build attribute columns
             foreach ( var column in gGroups.Columns.OfType<AttributeField>().ToList() )
@@ -1210,7 +1210,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( _collapseFilters )
             {
                 pnlSearch.CssClass = "collapse";
-                btnFilter.Visible = true;
+                pnlBtnFilter.Visible = true;
                 btnFilter.Attributes["data-target"] = string.Format( "#{0}", pnlSearch.ClientID );
                 btnFilter.Attributes["aria-controls"] = pnlSearch.ClientID;
             }
