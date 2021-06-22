@@ -21,6 +21,12 @@ Our Group finder is a significantly modified version of the core Rock version. I
 - Added Keyword search to search name or description of groups.
 - Added an additional setting to include Pending members in Over Capacity checking.
 
+**Collapsible Filters Screenshots**
+
+<img width="439" alt="Filters 1" src="https://user-images.githubusercontent.com/81330042/122945404-2c52f780-d33e-11eb-8ca5-b9882b3dbbe5.png">
+<img width="442" alt="Filters 2" src="https://user-images.githubusercontent.com/81330042/122945462-37a62300-d33e-11eb-8f3a-7047732f5746.png">
+<img width="515" alt="Filters 3" src="https://user-images.githubusercontent.com/81330042/122945514-3f65c780-d33e-11eb-9f7a-c3a4d1be0fdd.png">
+
 
 
 Quick Links:
