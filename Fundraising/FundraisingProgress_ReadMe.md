@@ -14,7 +14,6 @@ Quick Links:
 
 - [What's New](#whats-new)
 - [Configuration](#configuration)
-- [System Email](#system-email)
 
 ## What's New
 
