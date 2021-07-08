@@ -26,9 +26,9 @@
 
                 <asp:Panel ID="pnlSearchParent" runat="server">
                     <asp:Panel ID="pnlSearchFilters" runat="server" Visible="false"></asp:Panel>
-                    <div class="form-group">
-                        <button id="btnFilter" runat="server" visible="false" class="btn btn-primary btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">[Filter] <i class="fa fa-caret-down"></i><i class="fa fa-caret-up"></i></button>
-                    </div>
+                    <asp:Panel runat="server" ID="pnlBtnFilter" CssClass="form-group" Visible="false">
+                        <button id="btnFilter" runat="server" class="btn btn-primary btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">[Filter] <i class="fa fa-caret-down"></i><i class="fa fa-caret-up"></i></button>
+                    </asp:Panel>
                     <asp:Panel ID="pnlSearch" runat="server" DefaultButton="btnSearch">
 
                         <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
@@ -38,9 +38,9 @@
                         <Rock:RockCheckBoxList ID="cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Visible="false" />
                         <Rock:RockDropDownList ID="ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
                         <asp:PlaceHolder ID="phFilterControls" runat="server" />
-                        <div class="form-group">
-                            <button id="btnFilterControls" runat="server" visible="false" class="btn btn-default btn-xs btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">[More Filters] <i class='fa fa-caret-down'></i><i class='fa fa-caret-up'></i></button>
-                        </div>
+                        <asp:Panel runat="server" ID="pnlBtnFilterControls" class="form-group" Visible="false">
+                            <button id="btnFilterControls" runat="server" class="btn btn-default btn-xs btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">[More Filters] <i class='fa fa-caret-down'></i><i class='fa fa-caret-up'></i></button>
+                        </asp:Panel>
                         <asp:Panel ID="pnlHiddenFilterControls" runat="server" CssClass="form-group collapse">
                             <asp:PlaceHolder ID="phFilterControlsCollapsed" runat="server" />
                         </asp:Panel>
