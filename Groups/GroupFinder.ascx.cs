@@ -1436,7 +1436,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         personLocation = new LocationService( rockContext )
                         .Get( acAddress.Street1, acAddress.Street2, acAddress.City,
                             acAddress.State, acAddress.PostalCode, acAddress.Country, null, true, false );
-                        if ( personLocation.GeoPoint != null )
+                        if ( personLocation != null && personLocation.GeoPoint != null )
                             mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                     }
 
