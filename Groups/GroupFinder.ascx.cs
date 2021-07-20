@@ -727,6 +727,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
                     cblInitialLoadFilters.Items.Add( new ListItem( "PostalCode", "filter_postalcode" ) );
                     cblInitialLoadFilters.Items.Add( new ListItem( "Keyword", "filter_keyword" ) );
+                    cblInitialLoadFilters.Items.Add( new ListItem( "Search Button", "btnSearch" ) );
+                    cblInitialLoadFilters.Items.Add( new ListItem( "Clear Button", "btnClear" ) );
 
                     var group = new Group();
                     group.GroupTypeId = groupType.Id;
@@ -1030,6 +1032,17 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             btnFilterControls.Attributes["data-target"] = string.Format( "#{0}", pnlHiddenFilterControls.ClientID );
             btnFilterControls.Attributes["aria-controls"] = pnlHiddenFilterControls.ClientID;
             pnlBtnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
+
+            if ( hideFilters.Contains( "btnSearch" ) )
+            {
+                pnlSearch.Controls.Remove( btnSearch );
+                phFilterControlsCollapsed.Controls.Add( btnSearch );
+            }
+            if ( hideFilters.Contains( "btnClear" ) )
+            {
+                pnlSearch.Controls.Remove( btnClear );
+                phFilterControlsCollapsed.Controls.Add( btnClear );
+            }
 
             // Build attribute columns
             foreach ( var column in gGroups.Columns.OfType<AttributeField>().ToList() )
