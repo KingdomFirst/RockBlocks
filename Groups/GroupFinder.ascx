@@ -110,8 +110,8 @@
                                         <Rock:RockTextBox ID="tbCampusLabel" runat="server" Label="Campus Filter Label" Help="The text above the campus filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbPostalCodeLabel" runat="server" Label="Postal Code Label" Help="The text above the postal code filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbKeywordLabel" runat="server" Label="Keyword Label" Help="The text above the Keyword filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockTextBox ID="tbFilterLabel" runat="server" Label="Filter Button Text" Help="When using collapsible filters what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockTextBox ID="tbMoreFiltersLabel" runat="server" Label="More Filters Button Text" Help="When using initial load hidden filters what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockTextBox ID="tbFilterLabel" runat="server" Label="Collapse/Expand Filter Button Text" Help="When using collapsible filters, what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockTextBox ID="tbMoreFiltersLabel" runat="server" Label="Initial Load Collapse/Expand Filters Button Text" Help="When using initial load hidden filters, what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                     </div>
                                     <div class="col-md-6">
                                         <Rock:RockRadioButtonList ID="rblFilterDOW" runat="server" Label="Display Day of Week Filter" RepeatDirection="Horizontal"
@@ -132,8 +132,8 @@
                                             Help="Display the Keyword filter" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblAttributes" runat="server" Label="Display Attribute Filters" RepeatDirection="Horizontal"
                                             Help="The group attributes that should be available for user to filter results by." ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBoxList ID="cblInitialLoadFilters" runat="server" Label="Hide Filters on Initial Load" RepeatDirection="Horizontal"
-                                            Help="Hide these filter controls under a collapsible panel for user on first load." ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockCheckBoxList ID="cblInitialLoadFilters" runat="server" Label="Collapse Filters on Initial Load" RepeatDirection="Horizontal"
+                                            Help="Collapse/Hide these filter controls under a collapsible panel for user on first load." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockDropDownList ID="ddlAttributeSort" runat="server" Label="Custom Sort from Attribute"
                                             Help="Select an attribute to sort by if a group contains multiple of the selected attribute filter options." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values" RepeatDirection="Horizontal"

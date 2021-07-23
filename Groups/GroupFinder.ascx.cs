@@ -78,7 +78,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [CampusField( "Default Location", "The campus address that should be used as fallback for the search criteria.", false, "", "" )]
     [BooleanField( "Single Select Campus Filter", "When set to true, the campus filter will be a drop down instead of checkbox.", false, key: "SingleSelectFilters" )]
     [BooleanField( "Allow Search in PersonGuid Mode", "When set to true PersonGuid mode will allow you to change filters and search in that mode for that person.", false, key: "AllowSearchPersonGuid" )]
-    [CustomDropdownListField( "Collapse Filters on Search", "When set to yes, all filters will be collapsed into a single 'Filters' dropdown.", "False^No,True^Yes,InitialLoad^Same as Initial Load", false, "False" )]
+    [CustomDropdownListField( "Collapse Filters on Search", "When set to yes, all filters will be collapsed into a single 'Filters' dropdown. If set to 'Same as Initial Load' it will behave the same way as the initial load after search. Default: No", "False^No,True^Yes,InitialLoad^Same as Initial Load", false, "False" )]
     [BooleanField( "Show All Groups", "When set to true, all groups will show including those without Is Public being set to true.", false )]
 
     // Linked Pages
