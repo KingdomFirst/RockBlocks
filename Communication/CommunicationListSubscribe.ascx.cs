@@ -13,28 +13,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // </copyright>
+//
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * Adds ability display list categories
+// </notice>
+//
 
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
+using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-
 using Rock;
+using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
-using Rock.Web.UI.Controls;
-using Rock.Attribute;
 using Rock.Web.UI;
-using System.Data.Entity;
+using Rock.Web.UI.Controls;
 
 namespace RockWeb.Plugins.rocks_kfs.Communication
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [DisplayName( "Communication List Subscribe" )]
     [Category( "KFS > Communication" )]
@@ -64,7 +71,9 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         Key = AttributeKey.ShowCommunicationListCategories,
         Order = 3
         )]
+
     #endregion Block Attributes
+
     public partial class CommunicationListSubscribe : RockBlock
     {
         #region Attribute Keys
@@ -93,7 +102,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         /// </summary>
         private bool showMediumPreference = true;
 
-        #endregion
+        #endregion fields
 
         #region Base Control Methods
 
@@ -124,7 +133,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             }
         }
 
-        #endregion
+        #endregion Base Control Methods
 
         #region Events
 
@@ -176,7 +185,6 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 var tglCommunicationPreference = e.Item.FindControl( "tglCommunicationPreference" ) as Toggle;
                 tglCommunicationPreference.Checked = communicationType == CommunicationType.Email;
                 tglCommunicationPreference.Visible = showMediumPreference;
-
             }
         }
 
@@ -212,6 +220,11 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             }
         }
 
+        /// <summary>
+        /// Gets the lists by category.
+        /// </summary>
+        /// <param name="category">The category.</param>
+        /// <returns></returns>
         private List<Group> GetListsByCategory( Category category )
         {
             int communicationListGroupTypeId = GroupTypeCache.Get( Rock.SystemGuid.GroupType.GROUPTYPE_COMMUNICATIONLIST.AsGuid() ).Id;
@@ -286,11 +299,10 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 .ToList()
                 .ToDictionary( k => k.Key, v => v.FirstOrDefault() );
 
-            //nbNoCommunicationLists.Visible = !viewableCommunicationLists.Any();
+            nbNoCommunicationLists.Visible = !viewableCommunicationLists.Any();
             pnlCommunicationPreferences.Visible = viewableCommunicationLists.Any();
 
-            return viewableCommunicationLists;
-
+            return viewableCommunicationLists.OrderBy( l => l.Order ).ThenBy( l => l.Name ).ToList();
         }
 
         /// <summary>
@@ -315,7 +327,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             SaveChanges( repeaterItem );
         }
 
-        #endregion
+        #endregion Events
 
         #region Methods
 
@@ -414,7 +426,6 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             }
         }
 
-
         /// <summary>
         /// Binds the repeater.
         /// </summary>
@@ -429,12 +440,12 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
 
             var categoryGuids = this.GetAttributeValue( AttributeKey.CommunicationListCategories ).SplitDelimitedValues().AsGuidList();
 
-            var categories = new CategoryService( rockContext ).GetByGuids( categoryGuids ).OrderBy( c => c.Name ).ToList();
+            var categories = new CategoryService( rockContext ).GetByGuids( categoryGuids ).OrderBy( c => c.Order ).ThenBy( c => c.Name ).ToList();
 
             rptCommunicationListCategories.DataSource = categories;
             rptCommunicationListCategories.DataBind();
         }
 
-        #endregion
+        #endregion Methods
     }
 }
