@@ -78,7 +78,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [CampusField( "Default Location", "The campus address that should be used as fallback for the search criteria.", false, "", "" )]
     [BooleanField( "Single Select Campus Filter", "When set to true, the campus filter will be a drop down instead of checkbox.", false, key: "SingleSelectFilters" )]
     [BooleanField( "Allow Search in PersonGuid Mode", "When set to true PersonGuid mode will allow you to change filters and search in that mode for that person.", false, key: "AllowSearchPersonGuid" )]
-    [BooleanField( "Collapse Filters on Search", "When set to true, all filters will be collapsed into a single 'Filters' dropdown.", false )]
+    [CustomDropdownListField( "Collapse Filters on Search", "When set to yes, all filters will be collapsed into a single 'Filters' dropdown. If set to 'Same as Initial Load' it will behave the same way as the initial load after search. Default: No", "False^No,True^Yes,InitialLoad^Same as Initial Load", false, "False" )]
     [BooleanField( "Show All Groups", "When set to true, all groups will show including those without Is Public being set to true.", false )]
 
     // Linked Pages
@@ -170,7 +170,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private bool _autoLoad = false;
         private bool _ssFilters = false;
         private bool _allowSearch = false;
-        private bool _collapseFilters = false;
+        private string _collapseFilters = "false";
         private Dictionary<string, string> _filterValues = new Dictionary<string, string>();
 
         private const string DEFINED_TYPE_KEY = "definedtype";
@@ -241,7 +241,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             _autoLoad = GetAttributeValue( "AutoLoad" ).AsBoolean();
             _ssFilters = GetAttributeValue( "SingleSelectFilters" ).AsBoolean();
             _allowSearch = GetAttributeValue( "AllowSearchPersonGuid" ).AsBoolean();
-            _collapseFilters = GetAttributeValue( "CollapseFiltersonSearch" ).AsBoolean();
+            _collapseFilters = GetAttributeValue( "CollapseFiltersonSearch" );
 
             base.OnInit( e );
 
@@ -504,7 +504,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnSearch_Click( object sender, EventArgs e )
         {
-            btnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
+            pnlBtnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
             ShowResults();
         }
 
@@ -520,7 +520,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             BuildDynamicControls();
 
             pnlSearch.CssClass = "";
-            btnFilter.Visible = false;
+            pnlBtnFilter.Visible = false;
 
             pnlMap.Visible = false;
             pnlLavaOutput.Visible = false;
@@ -727,6 +727,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
                     cblInitialLoadFilters.Items.Add( new ListItem( "PostalCode", "filter_postalcode" ) );
                     cblInitialLoadFilters.Items.Add( new ListItem( "Keyword", "filter_keyword" ) );
+                    cblInitialLoadFilters.Items.Add( new ListItem( "Search Button", "btnSearch" ) );
+                    cblInitialLoadFilters.Items.Add( new ListItem( "Clear Button", "btnClear" ) );
 
                     var group = new Group();
                     group.GroupTypeId = groupType.Id;
@@ -912,16 +914,19 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// <summary>
         /// Builds the dynamic controls.
         /// </summary>
-        private void BuildDynamicControls( bool clearHideFilters = false )
+        private void BuildDynamicControls( bool clearHideFilters = false, bool clearControls = true )
         {
             var hideFilters = GetAttributeValues( "HideFiltersInitialLoad" );
-            if ( clearHideFilters )
+            if ( clearHideFilters && _collapseFilters != "InitialLoad" )
             {
                 hideFilters.Clear();
             }
-            // Clear attribute filter controls and recreate
-            phFilterControls.Controls.Clear();
-            phFilterControlsCollapsed.Controls.Clear();
+            if ( clearControls )
+            {
+                // Clear attribute filter controls and recreate
+                phFilterControls.Controls.Clear();
+                phFilterControlsCollapsed.Controls.Clear();
+            }
 
             nbPostalCode.Label = GetAttributeValue( "PostalCodeLabel" );
             nbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( "PostalCodeLabel" ) );
@@ -1026,7 +1031,18 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             btnFilterControls.Attributes["data-target"] = string.Format( "#{0}", pnlHiddenFilterControls.ClientID );
             btnFilterControls.Attributes["aria-controls"] = pnlHiddenFilterControls.ClientID;
-            btnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
+            pnlBtnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
+
+            if ( hideFilters.Contains( "btnSearch" ) )
+            {
+                pnlSearch.Controls.Remove( btnSearch );
+                phFilterControlsCollapsed.Controls.Add( btnSearch );
+            }
+            if ( hideFilters.Contains( "btnClear" ) )
+            {
+                pnlSearch.Controls.Remove( btnClear );
+                phFilterControlsCollapsed.Controls.Add( btnClear );
+            }
 
             // Build attribute columns
             foreach ( var column in gGroups.Columns.OfType<AttributeField>().ToList() )
@@ -1207,10 +1223,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             bool showProximity = GetAttributeValue( "ShowProximity" ).AsBoolean();
             gGroups.Columns[6].Visible = showProximity;  // Distance
 
-            if ( _collapseFilters )
+            if ( _collapseFilters == "True" )
             {
                 pnlSearch.CssClass = "collapse";
-                btnFilter.Visible = true;
+                pnlBtnFilter.Visible = true;
                 btnFilter.Attributes["data-target"] = string.Format( "#{0}", pnlSearch.ClientID );
                 btnFilter.Attributes["aria-controls"] = pnlSearch.ClientID;
             }
@@ -1433,7 +1449,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         personLocation = new LocationService( rockContext )
                         .Get( acAddress.Street1, acAddress.Street2, acAddress.City,
                             acAddress.State, acAddress.PostalCode, acAddress.Country, null, true, false );
-                        if ( personLocation.GeoPoint != null )
+                        if ( personLocation != null && personLocation.GeoPoint != null )
                             mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                     }
 

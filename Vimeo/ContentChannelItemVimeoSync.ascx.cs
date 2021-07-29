@@ -139,19 +139,22 @@ namespace RockWeb.Plugins.rocks_kfs.Vimeo
                     .Queryable( "ContentChannel,ContentChannelType" )
                     .FirstOrDefault( t => t.ContentChannelId == _contentChannelId );
 
-                    if ( contentItem.Attributes == null )
+                    if ( contentItem != null && contentItem.Attributes == null )
                     {
                         contentItem.LoadAttributes();
                     }
 
-                    var attributeKeys = contentItem.Attributes.Select( a => a.Key ).ToList();
-                    if ( !string.IsNullOrWhiteSpace( _vimeoIdKey ) && attributeKeys.Contains( _vimeoIdKey ) )
+                    if ( contentItem != null )
                     {
-                        pnlNewDetails.Visible = true;
-                        pnlVimeoSync.Visible = true;
-                        litPreview.Visible = false;
+                        var attributeKeys = contentItem.Attributes.Select( a => a.Key ).ToList();
+                        if ( !string.IsNullOrWhiteSpace( _vimeoIdKey ) && attributeKeys.Contains( _vimeoIdKey ) )
+                        {
+                            pnlNewDetails.Visible = true;
+                            pnlVimeoSync.Visible = true;
+                            litPreview.Visible = false;
 
-                        SetupSyncBoxes();
+                            SetupSyncBoxes();
+                        }
                     }
                 }
             }
@@ -191,7 +194,10 @@ namespace RockWeb.Plugins.rocks_kfs.Vimeo
                 }
             }
 
-            dpStart.Label = contentItem.ContentChannelType.DateRangeType == ContentChannelDateType.DateRange ? "Start" : "Active";
+            if ( contentItem != null )
+            {
+                dpStart.Label = contentItem.ContentChannelType.DateRangeType == ContentChannelDateType.DateRange ? "Start" : "Active";
+            }
         }
 
         protected void SetupSyncBoxes()
