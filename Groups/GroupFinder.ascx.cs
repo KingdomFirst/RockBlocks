@@ -367,7 +367,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 if ( !string.IsNullOrWhiteSpace( postalcodePageParam ) )
                 {
-                    nbPostalCode.Text = postalcodePageParam.AsNumeric();
+                    tbPostalCode.Text = postalcodePageParam;
                 }
 
                 if ( _targetPersonGuid != Guid.Empty )
@@ -516,7 +516,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         protected void btnClear_Click( object sender, EventArgs e )
         {
             acAddress.SetValues( null );
-            nbPostalCode.Text = "";
+            tbPostalCode.Text = "";
             BuildDynamicControls();
 
             pnlSearch.CssClass = "";
@@ -828,7 +828,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( fenceTypeGuid.HasValue || GetAttributeValue( "ShowProximity" ).AsBoolean() )
             {
                 acAddress.Visible = !GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean();
-                nbPostalCode.Visible = GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean();
+                tbPostalCode.Visible = GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean();
+                revPostalCode.Enabled = GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean();
 
                 if ( CurrentPerson != null )
                 {
@@ -836,7 +837,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     acAddress.SetValues( currentPersonLocation );
                     if ( currentPersonLocation != null )
                     {
-                        nbPostalCode.Text = currentPersonLocation.PostalCode;
+                        tbPostalCode.Text = currentPersonLocation.PostalCode;
                     }
                 }
 
@@ -846,7 +847,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             else
             {
                 acAddress.Visible = false;
-                nbPostalCode.Visible = false;
+                tbPostalCode.Visible = false;
+                revPostalCode.Visible = false;
 
                 // Check to see if there's any filters
                 string scheduleFilters = GetAttributeValue( "ScheduleFilters" );
@@ -928,12 +930,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 phFilterControlsCollapsed.Controls.Clear();
             }
 
-            nbPostalCode.Label = GetAttributeValue( "PostalCodeLabel" );
-            nbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( "PostalCodeLabel" ) );
+            tbPostalCode.Label = GetAttributeValue( "PostalCodeLabel" );
+            tbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( "PostalCodeLabel" ) );
+            revPostalCode.ErrorMessage = string.Format( "Your {0} is an invalid format, 12345 or 12345-6789 only.", GetAttributeValue( "PostalCodeLabel" ) );
             if ( hideFilters.Contains( "filter_postalcode" ) )
             {
-                pnlSearch.Controls.Remove( nbPostalCode );
-                phFilterControlsCollapsed.Controls.Add( nbPostalCode );
+                pnlSearch.Controls.Remove( tbPostalCode );
+                phFilterControlsCollapsed.Controls.Add( tbPostalCode );
             }
 
             var scheduleFilters = GetAttributeValue( "ScheduleFilters" ).SplitDelimitedValues().ToList();
@@ -1438,10 +1441,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                     if ( GetAttributeValue( "EnablePostalCodeSearch" ).AsBoolean() )
                     {
-                        if ( !string.IsNullOrWhiteSpace( nbPostalCode.Text ) )
+                        if ( !string.IsNullOrWhiteSpace( tbPostalCode.Text ) )
                         {
                             mapCoordinate = new LocationService( rockContext )
-                                .GetMapCoordinateFromPostalCode( nbPostalCode.Text );
+                                .GetMapCoordinateFromPostalCode( tbPostalCode.Text );
                         }
                     }
                     else
@@ -1462,7 +1465,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             personLocation = new LocationService( rockContext ).Get( ( int ) campusLocation );
                             if ( !string.IsNullOrWhiteSpace( personLocation.PostalCode ) )
                             {
-                                nbPostalCode.Text = personLocation.PostalCode.Substring( 0, 5 );
+                                tbPostalCode.Text = personLocation.PostalCode.Substring( 0, 5 );
                             }
                             if ( personLocation.GeoPoint != null )
                                 mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
@@ -1501,7 +1504,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     </div>
 </div>
 ",
-                        nbPostalCode.Text );
+                        tbPostalCode.Text );
 
                     personMapItem = new FinderMapItem();
                     personMapItem.Name = "Your Location";
