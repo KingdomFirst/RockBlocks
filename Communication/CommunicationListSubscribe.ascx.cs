@@ -475,7 +475,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 {
                     lists.AddRange( GetListsByCategory( category ) );
                 }
-                rptCommunicationListsNoCategories.DataSource = lists;
+                rptCommunicationListsNoCategories.DataSource = lists.OrderBy( g => g.Name );
                 rptCommunicationListsNoCategories.DataBind();
             }
         }
