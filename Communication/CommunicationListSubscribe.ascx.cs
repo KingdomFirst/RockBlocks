@@ -19,7 +19,7 @@
 // and is a derivative work.
 //
 // Modification (including but not limited to):
-// * Adds ability display list categories
+// * Adds ability to display list categories
 // </notice>
 //
 
