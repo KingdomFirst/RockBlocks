@@ -334,11 +334,10 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 .ToList()
                 .ToDictionary( k => k.Key, v => v.FirstOrDefault() );
 
-            if(localPersonCommunicationListsMember != null )
+            if ( localPersonCommunicationListsMember != null )
             {
                 personCommunicationListsMember.AddRange( localPersonCommunicationListsMember );
             }
-            
 
             nbNoCommunicationLists.Visible = !viewableCommunicationLists.Any();
             pnlCommunicationPreferences.Visible = viewableCommunicationLists.Any();
