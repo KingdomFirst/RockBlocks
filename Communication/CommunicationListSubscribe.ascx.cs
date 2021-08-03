@@ -30,6 +30,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using NuGet;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -95,7 +96,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         /// <summary>
         /// The person's group member record for each CommunicationListId
         /// </summary>
-        private Dictionary<int, GroupMember> personCommunicationListsMember = null;
+        private Dictionary<int, GroupMember> personCommunicationListsMember = new Dictionary<int, GroupMember>();
 
         /// <summary>
         /// The show medium preference
@@ -154,6 +155,72 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
         protected void rptCommunicationLists_ItemDataBound( object sender, RepeaterItemEventArgs e )
         {
+            ProcessDatabound( e );
+        }
+
+        /// <summary>
+        /// Handles the ItemDataBound event of the rptCommunicationListCategories control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
+        protected void rptCommunicationListCategories_ItemDataBound( object sender, RepeaterItemEventArgs e )
+        {
+            var category = e.Item.DataItem as Rock.Model.Category;
+            var showCategory = this.GetAttributeValue( AttributeKey.ShowCommunicationListCategories ).AsBoolean();
+            if ( category != null )
+            {
+                var pwCategoryPanel = e.Item.FindControl( "pwCategoryPanel" ) as PanelWidget;
+
+                pwCategoryPanel.Title = category.Name;
+                pwCategoryPanel.TitleIconCssClass = category.IconCssClass;
+                var rptCommunicationLists = pwCategoryPanel.FindControl( "rptCommunicationLists" ) as Repeater;
+                rptCommunicationLists.DataSource = GetListsByCategory( category );
+                rptCommunicationLists.DataBind();
+            }
+        }
+
+        /// <summary>
+        /// Handles the ItemDataBound event of the rptCommunicationListsNoCategories control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
+        protected void rptCommunicationListsNoCategories_ItemDataBound( object sender, RepeaterItemEventArgs e )
+        {
+            ProcessDatabound( e );
+        }
+
+        /// <summary>
+        /// Handles the CheckedChanged event of the cbCommunicationListIsSubscribed control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void cbCommunicationListIsSubscribed_CheckedChanged( object sender, EventArgs e )
+        {
+            var repeaterItem = ( sender as RockCheckBox ).BindingContainer as RepeaterItem;
+            SaveChanges( repeaterItem );
+        }
+
+        /// <summary>
+        /// Handles the CheckedChanged event of the tglCommunicationPreference control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void tglCommunicationPreference_CheckedChanged( object sender, EventArgs e )
+        {
+            var repeaterItem = ( sender as Toggle ).BindingContainer as RepeaterItem;
+            SaveChanges( repeaterItem );
+        }
+
+        #endregion Events
+
+        #region Methods
+
+        /// <summary>
+        /// Processes the databound.
+        /// </summary>
+        /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
+        private void ProcessDatabound( RepeaterItemEventArgs e )
+        {
             var group = e.Item.DataItem as Rock.Model.Group;
             if ( group != null )
             {
@@ -185,38 +252,6 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 var tglCommunicationPreference = e.Item.FindControl( "tglCommunicationPreference" ) as Toggle;
                 tglCommunicationPreference.Checked = communicationType == CommunicationType.Email;
                 tglCommunicationPreference.Visible = showMediumPreference;
-            }
-        }
-
-        /// <summary>
-        /// Handles the ItemDataBound event of the rptCommunicationListCategories control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
-        protected void rptCommunicationListCategories_ItemDataBound( object sender, RepeaterItemEventArgs e )
-        {
-            var category = e.Item.DataItem as Rock.Model.Category;
-            var showCategory = this.GetAttributeValue( AttributeKey.ShowCommunicationListCategories ).AsBoolean();
-            if ( category != null )
-            {
-                var pwCategoryPanel = e.Item.FindControl( "pwCategoryPanel" ) as PanelWidget;
-                var rptCommunicationList = pwCategoryPanel.FindControl( "rptCommunicationLists" ) as Repeater;
-
-                if ( showCategory )
-                {
-                    pwCategoryPanel.Title = category.Name;
-                    pwCategoryPanel.TitleIconCssClass = category.IconCssClass;
-                }
-                else
-                {
-                    var pnlListRepeaterParent = e.Item.FindControl( "pnlListRepeaterParent" ) as Panel;
-                    pwCategoryPanel.Controls.Remove( rptCommunicationList );
-                    pnlListRepeaterParent.Controls.Add( rptCommunicationList );
-                    pwCategoryPanel.Visible = false;
-                }
-
-                rptCommunicationList.DataSource = GetListsByCategory( category );
-                rptCommunicationList.DataBind();
             }
         }
 
@@ -291,7 +326,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
 
             showMediumPreference = this.GetAttributeValue( AttributeKey.ShowMediumPreference ).AsBoolean();
 
-            personCommunicationListsMember = new GroupMemberService( rockContext )
+            var localPersonCommunicationListsMember = new GroupMemberService( rockContext )
                 .Queryable()
                 .AsNoTracking()
                 .Where( a => groupIds.Contains( a.GroupId ) && a.PersonId == personId )
@@ -299,37 +334,17 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 .ToList()
                 .ToDictionary( k => k.Key, v => v.FirstOrDefault() );
 
+            if(localPersonCommunicationListsMember != null )
+            {
+                personCommunicationListsMember.AddRange( localPersonCommunicationListsMember );
+            }
+            
+
             nbNoCommunicationLists.Visible = !viewableCommunicationLists.Any();
             pnlCommunicationPreferences.Visible = viewableCommunicationLists.Any();
 
             return viewableCommunicationLists.OrderBy( l => l.Order ).ThenBy( l => l.Name ).ToList();
         }
-
-        /// <summary>
-        /// Handles the CheckedChanged event of the cbCommunicationListIsSubscribed control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void cbCommunicationListIsSubscribed_CheckedChanged( object sender, EventArgs e )
-        {
-            var repeaterItem = ( sender as RockCheckBox ).BindingContainer as RepeaterItem;
-            SaveChanges( repeaterItem );
-        }
-
-        /// <summary>
-        /// Handles the CheckedChanged event of the tglCommunicationPreference control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void tglCommunicationPreference_CheckedChanged( object sender, EventArgs e )
-        {
-            var repeaterItem = ( sender as Toggle ).BindingContainer as RepeaterItem;
-            SaveChanges( repeaterItem );
-        }
-
-        #endregion Events
-
-        #region Methods
 
         /// <summary>
         /// Saves the changes.
@@ -442,8 +457,27 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
 
             var categories = new CategoryService( rockContext ).GetByGuids( categoryGuids ).OrderBy( c => c.Order ).ThenBy( c => c.Name ).ToList();
 
-            rptCommunicationListCategories.DataSource = categories;
-            rptCommunicationListCategories.DataBind();
+            var showCategory = this.GetAttributeValue( AttributeKey.ShowCommunicationListCategories ).AsBoolean();
+
+            if ( showCategory )
+            {
+                rptCommunicationListCategories.Visible = true;
+                rptCommunicationListsNoCategories.Visible = false;
+                rptCommunicationListCategories.DataSource = categories;
+                rptCommunicationListCategories.DataBind();
+            }
+            else
+            {
+                rptCommunicationListCategories.Visible = false;
+                rptCommunicationListsNoCategories.Visible = true;
+                var lists = new List<Group>();
+                foreach ( var category in categories )
+                {
+                    lists.AddRange( GetListsByCategory( category ) );
+                }
+                rptCommunicationListsNoCategories.DataSource = lists;
+                rptCommunicationListsNoCategories.DataBind();
+            }
         }
 
         #endregion Methods
