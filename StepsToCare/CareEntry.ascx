@@ -5,7 +5,7 @@
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
             <asp:HiddenField ID="hfCareNeedId" runat="server" />
             <div class="panel-heading">
-                <h1 class="panel-title pull-left"><i class="fa fa-hand-holding"></i>Care Need</h1>
+                <h1 class="panel-title pull-left"><i class="fa fa-hand-holding"></i> Care Need</h1>
 
                 <div class="panel-labels">
                     <Rock:HighlightLabel ID="hlStatus" runat="server" LabelType="Default" Text="Pending" />
