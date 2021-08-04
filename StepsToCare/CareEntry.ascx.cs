@@ -18,7 +18,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-
+using System.Web.UI;
+using System.Web.UI.WebControls;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -39,7 +40,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
     #region Block Settings
 
-    [BooleanField( "Allow New Person Entry", "Should you be able to enter a new person from the care entry form?", false, key: "AllowNewPerson" )]
+    [BooleanField( "Allow New Person Entry", "Should you be able to enter a new person from the care entry form and use person matching?", false, key: "AllowNewPerson" )]
 
     #endregion
 
@@ -136,19 +137,101 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 careNeed.Details = dtbDetailsText.Text;
                 careNeed.CampusId = cpCampus.SelectedCampusId;
 
-                //var FirstName = dtbFirstName.Text;
-                //var LastName = dtbLastName.Text;
-                //var Email = ebEmail.Text;
-
-                //if ( lapAddress.Location != null )
-                //{
-                //    LocationId = lapAddress.Location.Id;
-                //}
-
-                //var HomePhoneNumber = pnbHomePhone.Number;
-                //var CellPhoneNumber = pnbCellPhone.Number;
-
                 careNeed.PersonAliasId = ppPerson.PersonAliasId;
+
+                if ( _allowNewPerson && ppPerson.PersonId == null )
+                {
+                    var personService = new PersonService( new RockContext() );
+                    var person = personService.FindPerson( new PersonService.PersonMatchQuery( dtbFirstName.Text, dtbLastName.Text, ebEmail.Text, pnbCellPhone.Number ), false, true, false );
+
+                    if ( person == null && dtbFirstName.Text.IsNotNullOrWhiteSpace() && dtbLastName.Text.IsNotNullOrWhiteSpace() && ( !string.IsNullOrWhiteSpace( ebEmail.Text ) || !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbHomePhone.Number ) ) || !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbCellPhone.Number ) ) ) )
+                    {
+                        var personRecordTypeId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_PERSON.AsGuid() ).Id;
+                        var personStatusPending = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_PENDING.AsGuid() ).Id;
+
+                        person = new Person();
+                        person.IsSystem = false;
+                        person.RecordTypeValueId = personRecordTypeId;
+                        person.RecordStatusValueId = personStatusPending;
+                        person.FirstName = dtbFirstName.Text;
+                        person.LastName = dtbLastName.Text;
+                        person.Gender = Gender.Unknown;
+
+                        if ( !string.IsNullOrWhiteSpace( ebEmail.Text ) )
+                        {
+                            person.Email = ebEmail.Text;
+                            person.IsEmailActive = true;
+                            person.EmailPreference = EmailPreference.EmailAllowed;
+                        }
+
+                        PersonService.SaveNewPerson( person, rockContext, cpCampus.SelectedCampusId );
+
+                        if ( !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbHomePhone.Number ) ) )
+                        {
+                            var homePhoneType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME ) );
+
+                            var phoneNumber = new PhoneNumber { NumberTypeValueId = homePhoneType.Id };
+                            phoneNumber.CountryCode = PhoneNumber.CleanNumber( pnbHomePhone.CountryCode );
+                            phoneNumber.Number = PhoneNumber.CleanNumber( pnbHomePhone.Number );
+                            person.PhoneNumbers.Add( phoneNumber );
+                        }
+
+                        if ( !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbCellPhone.Number ) ) )
+                        {
+                            var mobilePhoneType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE ) );
+
+                            var phoneNumber = new PhoneNumber { NumberTypeValueId = mobilePhoneType.Id };
+                            phoneNumber.CountryCode = PhoneNumber.CleanNumber( pnbCellPhone.CountryCode );
+                            phoneNumber.Number = PhoneNumber.CleanNumber( pnbCellPhone.Number );
+                            person.PhoneNumbers.Add( phoneNumber );
+                        }
+
+                        if ( lapAddress.Location != null )
+                        {
+                            Guid? familyGroupTypeGuid = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY.AsGuidOrNull();
+                            if ( familyGroupTypeGuid.HasValue )
+                            {
+                                var familyGroup = person.GetFamily();
+                                if ( familyGroup != null )
+                                {
+                                    Guid? addressTypeGuid = Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME.AsGuidOrNull();
+                                    if ( addressTypeGuid.HasValue )
+                                    {
+                                        var groupLocationService = new GroupLocationService( rockContext );
+
+                                        var dvHomeAddressType = DefinedValueCache.Get( addressTypeGuid.Value );
+                                        var familyAddress = groupLocationService.Queryable().Where( l => l.GroupId == familyGroup.Id && l.GroupLocationTypeValueId == dvHomeAddressType.Id ).FirstOrDefault();
+                                        if ( !string.IsNullOrWhiteSpace( lapAddress.Location.Street1 ) )
+                                        {
+                                            if ( familyAddress == null )
+                                            {
+                                                familyAddress = new GroupLocation();
+                                                groupLocationService.Add( familyAddress );
+                                                familyAddress.GroupLocationTypeValueId = dvHomeAddressType.Id;
+                                                familyAddress.GroupId = familyGroup.Id;
+                                                familyAddress.IsMailingLocation = true;
+                                                familyAddress.IsMappedLocation = true;
+                                            }
+
+                                            var loc = lapAddress.Location;
+                                            familyAddress.Location = new LocationService( rockContext ).Get(
+                                                loc.Street1, loc.Street2, loc.City, loc.State, loc.PostalCode, loc.Country, familyGroup, true );
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    careNeed.PersonAliasId = ( person != null ) ? person.PrimaryAliasId : null;
+
+                    if ( careNeed.PersonAliasId == null )
+                    {
+                        cvPersonValidation.IsValid = false;
+                        cvPersonValidation.ErrorMessage = "A Person must be selected or First Name, Last Name and Email and/or Phone number must be filled out to proceed.";
+                        return;
+                    }
+                }
 
                 careNeed.SubmitterAliasId = ppSubmitter.PersonAliasId;
 
@@ -186,6 +269,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
 
                     NavigateToParentPage( qryParams );
+                }
+                else
+                {
+                    cvCareNeed.IsValid = false;
+                    cvCareNeed.ErrorMessage = careNeed.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" );
                 }
             }
         }
@@ -277,7 +365,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 pnbHomePhone.Enabled = true;
                 pnbCellPhone.Enabled = true;
                 ebEmail.Enabled = true;
-                //lapAddress.Enabled = true;
+                if ( lapAddress.Location != null )
+                {
+                    lapAddress.Enabled = true;
+                }
             }
         }
 
@@ -318,6 +409,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             pnlNewPersonFields.Visible = _allowNewPerson;
+            ppPerson.Required = !_allowNewPerson;
 
             dtbDetailsText.Text = careNeed.Details;
             dpDate.SelectedDate = careNeed.DateEntered;
