@@ -14,6 +14,7 @@
             <Rock:PanelDrawer ID="pdAuditDetails" runat="server"></Rock:PanelDrawer>
             <div class="panel-body">
                 <asp:ValidationSummary ID="valValidation" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
+                <asp:CustomValidator ID="cvCareNeed" runat="server" Display="None" EnableClientScript="False"></asp:CustomValidator>
 
                 <div class="">
                     <div class="row">
@@ -64,6 +65,7 @@
                             </div>
                         </div>
                     </asp:Panel>
+                    <asp:CustomValidator ID="cvPersonValidation" runat="server" Display="None" EnableClientScript="False"></asp:CustomValidator>
                 </Rock:PanelWidget>
 
                 <Rock:PanelWidget ID="pwDetails" runat="server" Title="Need Details" Expanded="true">
