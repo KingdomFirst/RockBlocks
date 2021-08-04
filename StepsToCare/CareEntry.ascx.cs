@@ -34,7 +34,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
     [DisplayName( "Care Entry" )]
     [Category( "KFS > Steps To Care" )]
-    [Description( "Care entry page for KFS Steps to Care package. Used for adding and editing care needs " )]
+    [Description( "Care entry block for KFS Steps to Care package. Used for adding and editing care needs " )]
 
     #endregion
 
