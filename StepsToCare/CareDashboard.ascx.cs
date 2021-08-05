@@ -46,12 +46,52 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
     #region Block Settings
 
     [ContextAware( typeof( Person ) )]
-    [LinkedPage( "Detail Page" )]
+    [LinkedPage(
+        "Detail Page",
+        Description = "Page used to modify and create care needs.",
+        IsRequired = true,
+        Order = 1,
+        Key = AttributeKey.DetailPage )]
 
     #endregion Block Settings
 
     public partial class CareDashboard : Rock.Web.UI.RockBlock
     {
+        #region Keys
+
+        /// <summary>
+        /// Attribute Keys
+        /// </summary>
+        private static class AttributeKey
+        {
+            public const string DetailPage = "DetailPage";
+        }
+
+        /// <summary>
+        /// User Preference Key
+        /// </summary>
+        private static class UserPreferenceKey
+        {
+            public const string StartDate = "Start Date";
+            public const string EndDate = "End Date";
+            public const string FirstName = "First Name";
+            public const string LastName = "Last Name";
+            public const string SubmittedBy = "Submitted By";
+            public const string Category = "Category";
+            public const string Status = "Status";
+            public const string Campus = "Campus";
+        }
+
+        /// <summary>
+        /// View State Keys
+        /// </summary>
+        private static class ViewStateKey
+        {
+            public const string AvailableAttributes = "AvailableAttributes";
+        }
+
+        #endregion Keys
+
         #region Properties
 
         /// <summary>
@@ -85,7 +125,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             base.LoadViewState( savedState );
 
-            AvailableAttributes = ViewState["AvailableAttributes"] as List<AttributeCache>;
+            AvailableAttributes = ViewState[ViewStateKey.AvailableAttributes] as List<AttributeCache>;
 
             AddDynamicControls();
         }
@@ -98,7 +138,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// </returns>
         protected override object SaveViewState()
         {
-            ViewState["AvailableAttributes"] = AvailableAttributes;
+            ViewState[ViewStateKey.AvailableAttributes] = AvailableAttributes;
 
             return base.SaveViewState();
         }
@@ -188,14 +228,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void rFilter_ApplyFilterClick( object sender, EventArgs e )
         {
-            rFilter.SaveUserPreference( "Start Date", "Start Date", drpDate.LowerValue.HasValue ? drpDate.LowerValue.Value.ToString( "o" ) : string.Empty );
-            rFilter.SaveUserPreference( "End Date", "End Date", drpDate.UpperValue.HasValue ? drpDate.UpperValue.Value.ToString( "o" ) : string.Empty );
-            rFilter.SaveUserPreference( "First Name", "First Name", tbFirstName.Text );
-            rFilter.SaveUserPreference( "Last Name", "Last Name", tbLastName.Text );
-            rFilter.SaveUserPreference( "Submitted By", "Submitted By", ddlSubmitter.SelectedItem.Value );
-            rFilter.SaveUserPreference( "Category", "Category", dvpCategory.SelectedValues.AsDelimited( ";" ) );
-            rFilter.SaveUserPreference( "Status", "Status", dvpStatus.SelectedItem.Value );
-            rFilter.SaveUserPreference( "Campus", "Campus", cpCampus.SelectedCampusId.ToString() );
+            rFilter.SaveUserPreference( UserPreferenceKey.StartDate, "Start Date", drpDate.LowerValue.HasValue ? drpDate.LowerValue.Value.ToString( "o" ) : string.Empty );
+            rFilter.SaveUserPreference( UserPreferenceKey.EndDate, "End Date", drpDate.UpperValue.HasValue ? drpDate.UpperValue.Value.ToString( "o" ) : string.Empty );
+            rFilter.SaveUserPreference( UserPreferenceKey.FirstName, "First Name", tbFirstName.Text );
+            rFilter.SaveUserPreference( UserPreferenceKey.LastName, "Last Name", tbLastName.Text );
+            rFilter.SaveUserPreference( UserPreferenceKey.SubmittedBy, "Submitted By", ddlSubmitter.SelectedItem.Value );
+            rFilter.SaveUserPreference( UserPreferenceKey.Category, "Category", dvpCategory.SelectedValues.AsDelimited( ";" ) );
+            rFilter.SaveUserPreference( UserPreferenceKey.Status, "Status", dvpStatus.SelectedItem.Value );
+            rFilter.SaveUserPreference( UserPreferenceKey.Campus, "Campus", cpCampus.SelectedCampusId.ToString() );
 
             if ( AvailableAttributes != null )
             {
@@ -229,8 +269,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             switch ( e.Key )
             {
-                case "Start Date":
-                case "End Date":
+                case UserPreferenceKey.StartDate:
+                case UserPreferenceKey.EndDate:
                     var dateTime = e.Value.AsDateTime();
                     if ( dateTime.HasValue )
                     {
@@ -243,13 +283,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     return;
 
-                case "First Name":
+                case UserPreferenceKey.FirstName:
                     return;
 
-                case "Last Name":
+                case UserPreferenceKey.LastName:
                     return;
 
-                case "Campus":
+                case UserPreferenceKey.Campus:
                     {
                         int? campusId = e.Value.AsIntegerOrNull();
                         if ( campusId.HasValue )
@@ -259,7 +299,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         return;
                     }
 
-                case "Submitted By":
+                case UserPreferenceKey.SubmittedBy:
                     int? personAliasId = e.Value.AsIntegerOrNull();
                     if ( personAliasId.HasValue )
                     {
@@ -272,11 +312,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     return;
 
-                case "Category":
+                case UserPreferenceKey.Category:
                     e.Value = ResolveValues( e.Value, dvpCategory );
                     return;
 
-                case "Status":
+                case UserPreferenceKey.Status:
                     var definedValueId = e.Value.AsIntegerOrNull();
                     if ( definedValueId.HasValue )
                     {
@@ -426,20 +466,20 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// </summary>
         private void SetFilter()
         {
-            drpDate.LowerValue = rFilter.GetUserPreference( "Start Date" ).AsDateTime();
-            drpDate.UpperValue = rFilter.GetUserPreference( "End Date" ).AsDateTime();
+            drpDate.LowerValue = rFilter.GetUserPreference( UserPreferenceKey.StartDate ).AsDateTime();
+            drpDate.UpperValue = rFilter.GetUserPreference( UserPreferenceKey.EndDate ).AsDateTime();
 
             cpCampus.Campuses = CampusCache.All();
-            cpCampus.SelectedCampusId = rFilter.GetUserPreference( "Campus" ).AsInteger();
+            cpCampus.SelectedCampusId = rFilter.GetUserPreference( UserPreferenceKey.Campus ).AsInteger();
 
             // hide the First/Last name filter if this is being used as a Person block
-            //tbFirstName.Visible = TargetPerson == null;
-            //tbLastName.Visible = TargetPerson == null;
+            tbFirstName.Visible = TargetPerson == null;
+            tbLastName.Visible = TargetPerson == null;
 
-            tbFirstName.Text = rFilter.GetUserPreference( "First Name" );
-            tbLastName.Text = rFilter.GetUserPreference( "Last Name" );
+            tbFirstName.Text = rFilter.GetUserPreference( UserPreferenceKey.FirstName );
+            tbLastName.Text = rFilter.GetUserPreference( UserPreferenceKey.LastName );
 
-            var listData = new CareNeedService( new RockContext() ).Queryable( "Person" )
+            var listData = new CareNeedService( new RockContext() ).Queryable( "PersonAlias,PersonAlias.Person" )
                 .Where( cn => cn.SubmitterAliasId != null )
                 .Select( cn => cn.SubmitterPersonAlias.Person )
                 .Distinct()
@@ -449,17 +489,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             ddlSubmitter.DataValueField = "PrimaryAliasId";
             ddlSubmitter.DataBind();
             ddlSubmitter.Items.Insert( 0, new ListItem() );
-            ddlSubmitter.SetValue( rFilter.GetUserPreference( "Submitted By" ) );
+            ddlSubmitter.SetValue( rFilter.GetUserPreference( UserPreferenceKey.SubmittedBy ) );
 
-            dvpCategory.DefinedTypeId = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) ).Id;
-            string categoryValue = rFilter.GetUserPreference( "Category" );
+            var categoryDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) );
+            dvpCategory.DefinedTypeId = categoryDefinedType.Id;
+            string categoryValue = rFilter.GetUserPreference( UserPreferenceKey.Category );
             if ( !string.IsNullOrWhiteSpace( categoryValue ) )
             {
                 dvpCategory.SetValues( categoryValue.Split( ';' ).ToList() );
             }
 
             dvpStatus.DefinedTypeId = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) ).Id;
-            dvpStatus.SetValue( rFilter.GetUserPreference( "Status" ) );
+            dvpStatus.SetValue( rFilter.GetUserPreference( UserPreferenceKey.Status ) );
 
             // set attribute filters
             BindAttributes();
