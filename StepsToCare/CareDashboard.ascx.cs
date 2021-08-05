@@ -53,6 +53,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 1,
         Key = AttributeKey.DetailPage )]
 
+    [CodeEditorField(
+        "Categories Template",
+        Description = "Lava Template that can be used to customize what is displayed in the last status section. Includes common merge fields plus Care Need Categories.",
+        EditorMode = CodeEditorMode.Lava,
+        EditorTheme = CodeEditorTheme.Rock,
+        DefaultValue = CategoriesTemplateDefaultValue,
+        Order = 2,
+        Key = AttributeKey.CategoriesTemplate )]
+
+    [DefinedValueField(
+        "Outstanding Care Needs Statuses",
+        Description = "Select the status values that count towards the 'Outstanding Care Needs' total.",
+        IsRequired = true,
+        Order = 3,
+        Key = AttributeKey.OutstandingCareNeedsStatuses,
+        AllowMultiple = true,
+        DefaultValue = rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN,
+        DefinedTypeGuid = rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS
+        )]
+
     #endregion Block Settings
 
     public partial class CareDashboard : Rock.Web.UI.RockBlock
@@ -65,6 +85,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         private static class AttributeKey
         {
             public const string DetailPage = "DetailPage";
+            public const string CategoriesTemplate = "CategoriesTemplate";
+            public const string OutstandingCareNeedsStatuses = "OutstandingCareNeedsStatuses";
         }
 
         /// <summary>
@@ -91,6 +113,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         }
 
         #endregion Keys
+
+        #region Attribute Default values
+
+        private const string CategoriesTemplateDefaultValue = @"
+<div class="""">
+{% for category in Categories %}
+    <span class=""badge p-2 mb-2"" style=""background-color: {{ category | Attribute:'Color' }}"">{{ category.Value }}</span>
+{% endfor %}
+</div>";
+
+        #endregion Attribute Default values
 
         #region Properties
 
@@ -347,6 +380,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 CareNeed careNeed = e.Row.DataItem as CareNeed;
                 if ( careNeed != null )
                 {
+                    careNeed.Category.LoadAttributes();
+                    var categoryColor = careNeed.Category.GetAttributeValue( "Color" );
+                    var categoryCell = e.Row.Cells[0];
+                    if ( categoryCell != null && categoryColor.IsNotNullOrWhiteSpace() )
+                    {
+                        categoryCell.Style[HtmlTextWriterStyle.BackgroundColor] = categoryColor;
+                    }
+
                     Literal lName = e.Row.FindControl( "lName" ) as Literal;
                     if ( lName != null )
                     {
@@ -499,8 +540,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 dvpCategory.SetValues( categoryValue.Split( ';' ).ToList() );
             }
 
-            dvpStatus.DefinedTypeId = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) ).Id;
+            var statusDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) );
+            dvpStatus.DefinedTypeId = statusDefinedType.Id;
             dvpStatus.SetValue( rFilter.GetUserPreference( UserPreferenceKey.Status ) );
+
+            var template = GetAttributeValue( AttributeKey.CategoriesTemplate );
+
+            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+            mergeFields.Add( "Categories", categoryDefinedType.DefinedValues );
+            mergeFields.Add( "Statuses", statusDefinedType.DefinedValues );
+            lCategories.Text = template.ResolveMergeFields( mergeFields );
 
             // set attribute filters
             BindAttributes();
@@ -581,7 +630,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gList.Visible = true;
             RockContext rockContext = new RockContext();
             CareNeedService careNeedService = new CareNeedService( rockContext );
+            CareNoteService careNoteService = new CareNoteService( rockContext );
             var qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
+            var noteQry = careNoteService.Queryable().AsNoTracking();
+
+            var outstandingCareStatuses = GetAttributeValues( AttributeKey.OutstandingCareNeedsStatuses );
+            var totalCareNeeds = qry.Count();
+            var outstandingCareNeeds = qry.Count( cn => outstandingCareStatuses.Contains( cn.Status.Guid.ToString() ) );
+
+            var currentDateTime = RockDateTime.Now;
+            var last7Days = currentDateTime.AddDays( -7 );
+            var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime );
 
             // Filter by Start Date
             DateTime? startDate = drpDate.LowerValue;
@@ -644,7 +703,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             List<int> categories = dvpCategory.SelectedValuesAsInt;
             if ( categories.Any() )
             {
-                qry = qry.Where( cn => cn.CategoryValueId != null && categories.Contains(  cn.CategoryValueId.Value ) );
+                qry = qry.Where( cn => cn.CategoryValueId != null && categories.Contains( cn.CategoryValueId.Value ) );
             }
 
             SortProperty sortProperty = gList.SortProperty;
@@ -674,6 +733,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             // Hide the campus column if the campus filter is not visible.
             gList.ColumnsOfType<RockBoundField>().First( c => c.DataField == "Campus.Name" ).Visible = cpCampus.Visible;
+
+            lTouchesCount.Text = careTouches.ToString();
+            lCareNeedsCount.Text = outstandingCareNeeds.ToString();
+            lTotalNeedsCount.Text = totalCareNeeds.ToString();
         }
 
         /// <summary>

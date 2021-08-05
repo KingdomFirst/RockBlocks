@@ -4,12 +4,44 @@
     <ContentTemplate>
         <Rock:ModalAlert ID="mdGridWarning" runat="server" />
 
-        <asp:Panel ID="pnlView" runat="server" CssClass="">
+        <asp:Panel ID="pnlView" runat="server" CssClass="care-dashboard">
             <div class="panel panel-block">
                 <div class="panel-heading">
-                    <h1 class="panel-title"><i class="fa fa-hand-holding-heart"></i>Care Needs</h1>
+                    <h1 class="panel-title"><i class="fa fa-hand-holding-heart"></i> Care Needs</h1>
                 </div>
                 <div class="panel-body">
+
+                    <div class="list-as-blocks clearfix margin-b-lg">
+                        <ul>
+                            <li class="block-status care-count-touches">
+                                <a href="#" class="bg-teal-400 text-white text-uppercase">
+                                    <h1 class="mt-0 mb-3">
+                                        <asp:Literal ID="lTouchesCount" runat="server"></asp:Literal></h1>
+                                    Care Touches This Week
+                                </a>
+                            </li>
+                            <li class="block-status care-count-care-needs">
+                                <a href="#" class="bg-blue-400 text-white text-uppercase">
+                                    <h1 class="mt-0 mb-3">
+                                        <asp:Literal ID="lCareNeedsCount" runat="server"></asp:Literal></h1>
+                                    Outstanding Care Needs
+                                </a>
+                            </li>
+                            <li class="block-status care-count-total-needs">
+                                <a href="#" class="bg-blue-600 text-white text-uppercase">
+                                    <h1 class="mt-0 mb-3">
+                                        <asp:Literal ID="lTotalNeedsCount" runat="server"></asp:Literal></h1>
+                                    Total Care Needs
+                                </a>
+                            </li>
+                            <li class="block-status care-enter-need">
+                                <asp:LinkButton id="btnAdd" runat="server" CssClass="btn btn-default" OnClick="gList_AddClick"><i class='fas fa-plus'></i><strong class="text-uppercase">Enter Care Need</strong></asp:LinkButton>
+                            </li>
+                            <li class="block-status care-categories">
+                                <asp:Literal ID="lCategories" runat="server" />
+                            </li>
+                        </ul>
+                    </div>
 
                     <div class="grid grid-panel">
                         <Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue">
@@ -24,6 +56,8 @@
                         </Rock:GridFilter>
                         <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" OnRowDataBound="gList_RowDataBound" OnRowSelected="gList_Edit" ExportSource="DataSource">
                             <Columns>
+                                <Rock:ColorField DataField="Category.AttributeValues.Color" ToolTipDataField="Category.Value" HeaderText="Cat" SortExpression="Category.Value" />
+            
                                 <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name">
                                     <ItemTemplate>
                                         <asp:Literal ID="lName" runat="server" />
@@ -31,10 +65,6 @@
                                 </Rock:RockTemplateField>
                                 <Rock:RockBoundField DataField="Details" HeaderText="Details" SortExpression="Details" />
                                 <Rock:RockBoundField DataField="DateEntered" HeaderText="Date" DataFormatString="{0:d}" SortExpression="DateEntered" />
-
-                                <Rock:DefinedValueField DataField="CategoryValueId" HeaderText="Category" SortExpression="Category.Value" ColumnPriority="DesktopSmall" />
-
-                                <Rock:PersonField DataField="SubmitterPersonAlias.Person" SortExpression="SubmitterPersonAlias.Person.LastName, SubmitterPersonAlias.Person.NickName" HeaderText="Submitted By" ColumnPriority="Tablet" />
 
                                 <Rock:RockTemplateField SortExpression="Status.Value" HeaderText="Status">
                                     <ItemTemplate>
