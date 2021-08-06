@@ -222,6 +222,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             BindGrid();
             ppNewPerson.SetValue( null );
+            mdAddPerson.Title = "Add Worker";
             ShowDetail( 0 );
             nbAddPersonExists.Visible = false;
         }
@@ -256,8 +257,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void rFilter_ApplyFilterClick( object sender, EventArgs e )
         {
-            rFilter.SaveUserPreference( UserPreferenceKey.Category, "Category", dvpCategory.SelectedDefinedValueId.ToString() );
-            rFilter.SaveUserPreference( UserPreferenceKey.Campus, "Campus", cpCampus.SelectedCampusId.ToString() );
+            rFilter.SaveUserPreference( UserPreferenceKey.Category, "Category", dvpFilterCategory.SelectedDefinedValueId.ToString() );
+            rFilter.SaveUserPreference( UserPreferenceKey.Campus, "Campus", cpFilterCampus.SelectedCampusId.ToString() );
 
             if ( AvailableAttributes != null )
             {
@@ -320,6 +321,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
         }
 
+        protected void rFilter_ClearFilterClick( object sender, EventArgs e )
+        {
+            rFilter.DeleteUserPreferences();
+            BindFilter();
+            BindGrid();
+        }
+
         /// <summary>
         /// Handles the RowDataBound event of the gList control.
         /// </summary>
@@ -339,6 +347,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             ShowDetail( 0 );
             nbAddPersonExists.Visible = false;
+            mdAddPerson.Title = "Add Worker";
             mdAddPerson.Show();
         }
 
@@ -351,6 +360,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             ShowDetail( e.RowKeyId );
             nbAddPersonExists.Visible = false;
+            mdAddPerson.Title = "Edit Worker";
             mdAddPerson.Show();
         }
 
@@ -393,7 +403,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         private void SetFilter()
         {
             cpCampus.Campuses = CampusCache.All();
-            cpCampus.SelectedCampusId = rFilter.GetUserPreference( UserPreferenceKey.Campus ).AsInteger();
+            cpFilterCampus.Campuses = CampusCache.All();
+            cpFilterCampus.SelectedCampusId = rFilter.GetUserPreference( UserPreferenceKey.Campus ).AsInteger();
 
             dvpFilterCategory.DefinedTypeId = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) ).Id;
             string categoryValue = rFilter.GetUserPreference( UserPreferenceKey.Category );
@@ -416,9 +427,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var qry = careWorkerService.Queryable( "PersonAlias,PersonAlias.Person" ).AsNoTracking();
 
             // Filter by Campus
-            if ( cpCampus.SelectedCampusId.HasValue )
+            if ( cpFilterCampus.SelectedCampusId.HasValue )
             {
-                qry = qry.Where( b => b.CampusId == cpCampus.SelectedCampusId );
+                qry = qry.Where( b => b.CampusId == cpFilterCampus.SelectedCampusId );
             }
 
             // Filter by Category
@@ -641,6 +652,36 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var deleteField = new DeleteField();
             gList.Columns.Add( deleteField );
             deleteField.Click += gList_Delete;
+        }
+
+        private void BindFilter()
+        {
+            cpFilterCampus.SelectedCampusId = rFilter.GetUserPreference( UserPreferenceKey.Campus ).AsInteger();
+            dvpFilterCategory.SetValue( rFilter.GetUserPreference( UserPreferenceKey.Category ) );
+
+            if ( AvailableAttributes != null )
+            {
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    var control = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    if ( control != null )
+                    {
+                        string savedValue = rFilter.GetUserPreference( attribute.Key );
+                        //if ( !string.IsNullOrWhiteSpace( savedValue ) )
+                        //{
+                        try
+                        {
+                            var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
+                            attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
+                        }
+                        catch
+                        {
+                            // intentionally ignore
+                        }
+                        //}
+                    }
+                }
+            }
         }
         #endregion
     }
