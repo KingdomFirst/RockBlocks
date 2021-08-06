@@ -18,7 +18,7 @@
             </div>
             <div class="panel-body">
                 <div class="grid grid-panel">
-                    <Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue">
+                    <Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue" OnClearFilterClick="rFilter_ClearFilterClick">
                         <Rock:DefinedValuePicker ID="dvpFilterCategory" runat="server" Label="Category" DataTextField="Value" DataValueField="Id" />
                         <Rock:CampusPicker ID="cpFilterCampus" runat="server" Label="Campus" />
                         <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
