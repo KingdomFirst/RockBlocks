@@ -14,7 +14,7 @@
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
             <asp:HiddenField ID="hfCareWorkerId" runat="server" />
             <div class="panel-heading">
-                <h1 class="panel-title pull-left"><i class="fas fa-user-nurse"></i>Care Workers</h1>
+                <h1 class="panel-title pull-left"><i class="fas fa-user-nurse"></i> Care Workers</h1>
             </div>
             <div class="panel-body">
                 <div class="grid grid-panel">
