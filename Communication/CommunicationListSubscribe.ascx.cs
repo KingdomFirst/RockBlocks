@@ -72,6 +72,14 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         Key = AttributeKey.ShowCommunicationListCategories,
         Order = 3
         )]
+    [GroupCategoryField(
+        "Communication List Categories Default Opened",
+        Description = "By default all categories are displayed collapsed. Select the categories of the communication lists to display uncollapsed (open).",
+        AllowMultiple = true,
+        GroupTypeGuid = Rock.SystemGuid.GroupType.GROUPTYPE_COMMUNICATIONLIST,
+        IsRequired = false,
+        Key = AttributeKey.CommunicationListCategoriesOpen,
+        Order = 4 )]
 
     #endregion Block Attributes
 
@@ -87,6 +95,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             public const string CommunicationListCategories = "CommunicationListCategories";
             public const string ShowMediumPreference = "ShowMediumPreference";
             public const string ShowCommunicationListCategories = "ShowCommunicationListCategories";
+            public const string CommunicationListCategoriesOpen = "CommunicationListCategoriesOpen";
         }
 
         #endregion Attribute Keys
@@ -169,7 +178,9 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             if ( category != null )
             {
                 var pwCategoryPanel = e.Item.FindControl( "pwCategoryPanel" ) as PanelWidget;
+                var openCategoryGuids = this.GetAttributeValue( AttributeKey.CommunicationListCategoriesOpen ).SplitDelimitedValues().AsGuidList();
 
+                pwCategoryPanel.Expanded = openCategoryGuids.Contains( category.Guid );
                 pwCategoryPanel.Title = category.Name;
                 pwCategoryPanel.TitleIconCssClass = category.IconCssClass;
                 var rptCommunicationLists = pwCategoryPanel.FindControl( "rptCommunicationLists" ) as Repeater;
