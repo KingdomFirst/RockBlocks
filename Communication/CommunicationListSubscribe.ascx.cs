@@ -166,7 +166,6 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         protected void rptCommunicationListCategories_ItemDataBound( object sender, RepeaterItemEventArgs e )
         {
             var category = e.Item.DataItem as Rock.Model.Category;
-            var showCategory = this.GetAttributeValue( AttributeKey.ShowCommunicationListCategories ).AsBoolean();
             if ( category != null )
             {
                 var pwCategoryPanel = e.Item.FindControl( "pwCategoryPanel" ) as PanelWidget;
