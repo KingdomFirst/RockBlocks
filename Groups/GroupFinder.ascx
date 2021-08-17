@@ -35,7 +35,7 @@
 
                         <Rock:AddressControl ID="acAddress" runat="server" Required="true" RequiredErrorMessage="Your Address is Required" />
                         <Rock:RockTextBox ID="tbPostalCode" runat="server" Required="true" RequiredErrorMessage="Your Postal Code is Required" Label="Postal Code" CssClass="form-control js-postal-code js-postcode js-address-field" />
-                        <asp:RegularExpressionValidator ID="revPostalCode" runat="server" ControlToValidate="tbPostalCode" ValidationExpression="[0-9]*\-*[0-9]*" ErrorMessage="Your Postal code is an invalid format, 12345 or 12345-6789 only." Text="-" CssClass="hidden hide"></asp:RegularExpressionValidator>
+                        <asp:RegularExpressionValidator ID="revPostalCode" runat="server" ControlToValidate="tbPostalCode" ValidationExpression="[0-9]*\-*[0-9]*" Text="-" CssClass="hidden hide"></asp:RegularExpressionValidator>
                         <Rock:RockCheckBoxList ID="cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Visible="false" />
                         <Rock:RockDropDownList ID="ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
                         <asp:PlaceHolder ID="phFilterControls" runat="server" />
