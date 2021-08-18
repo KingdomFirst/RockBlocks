@@ -15,7 +15,7 @@
         <asp:Panel ID="pnlView" runat="server" CssClass="care-dashboard">
             <div class="panel panel-block">
                 <div class="panel-heading">
-                    <h1 class="panel-title"><i class="fa fa-hand-holding-heart"></i> Care Needs</h1>
+                    <h1 class="panel-title"><i class="fa fa-hand-holding-heart"></i>Care Needs</h1>
                     <div class="pull-right d-flex align-items-center">
                         <asp:LinkButton ID="lbCareConfigure" runat="server" CssClass="btn btn-xs btn-square btn-default pull-right" OnClick="lbCareConfigure_Click" CausesValidation="false"> <i title="Options" class="fa fa-gear"></i></asp:LinkButton>
                     </div>
@@ -120,7 +120,7 @@
                             }).responseText;
 
                             var resultObject = JSON.parse(result);
-                            var resultHtml = resultObject.PickerItemDetailsHtml.replace(/<small>.*<\/small>/ig, "").replace(/<div class='body'>.*<\/div>$/ig, "").replace(/header/g,"div").replace(/65/g,'120');
+                            var resultHtml = resultObject.PickerItemDetailsHtml.replace(/<small>.*<\/small>/ig, "").replace(/<div class='body'>.*<\/div>$/ig, "").replace(/header/g, "div").replace(/65/g, '120');
                             return resultHtml;
 
                         }
@@ -142,5 +142,19 @@
                 Sys.Application.add_load(initDashboard);
             </script>
         </asp:Panel>
+
+        <Rock:ModalDialog ID="mdMakeNote" runat="server" Title="Add Note" OnSaveClick="mdMakeNote_SaveClick" ValidationGroup="MakeNote">
+            <Content>
+                <asp:HiddenField ID="hfCareNeedId" runat="server" />
+
+                <asp:ValidationSummary ID="vsMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="MakeNote" />
+
+                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" Rows="4"></Rock:RockTextBox>
+
+                <Rock:DynamicPlaceholder ID="phMakeNoteAttributes" runat="server" />
+
+            </Content>
+        </Rock:ModalDialog>
+
     </ContentTemplate>
 </asp:UpdatePanel>

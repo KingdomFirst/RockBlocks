@@ -516,10 +516,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             var careNeed = new CareNeedService( new RockContext() ).Get( e.RowKeyId );
             string messages = string.Empty;
+            hfCareNeedId.Value = careNeed.Id.ToString();
 
-            // open note modal
-
-            mdGridWarning.Show( "Make a Note!", ModalAlertType.Information );
+            mdMakeNote.Show();
         }
 
         /// <summary>
@@ -611,6 +610,39 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     e.Row.Cells.RemoveAt( notesFieldIndex + 1 );
                 }
             }
+        }
+
+        /// <summary>
+        /// Handles the mdMakeNote Save Click event.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void mdMakeNote_SaveClick( object sender, EventArgs e )
+        {
+            var rockContext = new RockContext();
+            var careNoteService = new CareNoteService( rockContext );
+            var careNote = new CareNote { Id = 0 };
+            careNote.NeedId = hfCareNeedId.Value.AsInteger();
+            careNote.Note = tbNote.Text;
+            careNote.CreatedByPersonAliasId = CurrentPersonAliasId;
+            careNote.ModifiedByPersonAliasId = CurrentPersonAliasId;
+
+            if ( careNote.IsValid )
+            {
+                careNoteService.Add( careNote );
+
+                rockContext.WrapTransaction( () =>
+                {
+                    rockContext.SaveChanges();
+                    careNote.SaveAttributeValues( rockContext );
+                } );
+
+                tbNote.Text = "";
+                hfCareNeedId.Value = "";
+                mdMakeNote.Hide();
+                BindGrid();
+            }
+
         }
 
         #endregion Events
