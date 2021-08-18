@@ -4,6 +4,7 @@
         margin-top: -8px;
         margin-left: -12px;
         margin-right: -12px;
+        margin-bottom: 12px;
         width: auto;
     }
 </style>

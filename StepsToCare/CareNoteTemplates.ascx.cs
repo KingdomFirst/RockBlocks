@@ -225,6 +225,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="System.Web.UI.WebControls.GridViewRowEventArgs"/> instance containing the event data.</param>
         public void gList_RowDataBound( object sender, System.Web.UI.WebControls.GridViewRowEventArgs e )
         {
+            if ( e.Row.RowType == DataControlRowType.DataRow )
+            {
+                NoteTemplate noteTemplate = e.Row.DataItem as NoteTemplate;
+                if ( noteTemplate != null )
+                {
+                    Literal lIcon = e.Row.FindControl( "lIcon" ) as Literal;
+                    if ( lIcon != null )
+                    {
+                        lIcon.Text = string.Format( "<i class=\"{0}\"></i>", noteTemplate.Icon );
+                    }
+                }
+            }
+
         }
 
         /// <summary>
@@ -317,9 +330,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 noteTemplate = new NoteTemplate { Id = 0 };
                 pdAuditDetails.Visible = false;
+                cbActive.Checked = true;
+            }
+            else
+            {
+                cbActive.Checked = noteTemplate.IsActive;
+
             }
 
-
+            tbIcon.Text = noteTemplate.Icon;
+            tbNote.Text = noteTemplate.Note;
 
             noteTemplate.LoadAttributes();
             Helper.AddEditControls( noteTemplate, phAttributes, true, BlockValidationGroup, 2 );
@@ -416,6 +436,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             deleteField.Click += gList_Delete;
         }
 
-                #endregion
+        #endregion
     }
 }
