@@ -478,6 +478,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 careWorker = careWorkerService.Get( careWorkerId );
                 pdAuditDetails.SetEntity( careWorker, ResolveRockUrl( "~" ) );
+                cbActive.Checked = careWorker.IsActive;
+            }
+            else
+            {
+                cbActive.Checked = true;
             }
 
             if ( careWorker == null )
@@ -558,6 +563,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 careWorker.PersonAliasId = ppNewPerson.PersonAliasId;
 
                 careWorker.CategoryValueId = dvpCategory.SelectedValue.AsIntegerOrNull();
+
+                careWorker.IsActive = cbActive.Checked;
 
                 if ( careWorker.IsValid )
                 {

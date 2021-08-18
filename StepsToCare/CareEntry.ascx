@@ -5,7 +5,7 @@
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
             <asp:HiddenField ID="hfCareNeedId" runat="server" />
             <div class="panel-heading">
-                <h1 class="panel-title pull-left"><i class="fa fa-hand-holding"></i> Care Need</h1>
+                <h1 class="panel-title pull-left"><i class="fa fa-hand-holding mr-2"></i>Care Need</h1>
 
                 <div class="panel-labels">
                     <Rock:HighlightLabel ID="hlStatus" runat="server" LabelType="Default" Text="Pending" />
@@ -74,6 +74,47 @@
                     <Rock:DataTextBox ID="dtbDetailsText" runat="server" Label="Description of Need" TextMode="MultiLine" Rows="4" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="Details" />
 
                     <Rock:DynamicPlaceholder ID="phAttributes" runat="server" />
+                </Rock:PanelWidget>
+
+                <Rock:PanelWidget ID="pwAssigned" runat="server" Title="Assign Workers" Expanded="true">
+                    <div class="pull-left mr-3">
+                        <Rock:ButtonDropDownList
+                            ID="bddlAddWorker"
+                            runat="server"
+                            Title="<i class='fa fa-briefcase'></i> Add Worker"
+                            OnSelectionChanged="bddlAddWorker_SelectionChanged"
+                            DataTextField="Label"
+                            DataValueField="Value">
+                        </Rock:ButtonDropDownList>
+                    </div>
+                    <div class="pull-left">
+                        <Rock:PersonPicker
+                            ID="ppAddPerson"
+                            runat="server"
+                            CssClass="picker-menu-right"
+                            Label=""
+                            PersonName="Add Person"
+                            OnSelectPerson="ppAddPerson_SelectPerson"
+                            EnableSelfSelection="true" />
+                    </div>
+                    <Rock:Grid
+                        ID="gAssignedPersons"
+                        runat="server"
+                        DisplayType="Light"
+                        OnRowDataBound="gAssignedPersons_RowDataBound"
+                        HideDeleteButtonForIsSystem="false"
+                        ShowConfirmDeleteDialog="false">
+                        <Columns>
+                            <Rock:SelectField></Rock:SelectField>
+                            <asp:BoundField DataField="FullName" HeaderText="Name" SortExpression="FullName" />
+                            <Rock:DeleteField OnClick="gAssignedPersons_DeleteClick" />
+                        </Columns>
+                    </Rock:Grid>
+                    <asp:LinkButton ID="btnDeleteSelectedAssignedPersons"
+                        runat="server"
+                        CssClass="btn btn-sm btn-outline-primary mt-3"
+                        OnClick="btnDeleteSelectedAssignedPersons_Click"
+                        Text="Remove Selected" />
                 </Rock:PanelWidget>
 
                 <asp:LinkButton ID="lbSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="lbSave_Click" />

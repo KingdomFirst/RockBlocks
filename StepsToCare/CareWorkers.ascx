@@ -29,6 +29,7 @@
                             <Rock:DefinedValueField DataField="CategoryValueId" SortExpression="Category.Value" HeaderText="Category"></Rock:DefinedValueField>
                             <Rock:PersonField DataField="PersonAlias.Person" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name"></Rock:PersonField>
                             <Rock:RockBoundField DataField="Campus.Name" HeaderText="Campus" SortExpression="Campus.Name" />
+                            <Rock:BoolField DataField="IsActive" HeaderText="Active"></Rock:BoolField>
                         </Columns>
                     </Rock:Grid>
                 </div>
@@ -45,14 +46,17 @@
                 </Rock:NotificationBox>
 
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <Rock:PersonPicker ID="ppNewPerson" runat="server" Label="Person" Required="true" CssClass="js-newperson" ValidationGroup="AddPerson" OnSelectPerson="ppPerson_SelectPerson" />
                     </div>
                     <div class="col-md-4">
                         <Rock:DefinedValuePicker ID="dvpCategory" runat="server" Label="Category" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="CategoryValueId" />
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
+                    </div>
+                    <div class="col-md-2">
+                        <Rock:RockCheckBox ID="cbActive" runat="server" Label="Active" />
                     </div>
                 </div>
 
