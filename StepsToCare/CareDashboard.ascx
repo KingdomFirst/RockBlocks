@@ -1,6 +1,13 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CareDashboard.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.StepsToCare.CareDashboard" %>
-
-<asp:UpdatePanel runat="server" ID="upnlCareDashboard">
+<style>
+    .table>thead>tr>th>a:not(.btn)::after {
+        display: none;
+    }
+    .table>thead>tr>th.ascending a:not(.btn)::after, .table>thead>tr>th.descending a:not(.btn)::after {
+        display: inline;
+    }
+</style>
+<asp:UpdatePanel runat="server" ID="upnlCareDashboard" UpdateMode="Always">
     <ContentTemplate>
         <Rock:ModalAlert ID="mdGridWarning" runat="server" />
 
@@ -8,6 +15,9 @@
             <div class="panel panel-block">
                 <div class="panel-heading">
                     <h1 class="panel-title"><i class="fa fa-hand-holding-heart"></i> Care Needs</h1>
+                    <div class="pull-right d-flex align-items-center">
+                        <asp:LinkButton ID="lbCareConfigure" runat="server" CssClass="btn btn-xs btn-square btn-default pull-right" OnClick="lbCareConfigure_Click" CausesValidation="false"> <i title="Options" class="fa fa-gear"></i></asp:LinkButton>
+                    </div>
                 </div>
                 <div class="panel-body">
 
@@ -35,7 +45,7 @@
                                 </a>
                             </li>
                             <li class="block-status care-enter-need">
-                                <asp:LinkButton id="btnAdd" runat="server" CssClass="btn btn-default" OnClick="gList_AddClick"><i class='fas fa-plus'></i><strong class="text-uppercase">Enter Care Need</strong></asp:LinkButton>
+                                <asp:LinkButton ID="btnAdd" runat="server" CssClass="btn btn-default" OnClick="gList_AddClick"><i class='fas fa-plus'></i><strong class="text-uppercase">Enter Care Need</strong></asp:LinkButton>
                             </li>
                             <li class="block-status care-categories">
                                 <asp:Literal ID="lCategories" runat="server" />
@@ -54,10 +64,10 @@
                             <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
                             <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
                         </Rock:GridFilter>
-                        <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" OnRowDataBound="gList_RowDataBound" OnRowSelected="gList_Edit" ExportSource="DataSource">
+                        <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" OnRowDataBound="gList_RowDataBound" OnRowSelected="gList_Edit" OnRowCreated="gList_RowCreated" ExportSource="DataSource">
                             <Columns>
                                 <Rock:ColorField DataField="Category.AttributeValues.Color" ToolTipDataField="Category.Value" HeaderText="Cat" SortExpression="Category.Value" />
-            
+
                                 <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name">
                                     <ItemTemplate>
                                         <asp:Literal ID="lName" runat="server" />
@@ -72,6 +82,8 @@
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
                                 <Rock:RockBoundField DataField="Campus.Name" HeaderText="Campus" SortExpression="Campus.Name" />
+                                <Rock:RockBoundField DataField="CareNotes.Count" HeaderText="Care Touches" SortExpression="CareNotes.Count" HeaderStyle-CssClass="text-center" ItemStyle-CssClass="text-center"></Rock:RockBoundField>
+                                <%-- Columns are dynamically added due to dynamic content --%>
                             </Columns>
                         </Rock:Grid>
                     </div>

@@ -4,6 +4,7 @@
         margin-top: -8px;
         margin-left: -12px;
         margin-right: -12px;
+        margin-bottom: 12px;
         width: auto;
     }
 </style>
@@ -14,13 +15,13 @@
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
             <asp:HiddenField ID="hfNoteTemplateId" runat="server" />
             <div class="panel-heading">
-                <h1 class="panel-title pull-left"><i class="fas fa-notes-medical"></i> Care Note Templates</h1>
+                <h1 class="panel-title pull-left"><i class="fas fa-notes-medical"></i>Care Note Templates</h1>
             </div>
             <div class="panel-body">
                 <div class="grid grid-panel">
                     <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" OnRowDataBound="gList_RowDataBound" OnRowSelected="gList_Edit" ExportSource="DataSource">
                         <Columns>
-                            <Rock:RockTemplateField SortExpression="" HeaderText="">
+                            <Rock:RockTemplateField SortExpression="" HeaderText="Icon" ItemStyle-CssClass="text-center fa-lg" HeaderStyle-CssClass="text-center">
                                 <ItemTemplate>
                                     <asp:Literal ID="lIcon" runat="server" />
                                 </ItemTemplate>
@@ -47,7 +48,7 @@
                         <Rock:RockTextBox ID="tbNote" runat="server" Label="Note"></Rock:RockTextBox>
                     </div>
                     <div class="col-md-4">
-                        <Rock:RockCheckBox ID="cbActive" runat="server" Label="Active" />
+                        <Rock:RockCheckBox ID="cbActive" runat="server" Label="Active" Checked="true" />
                     </div>
                 </div>
 

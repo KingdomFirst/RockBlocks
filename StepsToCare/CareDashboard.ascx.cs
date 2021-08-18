@@ -73,6 +73,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefinedTypeGuid = rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS
         )]
 
+    [LinkedPage(
+        "Configuration Page",
+        Description = "Page used to configure care workers and note templates.",
+        IsRequired = true,
+        Order = 4,
+        Key = AttributeKey.ConfigurationPage )]
+
     #endregion Block Settings
 
     public partial class CareDashboard : Rock.Web.UI.RockBlock
@@ -87,6 +94,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string DetailPage = "DetailPage";
             public const string CategoriesTemplate = "CategoriesTemplate";
             public const string OutstandingCareNeedsStatuses = "OutstandingCareNeedsStatuses";
+            public const string ConfigurationPage = "ConfigurationPage";
         }
 
         /// <summary>
@@ -252,6 +260,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             SetFilter();
             BindGrid();
+        }
+        protected void lbCareConfigure_Click( object sender, EventArgs e )
+        {
+            NavigateToLinkedPage( AttributeKey.ConfigurationPage );
         }
 
         /// <summary>
@@ -427,6 +439,57 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
         }
 
+        protected void btnNoteTemplate_Click( object sender, RowEventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                LinkButtonField field = sender as LinkButtonField;
+                var fieldId = field.ID.Replace( "btn_", "" );
+                var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
+                var careNoteService = new CareNoteService( rockContext );
+
+                var careNote = new CareNote { Id = 0 };
+                careNote.Note = noteTemplate.Note;
+                careNote.NeedId = e.RowKeyId;
+                careNote.CreatedByPersonAliasId = CurrentPersonAliasId;
+                careNote.ModifiedByPersonAliasId = CurrentPersonAliasId;
+                careNote.CopyAttributesFrom( noteTemplate );
+
+                if ( careNote.IsValid )
+                {
+                    careNoteService.Add( careNote );
+
+                    rockContext.WrapTransaction( () =>
+                    {
+                        rockContext.SaveChanges();
+                        careNote.SaveAttributeValues( rockContext );
+                    } );
+
+                    mdGridWarning.Show( "Note Saved: " + noteTemplate.Note, ModalAlertType.Information );
+                    BindGrid();
+                }
+                else
+                {
+                    mdGridWarning.Show( "Note is invalid. <br>" + careNote.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" ), ModalAlertType.Alert );
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles the Click event of the gCompileTheme control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        protected void gMakeNote_Click( object sender, RowEventArgs e )
+        {
+            var careNeed = new CareNeedService( new RockContext() ).Get( e.RowKeyId );
+            string messages = string.Empty;
+
+            // open note modal
+
+            mdGridWarning.Show( "Make a Note!", ModalAlertType.Information );
+        }
+
         /// <summary>
         /// Handles the AddClick event of the gList control.
         /// </summary>
@@ -442,7 +505,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 qryParams.Add( "PersonId", TargetPerson.Id.ToString() );
             }
 
-            NavigateToLinkedPage( "DetailPage", qryParams );
+            NavigateToLinkedPage( AttributeKey.DetailPage, qryParams );
         }
 
         /// <summary>
@@ -496,6 +559,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         private void gList_GridRebind( object sender, EventArgs e )
         {
             BindGrid();
+        }
+
+        protected void gList_RowCreated( object sender, GridViewRowEventArgs e )
+        {
+            if ( e.Row.RowType == DataControlRowType.Header )
+            {
+                if ( e.Row.Cells.Count > 10 )
+                {
+                    e.Row.Cells[7].ColumnSpan = 2;
+                    //now make up for the colspan from cell2
+                    e.Row.Cells.RemoveAt( 8 );
+                }
+            }
         }
 
         #endregion Events
@@ -558,6 +634,43 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         private void AddDynamicControls()
         {
+            using ( var rockContext = new RockContext() )
+            {
+                var noteTemplates = new NoteTemplateService( rockContext ).Queryable().AsNoTracking().Where( nt => nt.IsActive );
+                var firstCol = true;
+                foreach ( var template in noteTemplates )
+                {
+                    var btnId = string.Format( "btn_{0}", template.Id );
+                    bool btnColumnExists = gList.Columns.OfType<LinkButtonField>().FirstOrDefault( b => b.ID == btnId ) != null;
+                    if ( !btnColumnExists )
+                    {
+                        var btnNoteTemplate = new LinkButtonField();
+                        btnNoteTemplate.ID = btnId;
+                        btnNoteTemplate.Text = string.Format( "<i class='{0}'></i>", template.Icon );
+                        btnNoteTemplate.ToolTip = template.Note;
+                        btnNoteTemplate.Click += btnNoteTemplate_Click;
+                        if ( firstCol )
+                        {
+                            btnNoteTemplate.HeaderText = "Quick Notes";
+                            firstCol = false;
+                        }
+                        //btnNoteTemplate.CommandName = "QuickNote";
+                        //btnNoteTemplate.CommandArgument = template.Id.ToString() + "^" + careNeed.Id.ToString();
+                        btnNoteTemplate.CssClass = "btn btn-info btn-sm";
+                        gList.Columns.Add( btnNoteTemplate );
+                    }
+                }
+            }
+
+            var makeNoteField = new LinkButtonField();
+            makeNoteField.HeaderText = "Make Note";
+            makeNoteField.CssClass = "btn btn-primary btn-make-note btn-sm w-auto";
+            makeNoteField.Text = "Make Note";
+            makeNoteField.Click += gMakeNote_Click;
+            makeNoteField.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
+            makeNoteField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+            gList.Columns.Add( makeNoteField );
+
             if ( AvailableAttributes != null )
             {
                 foreach ( var attribute in AvailableAttributes )
