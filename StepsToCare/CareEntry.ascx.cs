@@ -17,7 +17,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data.Entity;
 using System.Linq;
+using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Rock;
@@ -49,6 +51,34 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         bool _allowNewPerson = false;
 
+        #region Properties
+        /// <summary>
+        /// Gets or sets the individual recipient person ids.
+        /// </summary>
+        /// <value>
+        /// The individual recipient person ids.
+        /// </value>
+        protected List<int> AssignedPersonIds
+        {
+            get
+            {
+                var recipients = ViewState["AssignedPersonIds"] as List<int>;
+                if ( recipients == null )
+                {
+                    recipients = new List<int>();
+                    ViewState["AssignedPersonIds"] = recipients;
+                }
+
+                return recipients;
+            }
+
+            set
+            {
+                ViewState["AssignedPersonIds"] = value;
+            }
+        }
+        #endregion
+
         #region Base Control Methods
 
         /// <summary>
@@ -61,6 +91,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlCareEntry );
+
+            gAssignedPersons.DataKeyNames = new string[] { "Id" };
+            gAssignedPersons.GridRebind += gAssignedPersons_GridRebind;
+            gAssignedPersons.Actions.ShowAdd = false;
+            gAssignedPersons.ShowActionRow = false;
 
             _allowNewPerson = GetAttributeValue( "AllowNewPerson" ).AsBoolean();
         }
@@ -120,6 +155,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 RockContext rockContext = new RockContext();
                 CareNeedService careNeedService = new CareNeedService( rockContext );
+                AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
 
                 CareNeed careNeed = null;
                 int careNeedId = PageParameter( "CareNeedId" ).AsInteger();
@@ -241,6 +277,42 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 if ( dpDate.SelectedDate.HasValue )
                 {
                     careNeed.DateEntered = dpDate.SelectedDate.Value;
+                }
+
+                if ( careNeed.AssignedPersons != null )
+                {
+                    if ( AssignedPersonIds.Any() )
+                    {
+                        var assignedPersonsLookup = new PersonService( rockContext )
+                            .Queryable()
+                            .Where( a => AssignedPersonIds.Contains( a.Id ) )
+                            .Select( p => new
+                            {
+                                PrimaryAlias = p.Aliases.Where( x => x.AliasPersonId == x.PersonId ).Select( pa => pa ).FirstOrDefault()
+                            }
+                            );
+
+                        foreach ( var alias in assignedPersonsLookup )
+                        {
+                            if ( !careNeed.AssignedPersons.Any( ap => ap.PersonAliasId == alias.PrimaryAlias.Id ) )
+                            {
+                                var assignedPerson = new AssignedPerson
+                                {
+                                    PersonAlias = alias.PrimaryAlias,
+                                    PersonAliasId = alias.PrimaryAlias.Id
+                                };
+                                careNeed.AssignedPersons.Add( assignedPerson );
+                            }
+                        }
+                        var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.PrimaryAlias.Id ).ToList().Contains( ap.PersonAliasId.Value ) ).ToList();
+                        assignedPersonService.DeleteRange( removePersons );
+                        careNeed.AssignedPersons.RemoveAll( removePersons );
+                    }
+                    else if ( careNeed.AssignedPersons.Any() )
+                    {
+                        assignedPersonService.DeleteRange( careNeed.AssignedPersons );
+                        careNeed.AssignedPersons.Clear();
+                    }
                 }
 
                 if ( careNeed.IsValid )
@@ -371,7 +443,104 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
             }
         }
+        /// <summary>
+        /// Handles the Click event of the btnDeleteSelectedAssignedPersons control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void btnDeleteSelectedAssignedPersons_Click( object sender, EventArgs e )
+        {
+            // get the selected personIds
+            bool removeAll = false;
+            var selectField = gAssignedPersons.ColumnsOfType<SelectField>().First();
+            if ( selectField != null && selectField.HeaderCheckbox != null )
+            {
+                // if the 'Select All' checkbox in the header is checked, and they haven't unselected anything, then assume they want to remove all recipients
+                removeAll = selectField.HeaderCheckbox.Checked && gAssignedPersons.SelectedKeys.Count == gAssignedPersons.PageSize;
+            }
 
+            if ( removeAll )
+            {
+                AssignedPersonIds.Clear();
+            }
+            else
+            {
+                var selectedPersonIds = gAssignedPersons.SelectedKeys.OfType<int>().ToList();
+                AssignedPersonIds.RemoveAll( a => selectedPersonIds.Contains( a ) );
+            }
+
+            BindAssignedPersonsGrid();
+
+        }
+
+        /// <summary>
+        /// Handles the RowDataBound event of the gAssignedPersons control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="GridViewRowEventArgs"/> instance containing the event data.</param>
+        protected void gAssignedPersons_RowDataBound( object sender, GridViewRowEventArgs e )
+        {
+            // Don't need it to do anything yet, mainly for alerts or notes?
+            var recipientPerson = e.Row.DataItem as Person;
+        }
+
+        /// <summary>
+        /// Handles the GridRebind event of the gAssignedPersons control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="GridRebindEventArgs"/> instance containing the event data.</param>
+        private void gAssignedPersons_GridRebind( object sender, GridRebindEventArgs e )
+        {
+            BindAssignedPersonsGrid();
+        }
+        /// <summary>
+        /// Handles the DeleteClick event of the gAssignedPersons control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        protected void gAssignedPersons_DeleteClick( object sender, RowEventArgs e )
+        {
+            this.AssignedPersonIds.Remove( e.RowKeyId );
+            BindAssignedPersonsGrid();
+        }
+
+        /// <summary>
+        /// Handles the SelectPerson event of the ppAddPerson control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void ppAddPerson_SelectPerson( object sender, EventArgs e )
+        {
+            if ( ppAddPerson.PersonId.HasValue )
+            {
+                if ( !AssignedPersonIds.Contains( ppAddPerson.PersonId.Value ) )
+                {
+                    AssignedPersonIds.Add( ppAddPerson.PersonId.Value );
+                    BindAssignedPersonsGrid();
+                }
+
+                // clear out the personpicker and have it say "Add Person" again since they are added to the list
+                ppAddPerson.SetValue( null );
+                ppAddPerson.PersonName = "Add Person";
+            }
+        }
+
+        /// <summary>
+        /// Handles the SelectionChanged event of the worker control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void bddlAddWorker_SelectionChanged( object sender, EventArgs e )
+        {
+            var selectedVal = bddlAddWorker.SelectedValueAsInt();
+            if ( selectedVal != null && !AssignedPersonIds.Contains( bddlAddWorker.SelectedValueAsInt() ?? 0 ) )
+            {
+                AssignedPersonIds.Add( bddlAddWorker.SelectedValueAsInt() ?? 0 );
+                BindAssignedPersonsGrid();
+            }
+
+            bddlAddWorker.ClearSelection();
+        }
         #endregion
 
         #region Methods
@@ -475,6 +644,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 ppSubmitter.SetValue( null );
             }
 
+            if ( careNeed.AssignedPersons != null )
+            {
+                AssignedPersonIds = careNeed.AssignedPersons.Select( a => a.PersonAlias.PersonId ).ToList();
+                BindAssignedPersonsGrid();
+            }
+            else
+            {
+                pwAssigned.Visible = false;
+            }
+
             careNeed.LoadAttributes();
             Helper.AddEditControls( careNeed, phAttributes, true, BlockValidationGroup, 2 );
 
@@ -491,8 +670,54 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             dvpStatus.DefinedTypeId = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) ).Id;
             dvpCategory.DefinedTypeId = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) ).Id;
 
+            using ( var rockContext = new RockContext() )
+            {
+                var careWorkerService = new CareWorkerService( rockContext );
+                var careWorkers = careWorkerService.Queryable()
+                    .AsNoTracking()
+                    .Where( cw => cw.IsActive && cw.PersonAlias != null )
+                    .OrderBy( cw => cw.PersonAlias.Person.LastName )
+                    .ThenBy( cw => cw.PersonAlias.Person.NickName )
+                    .Select( cw => new
+                    {
+                        Value = cw.PersonAlias.PersonId,
+                        Label = cw.PersonAlias.Person.NickName + " " + cw.PersonAlias.Person.LastName
+                    } )
+                    .Distinct()
+                    .ToList();
+
+                bddlAddWorker.DataSource = careWorkers;
+                bddlAddWorker.DataBind();
+            }
             ppSubmitter.Visible = true;
         }
+
+        /// <summary>
+        /// Binds the Assigned Persons grid.
+        /// </summary>
+        private void BindAssignedPersonsGrid()
+        {
+            List<int> idList = this.AssignedPersonIds;
+
+            using ( var rockContext = new RockContext() )
+            {
+                var personService = new PersonService( rockContext );
+                var qryPersons = personService
+                    .Queryable( true )
+                    .AsNoTracking()
+                    .Where( a => idList.Contains( a.Id ) )
+                    .OrderBy( a => a.LastName )
+                    .ThenBy( a => a.NickName );
+
+                // Bind the list items to the grid.
+                gAssignedPersons.SetLinqDataSource( qryPersons );
+
+                gAssignedPersons.DataBind();
+            }
+
+            btnDeleteSelectedAssignedPersons.Visible = idList.Any();
+        }
+
 
         #endregion
     }

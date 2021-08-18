@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
+using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Newtonsoft.Json;
@@ -154,6 +155,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// </summary>
         private bool _canAddEditDelete = false;
 
+        private readonly string _photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
+
         #endregion Private Members
 
         #region Base Control Methods
@@ -191,6 +194,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
+
+            /// add lazyload js so that person-link-popover javascript works (see CareDashboard.ascx)
+            RockPage.AddScriptLink( "~/Scripts/jquery.lazyload.min.js" );
+
             gList.GridRebind += gList_GridRebind;
 
             // this event gets fired after block settings are updated. it's nice to repaint the screen if these settings would alter it
@@ -261,6 +268,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             SetFilter();
             BindGrid();
         }
+        /// <summary>
+        /// Handles the Click event of the lbCareConfigure control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void lbCareConfigure_Click( object sender, EventArgs e )
         {
             NavigateToLinkedPage( AttributeKey.ConfigurationPage );
@@ -409,6 +421,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                     }
 
+                    Literal lAssigned = e.Row.FindControl( "lAssigned" ) as Literal;
+                    if ( lAssigned != null )
+                    {
+                        if ( careNeed.AssignedPersons.Any() )
+                        {
+                            StringBuilder sbPersonHtml = new StringBuilder();
+                            foreach ( var assignedPerson in careNeed.AssignedPersons )
+                            {
+                                var person = assignedPerson.PersonAlias.Person;
+                                sbPersonHtml.AppendFormat( _photoFormat, person.Id, person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) );
+                            }
+                            lAssigned.Text = sbPersonHtml.ToString();
+                        }
+                    }
+
                     HighlightLabel hlStatus = e.Row.FindControl( "hlStatus" ) as HighlightLabel;
                     if ( hlStatus != null )
                     {
@@ -439,6 +466,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
         }
 
+        /// <summary>
+        /// Handles the Click event of the btnNoteTemplate control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         protected void btnNoteTemplate_Click( object sender, RowEventArgs e )
         {
             using ( var rockContext = new RockContext() )
@@ -476,7 +508,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         }
 
         /// <summary>
-        /// Handles the Click event of the gCompileTheme control.
+        /// Handles the Click event of the gMakeNote control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
@@ -561,15 +593,22 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             BindGrid();
         }
 
+        /// <summary>
+        /// Handles the RowCreated event of the gList control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="GridViewRowEventArgs"/> instance containing the event data.</param>
         protected void gList_RowCreated( object sender, GridViewRowEventArgs e )
         {
             if ( e.Row.RowType == DataControlRowType.Header )
             {
-                if ( e.Row.Cells.Count > 10 )
+                var notesField = gList.GetColumnByHeaderText( "Quick Notes" );
+                var notesFieldIndex = gList.GetColumnIndex( notesField );
+                if ( e.Row.Cells.Count > notesFieldIndex + 3 ) // ensure there are more columns to colspan with, +3 for itself, make a note and delete columns
                 {
-                    e.Row.Cells[7].ColumnSpan = 2;
+                    e.Row.Cells[notesFieldIndex].ColumnSpan = 2;
                     //now make up for the colspan from cell2
-                    e.Row.Cells.RemoveAt( 8 );
+                    e.Row.Cells.RemoveAt( notesFieldIndex + 1 );
                 }
             }
         }
@@ -632,11 +671,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             AddDynamicControls();
         }
 
+        /// <summary>
+        /// Adds dynamic columns and filter controls for note templates and attributes.
+        /// </summary>
         private void AddDynamicControls()
         {
             using ( var rockContext = new RockContext() )
             {
-                var noteTemplates = new NoteTemplateService( rockContext ).Queryable().AsNoTracking().Where( nt => nt.IsActive );
+                var noteTemplates = new NoteTemplateService( rockContext ).Queryable().AsNoTracking().Where( nt => nt.IsActive ).OrderBy( nt => nt.Order );
                 var firstCol = true;
                 foreach ( var template in noteTemplates )
                 {
