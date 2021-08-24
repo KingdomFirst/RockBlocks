@@ -63,6 +63,7 @@
                             <Rock:DefinedValuePicker ID="dvpStatus" runat="server" Label="Status" DataTextField="Value" DataValueField="Id" />
                             <Rock:RockDropDownList ID="ddlSubmitter" runat="server" Label="Submitted By" EnhanceForLongLists="true" />
                             <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
+                            <Rock:RockCheckBox ID="cbAssignedToMe" runat="server" Label="Assigned to Me" />
                             <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
                         </Rock:GridFilter>
                         <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" OnRowDataBound="gList_RowDataBound" OnRowSelected="gList_Edit" OnRowCreated="gList_RowCreated" ExportSource="DataSource">
@@ -93,7 +94,6 @@
                             </Columns>
                         </Rock:Grid>
                     </div>
-
                 </div>
             </div>
             <script type="text/javascript">
@@ -149,12 +149,10 @@
 
                 <asp:ValidationSummary ID="vsMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="MakeNote" />
 
-                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" Rows="4"></Rock:RockTextBox>
+                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" Rows="4" TextMode="MultiLine" Placeholder="Write a note..." Required="true" ValidationGroup="MakeNote"></Rock:RockTextBox>
 
                 <Rock:DynamicPlaceholder ID="phMakeNoteAttributes" runat="server" />
-
             </Content>
         </Rock:ModalDialog>
-
     </ContentTemplate>
 </asp:UpdatePanel>
