@@ -111,6 +111,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string Category = "Category";
             public const string Status = "Status";
             public const string Campus = "Campus";
+            public const string AssignedToMe = "Assigned to Me";
         }
 
         /// <summary>
@@ -293,6 +294,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             rFilter.SaveUserPreference( UserPreferenceKey.Category, "Category", dvpCategory.SelectedValues.AsDelimited( ";" ) );
             rFilter.SaveUserPreference( UserPreferenceKey.Status, "Status", dvpStatus.SelectedItem.Value );
             rFilter.SaveUserPreference( UserPreferenceKey.Campus, "Campus", cpCampus.SelectedCampusId.ToString() );
+            rFilter.SaveUserPreference( UserPreferenceKey.AssignedToMe, "Assigned to Me", cbAssignedToMe.Checked.ToString() );
 
             if ( AvailableAttributes != null )
             {
@@ -384,6 +386,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                     }
 
+                    return;
+
+                case UserPreferenceKey.AssignedToMe:
                     return;
 
                 default:
@@ -691,6 +696,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             dvpStatus.DefinedTypeId = statusDefinedType.Id;
             dvpStatus.SetValue( rFilter.GetUserPreference( UserPreferenceKey.Status ) );
 
+            cbAssignedToMe.Checked = rFilter.GetUserPreference( UserPreferenceKey.AssignedToMe ).AsBoolean();
+
             var template = GetAttributeValue( AttributeKey.CategoriesTemplate );
 
             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
@@ -891,6 +898,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( categories.Any() )
             {
                 qry = qry.Where( cn => cn.CategoryValueId != null && categories.Contains( cn.CategoryValueId.Value ) );
+            }
+
+            // Filter by Assigned to Me
+            if ( cbAssignedToMe.Checked )
+            {
+                qry = qry.Where( cn => cn.AssignedPersons.Count( ap => ap.PersonAliasId == CurrentPersonAliasId ) > 0 );
             }
 
             SortProperty sortProperty = gList.SortProperty;

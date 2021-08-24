@@ -32,7 +32,6 @@
                     </Rock:Grid>
                 </div>
             </div>
-
         </asp:Panel>
 
         <Rock:ModalDialog ID="mdAddNoteTemplate" runat="server" Title="Add Worker" OnSaveClick="mdAddNoteTemplate_SaveClick" OnSaveThenAddClick="mdAddNoteTemplate_SaveThenAddClick" ValidationGroup="AddNoteTemplate">
@@ -53,9 +52,7 @@
                 </div>
 
                 <Rock:DynamicPlaceholder ID="phAttributes" runat="server" />
-
             </Content>
         </Rock:ModalDialog>
-
     </ContentTemplate>
 </asp:UpdatePanel>
