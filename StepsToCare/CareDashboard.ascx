@@ -55,7 +55,8 @@
                     </div>
 
                     <div class="grid grid-panel">
-                        <Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue">
+                        <h5 class="pl-2">Care Dashboard</h5>
+                        <Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue" OnClearFilterClick="rFilter_ClearFilterClick">
                             <Rock:DateRangePicker ID="drpDate" runat="server" Label="Date Range" />
                             <Rock:RockTextBox ID="tbFirstName" runat="server" Label="First Name" />
                             <Rock:RockTextBox ID="tbLastName" runat="server" Label="Last Name" />
@@ -77,12 +78,44 @@
                                 </Rock:RockTemplateField>
                                 <Rock:RockBoundField DataField="Details" HeaderText="Details" SortExpression="Details" />
                                 <Rock:RockBoundField DataField="DateEntered" HeaderText="Date" DataFormatString="{0:d}" SortExpression="DateEntered" />
-
-                                <Rock:RockTemplateField SortExpression="Status.Value" HeaderText="Status">
+                                <Rock:RockBoundField DataField="Campus.Name" HeaderText="Campus" SortExpression="Campus.Name" />
+                                <Rock:RockTemplateField HeaderText="Care Touches" HeaderStyle-CssClass="text-center" ItemStyle-CssClass="text-center">
                                     <ItemTemplate>
-                                        <Rock:HighlightLabel ID="hlStatus" runat="server" />
+                                        <asp:Literal ID="lCareTouches" runat="server"></asp:Literal>
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
+                                <Rock:RockTemplateField HeaderText="Assigned">
+                                    <ItemTemplate>
+                                        <asp:Literal ID="lAssigned" runat="server"></asp:Literal>
+                                    </ItemTemplate>
+                                </Rock:RockTemplateField>
+                                <%-- Columns are dynamically added due to dynamic content --%>
+                            </Columns>
+                        </Rock:Grid>
+                    </div>
+                    <div class="grid grid-panel">
+                        <h5 class="pl-2">Care Follow Up</h5>
+                        <Rock:GridFilter ID="rFollowUpFilter" runat="server" OnDisplayFilterValue="rFollowUpFilter_DisplayFilterValue" OnApplyFilterClick="rFollowUpFilter_ApplyFilterClick" OnClearFilterClick="rFollowUpFilter_ClearFilterClick">
+                            <Rock:DateRangePicker ID="drpFollowUpDate" runat="server" Label="Date Range" />
+                            <Rock:RockTextBox ID="tbFollowUpFirstName" runat="server" Label="First Name" />
+                            <Rock:RockTextBox ID="tbFollowUpLastName" runat="server" Label="Last Name" />
+                            <Rock:DefinedValuesPicker ID="dvpFollowUpCategory" runat="server" Label="Category" DataTextField="Value" DataValueField="Id" />
+                            <Rock:RockDropDownList ID="ddlFollowUpSubmitter" runat="server" Label="Submitted By" EnhanceForLongLists="true" />
+                            <Rock:CampusPicker ID="cpFollowUpCampus" runat="server" Label="Campus" />
+                            <Rock:RockCheckBox ID="cbFollowUpAssignedToMe" runat="server" Label="Assigned to Me" Checked="true" />
+                            <asp:PlaceHolder ID="phFollowUpAttributeFilters" runat="server" />
+                        </Rock:GridFilter>
+                        <Rock:Grid ID="gFollowUp" runat="server" DisplayType="Full" AllowSorting="true" OnRowDataBound="gList_RowDataBound" OnRowSelected="gList_Edit" OnRowCreated="gList_RowCreated" ExportSource="DataSource">
+                            <Columns>
+                                <Rock:ColorField DataField="Category.AttributeValues.Color" ToolTipDataField="Category.Value" HeaderText="Cat" SortExpression="Category.Value" />
+
+                                <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name">
+                                    <ItemTemplate>
+                                        <asp:Literal ID="lName" runat="server" />
+                                    </ItemTemplate>
+                                </Rock:RockTemplateField>
+                                <Rock:RockBoundField DataField="Details" HeaderText="Details" SortExpression="Details" />
+                                <Rock:RockBoundField DataField="DateEntered" HeaderText="Date" DataFormatString="{0:d}" SortExpression="DateEntered" />
                                 <Rock:RockBoundField DataField="Campus.Name" HeaderText="Campus" SortExpression="Campus.Name" />
                                 <Rock:RockTemplateField HeaderText="Care Touches" HeaderStyle-CssClass="text-center" ItemStyle-CssClass="text-center">
                                     <ItemTemplate>

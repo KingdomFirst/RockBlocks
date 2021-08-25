@@ -177,6 +177,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string Status = "Status";
             public const string Campus = "Campus";
             public const string AssignedToMe = "Assigned to Me";
+            public const string StartDateFollowUp = "FollowUp Start Date";
+            public const string EndDateFollowUp = "FollowUp End Date";
+            public const string FirstNameFollowUp = "FollowUp First Name";
+            public const string LastNameFollowUp = "FollowUp Last Name";
+            public const string SubmittedByFollowUp = "FollowUp Submitted By";
+            public const string CategoryFollowUp = "FollowUp Category";
+            public const string StatusFollowUp = "FollowUp Status";
+            public const string CampusFollowUp = "FollowUp Campus";
+            public const string AssignedToMeFollowUp = "FollowUp Assigned to Me";
         }
 
         /// <summary>
@@ -272,6 +281,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlCareDashboard );
             rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
+            rFollowUpFilter.ApplyFilterClick += rFollowUpFilter_ApplyFilterClick;
 
             _canAddEditDelete = IsUserAuthorized( Authorization.EDIT );
 
@@ -281,6 +291,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gList.Actions.ShowAdd = _canAddEditDelete;
             gList.Actions.AddClick += gList_AddClick;
             gList.IsDeleteEnabled = _canAddEditDelete;
+
+            gFollowUp.GridRebind += gList_GridRebind;
+            gFollowUp.RowDataBound += gList_RowDataBound;
+            gFollowUp.DataKeyNames = new string[] { "Id" };
+            gFollowUp.Actions.ShowAdd = false;
+            gFollowUp.Actions.ShowMergeTemplate = false;
 
             mdMakeNote.Footer.Visible = false;
 
@@ -396,8 +412,61 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
             }
 
-            BindGrid();
+            BindMainGrid( null, null, null );
         }
+
+        /// <summary>
+        /// Handles the ApplyFilterClick event of the rFilter control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
+        protected void rFollowUpFilter_ApplyFilterClick( object sender, EventArgs e )
+        {
+            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.StartDateFollowUp, "Start Date", drpFollowUpDate.LowerValue.HasValue ? drpFollowUpDate.LowerValue.Value.ToString( "o" ) : string.Empty );
+            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.EndDateFollowUp, "End Date", drpFollowUpDate.UpperValue.HasValue ? drpFollowUpDate.UpperValue.Value.ToString( "o" ) : string.Empty );
+            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.FirstNameFollowUp, "First Name", tbFollowUpFirstName.Text );
+            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.LastNameFollowUp, "Last Name", tbFollowUpLastName.Text );
+            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.SubmittedByFollowUp, "Submitted By", ddlFollowUpSubmitter.SelectedItem.Value );
+            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.CategoryFollowUp, "Category", dvpFollowUpCategory.SelectedValues.AsDelimited( ";" ) );
+            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.CampusFollowUp, "Campus", cpFollowUpCampus.SelectedCampusId.ToString() );
+            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.AssignedToMeFollowUp, "Assigned to Me", cbFollowUpAssignedToMe.Checked.ToString() );
+
+            if ( AvailableAttributes != null )
+            {
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    var filterControl = phFollowUpAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    if ( filterControl != null )
+                    {
+                        try
+                        {
+                            var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
+                            rFollowUpFilter.SaveUserPreference( attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                        }
+                        catch
+                        {
+                            // intentionally ignore
+                        }
+                    }
+                }
+            }
+
+            BindFollowUpGrid( null, null, null );
+        }
+
+        protected void rFilter_ClearFilterClick( object sender, EventArgs e )
+        {
+            rFilter.DeleteUserPreferences();
+            SetFilter( false );
+            BindMainGrid( null, null, null );
+        }
+        protected void rFollowUpFilter_ClearFilterClick( object sender, EventArgs e )
+        {
+            rFollowUpFilter.DeleteUserPreferences();
+            SetFilter( false );
+            BindFollowUpGrid( null, null, null );
+        }
+
 
         /// <summary>
         /// Handles the filter display for each saved user value
@@ -423,8 +492,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     return;
 
                 case UserPreferenceKey.FirstName:
-                    return;
-
                 case UserPreferenceKey.LastName:
                     return;
 
@@ -469,8 +536,77 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     return;
 
                 case UserPreferenceKey.AssignedToMe:
+                    if ( !e.Value.AsBoolean() )
+                    {
+                        e.Value = string.Empty;
+                    }
+                    return;
+                default:
+                    e.Value = string.Empty;
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Handles the filter display for each saved user value
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The e.</param>
+        protected void rFollowUpFilter_DisplayFilterValue( object sender, GridFilter.DisplayFilterValueArgs e )
+        {
+            switch ( e.Key )
+            {
+                case UserPreferenceKey.StartDateFollowUp:
+                case UserPreferenceKey.EndDateFollowUp:
+                    var dateTime = e.Value.AsDateTime();
+                    if ( dateTime.HasValue )
+                    {
+                        e.Value = dateTime.Value.ToShortDateString();
+                    }
+                    else
+                    {
+                        e.Value = null;
+                    }
+
                     return;
 
+                case UserPreferenceKey.FirstNameFollowUp:
+                case UserPreferenceKey.LastNameFollowUp:
+                    return;
+
+                case UserPreferenceKey.CampusFollowUp:
+                    {
+                        int? campusId = e.Value.AsIntegerOrNull();
+                        if ( campusId.HasValue )
+                        {
+                            e.Value = CampusCache.Get( campusId.Value ).Name;
+                        }
+                        return;
+                    }
+
+                case UserPreferenceKey.SubmittedByFollowUp:
+                    int? personAliasId = e.Value.AsIntegerOrNull();
+                    if ( personAliasId.HasValue )
+                    {
+                        var personAlias = new PersonAliasService( new RockContext() ).Get( personAliasId.Value );
+                        if ( personAlias != null )
+                        {
+                            e.Value = personAlias.Person.FullName;
+                        }
+                    }
+
+                    return;
+
+                case UserPreferenceKey.CategoryFollowUp:
+                    e.Value = ResolveValues( e.Value, dvpCategory );
+                    return;
+
+                case UserPreferenceKey.AssignedToMeFollowUp:
+                    if ( !e.Value.AsBoolean() )
+                    {
+                        e.Value = string.Empty;
+                    }
+                    return;
                 default:
                     e.Value = string.Empty;
                     return;
@@ -539,33 +675,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 sbPersonHtml.AppendFormat( _photoFormat, person.Id, person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) );
                             }
                             lAssigned.Text = sbPersonHtml.ToString();
-                        }
-                    }
-
-                    HighlightLabel hlStatus = e.Row.FindControl( "hlStatus" ) as HighlightLabel;
-                    if ( hlStatus != null )
-                    {
-                        switch ( careNeed.Status.Value )
-                        {
-                            case "Open":
-                                hlStatus.Text = "Open";
-                                hlStatus.LabelType = LabelType.Success;
-                                return;
-
-                            case "Follow Up":
-                                hlStatus.Text = "Follow Up";
-                                hlStatus.LabelType = LabelType.Danger;
-                                return;
-
-                            case "Closed":
-                                hlStatus.Text = "Closed";
-                                hlStatus.LabelType = LabelType.Default;
-                                return;
-
-                            default:
-                                hlStatus.Text = careNeed.Status.Value;
-                                hlStatus.LabelType = LabelType.Info;
-                                return;
                         }
                     }
                 }
@@ -779,101 +888,103 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <summary>
         /// Binds the filter.
         /// </summary>
-        private void SetFilter()
+        private void SetFilter( bool refreshColumns = true )
         {
-            drpDate.LowerValue = rFilter.GetUserPreference( UserPreferenceKey.StartDate ).AsDateTime();
-            drpDate.UpperValue = rFilter.GetUserPreference( UserPreferenceKey.EndDate ).AsDateTime();
-
-            cpCampus.Campuses = CampusCache.All();
-            cpCampus.SelectedCampusId = rFilter.GetUserPreference( UserPreferenceKey.Campus ).AsInteger();
-
-            // hide the First/Last name filter if this is being used as a Person block
-            tbFirstName.Visible = TargetPerson == null;
-            tbLastName.Visible = TargetPerson == null;
-
-            tbFirstName.Text = rFilter.GetUserPreference( UserPreferenceKey.FirstName );
-            tbLastName.Text = rFilter.GetUserPreference( UserPreferenceKey.LastName );
-
-            var listData = new CareNeedService( new RockContext() ).Queryable( "PersonAlias,PersonAlias.Person" )
-                .Where( cn => cn.SubmitterAliasId != null )
-                .Select( cn => cn.SubmitterPersonAlias.Person )
-                .Distinct()
-                .ToList();
-            ddlSubmitter.DataSource = listData;
-            ddlSubmitter.DataTextField = "FullName";
-            ddlSubmitter.DataValueField = "PrimaryAliasId";
-            ddlSubmitter.DataBind();
-            ddlSubmitter.Items.Insert( 0, new ListItem() );
-            ddlSubmitter.SetValue( rFilter.GetUserPreference( UserPreferenceKey.SubmittedBy ) );
-
-            var categoryDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) );
-            dvpCategory.DefinedTypeId = categoryDefinedType.Id;
-            string categoryValue = rFilter.GetUserPreference( UserPreferenceKey.Category );
-            if ( !string.IsNullOrWhiteSpace( categoryValue ) )
+            using ( var rockContext = new RockContext() )
             {
-                dvpCategory.SetValues( categoryValue.Split( ';' ).ToList() );
+                drpDate.LowerValue = rFilter.GetUserPreference( UserPreferenceKey.StartDate ).AsDateTime();
+                drpDate.UpperValue = rFilter.GetUserPreference( UserPreferenceKey.EndDate ).AsDateTime();
+                drpFollowUpDate.LowerValue = rFollowUpFilter.GetUserPreference( UserPreferenceKey.StartDateFollowUp ).AsDateTime();
+                drpFollowUpDate.UpperValue = rFollowUpFilter.GetUserPreference( UserPreferenceKey.EndDateFollowUp ).AsDateTime();
+
+                cpCampus.Campuses = CampusCache.All();
+                cpCampus.SelectedCampusId = rFilter.GetUserPreference( UserPreferenceKey.Campus ).AsInteger();
+                cpFollowUpCampus.Campuses = CampusCache.All();
+                cpFollowUpCampus.SelectedCampusId = rFollowUpFilter.GetUserPreference( UserPreferenceKey.CampusFollowUp ).AsInteger();
+
+                // hide the First/Last name filter if this is being used as a Person block
+                tbFirstName.Visible = TargetPerson == null;
+                tbLastName.Visible = TargetPerson == null;
+                tbFollowUpFirstName.Visible = TargetPerson == null;
+                tbFollowUpLastName.Visible = TargetPerson == null;
+
+                tbFirstName.Text = rFilter.GetUserPreference( UserPreferenceKey.FirstName );
+                tbLastName.Text = rFilter.GetUserPreference( UserPreferenceKey.LastName );
+                tbFollowUpFirstName.Text = rFollowUpFilter.GetUserPreference( UserPreferenceKey.FirstNameFollowUp );
+                tbFollowUpLastName.Text = rFollowUpFilter.GetUserPreference( UserPreferenceKey.LastNameFollowUp );
+
+                var listData = new CareNeedService( rockContext ).Queryable( "PersonAlias,PersonAlias.Person" )
+                    .Where( cn => cn.SubmitterAliasId != null )
+                    .Select( cn => cn.SubmitterPersonAlias.Person )
+                    .Distinct()
+                    .ToList();
+                ddlSubmitter.DataSource = listData;
+                ddlSubmitter.DataTextField = "FullName";
+                ddlSubmitter.DataValueField = "PrimaryAliasId";
+                ddlSubmitter.DataBind();
+                ddlSubmitter.Items.Insert( 0, new ListItem() );
+                ddlSubmitter.SetValue( rFilter.GetUserPreference( UserPreferenceKey.SubmittedBy ) );
+
+                ddlFollowUpSubmitter.DataSource = listData;
+                ddlFollowUpSubmitter.DataTextField = "FullName";
+                ddlFollowUpSubmitter.DataValueField = "PrimaryAliasId";
+                ddlFollowUpSubmitter.DataBind();
+                ddlFollowUpSubmitter.Items.Insert( 0, new ListItem() );
+                ddlFollowUpSubmitter.SetValue( rFollowUpFilter.GetUserPreference( UserPreferenceKey.SubmittedByFollowUp ) );
+
+                var categoryDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) );
+                dvpCategory.DefinedTypeId = categoryDefinedType.Id;
+                string categoryValue = rFilter.GetUserPreference( UserPreferenceKey.Category );
+                if ( !string.IsNullOrWhiteSpace( categoryValue ) )
+                {
+                    dvpCategory.SetValues( categoryValue.Split( ';' ).ToList() );
+                }
+                dvpFollowUpCategory.DefinedTypeId = categoryDefinedType.Id;
+                string categoryValueFollowUp = rFollowUpFilter.GetUserPreference( UserPreferenceKey.CategoryFollowUp );
+                if ( !string.IsNullOrWhiteSpace( categoryValueFollowUp ) )
+                {
+                    dvpFollowUpCategory.SetValues( categoryValueFollowUp.Split( ';' ).ToList() );
+                }
+
+                var statusDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) );
+                dvpStatus.DefinedTypeId = statusDefinedType.Id;
+                var statusValue = rFilter.GetUserPreference( UserPreferenceKey.Status );
+                if ( string.IsNullOrWhiteSpace( statusValue ) )
+                {
+                    statusValue = new DefinedValueService( rockContext ).Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() ).Id.ToString();
+                    ;
+                }
+                dvpStatus.SetValue( statusValue );
+
+                cbAssignedToMe.Checked = rFilter.GetUserPreference( UserPreferenceKey.AssignedToMe ).AsBoolean();
+                var followUpAssignedToMe = rFollowUpFilter.GetUserPreference( UserPreferenceKey.AssignedToMeFollowUp );
+                if ( !string.IsNullOrWhiteSpace( followUpAssignedToMe ) )
+                {
+                    cbFollowUpAssignedToMe.Checked = followUpAssignedToMe.AsBoolean();
+                }
+                else
+                {
+                    cbFollowUpAssignedToMe.Checked = true;
+                }
+
+                var template = GetAttributeValue( AttributeKey.CategoriesTemplate );
+
+                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                mergeFields.Add( "Categories", categoryDefinedType.DefinedValues );
+                mergeFields.Add( "Statuses", statusDefinedType.DefinedValues );
+                lCategories.Text = template.ResolveMergeFields( mergeFields );
             }
-
-            var statusDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) );
-            dvpStatus.DefinedTypeId = statusDefinedType.Id;
-            dvpStatus.SetValue( rFilter.GetUserPreference( UserPreferenceKey.Status ) );
-
-            cbAssignedToMe.Checked = rFilter.GetUserPreference( UserPreferenceKey.AssignedToMe ).AsBoolean();
-
-            var template = GetAttributeValue( AttributeKey.CategoriesTemplate );
-
-            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
-            mergeFields.Add( "Categories", categoryDefinedType.DefinedValues );
-            mergeFields.Add( "Statuses", statusDefinedType.DefinedValues );
-            lCategories.Text = template.ResolveMergeFields( mergeFields );
 
             // set attribute filters
             BindAttributes();
-            AddDynamicControls();
+            AddDynamicControls( refreshColumns );
         }
 
         /// <summary>
         /// Adds dynamic columns and filter controls for note templates and attributes.
         /// </summary>
-        private void AddDynamicControls()
+        private void AddDynamicControls( bool addColumns = true )
         {
-            using ( var rockContext = new RockContext() )
-            {
-                var noteTemplates = new NoteTemplateService( rockContext ).Queryable().AsNoTracking().Where( nt => nt.IsActive ).OrderBy( nt => nt.Order );
-                var firstCol = true;
-                foreach ( var template in noteTemplates )
-                {
-                    var btnId = string.Format( "btn_{0}", template.Id );
-                    bool btnColumnExists = gList.Columns.OfType<LinkButtonField>().FirstOrDefault( b => b.ID == btnId ) != null;
-                    if ( !btnColumnExists )
-                    {
-                        var btnNoteTemplate = new LinkButtonField();
-                        btnNoteTemplate.ID = btnId;
-                        btnNoteTemplate.Text = string.Format( "<i class='{0}'></i>", template.Icon );
-                        btnNoteTemplate.ToolTip = template.Note;
-                        btnNoteTemplate.Click += btnNoteTemplate_Click;
-                        if ( firstCol )
-                        {
-                            btnNoteTemplate.HeaderText = "Quick Notes";
-                            firstCol = false;
-                        }
-                        //btnNoteTemplate.CommandName = "QuickNote";
-                        //btnNoteTemplate.CommandArgument = template.Id.ToString() + "^" + careNeed.Id.ToString();
-                        btnNoteTemplate.CssClass = "btn btn-info btn-sm";
-                        gList.Columns.Add( btnNoteTemplate );
-                    }
-                }
-            }
-
-            var makeNoteField = new LinkButtonField();
-            makeNoteField.HeaderText = "Make Note";
-            makeNoteField.CssClass = "btn btn-primary btn-make-note btn-sm w-auto";
-            makeNoteField.Text = "Make Note";
-            makeNoteField.Click += gMakeNote_Click;
-            makeNoteField.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
-            makeNoteField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-            gList.Columns.Add( makeNoteField );
-
             if ( AvailableAttributes != null )
             {
                 foreach ( var attribute in AvailableAttributes )
@@ -887,6 +998,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             rockControl.Label = attribute.Name;
                             rockControl.Help = attribute.Description;
                             phAttributeFilters.Controls.Add( control );
+                            phFollowUpAttributeFilters.Controls.Add( control );
                         }
                         else
                         {
@@ -895,6 +1007,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             wrapper.Label = attribute.Name;
                             wrapper.Controls.Add( control );
                             phAttributeFilters.Controls.Add( wrapper );
+                            phFollowUpAttributeFilters.Controls.Add( wrapper );
                         }
 
                         string savedValue = rFilter.GetUserPreference( attribute.Key );
@@ -913,7 +1026,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
 
                     bool columnExists = gList.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
-                    if ( !columnExists )
+                    if ( !columnExists && addColumns )
                     {
                         AttributeField boundField = new AttributeField();
                         boundField.DataField = attribute.Key;
@@ -928,13 +1041,77 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                         gList.Columns.Add( boundField );
                     }
+
+                    bool followUpColumnExists = gFollowUp.Columns.OfType<AttributeField>().FirstOrDefault( a => a.AttributeId == attribute.Id ) != null;
+                    if ( !followUpColumnExists && addColumns )
+                    {
+                        AttributeField boundField = new AttributeField();
+                        boundField.DataField = attribute.Key;
+                        boundField.AttributeId = attribute.Id;
+                        boundField.HeaderText = attribute.Name;
+
+                        var attributeCache = Rock.Web.Cache.AttributeCache.Get( attribute.Id );
+                        if ( attributeCache != null )
+                        {
+                            boundField.ItemStyle.HorizontalAlign = attributeCache.FieldType.Field.AlignValue;
+                        }
+
+                        gFollowUp.Columns.Add( boundField );
+                    }
                 }
             }
 
-            // Add delete column
-            var deleteField = new DeleteField();
-            gList.Columns.Add( deleteField );
-            deleteField.Click += gList_Delete;
+            if ( addColumns )
+            {
+                using ( var rockContext = new RockContext() )
+                {
+                    var noteTemplates = new NoteTemplateService( rockContext ).Queryable().AsNoTracking().Where( nt => nt.IsActive ).OrderBy( nt => nt.Order );
+                    var firstCol = true;
+                    foreach ( var template in noteTemplates )
+                    {
+                        var btnId = string.Format( "btn_{0}", template.Id );
+                        bool btnColumnExists = gList.Columns.OfType<LinkButtonField>().FirstOrDefault( b => b.ID == btnId ) != null;
+                        if ( !btnColumnExists )
+                        {
+                            var btnNoteTemplate = new LinkButtonField();
+                            btnNoteTemplate.ID = btnId;
+                            btnNoteTemplate.Text = string.Format( "<i class='{0}'></i>", template.Icon );
+                            btnNoteTemplate.ToolTip = template.Note;
+                            btnNoteTemplate.Click += btnNoteTemplate_Click;
+                            if ( firstCol )
+                            {
+                                btnNoteTemplate.HeaderText = "Quick Notes";
+                                firstCol = false;
+                            }
+                            //btnNoteTemplate.CommandName = "QuickNote";
+                            //btnNoteTemplate.CommandArgument = template.Id.ToString() + "^" + careNeed.Id.ToString();
+                            btnNoteTemplate.CssClass = "btn btn-info btn-sm";
+                            gList.Columns.Add( btnNoteTemplate );
+                            gFollowUp.Columns.Add( btnNoteTemplate );
+                        }
+                    }
+                }
+
+                var makeNoteField = new LinkButtonField();
+                makeNoteField.HeaderText = "Make Note";
+                makeNoteField.CssClass = "btn btn-primary btn-make-note btn-sm w-auto";
+                makeNoteField.Text = "Make Note";
+                makeNoteField.Click += gMakeNote_Click;
+                makeNoteField.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
+                makeNoteField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                gList.Columns.Add( makeNoteField );
+                gFollowUp.Columns.Add( makeNoteField );
+
+                // Add delete column
+                var deleteField = new DeleteField();
+                gList.Columns.Add( deleteField );
+                deleteField.Click += gList_Delete;
+
+                // Add delete column
+                var deleteFieldFollowUp = new DeleteField();
+                gFollowUp.Columns.Add( deleteFieldFollowUp );
+                deleteFieldFollowUp.Click += gList_Delete;
+            }
         }
 
         /// <summary>
@@ -958,6 +1135,29 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var last7Days = currentDateTime.AddDays( -7 );
             var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime );
 
+            BindMainGrid( rockContext, careNeedService, qry );
+            BindFollowUpGrid( rockContext, careNeedService, qry );
+
+            lTouchesCount.Text = careTouches.ToString();
+            lCareNeedsCount.Text = outstandingCareNeeds.ToString();
+            lTotalNeedsCount.Text = totalCareNeeds.ToString();
+        }
+
+        private void BindMainGrid( RockContext rockContext, CareNeedService careNeedService, IQueryable<CareNeed> qry )
+        {
+            if ( rockContext == null )
+            {
+                rockContext = new RockContext();
+            }
+            if ( careNeedService == null )
+            {
+                careNeedService = new CareNeedService( rockContext );
+            }
+            if ( qry == null )
+            {
+                qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
+            }
+
             // Filter by Start Date
             DateTime? startDate = drpDate.LowerValue;
             if ( startDate != null )
@@ -980,7 +1180,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( TargetPerson != null )
             {
-                // show benevolence request for the target person and also for their family members
+                // show care needs for the target person and also for their family members
                 var qryFamilyMembers = TargetPerson.GetFamilyMembers( true, rockContext );
                 qry = qry.Where( a => a.PersonAliasId.HasValue && qryFamilyMembers.Any( b => b.PersonId == a.PersonAlias.PersonId ) );
             }
@@ -1055,10 +1255,120 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             // Hide the campus column if the campus filter is not visible.
             gList.ColumnsOfType<RockBoundField>().First( c => c.DataField == "Campus.Name" ).Visible = cpCampus.Visible;
+        }
 
-            lTouchesCount.Text = careTouches.ToString();
-            lCareNeedsCount.Text = outstandingCareNeeds.ToString();
-            lTotalNeedsCount.Text = totalCareNeeds.ToString();
+        private void BindFollowUpGrid( RockContext rockContext, CareNeedService careNeedService, IQueryable<CareNeed> qry )
+        {
+            if ( rockContext == null )
+            {
+                rockContext = new RockContext();
+            }
+            if ( careNeedService == null )
+            {
+                careNeedService = new CareNeedService( rockContext );
+            }
+            if ( qry == null )
+            {
+                qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
+            }
+
+            // Filter by Start Date
+            DateTime? startDate = drpFollowUpDate.LowerValue;
+            if ( startDate != null )
+            {
+                qry = qry.Where( b => b.DateEntered >= startDate );
+            }
+
+            // Filter by End Date
+            DateTime? endDate = drpFollowUpDate.UpperValue;
+            if ( endDate != null )
+            {
+                qry = qry.Where( b => b.DateEntered <= endDate );
+            }
+
+            // Filter by Campus
+            if ( cpFollowUpCampus.SelectedCampusId.HasValue )
+            {
+                qry = qry.Where( b => b.CampusId == cpFollowUpCampus.SelectedCampusId );
+            }
+
+            if ( TargetPerson != null )
+            {
+                // show care needs for the target person and also for their family members
+                var qryFamilyMembers = TargetPerson.GetFamilyMembers( true, rockContext );
+                qry = qry.Where( a => a.PersonAliasId.HasValue && qryFamilyMembers.Any( b => b.PersonId == a.PersonAlias.PersonId ) );
+            }
+            else
+            {
+                // Filter by First Name
+                string firstName = tbFollowUpFirstName.Text;
+                if ( !string.IsNullOrWhiteSpace( firstName ) )
+                {
+                    qry = qry.Where( b => b.PersonAlias.Person.FirstName.StartsWith( firstName ) );
+                }
+
+                // Filter by Last Name
+                string lastName = tbFollowUpLastName.Text;
+                if ( !string.IsNullOrWhiteSpace( lastName ) )
+                {
+                    qry = qry.Where( b => b.PersonAlias.Person.LastName.StartsWith( lastName ) );
+                }
+            }
+
+            // Filter by Submitter
+            int? submitterPersonAliasId = ddlFollowUpSubmitter.SelectedItem.Value.AsIntegerOrNull();
+            if ( submitterPersonAliasId != null )
+            {
+                qry = qry.Where( b => b.SubmitterAliasId == submitterPersonAliasId );
+            }
+
+            // Filter by Status
+            var requestStatusValueId = new DefinedValueService( rockContext ).Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() );
+            if ( requestStatusValueId != null )
+            {
+                qry = qry.Where( b => b.StatusValueId == requestStatusValueId.Id );
+            }
+
+            // Filter by Category
+            List<int> categories = dvpFollowUpCategory.SelectedValuesAsInt;
+            if ( categories.Any() )
+            {
+                qry = qry.Where( cn => cn.CategoryValueId != null && categories.Contains( cn.CategoryValueId.Value ) );
+            }
+
+            // Filter by Assigned to Me
+            if ( cbFollowUpAssignedToMe.Checked )
+            {
+                qry = qry.Where( cn => cn.AssignedPersons.Count( ap => ap.PersonAliasId == CurrentPersonAliasId ) > 0 );
+            }
+
+            SortProperty sortProperty = gFollowUp.SortProperty;
+            if ( sortProperty != null )
+            {
+                qry = qry.Sort( sortProperty );
+            }
+            else
+            {
+                qry = qry.OrderByDescending( a => a.DateEntered ).ThenByDescending( a => a.Id );
+            }
+
+            // Filter query by any configured attribute filters
+            if ( AvailableAttributes != null && AvailableAttributes.Any() )
+            {
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    var filterControl = phFollowUpAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, careNeedService, Rock.Reporting.FilterMode.SimpleFilter );
+                }
+            }
+
+            var list = qry.ToList();
+
+            gFollowUp.DataSource = list;
+            gFollowUp.DataBind();
+
+            // Hide the campus column if the campus filter is not visible.
+            gFollowUp.ColumnsOfType<RockBoundField>().First( c => c.DataField == "Campus.Name" ).Visible = cpFollowUpCampus.Visible;
         }
 
         /// <summary>
@@ -1091,6 +1401,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var noteEditor = ( NoteEditor ) notesTimeline.Controls[0];
             noteEditor.CssClass = "note-new-kfs";
             noteEditor.SaveButtonClick += mdMakeNote_SaveClick;
+            noteEditor.Focus();
         }
 
         /// <summary>
