@@ -15,7 +15,7 @@
         <asp:Panel ID="pnlView" runat="server" CssClass="care-dashboard">
             <div class="panel panel-block">
                 <div class="panel-heading">
-                    <h1 class="panel-title"><i class="fa fa-hand-holding-heart"></i>Care Needs</h1>
+                    <h1 class="panel-title"><i class="fa fa-hand-holding-heart mr-2"></i>Care Needs</h1>
                     <div class="pull-right d-flex align-items-center">
                         <asp:LinkButton ID="lbCareConfigure" runat="server" CssClass="btn btn-xs btn-square btn-default pull-right" OnClick="lbCareConfigure_Click" CausesValidation="false"> <i title="Options" class="fa fa-gear"></i></asp:LinkButton>
                     </div>
@@ -84,7 +84,11 @@
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
                                 <Rock:RockBoundField DataField="Campus.Name" HeaderText="Campus" SortExpression="Campus.Name" />
-                                <Rock:RockBoundField DataField="CareNotes.Count" HeaderText="Care Touches" SortExpression="CareNotes.Count" HeaderStyle-CssClass="text-center" ItemStyle-CssClass="text-center"></Rock:RockBoundField>
+                                <Rock:RockTemplateField HeaderText="Care Touches" HeaderStyle-CssClass="text-center" ItemStyle-CssClass="text-center">
+                                    <ItemTemplate>
+                                        <asp:Literal ID="lCareTouches" runat="server"></asp:Literal>
+                                    </ItemTemplate>
+                                </Rock:RockTemplateField>
                                 <Rock:RockTemplateField HeaderText="Assigned">
                                     <ItemTemplate>
                                         <asp:Literal ID="lAssigned" runat="server"></asp:Literal>
@@ -142,16 +146,13 @@
                 Sys.Application.add_load(initDashboard);
             </script>
         </asp:Panel>
-
-        <Rock:ModalDialog ID="mdMakeNote" runat="server" Title="Add Note" OnSaveClick="mdMakeNote_SaveClick" ValidationGroup="MakeNote">
+        <Rock:ModalDialog ID="mdMakeNote" runat="server" Title="Add Note" ValidationGroup="MakeNote" ClickBackdropToClose="true" Content-CssClass="modal-kfsmakenote">
             <Content>
                 <asp:HiddenField ID="hfCareNeedId" runat="server" />
 
                 <asp:ValidationSummary ID="vsMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="MakeNote" />
 
-                <Rock:RockTextBox ID="tbNote" runat="server" Label="Note" Rows="4" TextMode="MultiLine" Placeholder="Write a note..." Required="true" ValidationGroup="MakeNote"></Rock:RockTextBox>
-
-                <Rock:DynamicPlaceholder ID="phMakeNoteAttributes" runat="server" />
+                <Rock:NoteContainer ID="notesTimeline" runat="server" ShowHeading="false"></Rock:NoteContainer>
             </Content>
         </Rock:ModalDialog>
     </ContentTemplate>
