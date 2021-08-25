@@ -616,14 +616,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 if ( careNeed.Status.Value == "Follow Up" )
                 {
                     hlStatus.Text = "Follow Up";
-                    hlStatus.LabelType = LabelType.Warning;
+                    hlStatus.LabelType = LabelType.Danger;
                 }
 
                 if ( careNeed.Status.Value == "Closed" )
                 {
                     hlStatus.Text = "Closed";
-                    hlStatus.LabelType = LabelType.Danger;
+                    hlStatus.LabelType = LabelType.Primary;
                 }
+            }
+            else
+            {
+                dvpStatus.SelectedDefinedValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() ).Id;
             }
 
             if ( careNeed.CategoryValueId != null )
