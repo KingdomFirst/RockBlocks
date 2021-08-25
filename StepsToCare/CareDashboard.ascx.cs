@@ -54,14 +54,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 1,
         Key = AttributeKey.DetailPage )]
 
-    [CodeEditorField(
-        "Categories Template",
-        Description = "Lava Template that can be used to customize what is displayed in the last status section. Includes common merge fields plus Care Need Categories.",
-        EditorMode = CodeEditorMode.Lava,
-        EditorTheme = CodeEditorTheme.Rock,
-        DefaultValue = CategoriesTemplateDefaultValue,
+    [LinkedPage(
+        "Configuration Page",
+        Description = "Page used to configure care workers and note templates.",
+        IsRequired = true,
         Order = 2,
-        Key = AttributeKey.CategoriesTemplate )]
+        Key = AttributeKey.ConfigurationPage )]
 
     [DefinedValueField(
         "Outstanding Care Needs Statuses",
@@ -74,12 +72,71 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefinedTypeGuid = rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS
         )]
 
-    [LinkedPage(
-        "Configuration Page",
-        Description = "Page used to configure care workers and note templates.",
-        IsRequired = true,
+    [CodeEditorField(
+        "Categories Template",
+        Description = "Lava Template that can be used to customize what is displayed in the last status section. Includes common merge fields plus Care Need Categories.",
+        EditorMode = CodeEditorMode.Lava,
+        EditorTheme = CodeEditorTheme.Rock,
+        DefaultValue = CategoriesTemplateDefaultValue,
         Order = 4,
-        Key = AttributeKey.ConfigurationPage )]
+        Key = AttributeKey.CategoriesTemplate )]
+
+    [CustomDropdownListField( "Display Type",
+        Description = "The format to use for displaying notes.",
+        ListSource = "Full,Light",
+        IsRequired = true,
+        DefaultValue = "Full",
+        Category = "Notes Dialog",
+        Order = 5,
+        Key = AttributeKey.DisplayType )]
+
+    [BooleanField( "Use Person Icon",
+        DefaultBooleanValue = false,
+        Order = 6,
+        Category = "Notes Dialog",
+        Key = AttributeKey.UsePersonIcon )]
+
+    [BooleanField( "Show Alert Checkbox",
+        DefaultBooleanValue = true,
+        Category = "Notes Dialog",
+        Order = 7,
+        Key = AttributeKey.ShowAlertCheckbox )]
+
+    [BooleanField( "Show Private Checkbox",
+        DefaultBooleanValue = true,
+        Category = "Notes Dialog",
+        Order = 8,
+        Key = AttributeKey.ShowPrivateCheckbox )]
+
+    [BooleanField( "Show Security Button",
+        DefaultBooleanValue = true,
+        Category = "Notes Dialog",
+        Order = 9,
+        Key = AttributeKey.ShowSecurityButton )]
+
+    [BooleanField( "Allow Backdated Notes",
+        DefaultBooleanValue = false,
+        Category = "Notes Dialog",
+        Order = 10,
+        Key = AttributeKey.AllowBackdatedNotes )]
+
+    [BooleanField( "Close Dialog on Save",
+        DefaultBooleanValue = true,
+        Category = "Notes Dialog",
+        Order = 11,
+        Key = AttributeKey.CloseDialogOnSave )]
+
+    [CodeEditorField( "Note View Lava Template",
+        Description = "The Lava Template to use when rendering the view of the notes.",
+        EditorMode = CodeEditorMode.Lava,
+        EditorTheme = CodeEditorTheme.Rock,
+        EditorHeight = 100,
+        IsRequired = false,
+        DefaultValue = @"{% include '~~/Assets/Lava/NoteViewList.lava' %}",
+        Category = "Notes Dialog",
+        Order = 12,
+        Key = AttributeKey.NoteViewLavaTemplate )]
+
 
     #endregion Block Settings
 
@@ -96,6 +153,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string CategoriesTemplate = "CategoriesTemplate";
             public const string OutstandingCareNeedsStatuses = "OutstandingCareNeedsStatuses";
             public const string ConfigurationPage = "ConfigurationPage";
+            public const string UsePersonIcon = "UsePersonIcon";
+            public const string DisplayType = "DisplayType";
+            public const string ShowAlertCheckbox = "ShowAlertCheckbox";
+            public const string ShowPrivateCheckbox = "ShowPrivateCheckbox";
+            public const string ShowSecurityButton = "ShowSecurityButton";
+            public const string AllowBackdatedNotes = "AllowBackdatedNotes";
+            public const string CloseDialogOnSave = "CloseDialogOnSave";
+            public const string NoteViewLavaTemplate = "NoteViewLavaTemplate";
         }
 
         /// <summary>
@@ -158,6 +223,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         private readonly string _photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
 
+        private List<NoteTypeCache> _careNeedNoteTypes = new List<NoteTypeCache>();
+
         #endregion Private Members
 
         #region Base Control Methods
@@ -215,8 +282,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gList.Actions.AddClick += gList_AddClick;
             gList.IsDeleteEnabled = _canAddEditDelete;
 
+            mdMakeNote.Footer.Visible = false;
+
             // in case this is used as a Person Block, set the TargetPerson
             TargetPerson = ContextEntity<Person>();
+
+            _careNeedNoteTypes = NoteTypeCache.GetByEntity( EntityTypeCache.Get( typeof( CareNeed ) ).Id, "", "", true );
         }
 
         /// <summary>
@@ -231,6 +302,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 SetFilter();
                 BindGrid();
+            }
+            if ( !string.IsNullOrWhiteSpace( hfCareNeedId.Value ) )
+            {
+                var careNeed = new CareNeedService( new RockContext() ).Get( hfCareNeedId.Value.AsInteger() );
+
+                if ( careNeed != null )
+                {
+                    SetupNoteTimeline( careNeed );
+                }
             }
         }
 
@@ -426,6 +506,27 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                     }
 
+                    Literal lCareTouches = e.Row.FindControl( "lCareTouches" ) as Literal;
+                    if ( lCareTouches != null )
+                    {
+                        using ( var rockContext = new RockContext() )
+                        {
+                            var noteType = _careNeedNoteTypes.FirstOrDefault();
+                            if ( noteType != null )
+                            {
+                                var careNeedNotes = new NoteService( rockContext )
+                                    .GetByNoteTypeId( noteType.Id )
+                                    .Where( n => n.EntityId == careNeed.Id );
+
+                                lCareTouches.Text = careNeedNotes.Count().ToString();
+                            }
+                            else
+                            {
+                                lCareTouches.Text = "0";
+                            }
+                        }
+                    }
+
                     Literal lAssigned = e.Row.FindControl( "lAssigned" ) as Literal;
                     if ( lAssigned != null )
                     {
@@ -483,31 +584,63 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 LinkButtonField field = sender as LinkButtonField;
                 var fieldId = field.ID.Replace( "btn_", "" );
                 var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
-                var careNoteService = new CareNoteService( rockContext );
+                var noteService = new NoteService( rockContext );
+                var noteType = _careNeedNoteTypes.FirstOrDefault();
 
-                var careNote = new CareNote { Id = 0 };
-                careNote.Note = noteTemplate.Note;
-                careNote.NeedId = e.RowKeyId;
-                careNote.CreatedByPersonAliasId = CurrentPersonAliasId;
-                careNote.ModifiedByPersonAliasId = CurrentPersonAliasId;
-                careNote.CopyAttributesFrom( noteTemplate );
-
-                if ( careNote.IsValid )
+                if ( noteType != null )
                 {
-                    careNoteService.Add( careNote );
+                    var note = new Note { Id = 0 };
+                    note.IsSystem = false;
+                    note.IsAlert = false;
+                    note.NoteTypeId = noteType.Id;
+                    note.EntityId = e.RowKeyId;
+                    note.Text = noteTemplate.Note;
+                    note.EditedByPersonAliasId = CurrentPersonAliasId;
+                    note.EditedDateTime = RockDateTime.Now;
+                    note.NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl();
+                    note.Caption = string.Empty;
 
-                    rockContext.WrapTransaction( () =>
+                    if ( noteType.RequiresApprovals )
                     {
-                        rockContext.SaveChanges();
-                        careNote.SaveAttributeValues( rockContext );
-                    } );
+                        if ( note.IsAuthorized( Authorization.APPROVE, CurrentPerson ) )
+                        {
+                            note.ApprovalStatus = NoteApprovalStatus.Approved;
+                            note.ApprovedByPersonAliasId = CurrentPersonAliasId;
+                            note.ApprovedDateTime = RockDateTime.Now;
+                        }
+                        else
+                        {
+                            note.ApprovalStatus = NoteApprovalStatus.PendingApproval;
+                        }
+                    }
+                    else
+                    {
+                        note.ApprovalStatus = NoteApprovalStatus.Approved;
+                    }
+                    note.CopyAttributesFrom( noteTemplate );
 
-                    mdGridWarning.Show( "Note Saved: " + noteTemplate.Note, ModalAlertType.Information );
-                    BindGrid();
+                    if ( note.IsValid )
+                    {
+                        noteService.Add( note );
+
+                        rockContext.WrapTransaction( () =>
+                        {
+                            rockContext.SaveChanges();
+                            note.SaveAttributeValues( rockContext );
+                        } );
+
+                        mdGridWarning.Show( "Note Saved: " + noteTemplate.Note, ModalAlertType.Information );
+                        BindGrid();
+                    }
+                    else
+                    {
+                        mdGridWarning.Show( "Note is invalid. <br>" + note.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" ), ModalAlertType.Alert );
+                    }
                 }
                 else
                 {
-                    mdGridWarning.Show( "Note is invalid. <br>" + careNote.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" ), ModalAlertType.Alert );
+                    mdGridWarning.Show( "The Care Need Note type is missing. Please setup a note type for Care Need.", ModalAlertType.Alert );
+
                 }
             }
         }
@@ -524,6 +657,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             hfCareNeedId.Value = careNeed.Id.ToString();
 
             mdMakeNote.Show();
+
+            if ( careNeed != null )
+            {
+                SetupNoteTimeline( careNeed );
+            }
+
         }
 
         /// <summary>
@@ -624,30 +763,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void mdMakeNote_SaveClick( object sender, EventArgs e )
         {
-            var rockContext = new RockContext();
-            var careNoteService = new CareNoteService( rockContext );
-            var careNote = new CareNote { Id = 0 };
-            careNote.NeedId = hfCareNeedId.Value.AsInteger();
-            careNote.Note = tbNote.Text;
-            careNote.CreatedByPersonAliasId = CurrentPersonAliasId;
-            careNote.ModifiedByPersonAliasId = CurrentPersonAliasId;
-
-            if ( careNote.IsValid )
+            var closeDialogOnSave = GetAttributeValue( AttributeKey.CloseDialogOnSave ).AsBoolean();
+            hfCareNeedId.Value = "";
+            if ( closeDialogOnSave )
             {
-                careNoteService.Add( careNote );
-
-                rockContext.WrapTransaction( () =>
-                {
-                    rockContext.SaveChanges();
-                    careNote.SaveAttributeValues( rockContext );
-                } );
-
-                tbNote.Text = "";
-                hfCareNeedId.Value = "";
                 mdMakeNote.Hide();
-                BindGrid();
             }
-
+            BindGrid();
         }
 
         #endregion Events
@@ -824,9 +946,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gList.Visible = true;
             RockContext rockContext = new RockContext();
             CareNeedService careNeedService = new CareNeedService( rockContext );
-            CareNoteService careNoteService = new CareNoteService( rockContext );
+            NoteService noteService = new NoteService( rockContext );
             var qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
-            var noteQry = careNoteService.Queryable().AsNoTracking();
+            var noteQry = noteService.GetByNoteTypeId( _careNeedNoteTypes.Any() ? _careNeedNoteTypes.FirstOrDefault().Id : 0 ).AsNoTracking();
 
             var outstandingCareStatuses = GetAttributeValues( AttributeKey.OutstandingCareNeedsStatuses );
             var totalCareNeeds = qry.Count();
@@ -937,6 +1059,38 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             lTouchesCount.Text = careTouches.ToString();
             lCareNeedsCount.Text = outstandingCareNeeds.ToString();
             lTotalNeedsCount.Text = totalCareNeeds.ToString();
+        }
+
+        /// <summary>
+        /// Setup NoteTimeline/Container for use in Make Note dialog.
+        /// </summary>
+        private void SetupNoteTimeline( CareNeed careNeed )
+        {
+            var noteTypes = _careNeedNoteTypes;
+
+            NoteOptions noteOptions = new NoteOptions( notesTimeline )
+            {
+                EntityId = careNeed.Id,
+                NoteTypes = noteTypes.ToArray(),
+                DisplayType = GetAttributeValue( AttributeKey.DisplayType ) == "Light" ? NoteDisplayType.Light : NoteDisplayType.Full,
+                ShowAlertCheckBox = GetAttributeValue( AttributeKey.ShowAlertCheckbox ).AsBoolean(),
+                ShowPrivateCheckBox = GetAttributeValue( AttributeKey.ShowPrivateCheckbox ).AsBoolean(),
+                ShowSecurityButton = GetAttributeValue( AttributeKey.ShowSecurityButton ).AsBoolean(),
+                AddAlwaysVisible = true,
+                ShowCreateDateInput = GetAttributeValue( AttributeKey.AllowBackdatedNotes ).AsBoolean(),
+                NoteViewLavaTemplate = GetAttributeValue( AttributeKey.NoteViewLavaTemplate ),
+                DisplayNoteTypeHeading = false,
+                UsePersonIcon = GetAttributeValue( AttributeKey.UsePersonIcon ).AsBoolean(),
+                ExpandReplies = false
+            };
+
+            notesTimeline.NoteOptions = noteOptions;
+            notesTimeline.AllowAnonymousEntry = false;
+            notesTimeline.SortDirection = ListSortDirection.Descending;
+
+            var noteEditor = ( NoteEditor ) notesTimeline.Controls[0];
+            noteEditor.CssClass = "note-new-kfs";
+            noteEditor.SaveButtonClick += mdMakeNote_SaveClick;
         }
 
         /// <summary>
