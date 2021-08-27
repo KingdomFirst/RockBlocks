@@ -197,7 +197,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void mdAddPerson_SaveClick( object sender, EventArgs e )
         {
-            if ( !AddWorker( hfCareWorkerId.Value.AsInteger(), ppNewPerson.SelectedValue.Value, dvpCategory.SelectedDefinedValueId ) )
+            if ( !AddWorker( hfCareWorkerId.Value.AsInteger(), ppNewPerson.SelectedValue.Value ) )
             {
                 nbAddPersonExists.Visible = true;
                 return;
@@ -214,7 +214,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void mdAddPerson_SaveThenAddClick( object sender, EventArgs e )
         {
-            if ( !AddWorker( hfCareWorkerId.Value.AsInteger(), ppNewPerson.SelectedValue.Value, dvpCategory.SelectedDefinedValueId ) )
+            if ( !AddWorker( hfCareWorkerId.Value.AsInteger(), ppNewPerson.SelectedValue.Value ) )
             {
                 nbAddPersonExists.Visible = true;
                 return;
@@ -240,11 +240,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 if ( person != null )
                 {
                     int? workerId = PageParameter( "CareWorkerId" ).AsIntegerOrNull();
+                    var personCampus = person.GetCampus();
 
-                    if ( !cpCampus.SelectedCampusId.HasValue && ( e != null || ( workerId.HasValue && workerId == 0 ) ) )
+                    if ( !cpCampus.SelectedCampusIds.Contains( personCampus.Id ) && ( e != null || ( workerId.HasValue && workerId == 0 ) ) )
                     {
-                        var personCampus = person.GetCampus();
-                        cpCampus.SelectedCampusId = personCampus != null ? personCampus.Id : ( int? ) null;
+                        cpCampus.SelectedValue = personCampus?.Id.ToString();
                     }
                 }
             }
@@ -429,14 +429,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             // Filter by Campus
             if ( cpFilterCampus.SelectedCampusId.HasValue )
             {
-                qry = qry.Where( b => b.CampusId == cpFilterCampus.SelectedCampusId );
+                qry = qry.Where( b => b.Campuses.Contains( cpFilterCampus.SelectedCampusId.ToString() ) );
             }
 
             // Filter by Category
             var categoryValueId = dvpFilterCategory.SelectedDefinedValueId;
+
             if ( categoryValueId != null )
             {
-                qry = qry.Where( b => b.CategoryValueId == categoryValueId );
+                qry = qry.Where( b => b.CategoryValues.Contains( categoryValueId.ToString() ) );
             }
 
             SortProperty sortProperty = gList.SortProperty;
@@ -491,13 +492,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 pdAuditDetails.Visible = false;
             }
 
-            if ( careWorker.Campus != null )
+            if ( careWorker.Campuses.IsNotNullOrWhiteSpace() )
             {
-                cpCampus.SelectedCampusId = careWorker.CampusId;
+                cpCampus.SelectedCampusIds = careWorker.Campuses.SplitDelimitedValues( "," ).Select( c => c.AsInteger() ).ToList();
             }
             else
             {
-                cpCampus.SelectedIndex = 0;
+                cpCampus.ClearSelection();
             }
 
             if ( careWorker.PersonAlias != null )
@@ -511,13 +512,24 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             dvpCategory.DefinedTypeId = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) ).Id;
 
-            if ( careWorker.CategoryValueId != null )
+            if ( careWorker.CategoryValues.IsNotNullOrWhiteSpace() )
             {
-                dvpCategory.SetValue( careWorker.CategoryValueId );
+                dvpCategory.SetValues( careWorker.CategoryValues.SplitDelimitedValues( "," ) );
             }
             else
             {
-                dvpCategory.SelectedIndex = 0;
+                dvpCategory.ClearSelection();
+            }
+
+            if ( careWorker.GeoFenceId != null )
+            {
+                var location = new LocationService( rockContext ).Get( careWorker.GeoFenceId.Value );
+                lpGeofenceLocation.SetBestPickerModeForLocation( location );
+                lpGeofenceLocation.Location = location;
+            }
+            else
+            {
+                lpGeofenceLocation.Location = null;
             }
 
             careWorker.LoadAttributes();
@@ -531,7 +543,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <summary>
         /// Adds the New Worker
         /// </summary>
-        private bool AddWorker( int careWorkerId, int personId, int? categoryId )
+        private bool AddWorker( int careWorkerId, int personId )
         {
             if ( Page.IsValid )
             {
@@ -544,27 +556,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     careWorker = careWorkerService.Get( careWorkerId );
                 }
-                else
-                {
-                    careWorker = careWorkerService.Get( categoryId, personId );
-                    if ( careWorker != null )
-                    {
-                        return false;
-                    }
-                }
 
                 if ( careWorker == null )
                 {
                     careWorker = new CareWorker { Id = 0 };
                 }
 
-                careWorker.CampusId = cpCampus.SelectedCampusId;
+                careWorker.Campuses = cpCampus.SelectedValues.AsDelimited( "," );
 
                 careWorker.PersonAliasId = ppNewPerson.PersonAliasId;
 
-                careWorker.CategoryValueId = dvpCategory.SelectedValue.AsIntegerOrNull();
+                careWorker.CategoryValues = dvpCategory.SelectedValues.AsDelimited( "," );
 
                 careWorker.IsActive = cbActive.Checked;
+
+                careWorker.GeoFenceId = lpGeofenceLocation.Location?.Id;
 
                 if ( careWorker.IsValid )
                 {
