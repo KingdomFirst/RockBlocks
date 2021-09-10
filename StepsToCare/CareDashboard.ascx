@@ -84,7 +84,7 @@
                                         <asp:Literal ID="lCareTouches" runat="server"></asp:Literal>
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
-                                <Rock:RockTemplateField HeaderText="Assigned">
+                                <Rock:RockTemplateField HeaderText="Assigned" SortExpression="AssignedPersons">
                                     <ItemTemplate>
                                         <asp:Literal ID="lAssigned" runat="server"></asp:Literal>
                                     </ItemTemplate>

@@ -409,16 +409,20 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 foreach ( var worker in careWorkersWithFence )
                 {
                     var geofenceLocation = new LocationService( rockContext ).Get( worker.GeoFenceId.Value );
-                    var geofenceIntersect = careNeed.PersonAlias.Person.GetHomeLocation().GeoPoint.Intersects( geofenceLocation.GeoFence );
-                    if ( geofenceIntersect )
+                    var homeLocation = careNeed.PersonAlias.Person.GetHomeLocation();
+                    if ( homeLocation != null )
                     {
-                        var careAssignee = new AssignedPerson { Id = 0 };
-                        careAssignee.CareNeed = careNeed;
-                        careAssignee.PersonAliasId = worker.PersonAliasId;
-                        careAssignee.WorkerId = worker.Id;
-                        //careAssignee.FollowUpWorker = true;
+                        var geofenceIntersect = homeLocation.GeoPoint.Intersects( geofenceLocation.GeoFence );
+                        if ( geofenceIntersect )
+                        {
+                            var careAssignee = new AssignedPerson { Id = 0 };
+                            careAssignee.CareNeed = careNeed;
+                            careAssignee.PersonAliasId = worker.PersonAliasId;
+                            careAssignee.WorkerId = worker.Id;
+                            //careAssignee.FollowUpWorker = true;
 
-                        careAssigneeService.Add( careAssignee );
+                            careAssigneeService.Add( careAssignee );
+                        }
                     }
                 }
             }
@@ -465,7 +469,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
                         Worker = cw,
-                        HasCategoryAndCampus = true,
+                        HasCategoryAndCampus = false,
                         HasCategory = false,
                         HasCampus = true
                     }
@@ -489,7 +493,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
                     .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
 
-                var careWorkerCounts = careWorkerCount1.Concat( careWorkerCount2 ).Concat( careWorkerCount3 ).Concat( careWorkerCount4 ).OrderBy( ct => ct.Count ).ThenBy( ct => ct.HasCategoryAndCampus ).ThenBy( ct => ct.HasCategory ).ThenBy( ct => ct.HasCampus );
+                var careWorkerCounts = careWorkerCount1
+                    .Concat( careWorkerCount2 )
+                    .Concat( careWorkerCount3 )
+                    .Concat( careWorkerCount4 )
+                    .OrderBy( ct => ct.Count )
+                    .ThenByDescending( ct => ct.HasCategoryAndCampus )
+                    .ThenByDescending( ct => ct.HasCategory )
+                    .ThenByDescending( ct => ct.HasCampus );
 
                 var careAssigned = careAssigneeService.Queryable().AsNoTracking().Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).GroupBy( ap => ap.PersonAliasId ).Select( ap => new { Count = ap.Count(), Id = ap.Key } ).OrderBy( a => a.Count );
                 foreach ( var workerCount in careWorkerCounts )
@@ -516,11 +527,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( leaderRole != null )
             {
                 var groupMemberService = new GroupMemberService( rockContext );
-                var groupMembers = groupMemberService.GetByGroupRoleId( leaderRole.Id );
+                var inGroups = groupMemberService.GetByPersonId( careNeed.PersonAlias.PersonId ).Where( gm => gm.Group != null && gm.Group.IsActive && !gm.Group.IsArchived && gm.Group.GroupTypeId == leaderRole.GroupTypeId && !gm.IsArchived && gm.GroupMemberStatus == GroupMemberStatus.Active ).Select( gm => gm.GroupId );
 
-                if ( groupMembers.Any() )
+                if ( inGroups.Any() )
                 {
-                    foreach ( var member in groupMembers )
+                    var groupLeaders = groupMemberService.GetByGroupRoleId( leaderRole.Id ).Where( gm => inGroups.Contains( gm.GroupId ) && !gm.IsArchived && gm.GroupMemberStatus == GroupMemberStatus.Active );
+
+                    foreach ( var member in groupLeaders )
                     {
                         if ( careAssigneeService.GetByPersonAliasAndCareNeed( member.Person.PrimaryAliasId, careNeed.Id ) == null )
                         {
