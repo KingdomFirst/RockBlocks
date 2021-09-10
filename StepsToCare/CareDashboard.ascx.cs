@@ -1231,11 +1231,31 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             SortProperty sortProperty = gList.SortProperty;
             if ( sortProperty != null )
             {
-                qry = qry.Sort( sortProperty );
+                if ( sortProperty.Property.Contains( "AssignedPersons" ) )
+                {
+                    if ( sortProperty.Direction == SortDirection.Ascending )
+                    {
+                        qry = qry.OrderBy( a => a.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
+                            .ThenBy( a => a.DateEntered )
+                            .ThenBy( a => a.Id );
+                    }
+                    else
+                    {
+                        qry = qry.OrderByDescending( a => a.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
+                            .ThenByDescending( a => a.DateEntered )
+                            .ThenByDescending( a => a.Id );
+                    }
+                }
+                else
+                {
+                    qry = qry.Sort( sortProperty );
+                }
             }
             else
             {
-                qry = qry.OrderByDescending( a => a.DateEntered ).ThenByDescending( a => a.Id );
+                qry = qry.OrderByDescending( a => a.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
+                    .ThenByDescending( a => a.DateEntered )
+                    .ThenByDescending( a => a.Id );
             }
 
             // Filter query by any configured attribute filters
