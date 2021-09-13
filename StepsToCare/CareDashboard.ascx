@@ -7,6 +7,12 @@
     .table > thead > tr > th.ascending a:not(.btn)::after, .table > thead > tr > th.descending a:not(.btn)::after {
         display: inline;
     }
+    .table-striped>tbody>tr.assigned:nth-of-type(odd) {
+        background-color: oldlace;
+    }
+    .table-striped>tbody>tr.assigned:nth-of-type(even) {
+        background-color: #fff2da;
+    }
 </style>
 <asp:UpdatePanel runat="server" ID="upnlCareDashboard" UpdateMode="Always">
     <ContentTemplate>

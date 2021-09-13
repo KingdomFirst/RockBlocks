@@ -61,11 +61,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 2,
         Key = AttributeKey.ConfigurationPage )]
 
+    [IntegerField(
+        "Minimum Care Touches",
+        Description = "Minimum care touches in 24 hours before the need gets 'flagged'.",
+        DefaultIntegerValue = 2,
+        IsRequired = true,
+        Order = 3,
+        Key = AttributeKey.MinimumCareTouches )]
+
     [DefinedValueField(
         "Outstanding Care Needs Statuses",
         Description = "Select the status values that count towards the 'Outstanding Care Needs' total.",
         IsRequired = true,
-        Order = 3,
+        Order = 4,
         Key = AttributeKey.OutstandingCareNeedsStatuses,
         AllowMultiple = true,
         DefaultValue = rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN,
@@ -78,7 +86,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         EditorMode = CodeEditorMode.Lava,
         EditorTheme = CodeEditorTheme.Rock,
         DefaultValue = CategoriesTemplateDefaultValue,
-        Order = 4,
+        Order = 5,
         Key = AttributeKey.CategoriesTemplate )]
 
     [CustomDropdownListField( "Display Type",
@@ -87,43 +95,43 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = true,
         DefaultValue = "Full",
         Category = "Notes Dialog",
-        Order = 5,
+        Order = 6,
         Key = AttributeKey.DisplayType )]
 
     [BooleanField( "Use Person Icon",
         DefaultBooleanValue = false,
-        Order = 6,
+        Order = 7,
         Category = "Notes Dialog",
         Key = AttributeKey.UsePersonIcon )]
 
     [BooleanField( "Show Alert Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 7,
+        Order = 8,
         Key = AttributeKey.ShowAlertCheckbox )]
 
     [BooleanField( "Show Private Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 8,
+        Order = 9,
         Key = AttributeKey.ShowPrivateCheckbox )]
 
     [BooleanField( "Show Security Button",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 9,
+        Order = 10,
         Key = AttributeKey.ShowSecurityButton )]
 
     [BooleanField( "Allow Backdated Notes",
         DefaultBooleanValue = false,
         Category = "Notes Dialog",
-        Order = 10,
+        Order = 11,
         Key = AttributeKey.AllowBackdatedNotes )]
 
     [BooleanField( "Close Dialog on Save",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 11,
+        Order = 12,
         Key = AttributeKey.CloseDialogOnSave )]
 
     [CodeEditorField( "Note View Lava Template",
@@ -134,7 +142,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = false,
         DefaultValue = @"{% include '~~/Assets/Lava/NoteViewList.lava' %}",
         Category = "Notes Dialog",
-        Order = 12,
+        Order = 13,
         Key = AttributeKey.NoteViewLavaTemplate )]
 
 
@@ -161,6 +169,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string AllowBackdatedNotes = "AllowBackdatedNotes";
             public const string CloseDialogOnSave = "CloseDialogOnSave";
             public const string NoteViewLavaTemplate = "NoteViewLavaTemplate";
+            public const string MinimumCareTouches = "MinimumCareTouches";
         }
 
         /// <summary>
@@ -205,6 +214,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 {% for category in Categories %}
     <span class=""badge p-2 mb-2"" style=""background-color: {{ category | Attribute:'Color' }}"">{{ category.Value }}</span>
 {% endfor %}
+<br><span class=""badge p-2 mb-2 text-color"" style=""background-color: oldlace"">Assigned to You</span>
 </div>";
 
         #endregion Attribute Default values
@@ -633,36 +643,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         categoryCell.Style[HtmlTextWriterStyle.BackgroundColor] = categoryColor;
                     }
 
-                    Literal lName = e.Row.FindControl( "lName" ) as Literal;
-                    if ( lName != null )
-                    {
-                        if ( careNeed.PersonAlias != null )
-                        {
-                            lName.Text = string.Format( "<a href=\"{0}\">{1}</a>", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty );
-                        }
-                    }
-
-                    Literal lCareTouches = e.Row.FindControl( "lCareTouches" ) as Literal;
-                    if ( lCareTouches != null )
-                    {
-                        using ( var rockContext = new RockContext() )
-                        {
-                            var noteType = _careNeedNoteTypes.FirstOrDefault();
-                            if ( noteType != null )
-                            {
-                                var careNeedNotes = new NoteService( rockContext )
-                                    .GetByNoteTypeId( noteType.Id )
-                                    .Where( n => n.EntityId == careNeed.Id );
-
-                                lCareTouches.Text = careNeedNotes.Count().ToString();
-                            }
-                            else
-                            {
-                                lCareTouches.Text = "0";
-                            }
-                        }
-                    }
-
+                    AssignedPerson assignedFollowUpWorker = null;
+                    var assignedFollowUpWorkerCareTouch = false;
                     Literal lAssigned = e.Row.FindControl( "lAssigned" ) as Literal;
                     if ( lAssigned != null )
                     {
@@ -673,10 +655,69 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             {
                                 var person = assignedPerson.PersonAlias.Person;
                                 sbPersonHtml.AppendFormat( _photoFormat, person.Id, person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) );
+                                if ( assignedPerson.PersonAliasId == CurrentPersonAliasId )
+                                {
+                                    e.Row.CssClass += " assigned";
+                                }
+                                if ( assignedPerson.WorkerId.HasValue && assignedPerson.FollowUpWorker.HasValue && assignedPerson.FollowUpWorker.Value )
+                                {
+                                    assignedFollowUpWorker = assignedPerson;
+                                }
                             }
                             lAssigned.Text = sbPersonHtml.ToString();
                         }
                     }
+
+                    var minimumCareTouches = GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger();
+                    var careTouchCount = 0;
+                    Literal lCareTouches = e.Row.FindControl( "lCareTouches" ) as Literal;
+                    if ( lCareTouches != null )
+                    {
+                        using ( var rockContext = new RockContext() )
+                        {
+                            var noteType = _careNeedNoteTypes.FirstOrDefault();
+                            if ( noteType != null )
+                            {
+                                var careNeedNotes = new NoteService( rockContext )
+                                    .GetByNoteTypeId( noteType.Id ).AsNoTracking()
+                                    .Where( n => n.EntityId == careNeed.Id );
+
+                                lCareTouches.Text = careNeedNotes.Count().ToString();
+                                careTouchCount = careNeedNotes.Count();
+
+                                if ( assignedFollowUpWorker != null )
+                                {
+                                    assignedFollowUpWorkerCareTouch = careNeedNotes.Any( n => n.CreatedByPersonAliasId == assignedFollowUpWorker.PersonAliasId );
+                                }
+                            }
+                            else
+                            {
+                                lCareTouches.Text = "0";
+                            }
+                        }
+                    }
+
+                    Literal lName = e.Row.FindControl( "lName" ) as Literal;
+                    if ( lName != null )
+                    {
+                        var dateDifference = RockDateTime.Now - careNeed.DateEntered.Value;
+                        var careNeedFollowUp = ( dateDifference.TotalHours >= 24 && careTouchCount <= minimumCareTouches );
+                        var careNeedFollowUpWorkerTouch = ( dateDifference.TotalHours >= 24 && !assignedFollowUpWorkerCareTouch );
+                        var careNeedFollowUpStr = "";
+                        if ( careNeedFollowUp )
+                        {
+                            careNeedFollowUpStr = "<i class=\"fas fa-flag text-danger\"  data-toggle=\"tooltip\" title=\"Not enough Care Touches\"></i>";
+                        }
+                        else if ( careNeedFollowUpWorkerTouch )
+                        {
+                            careNeedFollowUpStr = "<i class=\"fas fa-flag text-danger\"  data-toggle=\"tooltip\" title=\"Follow up worker Care Touch Needed!\"></i>";
+                        }
+                        if ( careNeed.PersonAlias != null )
+                        {
+                            lName.Text = string.Format( "<a href=\"{0}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFollowUpStr );
+                        }
+                    }
+
                 }
             }
         }
@@ -939,11 +980,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     dvpCategory.SetValues( categoryValue.Split( ';' ).ToList() );
                 }
+                else
+                {
+                    dvpCategory.ClearSelection();
+                }
                 dvpFollowUpCategory.DefinedTypeId = categoryDefinedType.Id;
                 string categoryValueFollowUp = rFollowUpFilter.GetUserPreference( UserPreferenceKey.CategoryFollowUp );
                 if ( !string.IsNullOrWhiteSpace( categoryValueFollowUp ) )
                 {
                     dvpFollowUpCategory.SetValues( categoryValueFollowUp.Split( ';' ).ToList() );
+                }
+                else
+                {
+                    dvpCategory.ClearSelection();
                 }
 
                 var statusDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) );
@@ -952,7 +1001,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 if ( string.IsNullOrWhiteSpace( statusValue ) )
                 {
                     statusValue = new DefinedValueService( rockContext ).Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() ).Id.ToString();
-                    ;
                 }
                 dvpStatus.SetValue( statusValue );
 
