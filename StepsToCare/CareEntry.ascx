@@ -19,7 +19,7 @@
                 <div class="">
                     <div class="row">
                         <div class="col-md-3">
-                            <Rock:DatePicker ID="dpDate" runat="server" Label="Date" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="DateEntered" />
+                            <Rock:DateTimePicker ID="dpDate" runat="server" Label="Date Entered" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="DateEntered" />
                         </div>
                         <div class="col-md-3">
                             <Rock:PersonPicker ID="ppSubmitter" runat="server" Label="Submitter" Visible="false" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="SubmitterPersonAlias" />

@@ -24,8 +24,10 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using Rock;
 using Rock.Attribute;
+using Rock.Communication;
 using Rock.Data;
 using Rock.Model;
+using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 using rocks.kfs.StepsToCare.Model;
@@ -62,6 +64,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultBooleanValue = true,
         Key = AttributeKey.AutoAssignWorker )]
 
+    [SystemCommunicationField( "Newly Assigned Need Notification",
+        Description = "Select the system communication template for the new assignment notification.",
+        DefaultSystemCommunicationGuid = rocks.kfs.StepsToCare.SystemGuid.SystemCommunication.CARE_NEED_ASSIGNED,
+        Key = AttributeKey.NewAssignmentNotification )]
+
     #endregion
 
     public partial class CareEntry : Rock.Web.UI.RockBlock
@@ -76,6 +83,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string GroupTypeAndRole = "GroupTypeAndRole";
             public const string AutoAssignWorkerGeofence = "AutoAssignWorkerGeofence";
             public const string AutoAssignWorker = "AutoAssignWorker";
+            public const string NewAssignmentNotification = "NewAssignmentNotification";
         }
 
         private bool _allowNewPerson = false;
@@ -305,11 +313,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 careNeed.StatusValueId = dvpStatus.SelectedValue.AsIntegerOrNull();
                 careNeed.CategoryValueId = dvpCategory.SelectedValue.AsIntegerOrNull();
 
-                if ( dpDate.SelectedDate.HasValue )
+                if ( dpDate.SelectedDateTime.HasValue )
                 {
-                    careNeed.DateEntered = dpDate.SelectedDate.Value;
+                    careNeed.DateEntered = dpDate.SelectedDateTime.Value;
                 }
 
+                var newlyAssignedPersons = new List<AssignedPerson>();
                 if ( careNeed.AssignedPersons != null )
                 {
                     if ( AssignedPersonIds.Any() )
@@ -333,6 +342,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     PersonAliasId = alias.PrimaryAlias.Id
                                 };
                                 careNeed.AssignedPersons.Add( assignedPerson );
+                                newlyAssignedPersons.Add( assignedPerson );
                             }
                         }
                         var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.PrimaryAlias.Id ).ToList().Contains( ap.PersonAliasId.Value ) ).ToList();
@@ -366,6 +376,42 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( isNew )
                     {
                         AutoAssignWorkers( careNeed );
+                    }
+
+                    // if a NewAssignmentNotificationEmailTemplate is configured, send an email
+                    var assignmentEmailTemplateGuid = GetAttributeValue( AttributeKey.NewAssignmentNotification ).AsGuidOrNull();
+
+                    var assignedPersons = careNeed.AssignedPersons;
+                    if ( newlyAssignedPersons.Any() )
+                    {
+                        assignedPersons = newlyAssignedPersons;
+                    }
+                    else
+                    {
+                        // Reload Care Need after save changes
+                        careNeed = new CareNeedService( new RockContext() ).Get( careNeed.Id );
+                        assignedPersons = careNeed.AssignedPersons;
+                    }
+                    if ( assignedPersons != null && assignedPersons.Any() && assignmentEmailTemplateGuid.HasValue )
+                    {
+                        Dictionary<string, object> linkedPages = new Dictionary<string, object>();
+                        linkedPages.Add( "CareDetail", CurrentPageReference.BuildUrl() );
+                        linkedPages.Add( "CareDashboard", GetParentPage().BuildUrl() );
+
+                        var emailMessage = new RockEmailMessage( assignmentEmailTemplateGuid.Value );
+                        emailMessage.AppRoot = ResolveRockUrl( "~/" );
+                        emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
+                        foreach ( var assignee in assignedPersons )
+                        {
+                            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
+                            mergeFields.Add( "CareNeed", careNeed );
+                            mergeFields.Add( "LinkedPages", linkedPages );
+                            mergeFields.Add( "AssignedPerson", assignee );
+                            mergeFields.Add( "Person", assignee.PersonAlias.Person );
+
+                            emailMessage.AddRecipient( new RockEmailMessageRecipient( assignee.PersonAlias.Person, mergeFields ) );
+                        }
+                        emailMessage.Send();
                     }
 
                     // redirect back to parent
@@ -402,6 +448,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             var careWorkers = careWorkerService.Queryable().AsNoTracking().Where( cw => cw.IsActive );
 
+            var addedWorkerAliasIds = new List<int?>();
+
             // auto assign Deacon/Worker by Geofence
             if ( autoAssignWorkerGeofence )
             {
@@ -422,6 +470,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             //careAssignee.FollowUpWorker = true;
 
                             careAssigneeService.Add( careAssignee );
+                            addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
                         }
                     }
                 }
@@ -506,7 +555,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 foreach ( var workerCount in careWorkerCounts )
                 {
                     var worker = workerCount.Worker;
-                    if ( !workerAssigned && worker.PersonAlias != null && careAssigneeService.GetByPersonAliasAndCareNeed( worker.PersonAlias.Id, careNeed.Id ) == null )
+                    if ( !workerAssigned && !addedWorkerAliasIds.Contains( worker.PersonAliasId ) && worker.PersonAlias != null && careAssigneeService.GetByPersonAliasAndCareNeed( worker.PersonAlias.Id, careNeed.Id ) == null )
                     {
                         var careAssignee = new AssignedPerson { Id = 0 };
                         careAssignee.CareNeed = careNeed;
@@ -515,6 +564,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         careAssignee.FollowUpWorker = true;
 
                         careAssigneeService.Add( careAssignee );
+                        addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
 
                         workerAssigned = true;
                     }
@@ -535,19 +585,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     foreach ( var member in groupLeaders )
                     {
-                        if ( careAssigneeService.GetByPersonAliasAndCareNeed( member.Person.PrimaryAliasId, careNeed.Id ) == null )
+                        if ( !addedWorkerAliasIds.Contains( member.Person.PrimaryAliasId ) && careAssigneeService.GetByPersonAliasAndCareNeed( member.Person.PrimaryAliasId, careNeed.Id ) == null && member.PersonId != careNeed.PersonAlias.Person.Id )
                         {
                             var careAssignee = new AssignedPerson { Id = 0 };
                             careAssignee.CareNeed = careNeed;
                             careAssignee.PersonAliasId = member.Person.PrimaryAliasId;
 
                             careAssigneeService.Add( careAssignee );
+                            addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
                         }
                     }
 
                 }
             }
-
             rockContext.SaveChanges();
         }
 
@@ -782,7 +832,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             ppPerson.Required = !_allowNewPerson;
 
             dtbDetailsText.Text = careNeed.Details;
-            dpDate.SelectedDate = careNeed.DateEntered;
+            dpDate.SelectedDateTime = careNeed.DateEntered;
 
             if ( careNeed.Campus != null )
             {
@@ -923,6 +973,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             btnDeleteSelectedAssignedPersons.Visible = idList.Any();
         }
 
+        private PageReference GetParentPage()
+        {
+            var pageCache = PageCache.Get( RockPage.PageId );
+            if ( pageCache != null )
+            {
+                var parentPage = pageCache.ParentPage;
+                if ( parentPage != null )
+                {
+                    return new PageReference( parentPage.Guid.ToString() );
+                }
+            }
+            return new PageReference( pageCache.Guid.ToString() );
+        }
 
         #endregion
     }
