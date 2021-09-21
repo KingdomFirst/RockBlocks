@@ -701,20 +701,20 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( lName != null )
                     {
                         var dateDifference = RockDateTime.Now - careNeed.DateEntered.Value;
-                        var careNeedFollowUp = ( dateDifference.TotalHours >= 24 && careTouchCount <= minimumCareTouches );
+                        var careNeedFlag = ( dateDifference.TotalHours >= 24 && careTouchCount <= minimumCareTouches );
                         var careNeedFollowUpWorkerTouch = ( dateDifference.TotalHours >= 24 && !assignedFollowUpWorkerCareTouch );
-                        var careNeedFollowUpStr = "";
-                        if ( careNeedFollowUp )
+                        var careNeedFlagStr = "";
+                        if ( careNeedFlag )
                         {
-                            careNeedFollowUpStr = "<i class=\"fas fa-flag text-danger\"  data-toggle=\"tooltip\" title=\"Not enough Care Touches\"></i>";
+                            careNeedFlagStr = "<i class=\"fas fa-flag text-danger\"  data-toggle=\"tooltip\" title=\"Not enough Care Touches\"></i>";
                         }
                         else if ( careNeedFollowUpWorkerTouch )
                         {
-                            careNeedFollowUpStr = "<i class=\"fas fa-flag text-danger\"  data-toggle=\"tooltip\" title=\"Follow up worker Care Touch Needed!\"></i>";
+                            careNeedFlagStr = "<i class=\"fas fa-flag text-danger\"  data-toggle=\"tooltip\" title=\"Follow up worker Care Touch Needed!\"></i>";
                         }
                         if ( careNeed.PersonAlias != null )
                         {
-                            lName.Text = string.Format( "<a href=\"{0}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFollowUpStr );
+                            lName.Text = string.Format( "<a href=\"{0}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr );
                         }
                     }
 
