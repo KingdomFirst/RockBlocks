@@ -20,7 +20,9 @@ using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.UI;
+using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 using Newtonsoft.Json;
 
@@ -275,6 +277,25 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         }
 
         /// <summary>
+        /// Gets or sets the launch workflow page route.
+        /// Example: "~/LaunchWorkflows/{0}" where {0} will be formatted with the EntitySetId
+        /// </summary>
+        /// <value>
+        /// The launch workflow page route.
+        /// </value>
+        public virtual string DefaultLaunchWorkflowPageRoute
+        {
+            get
+            {
+                return ViewState["DefaultLaunchWorkflowPageRoute"] as string ?? "~/LaunchWorkflows/{0}";
+            }
+            set
+            {
+                ViewState["DefaultLaunchWorkflowPageRoute"] = value;
+            }
+        }
+
+        /// <summary>
         /// Raises the <see cref="E:System.Web.UI.Control.Init" /> event.
         /// </summary>
         /// <param name="e">An <see cref="T:System.EventArgs" /> object that contains the event data.</param>
@@ -327,8 +348,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( !Page.IsPostBack )
             {
                 SetFilter();
-                BindGrid();
             }
+            BindGrid();
             if ( !string.IsNullOrWhiteSpace( hfCareNeedId.Value ) )
             {
                 var careNeed = new CareNeedService( new RockContext() ).Get( hfCareNeedId.Value.AsInteger() );
@@ -696,6 +717,79 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             }
                         }
                     }
+                    var actionsColumn = gList.ColumnsOfType<RockTemplateField>().First( c => c.HeaderText == "Actions" );
+                    var followUpGrid = false;
+                    if ( e.Row.ClientID.Contains( "gFollowUp" ) )
+                    {
+                        actionsColumn = gFollowUp.ColumnsOfType<RockTemplateField>().First( c => c.HeaderText == "Actions" );
+                        followUpGrid = true;
+                    }
+                    if ( actionsColumn.Visible )
+                    {
+                        var actionsCell = e.Row.Cells[gList.Columns.IndexOf( actionsColumn )];
+
+                        if ( followUpGrid )
+                        {
+                            actionsCell = e.Row.Cells[gFollowUp.Columns.IndexOf( actionsColumn )];
+                        }
+
+                        var ddlNav = new HtmlGenericControl( "div" );
+                        ddlNav.Attributes["class"] = "btn-group";
+                        actionsCell.Controls.Add( ddlNav );
+
+                        var ddlToggle = new HtmlGenericControl( "a" );
+                        ddlToggle.Attributes["class"] = "btn btn-default btn-sm dropdown-toggle";
+                        ddlToggle.Attributes["data-toggle"] = "dropdown";
+                        ddlToggle.Attributes["href"] = "#";
+                        ddlToggle.Attributes["tabindex"] = "0";
+                        ddlNav.Controls.Add( ddlToggle );
+
+                        var ddlToggleText = new HtmlGenericControl( "span" );
+                        ddlToggleText.InnerText = "Actions ";
+                        ddlToggle.Controls.Add( ddlToggleText );
+
+                        var ddlToggleCaret = new HtmlGenericControl( "b" );
+                        ddlToggleCaret.AddCssClass( "caret" );
+                        ddlToggle.Controls.Add( ddlToggleCaret );
+
+                        var ddlMenu = new HtmlGenericControl( "ul" );
+                        ddlMenu.Attributes["class"] = "dropdown-menu dropdown-menu-right";
+                        ddlNav.Controls.Add( ddlMenu );
+
+                        var actionItem1 = new HtmlGenericControl( "li" );
+                        ddlMenu.Controls.Add( actionItem1 );
+
+                        var lbCompleteNeed = new LinkButton();
+                        lbCompleteNeed.Command += lbNeedAction_Click;
+                        lbCompleteNeed.CommandArgument = careNeed.Id.ToString();
+                        lbCompleteNeed.CommandName = "complete";
+                        lbCompleteNeed.Text = "Complete";
+                        actionItem1.Controls.Add( lbCompleteNeed );
+
+                        if ( followUpGrid )
+                        {
+                            var actionItemReopen = new HtmlGenericControl( "li" );
+                            ddlMenu.Controls.Add( actionItemReopen );
+
+                            var lbReOpenNeed = new LinkButton();
+                            lbReOpenNeed.Command += lbNeedAction_Click;
+                            lbReOpenNeed.CommandArgument = careNeed.Id.ToString();
+                            lbReOpenNeed.CommandName = "reopen";
+                            lbReOpenNeed.Text = "Re-Open";
+                            actionItemReopen.Controls.Add( lbReOpenNeed );
+                        }
+
+                        var actionItem2 = new HtmlGenericControl( "li" );
+                        ddlMenu.Controls.Add( actionItem2 );
+
+                        var lbLaunchWorkflow = new LinkButton();
+                        lbLaunchWorkflow.Command += lbNeedAction_Click;
+                        lbLaunchWorkflow.CommandArgument = careNeed.Id.ToString();
+                        lbLaunchWorkflow.CommandName = "launchworkflow";
+                        lbLaunchWorkflow.Text = "Launch Workflow";
+                        actionItem1.Controls.Add( lbLaunchWorkflow );
+
+                    }
 
                     Literal lName = e.Row.FindControl( "lName" ) as Literal;
                     if ( lName != null )
@@ -722,6 +816,93 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
         }
 
+        private void lbNeedAction_Click( object sender, CommandEventArgs e )
+        {
+            var id = e.CommandArgument.ToString().AsInteger();
+            switch ( e.CommandName )
+            {
+                case "complete":
+                    // do something with complete here.
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var careNeedService = new CareNeedService( rockContext );
+                        var careNeed = careNeedService.Get( id );
+                        var completeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
+                        careNeed.StatusValueId = completeValueId;
+                        rockContext.SaveChanges();
+
+                        createNote( rockContext, id, "Marked Complete" );
+                    }
+                    BindGrid();
+                    break;
+                case "reopen":
+                    // do something with re-open here.
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var careNeedService = new CareNeedService( rockContext );
+                        var careNeed = careNeedService.Get( id );
+                        var openValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN ).Id;
+                        careNeed.StatusValueId = openValueId;
+                        careNeed.DateEntered = RockDateTime.Now;
+                        rockContext.SaveChanges();
+
+                        createNote( rockContext, id, "Re-Open Need" );
+                    }
+                    BindGrid();
+                    break;
+                case "launchworkflow":
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var entitySet = new EntitySet();
+                        entitySet.EntityTypeId = EntityTypeCache.Get<CareNeed>().Id;
+                        entitySet.ExpireDateTime = RockDateTime.Now.AddMinutes( 5 );
+                        List<EntitySetItem> entitySetItems = new List<Rock.Model.EntitySetItem>();
+
+                        var item = new EntitySetItem();
+                        item.EntityId = id;
+                        entitySetItems.Add( item );
+
+                        if ( entitySetItems.Any() )
+                        {
+                            var service = new EntitySetService( rockContext );
+                            service.Add( entitySet );
+                            rockContext.SaveChanges();
+                            entitySetItems.ForEach( a =>
+                            {
+                                a.EntitySetId = entitySet.Id;
+                            } );
+
+                            rockContext.BulkInsert( entitySetItems );
+
+                            var routeTemplate = GetRouteFromEventArgs( e ) ?? DefaultLaunchWorkflowPageRoute;
+                            string url;
+
+                            // If the user passed a format-able string like "/Launch/{0}", then fill in the entity set id
+                            // accordingly. Otherwise, add the entity set id as a query param.
+                            if ( routeTemplate.Contains( "{0}" ) )
+                            {
+                                url = string.Format( routeTemplate, entitySet.Id );
+                            }
+                            else
+                            {
+                                var uri = new Uri( Page.Request.Url, routeTemplate );
+                                var uriBuilder = new UriBuilder( uri.AbsoluteUri );
+                                var paramValues = HttpUtility.ParseQueryString( uriBuilder.Query );
+                                paramValues.Add( "EntitySetId", entitySet.Id.ToString() );
+                                uriBuilder.Query = paramValues.ToString();
+                                url = uriBuilder.Uri.PathAndQuery;
+                            }
+
+                            Page.Response.Redirect( url, false );
+                        }
+                        createNote( rockContext, id, "Workflow Launched" );
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
         /// <summary>
         /// Handles the Click event of the btnNoteTemplate control.
         /// </summary>
@@ -734,63 +915,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 LinkButtonField field = sender as LinkButtonField;
                 var fieldId = field.ID.Replace( "btn_", "" );
                 var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
-                var noteService = new NoteService( rockContext );
-                var noteType = _careNeedNoteTypes.FirstOrDefault();
 
-                if ( noteType != null )
+                var noteCreated = createNote( rockContext, e.RowKeyId, noteTemplate.Note, true, noteTemplate );
+                if ( noteCreated )
                 {
-                    var note = new Note { Id = 0 };
-                    note.IsSystem = false;
-                    note.IsAlert = false;
-                    note.NoteTypeId = noteType.Id;
-                    note.EntityId = e.RowKeyId;
-                    note.Text = noteTemplate.Note;
-                    note.EditedByPersonAliasId = CurrentPersonAliasId;
-                    note.EditedDateTime = RockDateTime.Now;
-                    note.NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl();
-                    note.Caption = string.Empty;
-
-                    if ( noteType.RequiresApprovals )
-                    {
-                        if ( note.IsAuthorized( Authorization.APPROVE, CurrentPerson ) )
-                        {
-                            note.ApprovalStatus = NoteApprovalStatus.Approved;
-                            note.ApprovedByPersonAliasId = CurrentPersonAliasId;
-                            note.ApprovedDateTime = RockDateTime.Now;
-                        }
-                        else
-                        {
-                            note.ApprovalStatus = NoteApprovalStatus.PendingApproval;
-                        }
-                    }
-                    else
-                    {
-                        note.ApprovalStatus = NoteApprovalStatus.Approved;
-                    }
-                    note.CopyAttributesFrom( noteTemplate );
-
-                    if ( note.IsValid )
-                    {
-                        noteService.Add( note );
-
-                        rockContext.WrapTransaction( () =>
-                        {
-                            rockContext.SaveChanges();
-                            note.SaveAttributeValues( rockContext );
-                        } );
-
-                        mdGridWarning.Show( "Note Saved: " + noteTemplate.Note, ModalAlertType.Information );
-                        BindGrid();
-                    }
-                    else
-                    {
-                        mdGridWarning.Show( "Note is invalid. <br>" + note.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" ), ModalAlertType.Alert );
-                    }
-                }
-                else
-                {
-                    mdGridWarning.Show( "The Care Need Note type is missing. Please setup a note type for Care Need.", ModalAlertType.Alert );
-
+                    BindGrid();
                 }
             }
         }
@@ -1150,6 +1279,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 gList.Columns.Add( makeNoteField );
                 gFollowUp.Columns.Add( makeNoteField );
 
+                var actionTemplateField = new RockTemplateField();
+                actionTemplateField.HeaderText = "Actions";
+                actionTemplateField.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
+                actionTemplateField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                actionTemplateField.ID = "tfActions";
+                gList.Columns.Add( actionTemplateField );
+                gFollowUp.Columns.Add( actionTemplateField );
+
                 // Add delete column
                 var deleteField = new DeleteField();
                 gList.Columns.Add( deleteField );
@@ -1470,6 +1607,92 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             noteEditor.CssClass = "note-new-kfs";
             noteEditor.SaveButtonClick += mdMakeNote_SaveClick;
             noteEditor.Focus();
+        }
+
+        private bool createNote( RockContext rockContext, int entityId, string noteText, bool displayDialog = false, NoteTemplate noteTemplate = null )
+        {
+            var noteService = new NoteService( rockContext );
+            var noteType = _careNeedNoteTypes.FirstOrDefault();
+            var retVal = false;
+
+            if ( noteType != null )
+            {
+                var note = new Note { Id = 0 };
+                note.IsSystem = false;
+                note.IsAlert = false;
+                note.NoteTypeId = noteType.Id;
+                note.EntityId = entityId;
+                note.Text = noteText;
+                note.EditedByPersonAliasId = CurrentPersonAliasId;
+                note.EditedDateTime = RockDateTime.Now;
+                note.NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl();
+                note.Caption = string.Empty;
+
+                if ( noteType.RequiresApprovals )
+                {
+                    if ( note.IsAuthorized( Authorization.APPROVE, CurrentPerson ) )
+                    {
+                        note.ApprovalStatus = NoteApprovalStatus.Approved;
+                        note.ApprovedByPersonAliasId = CurrentPersonAliasId;
+                        note.ApprovedDateTime = RockDateTime.Now;
+                    }
+                    else
+                    {
+                        note.ApprovalStatus = NoteApprovalStatus.PendingApproval;
+                    }
+                }
+                else
+                {
+                    note.ApprovalStatus = NoteApprovalStatus.Approved;
+                }
+                if ( noteTemplate != null )
+                {
+                    note.CopyAttributesFrom( noteTemplate );
+                }
+
+                if ( note.IsValid )
+                {
+                    noteService.Add( note );
+
+                    rockContext.WrapTransaction( () =>
+                    {
+                        rockContext.SaveChanges();
+                        note.SaveAttributeValues( rockContext );
+                    } );
+
+                    if ( displayDialog )
+                    {
+                        mdGridWarning.Show( "Note Saved: " + noteText, ModalAlertType.Information );
+                    }
+                    retVal = true;
+                }
+                else
+                {
+                    mdGridWarning.Show( "Note is invalid. <br>" + note.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" ), ModalAlertType.Alert );
+                }
+            }
+            else
+            {
+                mdGridWarning.Show( "The Care Need Note type is missing. Please setup a note type for Care Need.", ModalAlertType.Alert );
+            }
+            return retVal;
+        }
+
+        /// <summary>
+        /// Gets the route from event arguments.
+        /// </summary>
+        /// <param name="eventArgs">The <see cref="EventArgs"/> instance containing the event data.</param>
+        /// <returns></returns>
+        private string GetRouteFromEventArgs( EventArgs eventArgs )
+        {
+            var commandArgs = eventArgs as CommandEventArgs;
+
+            if ( commandArgs?.CommandName != "Route" || commandArgs.CommandArgument.ToStringSafe().IsNullOrWhiteSpace() )
+            {
+                return null;
+            }
+
+            return commandArgs.CommandArgument.ToString();
         }
 
         /// <summary>
