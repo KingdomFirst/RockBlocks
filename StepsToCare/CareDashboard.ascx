@@ -7,10 +7,12 @@
     .table > thead > tr > th.ascending a:not(.btn)::after, .table > thead > tr > th.descending a:not(.btn)::after {
         display: inline;
     }
-    .table-striped>tbody>tr.assigned:nth-of-type(odd) {
+
+    .table-striped > tbody > tr.assigned:nth-of-type(odd) {
         background-color: oldlace;
     }
-    .table-striped>tbody>tr.assigned:nth-of-type(even) {
+
+    .table-striped > tbody > tr.assigned:nth-of-type(even) {
         background-color: #fff2da;
     }
 </style>
@@ -192,6 +194,27 @@
                 <asp:ValidationSummary ID="vsMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="MakeNote" />
 
                 <Rock:NoteContainer ID="notesTimeline" runat="server" ShowHeading="false"></Rock:NoteContainer>
+            </Content>
+        </Rock:ModalDialog>
+        <Rock:ModalDialog ID="mdConnectionRequest" runat="server" Title="Convert to Connection Request" ValidationGroup="ConnectionRequest" ClickBackdropToClose="true" OnSaveClick="mdConnectionRequest_SaveClick" SaveButtonCausesValidation="true" Content-CssClass="modal-kfsconnectionrequest">
+            <Content>
+                <asp:HiddenField ID="hfConnectionCareNeedId" runat="server" />
+
+                <asp:ValidationSummary ID="vsConnectionRequest" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="ConnectionRequest" />
+                <Rock:NotificationBox ID="nbDanger" NotificationBoxType="Danger" runat="server" />
+                <Rock:NotificationBox ID="nbSuccess" NotificationBoxType="Success" runat="server" />
+
+                <asp:Panel ID="pnlConnectionTypes" runat="server" CssClass="well">
+                    <asp:Repeater ID="rptConnnectionTypes" runat="server" OnItemDataBound="rptConnnectionTypes_ItemDataBound">
+                        <ItemTemplate>
+                            <asp:Literal ID="lConnectionTypeName" runat="server" />
+                            <Rock:RockCheckBoxList ID="cblOpportunities" runat="server" RepeatDirection="Horizontal" DataTextField="Name" DataValueField="Id" />
+                            </br>
+                        </ItemTemplate>
+                    </asp:Repeater>
+                </asp:Panel>
+
+                <Rock:RockTextBox ID="tbComments" Label="Comments" runat="server" TextMode="MultiLine" Rows="4" ValidateRequestMode="Disabled" />
             </Content>
         </Rock:ModalDialog>
     </ContentTemplate>

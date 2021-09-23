@@ -91,6 +91,38 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 5,
         Key = AttributeKey.CategoriesTemplate )]
 
+    [LinkedPage(
+        "Prayer Detail Page",
+        Description = "Page used to convert needs to prayer requests. (if not set the action will not show)",
+        IsRequired = false,
+        Order = 6,
+        Category = "Actions",
+        Key = AttributeKey.PrayerDetailPage )]
+
+    [LinkedPage(
+        "Benevolence Detail Page",
+        Description = "Page used to convert needs to benevolence requests. (if not set the action will not show)",
+        IsRequired = false,
+        Order = 7,
+        Category = "Actions",
+        Key = AttributeKey.BenevolenceDetailPage )]
+
+    [BooleanField(
+        "Enable Convert to Connection Request",
+        Description = "Enable Convert to Connection Request Action",
+        IsRequired = false,
+        DefaultBooleanValue = false,
+        Order = 8,
+        Category = "Actions",
+        Key = AttributeKey.ConnectionRequestEnable )]
+
+    [ConnectionTypesField( "Include Connection Types",
+        Description = "The connection types to include.",
+        Category = "Actions",
+        IsRequired = false,
+        Order = 9,
+        Key = AttributeKey.IncludeConnectionTypes )]
+
     [CustomDropdownListField( "Display Type",
         Description = "The format to use for displaying notes.",
         ListSource = "Full,Light",
@@ -172,6 +204,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string CloseDialogOnSave = "CloseDialogOnSave";
             public const string NoteViewLavaTemplate = "NoteViewLavaTemplate";
             public const string MinimumCareTouches = "MinimumCareTouches";
+            public const string PrayerDetailPage = "PrayerDetailPage";
+            public const string BenevolenceDetailPage = "BenevolenceDetailPage";
+            public const string ConnectionRequestEnable = "ConnectionRequestEnable";
+            public const string IncludeConnectionTypes = "IncludeConnectionTypes";
         }
 
         /// <summary>
@@ -789,6 +825,50 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         lbLaunchWorkflow.Text = "Launch Workflow";
                         actionItem1.Controls.Add( lbLaunchWorkflow );
 
+                        var prayerDetailPage = LinkedPageRoute( AttributeKey.PrayerDetailPage );
+                        if ( prayerDetailPage.IsNotNullOrWhiteSpace() )
+                        {
+                            var actionItem3 = new HtmlGenericControl( "li" );
+                            ddlMenu.Controls.Add( actionItem3 );
+
+                            var lbLaunchPrayer = new LinkButton();
+                            lbLaunchPrayer.Command += lbNeedAction_Click;
+                            lbLaunchPrayer.CommandArgument = careNeed.Id.ToString();
+                            lbLaunchPrayer.CommandName = "prayer";
+                            lbLaunchPrayer.Text = "Convert to Prayer Request";
+                            actionItem3.Controls.Add( lbLaunchPrayer );
+
+                        }
+
+                        var benevolenceDetailPage = new Rock.Web.PageReference( GetAttributeValue( AttributeKey.BenevolenceDetailPage ) );
+                        if ( benevolenceDetailPage != null && PageCache.Get( benevolenceDetailPage.PageId ).IsAuthorized( Authorization.EDIT, CurrentPerson ) )
+                        {
+                            var actionItem4 = new HtmlGenericControl( "li" );
+                            ddlMenu.Controls.Add( actionItem4 );
+
+                            var lbLaunchBenevolence = new LinkButton();
+                            lbLaunchBenevolence.Command += lbNeedAction_Click;
+                            lbLaunchBenevolence.CommandArgument = careNeed.Id.ToString();
+                            lbLaunchBenevolence.CommandName = "benevolence";
+                            lbLaunchBenevolence.Text = "Convert to Benevolence Request";
+                            actionItem4.Controls.Add( lbLaunchBenevolence );
+                        }
+
+                        var connectionRequest = GetAttributeValue( AttributeKey.ConnectionRequestEnable ).AsBoolean();
+                        if ( connectionRequest )
+                        {
+                            var actionItem5 = new HtmlGenericControl( "li" );
+                            ddlMenu.Controls.Add( actionItem5 );
+
+                            var lbLaunchConnection = new LinkButton();
+                            lbLaunchConnection.Command += lbNeedAction_Click;
+                            lbLaunchConnection.CommandArgument = careNeed.Id.ToString();
+                            lbLaunchConnection.CommandName = "connection";
+                            lbLaunchConnection.Text = "Convert to Connection Request";
+                            actionItem5.Controls.Add( lbLaunchConnection );
+
+                        }
+
                     }
 
                     Literal lName = e.Row.FindControl( "lName" ) as Literal;
@@ -898,8 +978,283 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         createNote( rockContext, id, "Workflow Launched" );
                     }
                     break;
+                case "prayer":
+                    using ( var rockContext = new RockContext() )
+                    {
+                        PrayerRequest prayerRequest;
+                        PrayerRequestService prayerRequestService = new PrayerRequestService( rockContext );
+                        var careNeedService = new CareNeedService( rockContext );
+                        var careNeed = careNeedService.Get( id );
+
+                        prayerRequest = new PrayerRequest();
+                        prayerRequestService.Add( prayerRequest );
+                        prayerRequest.EnteredDateTime = RockDateTime.Now;
+
+                        if ( careNeed.PersonAliasId.HasValue )
+                        {
+                            prayerRequest.RequestedByPersonAliasId = careNeed.PersonAliasId;
+                            prayerRequest.FirstName = careNeed.PersonAlias.Person.FirstName;
+                            prayerRequest.LastName = careNeed.PersonAlias.Person.LastName;
+                            prayerRequest.Email = careNeed.PersonAlias.Person.Email;
+                        }
+
+                        //var expireDays = Convert.ToDouble( GetAttributeValue( "ExpireDays" ) );
+                        //prayerRequest.ExpirationDate = RockDateTime.Now.AddDays( expireDays );
+
+                        prayerRequest.CampusId = careNeed.CampusId;
+
+                        prayerRequest.Text = careNeed.Details.Trim();
+
+                        prayerRequest.LoadAttributes( rockContext );
+
+                        if ( !prayerRequest.IsValid )
+                        {
+                            mdGridWarning.Show( "Prayer Request is invalid. <br>" + prayerRequest.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" ), ModalAlertType.Alert );
+                            return;
+                        }
+
+                        rockContext.SaveChanges();
+                        prayerRequest.SaveAttributeValues( rockContext );
+
+                        var qryParams = new Dictionary<string, string>();
+                        qryParams.Add( "PrayerRequestId", prayerRequest.Id.ToString() );
+
+                        NavigateToLinkedPage( AttributeKey.PrayerDetailPage, qryParams );
+                    }
+                    break;
+                case "benevolence":
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var careNeedService = new CareNeedService( rockContext );
+                        var careNeed = careNeedService.Get( id );
+                        BenevolenceRequestService benevolenceRequestService = new BenevolenceRequestService( rockContext );
+                        BenevolenceResultService benevolenceResultService = new BenevolenceResultService( rockContext );
+
+                        BenevolenceRequest benevolenceRequest = null;
+                        benevolenceRequest = new BenevolenceRequest { Id = 0 };
+
+                        benevolenceRequest.FirstName = careNeed.PersonAlias.Person.FirstName;
+                        benevolenceRequest.LastName = careNeed.PersonAlias.Person.LastName;
+                        benevolenceRequest.Email = careNeed.PersonAlias.Person.Email;
+                        benevolenceRequest.RequestText = careNeed.Details;
+                        benevolenceRequest.CampusId = careNeed.CampusId;
+
+                        if ( careNeed.PersonAlias.Person.GetHomeLocation() != null )
+                        {
+                            benevolenceRequest.LocationId = careNeed.PersonAlias.Person.GetHomeLocation().Id;
+                        }
+
+                        benevolenceRequest.RequestedByPersonAliasId = careNeed.PersonAliasId;
+
+                        //if ( _caseWorkerGroupGuid.HasValue )
+                        //{
+                        //    benevolenceRequest.CaseWorkerPersonAliasId = ddlCaseWorker.SelectedValue.AsIntegerOrNull();
+                        //}
+                        //else
+                        //{
+                        //    benevolenceRequest.CaseWorkerPersonAliasId = ppCaseWorker.PersonAliasId;
+                        //}
+
+                        var pendingStatus = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.BENEVOLENCE_PENDING );
+                        benevolenceRequest.RequestStatusValueId = pendingStatus.Id;
+                        //benevolenceRequest.ConnectionStatusValueId = dvpConnectionStatus.SelectedValue.AsIntegerOrNull();
+
+                        benevolenceRequest.RequestDateTime = RockDateTime.Now;
+
+                        benevolenceRequest.HomePhoneNumber = careNeed.PersonAlias.Person.GetPhoneNumber( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid() )?.NumberFormatted;
+                        benevolenceRequest.CellPhoneNumber = careNeed.PersonAlias.Person.GetPhoneNumber( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() )?.NumberFormatted;
+                        benevolenceRequest.WorkPhoneNumber = careNeed.PersonAlias.Person.GetPhoneNumber( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() )?.NumberFormatted;
+
+                        if ( benevolenceRequest.IsValid )
+                        {
+                            if ( benevolenceRequest.Id.Equals( 0 ) )
+                            {
+                                benevolenceRequestService.Add( benevolenceRequest );
+                            }
+
+                            // get attributes
+                            benevolenceRequest.LoadAttributes();
+
+                            rockContext.WrapTransaction( () =>
+                            {
+                                rockContext.SaveChanges();
+                                benevolenceRequest.SaveAttributeValues( rockContext );
+                            } );
+
+                            var qryParams = new Dictionary<string, string>();
+                            qryParams.Add( "BenevolenceRequestId", benevolenceRequest.Id.ToString() );
+
+                            NavigateToLinkedPage( AttributeKey.BenevolenceDetailPage, qryParams );
+                        }
+                        else
+                        {
+                            mdGridWarning.Show( "Benevolence Request is invalid. <br>" + benevolenceRequest.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" ), ModalAlertType.Alert );
+                        }
+                    }
+                    break;
+                case "connection":
+                    hfConnectionCareNeedId.Value = id.ToString();
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var careNeedService = new CareNeedService( rockContext );
+                        var careNeed = careNeedService.Get( id );
+                        tbComments.Text = careNeed.Details;
+                    }
+                    LoadOpportunities();
+                    nbSuccess.Visible = false;
+                    nbDanger.Visible = false;
+                    tbComments.Visible = true;
+                    pnlConnectionTypes.Visible = true;
+                    mdConnectionRequest.SaveClick += mdConnectionRequest_SaveClick;
+                    mdConnectionRequest.Show();
+                    break;
                 default:
                     break;
+            }
+        }
+
+        protected void mdConnectionRequest_SaveClick( object sender, EventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                var opportunityService = new ConnectionOpportunityService( rockContext );
+                var connectionRequestService = new ConnectionRequestService( rockContext );
+                var careNeedService = new CareNeedService( rockContext );
+                var careNeed = careNeedService.Get( hfConnectionCareNeedId.ValueAsInt() );
+
+                if ( careNeed != null && careNeed.Id > 0 )
+                {
+                    var person = careNeed.PersonAlias.Person;
+                    List<string> opportunityNames = new List<string>();
+
+                    // If there is a valid person with a primary alias, continue
+                    if ( person != null && person.PrimaryAliasId.HasValue )
+                    {
+
+                        foreach ( RepeaterItem typeItem in rptConnnectionTypes.Items )
+                        {
+                            var cblOpportunities = typeItem.FindControl( "cblOpportunities" ) as RockCheckBoxList;
+                            foreach ( int connectionOpportunityId in cblOpportunities.SelectedValuesAsInt )
+                            {
+
+                                // Get the opportunity and default status
+                                var opportunity = opportunityService
+                                    .Queryable()
+                                    .Where( o => o.Id == connectionOpportunityId )
+                                    .FirstOrDefault();
+
+                                int defaultStatusId = opportunity.ConnectionType.ConnectionStatuses
+                                    .Where( s => s.IsDefault )
+                                    .Select( s => s.Id )
+                                    .FirstOrDefault();
+
+                                // If opportunity is valid and has a default status
+                                if ( opportunity != null && defaultStatusId > 0 )
+                                {
+                                    // Now we create the connection request
+                                    var connectionRequest = new ConnectionRequest();
+                                    connectionRequest.PersonAliasId = person.PrimaryAliasId.Value;
+                                    connectionRequest.Comments = tbComments.Text.Trim();
+                                    connectionRequest.ConnectionOpportunityId = opportunity.Id;
+                                    connectionRequest.ConnectionState = ConnectionState.Active;
+                                    connectionRequest.ConnectionStatusId = defaultStatusId;
+
+                                    if ( person.GetCampus() != null )
+                                    {
+                                        var campusId = person.GetCampus().Id;
+                                        connectionRequest.CampusId = campusId;
+                                        connectionRequest.ConnectorPersonAliasId = opportunity.GetDefaultConnectorPersonAliasId( campusId );
+                                        if (
+                                            opportunity != null &&
+                                            opportunity.ConnectionOpportunityCampuses != null )
+                                        {
+                                            var campus = opportunity.ConnectionOpportunityCampuses
+                                                .Where( c => c.CampusId == campusId )
+                                                .FirstOrDefault();
+                                            if ( campus != null )
+                                            {
+                                                connectionRequest.ConnectorPersonAliasId = campus.DefaultConnectorPersonAliasId;
+                                            }
+                                        }
+                                    }
+
+                                    if ( !connectionRequest.IsValid )
+                                    {
+                                        // Controls will show warnings
+                                        //var err = new CustomValidator();
+                                        //err.ValidationGroup = "ConnectionRequest";
+                                        //err.IsValid = false;
+                                        //err.ErrorMessage = connectionRequest.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" );
+                                        //Page.Validators.Add( err );
+                                        //return;
+                                        return;
+                                    }
+
+                                    opportunityNames.Add( opportunity.Name );
+
+                                    connectionRequestService.Add( connectionRequest );
+                                }
+                            }
+                        }
+                    }
+
+                    if ( opportunityNames.Count > 0 )
+                    {
+
+                        rockContext.SaveChanges();
+
+                        // Reset everything for the next person
+                        tbComments.Text = string.Empty;
+                        LoadOpportunities();
+
+                        StringBuilder sb = new StringBuilder();
+                        sb.AppendLine( String.Format( "{0}'s connection requests have been entered for the following opportunities:\n<ul>", person.FullName ) );
+                        foreach ( var name in opportunityNames )
+                        {
+                            sb.AppendLine( String.Format( "<li> {0}</li>", name ) );
+                        }
+                        sb.AppendLine( "</ul>" );
+
+                        mdConnectionRequest.SaveClick -= mdConnectionRequest_SaveClick;
+
+                        tbComments.Visible = false;
+                        pnlConnectionTypes.Visible = false;
+                        nbSuccess.Text = sb.ToString();
+                        nbSuccess.Visible = true;
+                        nbDanger.Visible = false;
+                    }
+                    else
+                    {
+                        nbSuccess.Visible = false;
+                        nbDanger.Visible = true;
+                        nbDanger.Text = "Please select an opportunity.";
+                    }
+                }
+                else
+                {
+                    nbSuccess.Visible = false;
+                    nbDanger.Visible = true;
+                    nbDanger.Text = "Care Need is invalid, please try again.";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles the ItemDataBound event of the rptConnnectionTypes control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RepeaterItemEventArgs"/> instance containing the event data.</param>
+        protected void rptConnnectionTypes_ItemDataBound( object sender, RepeaterItemEventArgs e )
+        {
+            var cblOpportunities = e.Item.FindControl( "cblOpportunities" ) as RockCheckBoxList;
+            var lConnectionTypeName = e.Item.FindControl( "lConnectionTypeName" ) as Literal;
+            var connectionType = e.Item.DataItem as ConnectionType;
+            if ( cblOpportunities != null && lConnectionTypeName != null && connectionType != null )
+            {
+                lConnectionTypeName.Text = String.Format( "<h4 class='block-title'>{0}</h4>", connectionType.Name );
+
+                cblOpportunities.DataSource = connectionType.ConnectionOpportunities.Where( c => c.IsActive ).OrderBy( c => c.Name );
+                cblOpportunities.DataBind();
             }
         }
 
@@ -1693,6 +2048,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             return commandArgs.CommandArgument.ToString();
+        }
+
+        /// <summary>
+        /// Loads the opportunities.
+        /// </summary>
+        private void LoadOpportunities()
+        {
+            var typeFilter = GetAttributeValue( AttributeKey.IncludeConnectionTypes ).SplitDelimitedValues().AsGuidList();
+            rptConnnectionTypes.DataSource = new ConnectionTypeService( new RockContext() ).Queryable().Where( t => !typeFilter.Any() || typeFilter.Contains( t.Guid ) ).ToList();
+            rptConnnectionTypes.DataBind();
         }
 
         /// <summary>
