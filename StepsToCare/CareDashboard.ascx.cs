@@ -91,11 +91,20 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 5,
         Key = AttributeKey.CategoriesTemplate )]
 
+    [BooleanField(
+        "Enable Launch Workflow",
+        Description = "Enable Launch Workflow Action",
+        IsRequired = false,
+        DefaultBooleanValue = true,
+        Order = 6,
+        Category = "Actions",
+        Key = AttributeKey.WorkflowEnable )]
+
     [LinkedPage(
         "Prayer Detail Page",
         Description = "Page used to convert needs to prayer requests. (if not set the action will not show)",
         IsRequired = false,
-        Order = 6,
+        Order = 7,
         Category = "Actions",
         Key = AttributeKey.PrayerDetailPage )]
 
@@ -103,7 +112,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         "Benevolence Detail Page",
         Description = "Page used to convert needs to benevolence requests. (if not set the action will not show)",
         IsRequired = false,
-        Order = 7,
+        Order = 8,
         Category = "Actions",
         Key = AttributeKey.BenevolenceDetailPage )]
 
@@ -112,15 +121,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Description = "Enable Convert to Connection Request Action",
         IsRequired = false,
         DefaultBooleanValue = false,
-        Order = 8,
+        Order = 9,
         Category = "Actions",
         Key = AttributeKey.ConnectionRequestEnable )]
 
-    [ConnectionTypesField( "Include Connection Types",
-        Description = "The connection types to include.",
+    [ConnectionTypesField( "Filter Connection Types",
+        Description = "Filter down the connection types to include only these selected types.",
         Category = "Actions",
         IsRequired = false,
-        Order = 9,
+        Order = 10,
         Key = AttributeKey.IncludeConnectionTypes )]
 
     [CustomDropdownListField( "Display Type",
@@ -129,43 +138,43 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = true,
         DefaultValue = "Full",
         Category = "Notes Dialog",
-        Order = 6,
+        Order = 11,
         Key = AttributeKey.DisplayType )]
 
     [BooleanField( "Use Person Icon",
         DefaultBooleanValue = false,
-        Order = 7,
+        Order = 12,
         Category = "Notes Dialog",
         Key = AttributeKey.UsePersonIcon )]
 
     [BooleanField( "Show Alert Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 8,
+        Order = 13,
         Key = AttributeKey.ShowAlertCheckbox )]
 
     [BooleanField( "Show Private Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 9,
+        Order = 14,
         Key = AttributeKey.ShowPrivateCheckbox )]
 
     [BooleanField( "Show Security Button",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 10,
+        Order = 15,
         Key = AttributeKey.ShowSecurityButton )]
 
     [BooleanField( "Allow Backdated Notes",
         DefaultBooleanValue = false,
         Category = "Notes Dialog",
-        Order = 11,
+        Order = 16,
         Key = AttributeKey.AllowBackdatedNotes )]
 
     [BooleanField( "Close Dialog on Save",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 12,
+        Order = 17,
         Key = AttributeKey.CloseDialogOnSave )]
 
     [CodeEditorField( "Note View Lava Template",
@@ -176,9 +185,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = false,
         DefaultValue = @"{% include '~~/Assets/Lava/NoteViewList.lava' %}",
         Category = "Notes Dialog",
-        Order = 13,
+        Order = 18,
         Key = AttributeKey.NoteViewLavaTemplate )]
-
 
     #endregion Block Settings
 
@@ -208,6 +216,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string BenevolenceDetailPage = "BenevolenceDetailPage";
             public const string ConnectionRequestEnable = "ConnectionRequestEnable";
             public const string IncludeConnectionTypes = "IncludeConnectionTypes";
+            public const string WorkflowEnable = "WorkflowEnable";
         }
 
         /// <summary>
@@ -815,15 +824,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItemReopen.Controls.Add( lbReOpenNeed );
                         }
 
-                        var actionItem2 = new HtmlGenericControl( "li" );
-                        ddlMenu.Controls.Add( actionItem2 );
+                        var launchWorkflowEnabled = GetAttributeValue( AttributeKey.WorkflowEnable ).AsBoolean();
+                        if ( launchWorkflowEnabled )
+                        {
+                            var actionItem2 = new HtmlGenericControl( "li" );
+                            ddlMenu.Controls.Add( actionItem2 );
 
-                        var lbLaunchWorkflow = new LinkButton();
-                        lbLaunchWorkflow.Command += lbNeedAction_Click;
-                        lbLaunchWorkflow.CommandArgument = careNeed.Id.ToString();
-                        lbLaunchWorkflow.CommandName = "launchworkflow";
-                        lbLaunchWorkflow.Text = "Launch Workflow";
-                        actionItem1.Controls.Add( lbLaunchWorkflow );
+                            var lbLaunchWorkflow = new LinkButton();
+                            lbLaunchWorkflow.Command += lbNeedAction_Click;
+                            lbLaunchWorkflow.CommandArgument = careNeed.Id.ToString();
+                            lbLaunchWorkflow.CommandName = "launchworkflow";
+                            lbLaunchWorkflow.Text = "Launch Workflow";
+                            actionItem1.Controls.Add( lbLaunchWorkflow );
+                        }
 
                         var prayerDetailPage = LinkedPageRoute( AttributeKey.PrayerDetailPage );
                         if ( prayerDetailPage.IsNotNullOrWhiteSpace() )
@@ -854,8 +867,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItem4.Controls.Add( lbLaunchBenevolence );
                         }
 
-                        var connectionRequest = GetAttributeValue( AttributeKey.ConnectionRequestEnable ).AsBoolean();
-                        if ( connectionRequest )
+                        var connectionRequestEnabled = GetAttributeValue( AttributeKey.ConnectionRequestEnable ).AsBoolean();
+                        if ( connectionRequestEnabled )
                         {
                             var actionItem5 = new HtmlGenericControl( "li" );
                             ddlMenu.Controls.Add( actionItem5 );
