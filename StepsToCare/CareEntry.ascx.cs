@@ -85,6 +85,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string AutoAssignWorker = "AutoAssignWorker";
             public const string NewAssignmentNotification = "NewAssignmentNotification";
         }
+        private static class PageParameterKey
+        {
+            public const string PersonId = "PersonId";
+            public const string DateEntered = "DateEntered";
+            public const string Status = "Status";
+            public const string CampusId = "CampusId";
+            public const string Category = "Category";
+            public const string Details = "Details";
+        }
 
         private bool _allowNewPerson = false;
 
@@ -815,7 +824,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 careNeed = new CareNeed { Id = 0 };
                 careNeed.DateEntered = RockDateTime.Now;
-                var personId = this.PageParameter( "PersonId" ).AsIntegerOrNull();
+                var personId = this.PageParameter( PageParameterKey.PersonId ).AsIntegerOrNull();
                 if ( personId.HasValue )
                 {
                     var person = new PersonService( rockContext ).Get( personId.Value );
@@ -831,12 +840,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             pnlNewPersonFields.Visible = _allowNewPerson;
             ppPerson.Required = !_allowNewPerson;
 
-            dtbDetailsText.Text = careNeed.Details;
-            dpDate.SelectedDateTime = careNeed.DateEntered;
+            dtbDetailsText.Text = ( careNeed.Details.IsNotNullOrWhiteSpace() ) ? careNeed.Details : PageParameter( PageParameterKey.Details ).ToString();
+            dpDate.SelectedDateTime = careNeed.DateEntered ?? PageParameter( PageParameterKey.DateEntered ).AsDateTime();
 
+            var paramCampusId = PageParameter( PageParameterKey.CampusId ).AsIntegerOrNull();
             if ( careNeed.Campus != null )
             {
                 cpCampus.SelectedCampusId = careNeed.CampusId;
+            }
+            else if ( paramCampusId != null )
+            {
+                cpCampus.SelectedCampusId = paramCampusId;
             }
             else
             {
@@ -854,6 +868,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             LoadDropDowns( careNeed );
 
+            var paramStatus = PageParameter( PageParameterKey.Status ).AsIntegerOrNull();
             if ( careNeed.StatusValueId != null )
             {
                 dvpStatus.SetValue( careNeed.StatusValueId );
@@ -876,14 +891,23 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     hlStatus.LabelType = LabelType.Primary;
                 }
             }
+            else if ( paramStatus != null )
+            {
+                dvpStatus.SetValue( paramStatus );
+            }
             else
             {
                 dvpStatus.SelectedDefinedValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() ).Id;
             }
 
+            var paramCategory = PageParameter( PageParameterKey.Category ).AsIntegerOrNull();
             if ( careNeed.CategoryValueId != null )
             {
                 dvpCategory.SetValue( careNeed.CategoryValueId );
+            }
+            else if ( paramCategory != null )
+            {
+                dvpCategory.SetValue( paramCategory );
             }
 
             if ( careNeed.SubmitterPersonAlias != null )
