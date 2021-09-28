@@ -99,20 +99,20 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         #region Properties
         /// <summary>
-        /// Gets or sets the individual recipient person ids.
+        /// Gets or sets the Assigned Persons to the list.
         /// </summary>
         /// <value>
-        /// The individual recipient person ids.
+        /// The Assigned Person list.
         /// </value>
-        protected List<int> AssignedPersonIds
+        protected List<AssignedPerson> AssignedPersons
         {
             get
             {
-                var recipients = ViewState["AssignedPersonIds"] as List<int>;
+                var recipients = Session["AssignedPersons"] as List<AssignedPerson>;
                 if ( recipients == null )
                 {
-                    recipients = new List<int>();
-                    ViewState["AssignedPersonIds"] = recipients;
+                    recipients = new List<AssignedPerson>();
+                    Session["AssignedPersons"] = recipients;
                 }
 
                 return recipients;
@@ -120,7 +120,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             set
             {
-                ViewState["AssignedPersonIds"] = value;
+                Session["AssignedPersons"] = value;
             }
         }
         #endregion
@@ -330,31 +330,31 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var newlyAssignedPersons = new List<AssignedPerson>();
                 if ( careNeed.AssignedPersons != null )
                 {
-                    if ( AssignedPersonIds.Any() )
+                    if ( AssignedPersons.Any() )
                     {
-                        var assignedPersonsLookup = new PersonService( rockContext )
-                            .Queryable()
-                            .Where( a => AssignedPersonIds.Contains( a.Id ) )
-                            .Select( p => new
-                            {
-                                PrimaryAlias = p.Aliases.Where( x => x.AliasPersonId == x.PersonId ).Select( pa => pa ).FirstOrDefault()
-                            }
-                            );
+                        var assignedPersonsLookup = AssignedPersons;
 
                         foreach ( var alias in assignedPersonsLookup )
                         {
-                            if ( !careNeed.AssignedPersons.Any( ap => ap.PersonAliasId == alias.PrimaryAlias.Id ) )
+                            if ( !careNeed.AssignedPersons.Any( ap => ap.PersonAliasId == alias.PersonAliasId ) )
                             {
+                                var personAlias = alias.PersonAlias;
+                                if ( personAlias == null )
+                                {
+                                    personAlias = new PersonAliasService( rockContext ).Get( alias.PersonAliasId.Value );
+                                }
                                 var assignedPerson = new AssignedPerson
                                 {
-                                    PersonAlias = alias.PrimaryAlias,
-                                    PersonAliasId = alias.PrimaryAlias.Id
+                                    PersonAlias = personAlias,
+                                    PersonAliasId = personAlias.Id,
+                                    FollowUpWorker = alias.FollowUpWorker,
+                                    WorkerId = alias.WorkerId
                                 };
                                 careNeed.AssignedPersons.Add( assignedPerson );
                                 newlyAssignedPersons.Add( assignedPerson );
                             }
                         }
-                        var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.PrimaryAlias.Id ).ToList().Contains( ap.PersonAliasId.Value ) ).ToList();
+                        var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.PersonAliasId ).ToList().Contains( ap.PersonAliasId.Value ) ).ToList();
                         assignedPersonService.DeleteRange( removePersons );
                         careNeed.AssignedPersons.RemoveAll( removePersons );
                     }
@@ -721,12 +721,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( removeAll )
             {
-                AssignedPersonIds.Clear();
+                AssignedPersons.Clear();
             }
             else
             {
-                var selectedPersonIds = gAssignedPersons.SelectedKeys.OfType<int>().ToList();
-                AssignedPersonIds.RemoveAll( a => selectedPersonIds.Contains( a ) );
+                var selectedIds = gAssignedPersons.SelectedKeys.OfType<int>().ToList();
+                AssignedPersons.RemoveAll( a => selectedIds.Contains( a.Id ) );
             }
 
             BindAssignedPersonsGrid();
@@ -760,7 +760,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         protected void gAssignedPersons_DeleteClick( object sender, RowEventArgs e )
         {
-            this.AssignedPersonIds.Remove( e.RowKeyId );
+            var remove = this.AssignedPersons.FirstOrDefault( ap => ap.Id == e.RowKeyId );
+            this.AssignedPersons.Remove( remove );
             BindAssignedPersonsGrid();
         }
 
@@ -773,9 +774,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             if ( ppAddPerson.PersonId.HasValue )
             {
-                if ( !AssignedPersonIds.Contains( ppAddPerson.PersonId.Value ) )
+                if ( !AssignedPersons.Any( ap => ap.PersonAliasId == ppAddPerson.PersonAliasId ) )
                 {
-                    AssignedPersonIds.Add( ppAddPerson.PersonId.Value );
+                    var addPerson = new AssignedPerson
+                    {
+                        PersonAliasId = ppAddPerson.PersonAliasId,
+                        NeedId = hfCareNeedId.Value.AsInteger()
+                    };
+                    AssignedPersons.Add( addPerson );
                     BindAssignedPersonsGrid();
                 }
 
@@ -793,9 +799,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         protected void bddlAddWorker_SelectionChanged( object sender, EventArgs e )
         {
             var selectedVal = bddlAddWorker.SelectedValueAsInt();
-            if ( selectedVal != null && !AssignedPersonIds.Contains( bddlAddWorker.SelectedValueAsInt() ?? 0 ) )
+            if ( selectedVal != null && !AssignedPersons.Any( ap => ap.PersonAliasId == bddlAddWorker.SelectedValueAsInt() ) )
             {
-                AssignedPersonIds.Add( bddlAddWorker.SelectedValueAsInt() ?? 0 );
+                var addPerson = new AssignedPerson
+                {
+                    PersonAliasId = bddlAddWorker.SelectedValueAsInt() ?? 0,
+                    NeedId = hfCareNeedId.Value.AsInteger()
+                };
+                AssignedPersons.Add( addPerson );
                 BindAssignedPersonsGrid();
             }
 
@@ -925,7 +936,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( careNeed.AssignedPersons != null )
             {
-                AssignedPersonIds = careNeed.AssignedPersons.Select( a => a.PersonAlias.PersonId ).ToList();
+                AssignedPersons = careNeed.AssignedPersons.ToList();
                 BindAssignedPersonsGrid();
             }
             else
@@ -959,7 +970,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     .ThenBy( cw => cw.PersonAlias.Person.NickName )
                     .Select( cw => new
                     {
-                        Value = cw.PersonAlias.PersonId,
+                        Value = cw.PersonAlias.Id,
                         Label = cw.PersonAlias.Person.NickName + " " + cw.PersonAlias.Person.LastName
                     } )
                     .Distinct()
@@ -976,25 +987,23 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// </summary>
         private void BindAssignedPersonsGrid()
         {
-            List<int> idList = this.AssignedPersonIds;
+            var reloadList = AssignedPersons
+                .Select( ap => new AssignedPerson
+                {
+                    Id = ap.Id,
+                    PersonAlias = new PersonAliasService( new RockContext() ).Get( ap.PersonAliasId.Value ),
+                    PersonAliasId = ap.PersonAliasId,
+                    NeedId = ap.NeedId,
+                    FollowUpWorker = ap.FollowUpWorker,
+                    WorkerId = ap.WorkerId
+                } )
+                .OrderBy( ap => ap.PersonAlias.Person.LastName )
+                .ThenBy( ap => ap.PersonAlias.Person.NickName );
+            // Bind the list items to the grid.
+            gAssignedPersons.DataSource = reloadList;
+            gAssignedPersons.DataBind();
 
-            using ( var rockContext = new RockContext() )
-            {
-                var personService = new PersonService( rockContext );
-                var qryPersons = personService
-                    .Queryable( true )
-                    .AsNoTracking()
-                    .Where( a => idList.Contains( a.Id ) )
-                    .OrderBy( a => a.LastName )
-                    .ThenBy( a => a.NickName );
-
-                // Bind the list items to the grid.
-                gAssignedPersons.SetLinqDataSource( qryPersons );
-
-                gAssignedPersons.DataBind();
-            }
-
-            btnDeleteSelectedAssignedPersons.Visible = idList.Any();
+            btnDeleteSelectedAssignedPersons.Visible = AssignedPersons.Any();
         }
 
         private PageReference GetParentPage()

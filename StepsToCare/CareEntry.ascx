@@ -106,7 +106,9 @@
                         ShowConfirmDeleteDialog="false">
                         <Columns>
                             <Rock:SelectField></Rock:SelectField>
-                            <asp:BoundField DataField="FullName" HeaderText="Name" SortExpression="FullName" />
+                            <asp:BoundField DataField="PersonAlias.Person.FullName" HeaderText="Name" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" />
+                            <Rock:BoolField HeaderText="Follow Up Worker" DataField="FollowUpWorker"></Rock:BoolField>
+                            <Rock:RockBoundField HeaderText="Worker Id" DataField="WorkerId"></Rock:RockBoundField>
                             <Rock:DeleteField OnClick="gAssignedPersons_DeleteClick" />
                         </Columns>
                     </Rock:Grid>
