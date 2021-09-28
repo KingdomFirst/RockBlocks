@@ -294,6 +294,23 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             BindGrid();
         }
 
+        /// <summary>
+        /// Handles the GridReorder event of the gList control
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        protected void gList_GridReorder( object sender, GridReorderEventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                NoteTemplateService noteTemplateService = new NoteTemplateService( rockContext );
+                var noteTemplates = noteTemplateService.Queryable().OrderBy( nt => nt.Order ).ToList();
+                noteTemplateService.Reorder( noteTemplates, e.OldIndex, e.NewIndex );
+                rockContext.SaveChanges();
+            }
+
+            BindGrid();
+        }
         #endregion
 
         #region Methods
@@ -303,7 +320,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gList.Visible = true;
             RockContext rockContext = new RockContext();
             NoteTemplateService noteTemplateService = new NoteTemplateService( rockContext );
-            var qry = noteTemplateService.Queryable().AsNoTracking();
+            var qry = noteTemplateService.Queryable().AsNoTracking().OrderBy( nt => nt.Order );
 
             var list = qry.ToList();
 
@@ -375,6 +392,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 noteTemplate.IsActive = cbActive.Checked;
 
+                NoteTemplate lastNoteTemplate = noteTemplateService.Queryable().OrderByDescending( b => b.Order ).FirstOrDefault();
+
+                if ( lastNoteTemplate != null )
+                {
+                    noteTemplate.Order = lastNoteTemplate.Order + 1;
+                }
+                else
+                {
+                    noteTemplate.Order = 0;
+                }
+
                 if ( noteTemplate.IsValid )
                 {
                     if ( noteTemplate.Id.Equals( 0 ) )
@@ -437,5 +465,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         }
 
         #endregion
+
     }
 }
