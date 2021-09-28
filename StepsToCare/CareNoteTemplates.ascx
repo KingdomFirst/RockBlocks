@@ -19,8 +19,9 @@
             </div>
             <div class="panel-body">
                 <div class="grid grid-panel">
-                    <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" OnRowDataBound="gList_RowDataBound" OnRowSelected="gList_Edit" ExportSource="DataSource">
+                    <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="false" OnRowDataBound="gList_RowDataBound" OnRowSelected="gList_Edit" OnGridReorder="gList_GridReorder" ExportSource="DataSource">
                         <Columns>
+                            <Rock:ReorderField></Rock:ReorderField>
                             <Rock:RockTemplateField SortExpression="" HeaderText="Icon" ItemStyle-CssClass="text-center fa-lg" HeaderStyle-CssClass="text-center">
                                 <ItemTemplate>
                                     <asp:Literal ID="lIcon" runat="server" />
