@@ -59,7 +59,7 @@
 
                 <div class="row">
                     <div class="col-md-4">
-                        <Rock:LocationPicker ID="lpGeofenceLocation" runat="server" Label="Geofence Location" AllowedPickerModes="Named,Polygon" Help="If geofence is set it is used for auto assignment of care needs based on where the person's home is located."/>
+                        <Rock:LocationPicker ID="lpGeofenceLocation" runat="server" Label="Geofence Location" AllowedPickerModes="Named" Help="If geofence is set it is used for auto assignment of care needs based on where the person's home is located. Only named Polygon/Geofence locations are supported to minimize where you can create the area for use in multiple entities such as Groups."/>
                     </div>
                     <div class="col-md-2">
                         <Rock:RockCheckBox ID="cbActive" runat="server" Label="Active" />
