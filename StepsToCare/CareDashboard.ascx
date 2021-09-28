@@ -15,6 +15,10 @@
     .table-striped > tbody > tr.assigned:nth-of-type(even) {
         background-color: #fff2da;
     }
+
+    .care-dashboard .table-responsive {
+        overflow-y: auto;
+    }
 </style>
 <asp:UpdatePanel runat="server" ID="upnlCareDashboard" UpdateMode="Always">
     <ContentTemplate>

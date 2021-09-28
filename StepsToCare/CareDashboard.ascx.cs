@@ -1393,12 +1393,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( e.Row.RowType == DataControlRowType.Header )
             {
                 var notesField = gList.GetColumnByHeaderText( "Quick Notes" );
-                var notesFieldIndex = gList.GetColumnIndex( notesField );
-                if ( e.Row.Cells.Count > notesFieldIndex + 3 ) // ensure there are more columns to colspan with, +3 for itself, make a note and delete columns
+                if ( notesField != null )
                 {
-                    e.Row.Cells[notesFieldIndex].ColumnSpan = 2;
-                    //now make up for the colspan from cell2
-                    e.Row.Cells.RemoveAt( notesFieldIndex + 1 );
+                    var notesFieldIndex = gList.GetColumnIndex( notesField );
+                    if ( e.Row.Cells.Count > notesFieldIndex + 3 ) // ensure there are more columns to colspan with, +3 for itself, make a note and delete columns
+                    {
+                        e.Row.Cells[notesFieldIndex].ColumnSpan = 2;
+                        //now make up for the colspan from cell2
+                        e.Row.Cells.RemoveAt( notesFieldIndex + 1 );
+                    }
                 }
             }
         }
@@ -1755,14 +1758,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             // Filter by Submitter
-            int? submitterPersonAliasId = ddlSubmitter.SelectedItem.Value.AsIntegerOrNull();
+            int? submitterPersonAliasId = ddlSubmitter.SelectedItem?.Value.AsIntegerOrNull();
             if ( submitterPersonAliasId != null )
             {
                 qry = qry.Where( b => b.SubmitterAliasId == submitterPersonAliasId );
             }
 
             // Filter by Status
-            int? requestStatusValueId = dvpStatus.SelectedItem.Value.AsIntegerOrNull();
+            int? requestStatusValueId = dvpStatus.SelectedItem?.Value.AsIntegerOrNull();
             if ( requestStatusValueId != null )
             {
                 qry = qry.Where( b => b.StatusValueId == requestStatusValueId );
