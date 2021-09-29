@@ -312,7 +312,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( careNeed.PersonAliasId == null )
                     {
                         cvPersonValidation.IsValid = false;
-                        cvPersonValidation.ErrorMessage = "A Person must be selected or First Name, Last Name and Email and/or Phone number must be filled out to proceed.";
+                        cvPersonValidation.ErrorMessage = "A Person must be selected or First Name, Last Name and Email or Phone number must be filled out to proceed.";
+                        wpRequestor.CssClass += " has-error";
                         return;
                     }
                 }
@@ -639,6 +640,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 Person person = new PersonService( new RockContext() ).Get( ppPerson.PersonId.Value );
                 if ( person != null )
                 {
+                    wpRequestor.CssClass = wpRequestor.CssClass.Replace( " has-error", "" );
                     if ( !string.IsNullOrWhiteSpace( person.FirstName ) )
                     {
                         dtbFirstName.Text = person.FirstName;
