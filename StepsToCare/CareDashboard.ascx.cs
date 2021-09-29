@@ -1167,7 +1167,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     // Now we create the connection request
                                     var connectionRequest = new ConnectionRequest();
                                     connectionRequest.PersonAliasId = person.PrimaryAliasId.Value;
-                                    connectionRequest.Comments = tbComments.Text.Trim();
+                                    connectionRequest.Comments = string.Format( "{0} (Converted from Care Need #{1})", tbComments.Text.Trim(), careNeed.Id.ToString() );
                                     connectionRequest.ConnectionOpportunityId = opportunity.Id;
                                     connectionRequest.ConnectionState = ConnectionState.Active;
                                     connectionRequest.ConnectionStatusId = defaultStatusId;
