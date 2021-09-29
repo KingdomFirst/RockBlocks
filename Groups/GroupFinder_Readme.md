@@ -2,9 +2,9 @@
 
 # Advanced Group Finder
 *Tested/Supported in Rock version:  8.0-12.5*   
-*Created:  6/8/2021*
-*Updated: 9/30/2021*
-*Rock Shop Plugin: https://www.rockrms.com/Plugin/161*
+*Created:  6/8/2021*   
+*Updated: 9/30/2021*   
+*Rock Shop Plugin: https://www.rockrms.com/Plugin/161*   
 
 ## Summary
 
