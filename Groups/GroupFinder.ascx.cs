@@ -77,7 +77,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
     //Advanced/not custom settings
     [BooleanField( "Auto Load",
-        Description = "When set to true, all results will be loaded to begin.",
+        Description = "When set to true, all results will be loaded to begin. (Deprecated as of 12.5 due to new core setting for 'Load Initial Results')",
         DefaultBooleanValue = false,
         Key = AttributeKey.AutoLoad )]
     [CampusField( "Default Location",
@@ -532,6 +532,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         protected override void OnInit( EventArgs e )
         {
             _autoLoad = GetAttributeValue( AttributeKey.AutoLoad ).AsBoolean();
+            if ( !_autoLoad )
+            {
+                _autoLoad = GetAttributeValue( AttributeKey.LoadInitialResults ).AsBoolean();
+            }
             _ssFilters = GetAttributeValue( AttributeKey.SingleSelectFilters ).AsBoolean();
             _allowSearch = GetAttributeValue( AttributeKey.AllowSearchPersonGuid ).AsBoolean();
             _collapseFilters = GetAttributeValue( AttributeKey.CollapseFiltersonSearch );
