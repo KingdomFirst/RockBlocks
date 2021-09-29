@@ -72,6 +72,14 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         Key = AttributeKey.ShowCommunicationListCategories,
         Order = 3
         )]
+    [GroupCategoryField(
+        "Communication List Categories Default Expanded",
+        Description = "By default all categories are displayed collapsed. Select the categories of the communication lists to display expanded (open).",
+        AllowMultiple = true,
+        GroupTypeGuid = Rock.SystemGuid.GroupType.GROUPTYPE_COMMUNICATIONLIST,
+        IsRequired = false,
+        Key = AttributeKey.CommunicationListCategoriesExpanded,
+        Order = 4 )]
 
     #endregion Block Attributes
 
@@ -87,6 +95,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             public const string CommunicationListCategories = "CommunicationListCategories";
             public const string ShowMediumPreference = "ShowMediumPreference";
             public const string ShowCommunicationListCategories = "ShowCommunicationListCategories";
+            public const string CommunicationListCategoriesExpanded = "CommunicationListCategoriesOpen";
         }
 
         #endregion Attribute Keys
@@ -166,11 +175,12 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         protected void rptCommunicationListCategories_ItemDataBound( object sender, RepeaterItemEventArgs e )
         {
             var category = e.Item.DataItem as Rock.Model.Category;
-            var showCategory = this.GetAttributeValue( AttributeKey.ShowCommunicationListCategories ).AsBoolean();
             if ( category != null )
             {
                 var pwCategoryPanel = e.Item.FindControl( "pwCategoryPanel" ) as PanelWidget;
+                var openCategoryGuids = this.GetAttributeValue( AttributeKey.CommunicationListCategoriesExpanded ).SplitDelimitedValues().AsGuidList();
 
+                pwCategoryPanel.Expanded = openCategoryGuids.Contains( category.Guid );
                 pwCategoryPanel.Title = category.Name;
                 pwCategoryPanel.TitleIconCssClass = category.IconCssClass;
                 var rptCommunicationLists = pwCategoryPanel.FindControl( "rptCommunicationLists" ) as Repeater;
