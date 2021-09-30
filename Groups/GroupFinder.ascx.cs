@@ -77,7 +77,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
     //Advanced/not custom settings
     [BooleanField( "Auto Load",
-        Description = "When set to true, all results will be loaded to begin. (Deprecated as of 12.5 due to new core setting for 'Load Initial Results')",
+        Description = "When set to true, all results will be loaded to begin.",
         DefaultBooleanValue = false,
         Key = AttributeKey.AutoLoad )]
     [CampusField( "Default Location",
@@ -310,6 +310,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         DefaultBooleanValue = true,
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.IncludePending )]
+    // Due to wanting to replace our AutoLoad attribute with the new block setting the core version added in 12.5, we will update the value behind the scenes until the next release. Currently visible = false in the panel for now.
     [BooleanField( "Load Initial Results",
         Key = AttributeKey.LoadInitialResults,
         Category = AttributeCategory.CustomSetting )]
@@ -532,9 +533,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         protected override void OnInit( EventArgs e )
         {
             _autoLoad = GetAttributeValue( AttributeKey.AutoLoad ).AsBoolean();
-            if ( !_autoLoad )
+            // Due to wanting to replace our AutoLoad attribute with the new block setting the core version added in 12.5, we will update the value behind the scenes until the next release.
+            var loadInitialResults = GetAttributeValue( AttributeKey.LoadInitialResults ).AsBoolean();
+            if ( loadInitialResults != _autoLoad )
             {
-                _autoLoad = GetAttributeValue( AttributeKey.LoadInitialResults ).AsBoolean();
+                SetAttributeValue( AttributeKey.LoadInitialResults, _autoLoad.ToString() );
             }
             _ssFilters = GetAttributeValue( AttributeKey.SingleSelectFilters ).AsBoolean();
             _allowSearch = GetAttributeValue( AttributeKey.AllowSearchPersonGuid ).AsBoolean();

@@ -124,7 +124,8 @@
                                             runat="server"
                                             Label="Load Results on Initial Page Load"
                                             Help="When enabled the group finder will load with all configured groups (no filters enabled)."
-                                            ValidationGroup="GroupFinderSettings" />
+                                            ValidationGroup="GroupFinderSettings"
+                                            Visible="false" />
 
                                         <Rock:GroupTypePicker ID="gtpGeofenceGroupType" runat="server" Label="Geofence Group Type"
                                             Help="An optional group type that contains groups with geographic boundary (fence). If specified, user will be prompted for their address, and only groups that are located in the same geographic boundary ( as defined by one or more groups of this type ) will be displayed."
