@@ -19,6 +19,9 @@
     .care-dashboard .table-responsive {
         overflow-y: auto;
     }
+    .popover-content {
+        text-align: center;
+    }
 </style>
 <asp:UpdatePanel runat="server" ID="upnlCareDashboard" UpdateMode="Always">
     <ContentTemplate>

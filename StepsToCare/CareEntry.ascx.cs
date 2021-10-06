@@ -108,14 +108,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             get
             {
-                var recipients = Session["AssignedPersons"] as List<AssignedPerson>;
-                if ( recipients == null )
+                var persons = Session["AssignedPersons"] as List<AssignedPerson>;
+                if ( persons == null )
                 {
-                    recipients = new List<AssignedPerson>();
-                    Session["AssignedPersons"] = recipients;
+                    persons = new List<AssignedPerson>();
+                    Session["AssignedPersons"] = persons;
                 }
 
-                return recipients;
+                return persons;
             }
 
             set
@@ -171,9 +171,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 phAttributes.Controls.Clear();
                 Helper.AddEditControls( item, phAttributes, false, BlockValidationGroup, 2 );
-
-                confirmExit.Enabled = true;
             }
+
+            confirmExit.Enabled = true;
         }
 
         #endregion
@@ -442,175 +442,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
         }
 
-        private void AutoAssignWorkers( CareNeed careNeed )
-        {
-            var rockContext = new RockContext();
-
-            var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
-            var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
-
-            var careNeedService = new CareNeedService( rockContext );
-            var careWorkerService = new CareWorkerService( rockContext );
-            var careAssigneeService = new AssignedPersonService( rockContext );
-
-            // reload careNeed to fully populate child properties
-            careNeed = careNeedService.Get( careNeed.Guid );
-
-            var careWorkers = careWorkerService.Queryable().AsNoTracking().Where( cw => cw.IsActive );
-
-            var addedWorkerAliasIds = new List<int?>();
-
-            // auto assign Deacon/Worker by Geofence
-            if ( autoAssignWorkerGeofence )
-            {
-                var careWorkersWithFence = careWorkers.Where( cw => cw.GeoFenceId != null );
-                foreach ( var worker in careWorkersWithFence )
-                {
-                    var geofenceLocation = new LocationService( rockContext ).Get( worker.GeoFenceId.Value );
-                    var homeLocation = careNeed.PersonAlias.Person.GetHomeLocation();
-                    if ( homeLocation != null )
-                    {
-                        var geofenceIntersect = homeLocation.GeoPoint.Intersects( geofenceLocation.GeoFence );
-                        if ( geofenceIntersect )
-                        {
-                            var careAssignee = new AssignedPerson { Id = 0 };
-                            careAssignee.CareNeed = careNeed;
-                            careAssignee.PersonAliasId = worker.PersonAliasId;
-                            careAssignee.WorkerId = worker.Id;
-                            //careAssignee.FollowUpWorker = true;
-
-                            careAssigneeService.Add( careAssignee );
-                            addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
-                        }
-                    }
-                }
-            }
-
-            //auto assign worker/pastor by load balance assignment
-            if ( autoAssignWorker )
-            {
-                var careWorkersNoFence = careWorkers.Where( cw => cw.GeoFenceId == null );
-                var workerAssigned = false;
-                var closedId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
-                var careWorkerCount1 = careWorkersNoFence
-                    .Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategoryAndCampus = true,
-                        HasCategory = false,
-                        HasCampus = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
-
-                var careWorkerCount2 = careWorkersNoFence
-                    .Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategoryAndCampus = false,
-                        HasCategory = true,
-                        HasCampus = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
-
-                var careWorkerCount3 = careWorkersNoFence
-                    .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategoryAndCampus = false,
-                        HasCategory = false,
-                        HasCampus = true
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
-
-                var careWorkerCount4 = careWorkersNoFence
-                    .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategoryAndCampus = false,
-                        HasCategory = false,
-                        HasCampus = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
-
-                var careWorkerCounts = careWorkerCount1
-                    .Concat( careWorkerCount2 )
-                    .Concat( careWorkerCount3 )
-                    .Concat( careWorkerCount4 )
-                    .OrderBy( ct => ct.Count )
-                    .ThenByDescending( ct => ct.HasCategoryAndCampus )
-                    .ThenByDescending( ct => ct.HasCategory )
-                    .ThenByDescending( ct => ct.HasCampus );
-
-                var careAssigned = careAssigneeService.Queryable().AsNoTracking().Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).GroupBy( ap => ap.PersonAliasId ).Select( ap => new { Count = ap.Count(), Id = ap.Key } ).OrderBy( a => a.Count );
-                foreach ( var workerCount in careWorkerCounts )
-                {
-                    var worker = workerCount.Worker;
-                    if ( !workerAssigned && !addedWorkerAliasIds.Contains( worker.PersonAliasId ) && worker.PersonAlias != null && careAssigneeService.GetByPersonAliasAndCareNeed( worker.PersonAlias.Id, careNeed.Id ) == null )
-                    {
-                        var careAssignee = new AssignedPerson { Id = 0 };
-                        careAssignee.CareNeed = careNeed;
-                        careAssignee.PersonAliasId = worker.PersonAliasId;
-                        careAssignee.WorkerId = worker.Id;
-                        careAssignee.FollowUpWorker = true;
-
-                        careAssigneeService.Add( careAssignee );
-                        addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
-
-                        workerAssigned = true;
-                    }
-                }
-            }
-
-            // auto assign Small Group Leader by Role
-            var leaderRoleGuid = GetAttributeValue( AttributeKey.GroupTypeAndRole ).AsGuidOrNull() ?? Guid.Empty;
-            var leaderRole = new GroupTypeRoleService( rockContext ).Get( leaderRoleGuid );
-            if ( leaderRole != null )
-            {
-                var groupMemberService = new GroupMemberService( rockContext );
-                var inGroups = groupMemberService.GetByPersonId( careNeed.PersonAlias.PersonId ).Where( gm => gm.Group != null && gm.Group.IsActive && !gm.Group.IsArchived && gm.Group.GroupTypeId == leaderRole.GroupTypeId && !gm.IsArchived && gm.GroupMemberStatus == GroupMemberStatus.Active ).Select( gm => gm.GroupId );
-
-                if ( inGroups.Any() )
-                {
-                    var groupLeaders = groupMemberService.GetByGroupRoleId( leaderRole.Id ).Where( gm => inGroups.Contains( gm.GroupId ) && !gm.IsArchived && gm.GroupMemberStatus == GroupMemberStatus.Active );
-
-                    foreach ( var member in groupLeaders )
-                    {
-                        if ( !addedWorkerAliasIds.Contains( member.Person.PrimaryAliasId ) && careAssigneeService.GetByPersonAliasAndCareNeed( member.Person.PrimaryAliasId, careNeed.Id ) == null && member.PersonId != careNeed.PersonAlias.Person.Id )
-                        {
-                            var careAssignee = new AssignedPerson { Id = 0 };
-                            careAssignee.CareNeed = careNeed;
-                            careAssignee.PersonAliasId = member.Person.PrimaryAliasId;
-
-                            careAssigneeService.Add( careAssignee );
-                            addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
-                        }
-                    }
-
-                }
-            }
-            rockContext.SaveChanges();
-        }
-
         /// <summary>
         /// Handles the Click event of the lbCancel control.
         /// </summary>
@@ -705,6 +536,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
             }
         }
+
         /// <summary>
         /// Handles the Click event of the btnDeleteSelectedAssignedPersons control.
         /// </summary>
@@ -755,6 +587,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             BindAssignedPersonsGrid();
         }
+
         /// <summary>
         /// Handles the DeleteClick event of the gAssignedPersons control.
         /// </summary>
@@ -982,6 +815,174 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 bddlAddWorker.DataBind();
             }
             ppSubmitter.Visible = true;
+        }
+
+        private void AutoAssignWorkers( CareNeed careNeed )
+        {
+            var rockContext = new RockContext();
+
+            var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
+            var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
+
+            var careNeedService = new CareNeedService( rockContext );
+            var careWorkerService = new CareWorkerService( rockContext );
+            var careAssigneeService = new AssignedPersonService( rockContext );
+
+            // reload careNeed to fully populate child properties
+            careNeed = careNeedService.Get( careNeed.Guid );
+
+            var careWorkers = careWorkerService.Queryable().AsNoTracking().Where( cw => cw.IsActive );
+
+            var addedWorkerAliasIds = new List<int?>();
+
+            // auto assign Deacon/Worker by Geofence
+            if ( autoAssignWorkerGeofence )
+            {
+                var careWorkersWithFence = careWorkers.Where( cw => cw.GeoFenceId != null );
+                foreach ( var worker in careWorkersWithFence )
+                {
+                    var geofenceLocation = new LocationService( rockContext ).Get( worker.GeoFenceId.Value );
+                    var homeLocation = careNeed.PersonAlias.Person.GetHomeLocation();
+                    if ( homeLocation != null )
+                    {
+                        var geofenceIntersect = homeLocation.GeoPoint.Intersects( geofenceLocation.GeoFence );
+                        if ( geofenceIntersect )
+                        {
+                            var careAssignee = new AssignedPerson { Id = 0 };
+                            careAssignee.CareNeed = careNeed;
+                            careAssignee.PersonAliasId = worker.PersonAliasId;
+                            careAssignee.WorkerId = worker.Id;
+                            //careAssignee.FollowUpWorker = true;
+
+                            careAssigneeService.Add( careAssignee );
+                            addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
+                        }
+                    }
+                }
+            }
+
+            //auto assign worker/pastor by load balance assignment
+            if ( autoAssignWorker )
+            {
+                var careWorkersNoFence = careWorkers.Where( cw => cw.GeoFenceId == null );
+                var workerAssigned = false;
+                var closedId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
+                var careWorkerCount1 = careWorkersNoFence
+                    .Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
+                    .Select( cw => new
+                    {
+                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
+                        Worker = cw,
+                        HasCategoryAndCampus = true,
+                        HasCategory = false,
+                        HasCampus = false
+                    }
+                    )
+                    .OrderBy( cw => cw.Count )
+                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
+                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+
+                var careWorkerCount2 = careWorkersNoFence
+                    .Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
+                    .Select( cw => new
+                    {
+                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
+                        Worker = cw,
+                        HasCategoryAndCampus = false,
+                        HasCategory = true,
+                        HasCampus = false
+                    }
+                    )
+                    .OrderBy( cw => cw.Count )
+                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
+                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+
+                var careWorkerCount3 = careWorkersNoFence
+                    .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
+                    .Select( cw => new
+                    {
+                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
+                        Worker = cw,
+                        HasCategoryAndCampus = false,
+                        HasCategory = false,
+                        HasCampus = true
+                    }
+                    )
+                    .OrderBy( cw => cw.Count )
+                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
+                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+
+                var careWorkerCount4 = careWorkersNoFence
+                    .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
+                    .Select( cw => new
+                    {
+                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
+                        Worker = cw,
+                        HasCategoryAndCampus = false,
+                        HasCategory = false,
+                        HasCampus = false
+                    }
+                    )
+                    .OrderBy( cw => cw.Count )
+                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
+                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+
+                var careWorkerCounts = careWorkerCount1
+                    .Concat( careWorkerCount2 )
+                    .Concat( careWorkerCount3 )
+                    .Concat( careWorkerCount4 )
+                    .OrderBy( ct => ct.Count )
+                    .ThenByDescending( ct => ct.HasCategoryAndCampus )
+                    .ThenByDescending( ct => ct.HasCategory )
+                    .ThenByDescending( ct => ct.HasCampus );
+
+                foreach ( var workerCount in careWorkerCounts )
+                {
+                    var worker = workerCount.Worker;
+                    if ( !workerAssigned && !addedWorkerAliasIds.Contains( worker.PersonAliasId ) && worker.PersonAlias != null && careAssigneeService.GetByPersonAliasAndCareNeed( worker.PersonAlias.Id, careNeed.Id ) == null )
+                    {
+                        var careAssignee = new AssignedPerson { Id = 0 };
+                        careAssignee.CareNeed = careNeed;
+                        careAssignee.PersonAliasId = worker.PersonAliasId;
+                        careAssignee.WorkerId = worker.Id;
+                        careAssignee.FollowUpWorker = true;
+
+                        careAssigneeService.Add( careAssignee );
+                        addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
+
+                        workerAssigned = true;
+                    }
+                }
+            }
+
+            // auto assign Small Group Leader by Role
+            var leaderRoleGuid = GetAttributeValue( AttributeKey.GroupTypeAndRole ).AsGuidOrNull() ?? Guid.Empty;
+            var leaderRole = new GroupTypeRoleService( rockContext ).Get( leaderRoleGuid );
+            if ( leaderRole != null )
+            {
+                var groupMemberService = new GroupMemberService( rockContext );
+                var inGroups = groupMemberService.GetByPersonId( careNeed.PersonAlias.PersonId ).Where( gm => gm.Group != null && gm.Group.IsActive && !gm.Group.IsArchived && gm.Group.GroupTypeId == leaderRole.GroupTypeId && !gm.IsArchived && gm.GroupMemberStatus == GroupMemberStatus.Active ).Select( gm => gm.GroupId );
+
+                if ( inGroups.Any() )
+                {
+                    var groupLeaders = groupMemberService.GetByGroupRoleId( leaderRole.Id ).Where( gm => inGroups.Contains( gm.GroupId ) && !gm.IsArchived && gm.GroupMemberStatus == GroupMemberStatus.Active );
+
+                    foreach ( var member in groupLeaders )
+                    {
+                        if ( !addedWorkerAliasIds.Contains( member.Person.PrimaryAliasId ) && careAssigneeService.GetByPersonAliasAndCareNeed( member.Person.PrimaryAliasId, careNeed.Id ) == null && member.PersonId != careNeed.PersonAlias.Person.Id )
+                        {
+                            var careAssignee = new AssignedPerson { Id = 0 };
+                            careAssignee.CareNeed = careNeed;
+                            careAssignee.PersonAliasId = member.Person.PrimaryAliasId;
+
+                            careAssigneeService.Add( careAssignee );
+                            addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
+                        }
+                    }
+
+                }
+            }
+            rockContext.SaveChanges();
         }
 
         /// <summary>
