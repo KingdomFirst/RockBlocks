@@ -376,7 +376,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             mdMakeNote.Footer.Visible = false;
 
-            // in case this is used as a Person Block, set the TargetPerson
+            // in case this is used as a Person Block, set the TargetPerson, future expansion point
             TargetPerson = ContextEntity<Person>();
 
             _careNeedNoteTypes = NoteTypeCache.GetByEntity( EntityTypeCache.Get( typeof( CareNeed ) ).Id, "", "", true );
@@ -536,13 +536,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             SetFilter( false );
             BindMainGrid( null, null, null );
         }
+
         protected void rFollowUpFilter_ClearFilterClick( object sender, EventArgs e )
         {
             rFollowUpFilter.DeleteUserPreferences();
             SetFilter( false );
             BindFollowUpGrid( null, null, null );
         }
-
 
         /// <summary>
         /// Handles the filter display for each saved user value
@@ -850,7 +850,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             lbLaunchPrayer.CommandName = "prayer";
                             lbLaunchPrayer.Text = "Convert to Prayer Request";
                             actionItem3.Controls.Add( lbLaunchPrayer );
-
                         }
 
                         var benevolenceDetailPage = new Rock.Web.PageReference( GetAttributeValue( AttributeKey.BenevolenceDetailPage ) );
@@ -879,7 +878,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             lbLaunchConnection.CommandName = "connection";
                             lbLaunchConnection.Text = "Convert to Connection Request";
                             actionItem5.Controls.Add( lbLaunchConnection );
-
                         }
 
                     }
@@ -1374,7 +1372,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         }
 
         /// <summary>
-        /// Handles the GridRebind event of the gPledges control.
+        /// Handles the GridRebind event of the gList control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
