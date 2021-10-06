@@ -680,8 +680,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( control != null )
                     {
                         string savedValue = rFilter.GetUserPreference( attribute.Key );
-                        //if ( !string.IsNullOrWhiteSpace( savedValue ) )
-                        //{
                         try
                         {
                             var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
@@ -691,7 +689,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         {
                             // intentionally ignore
                         }
-                        //}
                     }
                 }
             }

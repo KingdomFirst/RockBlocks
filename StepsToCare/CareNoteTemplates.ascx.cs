@@ -49,15 +49,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
     {
 
         /// <summary>
-        /// User Preference Key
-        /// </summary>
-        private static class UserPreferenceKey
-        {
-            public const string Category = "Category";
-            public const string Campus = "Campus";
-        }
-
-        /// <summary>
         /// View State Keys
         /// </summary>
         private static class ViewStateKey

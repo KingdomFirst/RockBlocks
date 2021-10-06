@@ -65,17 +65,25 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
     [IntegerField(
         "Minimum Care Touches",
-        Description = "Minimum care touches in 24 hours before the need gets 'flagged'.",
+        Description = "Minimum care touches in 'Minimum Care Touch Hours' before the need gets 'flagged'.",
         DefaultIntegerValue = 2,
         IsRequired = true,
         Order = 3,
         Key = AttributeKey.MinimumCareTouches )]
 
+    [IntegerField(
+        "Minimum Care Touch Hours",
+        Description = "Minimum care touches in this time period before the need gets 'flagged'.",
+        DefaultIntegerValue = 24,
+        IsRequired = true,
+        Order = 4,
+        Key = AttributeKey.MinimumCareTouchHours )]
+
     [DefinedValueField(
         "Outstanding Care Needs Statuses",
         Description = "Select the status values that count towards the 'Outstanding Care Needs' total.",
         IsRequired = true,
-        Order = 4,
+        Order = 5,
         Key = AttributeKey.OutstandingCareNeedsStatuses,
         AllowMultiple = true,
         DefaultValue = rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN,
@@ -88,7 +96,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         EditorMode = CodeEditorMode.Lava,
         EditorTheme = CodeEditorTheme.Rock,
         DefaultValue = CategoriesTemplateDefaultValue,
-        Order = 5,
+        Order = 6,
         Key = AttributeKey.CategoriesTemplate )]
 
     [BooleanField(
@@ -96,7 +104,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Description = "Enable Launch Workflow Action",
         IsRequired = false,
         DefaultBooleanValue = true,
-        Order = 6,
+        Order = 7,
         Category = "Actions",
         Key = AttributeKey.WorkflowEnable )]
 
@@ -104,7 +112,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         "Prayer Detail Page",
         Description = "Page used to convert needs to prayer requests. (if not set the action will not show)",
         IsRequired = false,
-        Order = 7,
+        Order = 8,
         Category = "Actions",
         Key = AttributeKey.PrayerDetailPage )]
 
@@ -112,7 +120,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         "Benevolence Detail Page",
         Description = "Page used to convert needs to benevolence requests. (if not set the action will not show)",
         IsRequired = false,
-        Order = 8,
+        Order = 9,
         Category = "Actions",
         Key = AttributeKey.BenevolenceDetailPage )]
 
@@ -121,7 +129,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Description = "Enable Convert to Connection Request Action",
         IsRequired = false,
         DefaultBooleanValue = false,
-        Order = 9,
+        Order = 10,
         Category = "Actions",
         Key = AttributeKey.ConnectionRequestEnable )]
 
@@ -129,7 +137,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Description = "Filter down the connection types to include only these selected types.",
         Category = "Actions",
         IsRequired = false,
-        Order = 10,
+        Order = 11,
         Key = AttributeKey.IncludeConnectionTypes )]
 
     [CustomDropdownListField( "Display Type",
@@ -138,43 +146,43 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = true,
         DefaultValue = "Full",
         Category = "Notes Dialog",
-        Order = 11,
+        Order = 12,
         Key = AttributeKey.DisplayType )]
 
     [BooleanField( "Use Person Icon",
         DefaultBooleanValue = false,
-        Order = 12,
+        Order = 13,
         Category = "Notes Dialog",
         Key = AttributeKey.UsePersonIcon )]
 
     [BooleanField( "Show Alert Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 13,
+        Order = 14,
         Key = AttributeKey.ShowAlertCheckbox )]
 
     [BooleanField( "Show Private Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 14,
+        Order = 15,
         Key = AttributeKey.ShowPrivateCheckbox )]
 
     [BooleanField( "Show Security Button",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 15,
+        Order = 16,
         Key = AttributeKey.ShowSecurityButton )]
 
     [BooleanField( "Allow Backdated Notes",
         DefaultBooleanValue = false,
         Category = "Notes Dialog",
-        Order = 16,
+        Order = 17,
         Key = AttributeKey.AllowBackdatedNotes )]
 
     [BooleanField( "Close Dialog on Save",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 17,
+        Order = 18,
         Key = AttributeKey.CloseDialogOnSave )]
 
     [CodeEditorField( "Note View Lava Template",
@@ -185,7 +193,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = false,
         DefaultValue = @"{% include '~~/Assets/Lava/NoteViewList.lava' %}",
         Category = "Notes Dialog",
-        Order = 18,
+        Order = 19,
         Key = AttributeKey.NoteViewLavaTemplate )]
 
     #endregion Block Settings
@@ -212,6 +220,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string CloseDialogOnSave = "CloseDialogOnSave";
             public const string NoteViewLavaTemplate = "NoteViewLavaTemplate";
             public const string MinimumCareTouches = "MinimumCareTouches";
+            public const string MinimumCareTouchHours = "MinimumCareTouchHours";
             public const string PrayerDetailPage = "PrayerDetailPage";
             public const string BenevolenceDetailPage = "BenevolenceDetailPage";
             public const string ConnectionRequestEnable = "ConnectionRequestEnable";
@@ -259,9 +268,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         private const string CategoriesTemplateDefaultValue = @"
 <div class="""">
 {% for category in Categories %}
-    <span class=""badge p-2 mb-2"" style=""background-color: {{ category | Attribute:'Color' }}"">{{ category.Value }}</span>
+    <span class=""badge rounded-0 p-2 mb-2"" style=""background-color: {{ category | Attribute:'Color' }}"">{{ category.Value }}</span>
 {% endfor %}
-<br><span class=""badge p-2 mb-2 text-color"" style=""background-color: oldlace"">Assigned to You</span>
+<br><span class=""badge rounded-0 p-2 mb-2 text-color"" style=""background-color: oldlace"">Assigned to You</span>
 </div>";
 
         #endregion Attribute Default values
@@ -438,7 +447,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
-            SetFilter();
+            SetFilter( false );
             BindGrid();
         }
         /// <summary>
@@ -735,6 +744,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
 
                     var minimumCareTouches = GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger();
+                    var minimumCareTouchHours = GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger();
                     var careTouchCount = 0;
                     Literal lCareTouches = e.Row.FindControl( "lCareTouches" ) as Literal;
                     if ( lCareTouches != null )
@@ -886,8 +896,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( lName != null )
                     {
                         var dateDifference = RockDateTime.Now - careNeed.DateEntered.Value;
-                        var careNeedFlag = ( dateDifference.TotalHours >= 24 && careTouchCount <= minimumCareTouches );
-                        var careNeedFollowUpWorkerTouch = ( dateDifference.TotalHours >= 24 && !assignedFollowUpWorkerCareTouch );
+                        var careNeedFlag = ( dateDifference.TotalHours >= minimumCareTouchHours && careTouchCount <= minimumCareTouches );
+                        var careNeedFollowUpWorkerTouch = ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
                         var careNeedFlagStr = "";
                         if ( careNeedFlag )
                         {
@@ -951,19 +961,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                         var item = new EntitySetItem();
                         item.EntityId = id;
-                        entitySetItems.Add( item );
+                        entitySet.Items.Add( item );
 
-                        if ( entitySetItems.Any() )
+                        if ( entitySet.Items.Any() )
                         {
                             var service = new EntitySetService( rockContext );
                             service.Add( entitySet );
                             rockContext.SaveChanges();
-                            entitySetItems.ForEach( a =>
-                            {
-                                a.EntitySetId = entitySet.Id;
-                            } );
-
-                            rockContext.BulkInsert( entitySetItems );
 
                             var routeTemplate = GetRouteFromEventArgs( e ) ?? DefaultLaunchWorkflowPageRoute;
                             string url;
@@ -1057,18 +1061,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                         benevolenceRequest.RequestedByPersonAliasId = careNeed.PersonAliasId;
 
-                        //if ( _caseWorkerGroupGuid.HasValue )
-                        //{
-                        //    benevolenceRequest.CaseWorkerPersonAliasId = ddlCaseWorker.SelectedValue.AsIntegerOrNull();
-                        //}
-                        //else
-                        //{
-                        //    benevolenceRequest.CaseWorkerPersonAliasId = ppCaseWorker.PersonAliasId;
-                        //}
-
                         var pendingStatus = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.BENEVOLENCE_PENDING );
                         benevolenceRequest.RequestStatusValueId = pendingStatus.Id;
-                        //benevolenceRequest.ConnectionStatusValueId = dvpConnectionStatus.SelectedValue.AsIntegerOrNull();
 
                         benevolenceRequest.RequestDateTime = RockDateTime.Now;
 
@@ -1191,13 +1185,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                                     if ( !connectionRequest.IsValid )
                                     {
-                                        // Controls will show warnings
-                                        //var err = new CustomValidator();
-                                        //err.ValidationGroup = "ConnectionRequest";
-                                        //err.IsValid = false;
-                                        //err.ErrorMessage = connectionRequest.ValidationResults.Select( a => a.ErrorMessage ).ToList().AsDelimited( "<br />" );
-                                        //Page.Validators.Add( err );
-                                        //return;
                                         return;
                                     }
 
@@ -1636,35 +1623,35 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             gFollowUp.Columns.Add( btnNoteTemplate );
                         }
                     }
+
+                    var makeNoteField = new LinkButtonField();
+                    makeNoteField.HeaderText = "Make Note";
+                    makeNoteField.CssClass = "btn btn-primary btn-make-note btn-sm w-auto";
+                    makeNoteField.Text = "Make Note";
+                    makeNoteField.Click += gMakeNote_Click;
+                    makeNoteField.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
+                    makeNoteField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                    gList.Columns.Add( makeNoteField );
+                    gFollowUp.Columns.Add( makeNoteField );
+
+                    var actionTemplateField = new RockTemplateField();
+                    actionTemplateField.HeaderText = "Actions";
+                    actionTemplateField.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
+                    actionTemplateField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                    actionTemplateField.ID = "tfActions";
+                    gList.Columns.Add( actionTemplateField );
+                    gFollowUp.Columns.Add( actionTemplateField );
+
+                    // Add delete column
+                    var deleteField = new DeleteField();
+                    gList.Columns.Add( deleteField );
+                    deleteField.Click += gList_Delete;
+
+                    // Add delete column
+                    var deleteFieldFollowUp = new DeleteField();
+                    gFollowUp.Columns.Add( deleteFieldFollowUp );
+                    deleteFieldFollowUp.Click += gList_Delete;
                 }
-
-                var makeNoteField = new LinkButtonField();
-                makeNoteField.HeaderText = "Make Note";
-                makeNoteField.CssClass = "btn btn-primary btn-make-note btn-sm w-auto";
-                makeNoteField.Text = "Make Note";
-                makeNoteField.Click += gMakeNote_Click;
-                makeNoteField.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
-                makeNoteField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                gList.Columns.Add( makeNoteField );
-                gFollowUp.Columns.Add( makeNoteField );
-
-                var actionTemplateField = new RockTemplateField();
-                actionTemplateField.HeaderText = "Actions";
-                actionTemplateField.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
-                actionTemplateField.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                actionTemplateField.ID = "tfActions";
-                gList.Columns.Add( actionTemplateField );
-                gFollowUp.Columns.Add( actionTemplateField );
-
-                // Add delete column
-                var deleteField = new DeleteField();
-                gList.Columns.Add( deleteField );
-                deleteField.Click += gList_Delete;
-
-                // Add delete column
-                var deleteFieldFollowUp = new DeleteField();
-                gFollowUp.Columns.Add( deleteFieldFollowUp );
-                deleteFieldFollowUp.Click += gList_Delete;
             }
         }
 
@@ -1689,12 +1676,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var last7Days = currentDateTime.AddDays( -7 );
             var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime );
 
-            BindMainGrid( rockContext, careNeedService, qry );
-            BindFollowUpGrid( rockContext, careNeedService, qry );
-
             lTouchesCount.Text = careTouches.ToString();
             lCareNeedsCount.Text = outstandingCareNeeds.ToString();
             lTotalNeedsCount.Text = totalCareNeeds.ToString();
+
+            BindMainGrid( rockContext, careNeedService, qry );
+            BindFollowUpGrid( rockContext, careNeedService, qry );
         }
 
         private void BindMainGrid( RockContext rockContext, CareNeedService careNeedService, IQueryable<CareNeed> qry )
@@ -1919,7 +1906,25 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             SortProperty sortProperty = gFollowUp.SortProperty;
             if ( sortProperty != null )
             {
-                qry = qry.Sort( sortProperty );
+                if ( sortProperty.Property.Contains( "AssignedPersons" ) )
+                {
+                    if ( sortProperty.Direction == SortDirection.Ascending )
+                    {
+                        qry = qry.OrderBy( a => a.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
+                            .ThenBy( a => a.DateEntered )
+                            .ThenBy( a => a.Id );
+                    }
+                    else
+                    {
+                        qry = qry.OrderByDescending( a => a.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
+                            .ThenByDescending( a => a.DateEntered )
+                            .ThenByDescending( a => a.Id );
+                    }
+                }
+                else
+                {
+                    qry = qry.Sort( sortProperty );
+                }
             }
             else
             {
@@ -1986,17 +1991,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( noteType != null )
             {
-                var note = new Note { Id = 0 };
-                note.IsSystem = false;
-                note.IsAlert = false;
-                note.NoteTypeId = noteType.Id;
-                note.EntityId = entityId;
-                note.Text = noteText;
-                note.EditedByPersonAliasId = CurrentPersonAliasId;
-                note.EditedDateTime = RockDateTime.Now;
-                note.NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl();
-                note.Caption = string.Empty;
-
+                var note = new Note
+                {
+                    Id = 0,
+                    IsSystem = false,
+                    IsAlert = false,
+                    NoteTypeId = noteType.Id,
+                    EntityId = entityId,
+                    Text = noteText,
+                    EditedByPersonAliasId = CurrentPersonAliasId,
+                    EditedDateTime = RockDateTime.Now,
+                    NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl(),
+                    Caption = string.Empty
+                };
                 if ( noteType.RequiresApprovals )
                 {
                     if ( note.IsAuthorized( Authorization.APPROVE, CurrentPerson ) )
