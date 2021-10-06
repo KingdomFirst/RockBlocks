@@ -60,7 +60,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.AutoAssignWorkerGeofence )]
 
     [BooleanField( "Auto Assign Worker (load balanced)",
-        Description = "Should workers be auto assigned to care need (by default it will prioritize same category workers with category of need)",
+        Description = "Use intelligent load balancing to auto assign care workers to a care need based on their workload and other parameters?",
         DefaultBooleanValue = true,
         Key = AttributeKey.AutoAssignWorker )]
 
@@ -312,7 +312,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( careNeed.PersonAliasId == null )
                     {
                         cvPersonValidation.IsValid = false;
-                        cvPersonValidation.ErrorMessage = "A Person must be selected or First Name, Last Name and Email or Phone number must be filled out to proceed.";
+                        cvPersonValidation.ErrorMessage = "Please select a Person or provide First Name, Last Name and Email or Phone number to proceed.";
                         wpRequestor.CssClass += " has-error";
                         return;
                     }

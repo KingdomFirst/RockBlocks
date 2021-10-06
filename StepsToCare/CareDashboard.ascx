@@ -82,7 +82,6 @@
                         <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gList_Edit" OnRowCreated="gList_RowCreated" ExportSource="DataSource">
                             <Columns>
                                 <Rock:ColorField DataField="Category.AttributeValues.Color" ToolTipDataField="Category.Value" HeaderText="Cat" SortExpression="Category.Value" />
-
                                 <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name">
                                     <ItemTemplate>
                                         <asp:Literal ID="lName" runat="server" />
@@ -120,7 +119,6 @@
                         <Rock:Grid ID="gFollowUp" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gList_Edit" OnRowCreated="gList_RowCreated" ExportSource="DataSource">
                             <Columns>
                                 <Rock:ColorField DataField="Category.AttributeValues.Color" ToolTipDataField="Category.Value" HeaderText="Cat" SortExpression="Category.Value" />
-
                                 <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name">
                                     <ItemTemplate>
                                         <asp:Literal ID="lName" runat="server" />
@@ -171,7 +169,6 @@
                             var resultObject = JSON.parse(result);
                             var resultHtml = resultObject.PickerItemDetailsHtml.replace(/<small>.*<\/small>/ig, "").replace(/<div class='body'>.*<\/div>$/ig, "").replace(/header/g, "div").replace(/65/g, '120');
                             return resultHtml;
-
                         }
                     }).on('mouseenter', function () {
                         var _this = this;
