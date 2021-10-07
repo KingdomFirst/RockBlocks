@@ -549,7 +549,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var selectField = gAssignedPersons.ColumnsOfType<SelectField>().First();
             if ( selectField != null && selectField.HeaderCheckbox != null )
             {
-                // if the 'Select All' checkbox in the header is checked, and they haven't unselected anything, then assume they want to remove all recipients
+                // if the 'Select All' checkbox in the header is checked, and they haven't unselected anything, then assume they want to remove all people
                 removeAll = selectField.HeaderCheckbox.Checked && gAssignedPersons.SelectedKeys.Count == gAssignedPersons.PageSize;
             }
 
@@ -565,17 +565,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             BindAssignedPersonsGrid();
 
-        }
-
-        /// <summary>
-        /// Handles the RowDataBound event of the gAssignedPersons control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="GridViewRowEventArgs"/> instance containing the event data.</param>
-        protected void gAssignedPersons_RowDataBound( object sender, GridViewRowEventArgs e )
-        {
-            // Don't need it to do anything yet, mainly for alerts or notes?
-            var recipientPerson = e.Row.DataItem as Person;
         }
 
         /// <summary>
