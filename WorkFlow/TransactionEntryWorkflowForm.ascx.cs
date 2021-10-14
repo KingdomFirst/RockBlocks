@@ -31,6 +31,7 @@ using Rock.Data;
 using Rock.Financial;
 using Rock.Lava;
 using Rock.Model;
+using Rock.Utility;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
@@ -586,7 +587,7 @@ TransactionAccountDetails: [
             }
 
             // Update the total amount
-            lblTotalAmount.Text = GlobalAttributesCache.Value( "CurrencySymbol" ) + SelectedAccounts.Sum( f => f.Amount ).ToString( "F2" );
+            lblTotalAmount.Text = SelectedAccounts.Sum( f => f.Amount ).FormatAsCurrency();
 
             // Set the frequency date label based on if 'One Time' is selected or not
             if ( btnFrequency.Items.Count > 0 )
@@ -821,7 +822,7 @@ TransactionAccountDetails: [
             }
 
             // Update the total amount
-            lblTotalAmount.Text = GlobalAttributesCache.Value( "CurrencySymbol" ) + SelectedAccounts.Sum( f => f.Amount ).ToString( "F2" );
+            lblTotalAmount.Text = SelectedAccounts.Sum( f => f.Amount ).FormatAsCurrency();
 
             // Set the frequency date label based on if 'One Time' is selected or not
             if ( btnFrequency.Items.Count > 0 )
@@ -3719,12 +3720,14 @@ TransactionAccountDetails: [
     }});
 
 ";
+            var currencyCodeInfo = new RockCurrencyCodeInfo();
+
             string script = string.Format(
                 scriptFormat,
                 divCCPaymentInfo.ClientID,      // {0}
                 hfPaymentTab.ClientID,          // {1}
                 oneTimeFrequencyId,             // {2}
-                GlobalAttributesCache.Value( "CurrencySymbol" ), // {3)
+                currencyCodeInfo.Symbol, // {3)
                 hfStep2Url.ClientID,            // {4}
                 hfStep2ReturnQueryString.ClientID,   // {5}
                 this.Page.ClientScript.GetPostBackEventReference( lbStep2Return, "" ), // {6}
