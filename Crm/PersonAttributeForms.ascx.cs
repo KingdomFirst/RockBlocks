@@ -883,8 +883,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             ParseEditControls();
 
             ShowFormFieldEdit( e.FormGuid, Guid.NewGuid() );
-
-            BuildEditControls( true );
         }
 
         /// <summary>
@@ -897,8 +895,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             ParseEditControls();
 
             ShowFormFieldEdit( e.FormGuid, e.FormFieldGuid );
-
-            BuildEditControls( true );
         }
 
         /// <summary>
