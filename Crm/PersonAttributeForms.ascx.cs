@@ -985,7 +985,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                 field.PreText = ceAttributePreText.Text;
                 field.PostText = ceAttributePostText.Text;
-                
+
                 switch ( field.FieldSource )
                 {
                     case FormFieldSource.PersonField:
@@ -1707,17 +1707,17 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             var pnlFrmGroup = new Panel { CssClass = "form-group phonegroup clearfix" };
                             phContent.Controls.Add( pnlFrmGroup );
 
-                            var lblMobile = new Panel { CssClass = "control-label col-sm-1 phonegroup-label" };
-                            lblMobile.Controls.Add( new LiteralControl( dv.Value ) );
+                            var lblMobile = new Label { CssClass = "control-label phonegroup-label" };
+                            lblMobile.Text = dv.Value;
                             pnlFrmGroup.Controls.Add( lblMobile );
 
-                            var pnlPhoneGroup = new Panel { CssClass = "controls col-sm-11 phonegroup-number" };
+                            var pnlPhoneGroup = new Panel { CssClass = "controls col-sm-12 pl-0 phonegroup-number" };
                             pnlFrmGroup.Controls.Add( pnlPhoneGroup );
 
                             var pnlRow = new Panel { CssClass = "form-row" };
                             pnlPhoneGroup.Controls.Add( pnlRow );
 
-                            var pnlCol1 = new Panel { CssClass = "col-sm-7 col-lg-10" };
+                            var pnlCol1 = new Panel { CssClass = "col-sm-11" };
                             pnlRow.Controls.Add( pnlCol1 );
 
                             var ppMobile = new PhoneNumberBox
@@ -1727,6 +1727,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 ValidationGroup = BlockValidationGroup,
                                 CountryCode = PhoneNumber.DefaultCountryCode()
                             };
+                            lblMobile.AssociatedControlID = ppMobile.ClientID;
                             pnlCol1.Controls.Add( ppMobile );
 
                             var splitFieldValue = fieldValue.SplitDelimitedValues( "^" );
@@ -1735,7 +1736,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 ppMobile.Number = PhoneNumber.FormattedNumber( PhoneNumber.DefaultCountryCode(), fieldValue.Contains( "^" ) ? splitFieldValue[0] : fieldValue );
                             }
 
-                            var pnlCol2 = new Panel { CssClass = "col-sm-5 col-lg-2 form-align" };
+                            var pnlCol2 = new Panel { CssClass = "col-sm-1 form-align" };
                             pnlRow.Controls.Add( pnlCol2 );
 
                             var cbSms = new RockCheckBox
@@ -1744,7 +1745,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 Required = field.IsRequired,
                                 ValidationGroup = BlockValidationGroup,
                                 Text = "SMS",
-                                DisplayInline = true
+                                DisplayInline = true,
+                                ContainerCssClass = "checkbox-inline pt-0 my-2"
                             };
                             pnlCol2.Controls.Add( cbSms );
 
@@ -2177,7 +2179,17 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     {
                         var splitNum = cleanNumber.SplitDelimitedValues( "^" );
                         cleanNumber = splitNum[0];
-                        phone.IsMessagingEnabled = splitNum[1].AsBoolean();
+
+                        var isSms = splitNum[1].AsBoolean();
+                        if ( isSms )
+                        {
+                            // only allow one sms enabled number on the person record
+                            foreach ( var phoneNum in person.PhoneNumbers.Where( p => p.IsMessagingEnabled && p.Number != cleanNumber ) )
+                            {
+                                phoneNum.IsMessagingEnabled = false;
+                            }
+                        }
+                        phone.IsMessagingEnabled = isSms;
                     }
 
                     phone.CountryCode = PhoneNumber.CleanNumber( PhoneNumber.DefaultCountryCode() );
