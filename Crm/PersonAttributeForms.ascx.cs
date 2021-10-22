@@ -1146,7 +1146,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                                 var value = phone.Number;
                                                 if ( !string.IsNullOrWhiteSpace( value ) )
                                                 {
-                                                    PersonValueState.AddOrReplace( PersonFieldType.MobilePhone, value );
+                                                    PersonValueState.AddOrReplace( PersonFieldType.MobilePhone, value + "^" + phone.IsMessagingEnabled.ToString() );
                                                 }
                                             }
                                             break;
@@ -1432,11 +1432,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 {
                                     var phoneNumber = new PhoneNumber();
                                     var ppMobile = phContent.FindControl( "ppMobile" ) as PhoneNumberBox;
+                                    var cbSms = phContent.FindControl( "cbSms" ) as RockCheckBox;
                                     if ( ppMobile != null )
                                     {
                                         phoneNumber.CountryCode = PhoneNumber.CleanNumber( ppMobile.CountryCode );
                                         phoneNumber.Number = PhoneNumber.CleanNumber( ppMobile.Number );
                                         value = phoneNumber.Number;
+                                        if ( cbSms != null )
+                                        {
+                                            value += "^" + cbSms.Checked.ToString();
+                                        }
                                     }
                                     break;
                                 }
@@ -1699,18 +1704,53 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         var dv = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
                         if ( dv != null )
                         {
-                            var ppMobile = new PhoneNumberBox();
-                            ppMobile.ID = "ppMobile";
-                            ppMobile.Label = dv.Value;
-                            ppMobile.Required = field.IsRequired;
-                            ppMobile.ValidationGroup = BlockValidationGroup;
-                            ppMobile.CountryCode = PhoneNumber.DefaultCountryCode();
+                            var pnlFrmGroup = new Panel { CssClass = "form-group phonegroup clearfix" };
+                            phContent.Controls.Add( pnlFrmGroup );
 
-                            phContent.Controls.Add( ppMobile );
+                            var lblMobile = new Panel { CssClass = "control-label col-sm-1 phonegroup-label" };
+                            lblMobile.Controls.Add( new LiteralControl( dv.Value ) );
+                            pnlFrmGroup.Controls.Add( lblMobile );
 
+                            var pnlPhoneGroup = new Panel { CssClass = "controls col-sm-11 phonegroup-number" };
+                            pnlFrmGroup.Controls.Add( pnlPhoneGroup );
+
+                            var pnlRow = new Panel { CssClass = "form-row" };
+                            pnlPhoneGroup.Controls.Add( pnlRow );
+
+                            var pnlCol1 = new Panel { CssClass = "col-sm-7 col-lg-10" };
+                            pnlRow.Controls.Add( pnlCol1 );
+
+                            var ppMobile = new PhoneNumberBox
+                            {
+                                ID = "ppMobile",
+                                Required = field.IsRequired,
+                                ValidationGroup = BlockValidationGroup,
+                                CountryCode = PhoneNumber.DefaultCountryCode()
+                            };
+                            pnlCol1.Controls.Add( ppMobile );
+
+                            var splitFieldValue = fieldValue.SplitDelimitedValues( "^" );
                             if ( setValue && fieldValue != null )
                             {
-                                ppMobile.Number = PhoneNumber.FormattedNumber( PhoneNumber.DefaultCountryCode(), fieldValue );
+                                ppMobile.Number = PhoneNumber.FormattedNumber( PhoneNumber.DefaultCountryCode(), fieldValue.Contains( "^" ) ? splitFieldValue[0] : fieldValue );
+                            }
+
+                            var pnlCol2 = new Panel { CssClass = "col-sm-5 col-lg-2 form-align" };
+                            pnlRow.Controls.Add( pnlCol2 );
+
+                            var cbSms = new RockCheckBox
+                            {
+                                ID = "cbSms",
+                                Required = field.IsRequired,
+                                ValidationGroup = BlockValidationGroup,
+                                Text = "SMS",
+                                DisplayInline = true
+                            };
+                            pnlCol2.Controls.Add( cbSms );
+
+                            if ( setValue && fieldValue != null && fieldValue.Contains( "^" ) )
+                            {
+                                cbSms.Checked = splitFieldValue[1].AsBoolean();
                             }
                         }
 
@@ -2131,6 +2171,13 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     else
                     {
                         oldPhoneNumber = phone.NumberFormattedWithCountryCode;
+                    }
+
+                    if ( cleanNumber.Contains( "^" ) )
+                    {
+                        var splitNum = cleanNumber.SplitDelimitedValues( "^" );
+                        cleanNumber = splitNum[0];
+                        phone.IsMessagingEnabled = splitNum[1].AsBoolean();
                     }
 
                     phone.CountryCode = PhoneNumber.CleanNumber( PhoneNumber.DefaultCountryCode() );
