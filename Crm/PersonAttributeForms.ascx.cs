@@ -1964,12 +1964,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 var person = new Person();
                 person.LoadAttributes();
                 foreach ( var attr in person.Attributes
-                    .OrderBy( a => a.Value.Name )
+                    .OrderBy( a => a.Value.Categories.FirstOrDefault()?.Name )
+                    .ThenBy( a => a.Value.Name )
                     .Select( a => a.Value ) )
                 {
                     if ( attr.IsAuthorized( Authorization.VIEW, CurrentPerson ) )
                     {
-                        ddlPersonAttributes.Items.Add( new ListItem( attr.Name, attr.Id.ToString() ) );
+                        var li = new ListItem( attr.Name, attr.Id.ToString() );
+                        li.Attributes.Add( "optiongroup", attr.Categories.AsDelimited( ", " ) );
+                        li.Attributes.Add( "title", attr.Description );
+                        ddlPersonAttributes.Items.Add( li );
                     }
                 }
 
