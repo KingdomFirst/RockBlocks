@@ -66,6 +66,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
     [GroupTypesField( "Allowed Group Types", "This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.", true, Rock.SystemGuid.GroupType.GROUPTYPE_SMALL_GROUP, "Groups", 2 )]
     [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "Groups", 3 )]
     [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "Groups", 4 )]
+    [BooleanField( "Display SMS Checkbox on Mobile Phone", "Should we show the SMS checkbox when a mobile phone is displayed on the form?", false )]
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
@@ -1711,13 +1712,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             lblMobile.Text = dv.Value;
                             pnlFrmGroup.Controls.Add( lblMobile );
 
-                            var pnlPhoneGroup = new Panel { CssClass = "controls col-sm-12 pl-0 phonegroup-number" };
+                            var displaySmsCheckbox = GetAttributeValue( "DisplaySMSCheckboxonMobilePhone" ).AsBoolean();
+
+                            var pnlPhoneGroup = new Panel { CssClass = string.Format( "controls col-sm-12 pl-0 phonegroup-number {0}", displaySmsCheckbox ? "" : " pr-0" ) };
                             pnlFrmGroup.Controls.Add( pnlPhoneGroup );
 
-                            var pnlRow = new Panel { CssClass = "form-row" };
+                            var pnlRow = new Panel { CssClass = string.Format( "form-row {0}", displaySmsCheckbox ? "" : "mr-0" ) };
                             pnlPhoneGroup.Controls.Add( pnlRow );
 
-                            var pnlCol1 = new Panel { CssClass = "col-sm-11" };
+
+                            var pnlCol1 = new Panel { CssClass = displaySmsCheckbox ? "col-sm-11" : "col-sm-12 pr-0" };
                             pnlRow.Controls.Add( pnlCol1 );
 
                             var ppMobile = new PhoneNumberBox
@@ -1736,7 +1740,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 ppMobile.Number = PhoneNumber.FormattedNumber( PhoneNumber.DefaultCountryCode(), fieldValue.Contains( "^" ) ? splitFieldValue[0] : fieldValue );
                             }
 
-                            var pnlCol2 = new Panel { CssClass = "col-sm-1 form-align" };
+                            var pnlCol2 = new Panel { CssClass = string.Format( "col-sm-1 form-align {0}", displaySmsCheckbox ? "" : "hidden" ) };
                             pnlRow.Controls.Add( pnlCol2 );
 
                             var cbSms = new RockCheckBox
