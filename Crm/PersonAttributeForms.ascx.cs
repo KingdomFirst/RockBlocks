@@ -66,6 +66,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
     [GroupTypesField( "Allowed Group Types", "This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.", true, Rock.SystemGuid.GroupType.GROUPTYPE_SMALL_GROUP, "Groups", 2 )]
     [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "Groups", 3 )]
     [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "Groups", 4 )]
+    [BooleanField( "Display SMS Checkbox on Mobile Phone", "Should we show the SMS checkbox when a mobile phone is displayed on the form?", false )]
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
@@ -883,8 +884,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             ParseEditControls();
 
             ShowFormFieldEdit( e.FormGuid, Guid.NewGuid() );
-
-            BuildEditControls( true );
         }
 
         /// <summary>
@@ -897,8 +896,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             ParseEditControls();
 
             ShowFormFieldEdit( e.FormGuid, e.FormFieldGuid );
-
-            BuildEditControls( true );
         }
 
         /// <summary>
@@ -989,7 +986,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                 field.PreText = ceAttributePreText.Text;
                 field.PostText = ceAttributePostText.Text;
-                
+
                 switch ( field.FieldSource )
                 {
                     case FormFieldSource.PersonField:
@@ -1150,7 +1147,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                                 var value = phone.Number;
                                                 if ( !string.IsNullOrWhiteSpace( value ) )
                                                 {
-                                                    PersonValueState.AddOrReplace( PersonFieldType.MobilePhone, value );
+                                                    PersonValueState.AddOrReplace( PersonFieldType.MobilePhone, value + "^" + phone.IsMessagingEnabled.ToString() );
                                                 }
                                             }
                                             break;
@@ -1436,11 +1433,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 {
                                     var phoneNumber = new PhoneNumber();
                                     var ppMobile = phContent.FindControl( "ppMobile" ) as PhoneNumberBox;
+                                    var cbSms = phContent.FindControl( "cbSms" ) as RockCheckBox;
                                     if ( ppMobile != null )
                                     {
                                         phoneNumber.CountryCode = PhoneNumber.CleanNumber( ppMobile.CountryCode );
                                         phoneNumber.Number = PhoneNumber.CleanNumber( ppMobile.Number );
                                         value = phoneNumber.Number;
+                                        if ( cbSms != null )
+                                        {
+                                            value += "^" + cbSms.Checked.ToString();
+                                        }
                                     }
                                     break;
                                 }
@@ -1703,18 +1705,58 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         var dv = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE );
                         if ( dv != null )
                         {
-                            var ppMobile = new PhoneNumberBox();
-                            ppMobile.ID = "ppMobile";
-                            ppMobile.Label = dv.Value;
-                            ppMobile.Required = field.IsRequired;
-                            ppMobile.ValidationGroup = BlockValidationGroup;
-                            ppMobile.CountryCode = PhoneNumber.DefaultCountryCode();
+                            var pnlFrmGroup = new Panel { CssClass = "form-group phonegroup clearfix" };
+                            phContent.Controls.Add( pnlFrmGroup );
 
-                            phContent.Controls.Add( ppMobile );
+                            var lblMobile = new Label { CssClass = "control-label phonegroup-label" };
+                            lblMobile.Text = dv.Value;
+                            pnlFrmGroup.Controls.Add( lblMobile );
 
+                            var displaySmsCheckbox = GetAttributeValue( "DisplaySMSCheckboxonMobilePhone" ).AsBoolean();
+
+                            var pnlPhoneGroup = new Panel { CssClass = string.Format( "controls col-sm-12 pl-0 phonegroup-number {0}", displaySmsCheckbox ? "" : " pr-0" ) };
+                            pnlFrmGroup.Controls.Add( pnlPhoneGroup );
+
+                            var pnlRow = new Panel { CssClass = string.Format( "form-row {0}", displaySmsCheckbox ? "" : "mr-0" ) };
+                            pnlPhoneGroup.Controls.Add( pnlRow );
+
+
+                            var pnlCol1 = new Panel { CssClass = displaySmsCheckbox ? "col-sm-11" : "col-sm-12 pr-0" };
+                            pnlRow.Controls.Add( pnlCol1 );
+
+                            var ppMobile = new PhoneNumberBox
+                            {
+                                ID = "ppMobile",
+                                Required = field.IsRequired,
+                                ValidationGroup = BlockValidationGroup,
+                                CountryCode = PhoneNumber.DefaultCountryCode()
+                            };
+                            lblMobile.AssociatedControlID = ppMobile.ClientID;
+                            pnlCol1.Controls.Add( ppMobile );
+
+                            var splitFieldValue = fieldValue.SplitDelimitedValues( "^" );
                             if ( setValue && fieldValue != null )
                             {
-                                ppMobile.Number = PhoneNumber.FormattedNumber( PhoneNumber.DefaultCountryCode(), fieldValue );
+                                ppMobile.Number = PhoneNumber.FormattedNumber( PhoneNumber.DefaultCountryCode(), fieldValue.Contains( "^" ) ? splitFieldValue[0] : fieldValue );
+                            }
+
+                            var pnlCol2 = new Panel { CssClass = string.Format( "col-sm-1 form-align {0}", displaySmsCheckbox ? "" : "hidden" ) };
+                            pnlRow.Controls.Add( pnlCol2 );
+
+                            var cbSms = new RockCheckBox
+                            {
+                                ID = "cbSms",
+                                Required = field.IsRequired,
+                                ValidationGroup = BlockValidationGroup,
+                                Text = "SMS",
+                                DisplayInline = true,
+                                ContainerCssClass = "checkbox-inline pt-0 my-2"
+                            };
+                            pnlCol2.Controls.Add( cbSms );
+
+                            if ( setValue && fieldValue != null && fieldValue.Contains( "^" ) )
+                            {
+                                cbSms.Checked = splitFieldValue[1].AsBoolean();
                             }
                         }
 
@@ -1968,12 +2010,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 var person = new Person();
                 person.LoadAttributes();
                 foreach ( var attr in person.Attributes
-                    .OrderBy( a => a.Value.Name )
+                    .OrderBy( a => a.Value.Categories.FirstOrDefault()?.Name )
+                    .ThenBy( a => a.Value.Name )
                     .Select( a => a.Value ) )
                 {
                     if ( attr.IsAuthorized( Authorization.VIEW, CurrentPerson ) )
                     {
-                        ddlPersonAttributes.Items.Add( new ListItem( attr.Name, attr.Id.ToString() ) );
+                        var li = new ListItem( attr.Name, attr.Id.ToString() );
+                        li.Attributes.Add( "optiongroup", attr.Categories.AsDelimited( ", " ) );
+                        li.Attributes.Add( "title", attr.Description );
+                        ddlPersonAttributes.Items.Add( li );
                     }
                 }
 
@@ -2131,6 +2177,23 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     else
                     {
                         oldPhoneNumber = phone.NumberFormattedWithCountryCode;
+                    }
+
+                    if ( cleanNumber.Contains( "^" ) )
+                    {
+                        var splitNum = cleanNumber.SplitDelimitedValues( "^" );
+                        cleanNumber = splitNum[0];
+
+                        var isSms = splitNum[1].AsBoolean();
+                        if ( isSms )
+                        {
+                            // only allow one sms enabled number on the person record
+                            foreach ( var phoneNum in person.PhoneNumbers.Where( p => p.IsMessagingEnabled && p.Number != cleanNumber ) )
+                            {
+                                phoneNum.IsMessagingEnabled = false;
+                            }
+                        }
+                        phone.IsMessagingEnabled = isSms;
                     }
 
                     phone.CountryCode = PhoneNumber.CleanNumber( PhoneNumber.DefaultCountryCode() );
