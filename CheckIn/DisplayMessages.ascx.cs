@@ -47,7 +47,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
 
     [LavaField( "Detail Message",
         Key = AttributeKey.DetailMessage,
-        Description = "You can customize the message even further using lava, an array of 'Messages' is available to use what was provided from the current check-in state.",
+        Description = "By default the messages will come straight from the check-in state 'Messages' array. You can customize the message even further using lava, an array of 'Messages' is available to use what was provided from the current check-in state.",
         IsRequired = false,
         DefaultValue = "" )]
 
@@ -113,7 +113,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                             var messageStr = "";
                             foreach ( var message in CurrentCheckInState.Messages )
                             {
-                                if ( message.MessageText.IsNotNullOrWhiteSpace() )
+                                if ( message.MessageText.IsNotNullOrWhiteSpace() && !messageStr.Contains( message.MessageText ) )
                                 {
                                     messageStr += message.MessageText;
                                 }
