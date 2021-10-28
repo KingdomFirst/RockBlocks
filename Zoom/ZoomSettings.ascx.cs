@@ -152,7 +152,7 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
             {
                 rocks.kfs.Zoom.Zoom.SyncZoomRoomDT( rockContext, enableLogging: GetAttributeValue( "EnableLogging" ).AsBoolean() );
             }
-            ShowDetail();
+            Response.Redirect( Request.RawUrl, false );
         }
 
         #endregion Events
