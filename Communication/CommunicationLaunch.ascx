@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="WorkflowLaunch.ascx.cs" Inherits="RockWeb.Blocks.WorkFlow.WorkflowLaunch" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CommunicationLaunch.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Communication.CommunicationLaunch" %>
 
 <asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
@@ -40,9 +40,7 @@
 
                 <div class="row">
                     <div class="col-md-6 col-lg-3">
-                        <Rock:WorkflowTypePicker ID="wtpWorkflowType" runat="server" Label="Workflow Type" Required="true" />
-                        <Rock:RockDropDownList ID="ddlWorkflowType" runat="server" Label="Workflow Type" Required="true" DataValueField="Id" DataTextField="Name" />
-                        <asp:Literal ID="lWorkflowType" runat="server" />
+                        <Rock:PagePicker ID="ppCommunicationPage" runat="server" Label="Communication Page" Required="true" />
                     </div>
                 </div>
 

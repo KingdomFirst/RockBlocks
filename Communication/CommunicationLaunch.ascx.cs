@@ -14,6 +14,14 @@
 // limitations under the License.
 // </copyright>
 //
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * Converted Workflow Launch block to be a Communication Launch block. The block creates a communication then redirects to a communicate page.
+// </notice>
+//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -24,36 +32,36 @@ using System.Web.UI.WebControls;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Field.Types;
 using Rock.Model;
 using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 
-namespace RockWeb.Blocks.WorkFlow
+namespace RockWeb.Plugins.rocks_kfs.Communication
 {
     /// <summary>
     /// Block that enables previewing an entity set and then launching a workflow for each item within the set. This block was designed to
     /// work in tandem with <see cref="Rock.Web.UI.Controls.GridActions.ShowLaunchWorkflow"/>.
     /// </summary>
-    [DisplayName( "Workflow Launch" )]
-    [Category( "Workflow" )]
-    [Description( "Block that enables previewing an entity set and then launching a workflow for each item within the set." )]
+    [DisplayName( "Communication Launch" )]
+    [Category( "KFS > Communication" )]
+    [Description( "Block that enables previewing an entity set and then launching a communication from it." )]
 
     #region Block Attributes
 
-    [WorkflowTypeField(
-        "Workflow Types",
-        Key = AttributeKey.WorkflowTypes,
-        Description = "Only the selected workflow types will be shown. If left blank, any workflow type can be launched.",
-        AllowMultiple = true,
-        IsRequired = false,
-        Order = 1 )]
+    [LinkedPage( "Communication Page",
+        Key = AttributeKey.CommunicationPage,
+        Description = "If you do not set the communication page it will reload the current page with a Communication Id.",
+        Order = 1,
+        IsRequired = false
+        )]
 
     [BooleanField(
-        "Allow Multiple Workflow Launches",
-        Key = AttributeKey.AllowMultipleWorkflowLaunches,
-        Description = "If set to yes, allows launching multiple different types of workflows. After one is launched, the block will allow the individual to select another type to be launched. This will only show if more than one type is configured.",
-        DefaultBooleanValue = AttributeDefault.AllowMultipleWorkflowLaunches,
+        "Automatically Launch Communication",
+        Key = AttributeKey.LaunchCommunication,
+        Description = "If set to yes it will automatically launch communication, otherwise it will require input prior to launching.",
+        DefaultBooleanValue = AttributeDefault.LaunchCommunication,
         Order = 2 )]
 
     [TextField(
@@ -79,7 +87,7 @@ namespace RockWeb.Blocks.WorkFlow
 
     #endregion Block Attributes
 
-    public partial class WorkflowLaunch : Rock.Web.UI.RockBlock
+    public partial class CommunicationLaunch : Rock.Web.UI.RockBlock
     {
 
         #region Keys
@@ -90,14 +98,14 @@ namespace RockWeb.Blocks.WorkFlow
         private static class AttributeKey
         {
             /// <summary>
-            /// The workflow types
+            /// The Communication Page
             /// </summary>
-            public const string WorkflowTypes = "WorkflowTypes";
+            public const string CommunicationPage = "CommunicationPage";
 
             /// <summary>
-            /// The allow multiple workflow launches
+            /// The Launch Communication boolean
             /// </summary>
-            public const string AllowMultipleWorkflowLaunches = "AllowMultipleWorkflowLaunches";
+            public const string LaunchCommunication = "LaunchCommunication";
 
             /// <summary>
             /// The panel title
@@ -128,17 +136,17 @@ namespace RockWeb.Blocks.WorkFlow
             /// <summary>
             /// The panel title
             /// </summary>
-            public const string PanelTitle = "Workflow Launch";
+            public const string PanelTitle = "Communication Launch";
 
             /// <summary>
             /// The panel icon
             /// </summary>
-            public const string PanelIcon = "fa fa-cog";
+            public const string PanelIcon = "fa fa-comment";
 
             /// <summary>
-            /// The allow multiple workflow launches
+            /// The automatically launch communication
             /// </summary>
-            public const bool AllowMultipleWorkflowLaunches = true;
+            public const bool LaunchCommunication = true;
         }
 
         /// <summary>
@@ -152,14 +160,19 @@ namespace RockWeb.Blocks.WorkFlow
             public const string EntitySetId = "EntitySetId";
 
             /// <summary>
-            /// The workflow type identifier
+            /// The communication page identifier
             /// </summary>
-            public const string WorkflowTypeId = "WorkflowTypeId";
+            public const string CommunicationPageId = "CommunicationPageId";
 
             /// <summary>
             /// The by pass confirm
             /// </summary>
             public const string BypassConfirm = "BypassConfirm";
+
+            /// <summary>
+            /// The communication identifier
+            /// </summary>
+            public const string CommunicationId = "CommunicationId";
         }
 
         /// <summary>
@@ -178,9 +191,9 @@ namespace RockWeb.Blocks.WorkFlow
             public const string DoShowAll = "DoShowAll";
 
             /// <summary>
-            /// The workflow type identifier
+            /// The communication page identifier
             /// </summary>
-            public const string WorkflowTypeId = "WorkflowTypeId";
+            public const string CommunicationPageId = "CommunicationPageId";
 
             /// <summary>
             /// The has launched
@@ -255,9 +268,16 @@ namespace RockWeb.Blocks.WorkFlow
 
             if ( !Page.IsPostBack )
             {
-                if ( PageParameter( PageParameterKey.BypassConfirm ).AsBoolean() && !PageParameter( PageParameterKey.WorkflowTypeId ).IsNullOrWhiteSpace() )
+                if ( PageParameter( PageParameterKey.BypassConfirm ).AsBoolean() && !PageParameter( PageParameterKey.CommunicationPageId ).IsNullOrWhiteSpace() )
                 {
-                    LaunchWorkflows();
+                    LaunchCommunication();
+                    _hasLaunched = true;
+                }
+
+                var autoLaunch = GetAttributeValue( AttributeKey.LaunchCommunication ).AsBoolean();
+                if ( autoLaunch && !_hasLaunched )
+                {
+                    LaunchCommunication();
                     _hasLaunched = true;
                 }
 
@@ -299,7 +319,7 @@ namespace RockWeb.Blocks.WorkFlow
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnLaunch_Click( object sender, EventArgs e )
         {
-            LaunchWorkflows();
+            LaunchCommunication();
             _hasLaunched = true;
             RenderState();
         }
@@ -320,53 +340,118 @@ namespace RockWeb.Blocks.WorkFlow
         #region Methods
 
         /// <summary>
-        /// Gets the selected workflow type identifier.
+        /// Gets the selected page identifier.
         /// </summary>
         /// <returns></returns>
-        private WorkflowTypeCache GetSelectedWorkflowType()
+        private PageCache GetSelectedPage()
         {
-            var workflowTypeId = PageParameter( PageParameterKey.WorkflowTypeId ).AsIntegerOrNull();
+            var communicationPageId = PageParameter( PageParameterKey.CommunicationPageId ).AsIntegerOrNull();
 
-            if ( workflowTypeId.HasValue )
+            if ( communicationPageId.HasValue )
             {
-                return WorkflowTypeCache.Get( workflowTypeId.Value );
+                return PageCache.Get( communicationPageId.Value );
             }
 
-            var workflowTypes = GetAttributeValues( AttributeKey.WorkflowTypes )
-                .Select( WorkflowTypeCache.Get )
-                .ToList();
+            communicationPageId = ppCommunicationPage.SelectedValueAsInt();
 
-            if ( workflowTypes.Count == 1 )
+            if ( communicationPageId.HasValue )
             {
-                var workflowType = workflowTypes.Single();
-                return workflowType;
+                return PageCache.Get( communicationPageId ?? 0 );
             }
 
-            workflowTypeId = workflowTypes.Any() ?
-                ddlWorkflowType.SelectedValueAsInt() :
-                wtpWorkflowType.SelectedValueAsInt();
+            var selectedPage = GetAttributeValue( AttributeKey.CommunicationPage );
 
-            return WorkflowTypeCache.Get( workflowTypeId ?? 0 );
+            if ( selectedPage.IsNotNullOrWhiteSpace() )
+            {
+                return PageCache.Get( selectedPage );
+            }
+
+            return PageCache.Get( RockPage.Guid );
         }
 
         /// <summary>
-        /// Launches the workflows.
+        /// Launches the Communication.
         /// </summary>
-        private void LaunchWorkflows()
+        private void LaunchCommunication()
         {
-            var workflowType = GetSelectedWorkflowType();
-
-            if ( workflowType == null )
+            var entitySetId = GetEntitySetId();
+            if ( entitySetId != default( int ) )
             {
-                // Validator control will alert the user
-                return;
+                var rockContext = new RockContext();
+                var entitySetService = new EntitySetService( rockContext );
+                var entityTypeCache = GetEntityTypeCache();
+                var entityQuery = GetEntityQuery();
+                var personAliases = new List<PersonAlias>();
+
+
+                if ( entityTypeCache.Id == EntityTypeCache.Get<Person>().Id )
+                {
+                    foreach ( var person in entityQuery.ToList().Select( e => ( Person ) e ) )
+                    {
+                        personAliases.Add( person.PrimaryAlias );
+                    }
+                }
+                else if ( entityTypeCache.Id == EntityTypeCache.Get<Group>().Id )
+                {
+                    foreach ( var group in entityQuery.ToList().Select( e => ( Group ) e ) )
+                    {
+                        foreach ( var groupMember in group.Members )
+                        {
+                            personAliases.Add( groupMember.Person.PrimaryAlias );
+                        }
+                    }
+                }
+                else if ( entityTypeCache.Id == EntityTypeCache.Get<GroupMember>().Id )
+                {
+                    foreach ( var groupMember in entityQuery.ToList().Select( e => ( GroupMember ) e ) )
+                    {
+                        personAliases.Add( groupMember.Person.PrimaryAlias );
+                    }
+                }
+                else
+                {
+                    ShowError( string.Format( "The entity set that was passed in is currently not supported. Please contact Kingdom First Solutions for more information. EntityType: {0}", entityTypeCache.FriendlyName ) );
+                    return;
+                }
+
+                var queryParameters = CreateCommunication( personAliases, rockContext );
+                if ( queryParameters.Any() )
+                {
+                    NavigateToPage( GetSelectedPage().Guid, queryParameters );
+                }
+            }
+        }
+
+        private Dictionary<string, string> CreateCommunication( List<PersonAlias> personAliases, RockContext rockContext = null )
+        {
+            if ( rockContext == null )
+            {
+                rockContext = new RockContext();
+            }
+            var service = new CommunicationService( rockContext );
+            var communication = new Rock.Model.Communication();
+            communication.IsBulkCommunication = false;
+            communication.Status = CommunicationStatus.Transient;
+
+            communication.SenderPersonAliasId = CurrentPersonAliasId;
+
+            service.Add( communication );
+
+
+            // Get the primary aliases
+            foreach ( var personAlias in personAliases )
+            {
+                var recipient = new CommunicationRecipient();
+                recipient.PersonAliasId = personAlias.Id;
+                communication.Recipients.Add( recipient );
             }
 
-            var workflowAttributes = PageParameters().ToDictionary( k => k.Key, v => v.Value.ToString() );
-            var entitySetId = GetEntitySetId();
-            var rockContext = new RockContext();
-            var entitySetService = new EntitySetService( rockContext );
-            entitySetService.LaunchWorkflows( entitySetId, workflowType.Id, workflowAttributes );
+            rockContext.SaveChanges();
+
+            var queryParameters = new Dictionary<string, string>();
+            queryParameters.Add( "CommunicationId", communication.Id.ToString() );
+
+            return queryParameters;
         }
 
         /// <summary>
@@ -378,37 +463,19 @@ namespace RockWeb.Blocks.WorkFlow
 
             nbNotificationBox.Visible = false;
             var isValid = ValidateBlockRequirements();
+            var communicationId = GetCommunicationId();
 
             if ( !isValid )
             {
-                HideAllControls();
+                HideAllControls( communicationId != default( int ) );
                 return;
             }
 
             BindRepeater();
-            BindWorkflowTypeControls();
+            BindPagePickerControls();
             BindShowAllControls();
             BindButtons();
-            BindSuccessMessage();
             BindEntityTypeName();
-        }
-
-        /// <summary>
-        /// Binds the success message.
-        /// </summary>
-        private void BindSuccessMessage()
-        {
-            if ( !_hasLaunched )
-            {
-                return;
-            }
-
-            var workflowType = GetSelectedWorkflowType();
-            var entityTypeCache = GetEntityTypeCache();
-
-            ShowSuccess( string.Format( "A new {0} workflow is being launched for each of the {1} above.",
-                workflowType == null ? string.Empty : workflowType.Name,
-                entityTypeCache == null ? "entities" : entityTypeCache.FriendlyName.Pluralize() ) );
         }
 
         /// <summary>
@@ -420,10 +487,6 @@ namespace RockWeb.Blocks.WorkFlow
 
             if ( _hasLaunched )
             {
-                var allowMultiple = GetAttributeValue( AttributeKey.AllowMultipleWorkflowLaunches ).AsBooleanOrNull() ??
-                    AttributeDefault.AllowMultipleWorkflowLaunches;
-
-                btnReset.Visible = allowMultiple;
             }
             else
             {
@@ -462,6 +525,13 @@ namespace RockWeb.Blocks.WorkFlow
         private bool ValidateBlockRequirements()
         {
             var entitySetId = GetEntitySetId();
+            var communicationId = GetCommunicationId();
+
+            if ( communicationId != default( int ) )
+            {
+                // if the block is on a communication page and has a communication id it is valid...
+                return false;
+            }
 
             if ( entitySetId == default( int ) )
             {
@@ -481,13 +551,17 @@ namespace RockWeb.Blocks.WorkFlow
         /// <summary>
         /// Hides all controls.
         /// </summary>
-        private void HideAllControls()
+        private void HideAllControls( bool includePanel = false )
         {
             lbShowAll.Visible = false;
-            wtpWorkflowType.Visible = false;
-            ddlWorkflowType.Visible = false;
+            ppCommunicationPage.Visible = false;
             btnLaunch.Visible = false;
             btnReset.Visible = false;
+
+            if ( includePanel )
+            {
+                pnlView.Visible = false;
+            }
         }
 
         /// <summary>
@@ -552,62 +626,37 @@ namespace RockWeb.Blocks.WorkFlow
         /// <summary>
         /// Binds the workflow type picker.
         /// </summary>
-        private void BindWorkflowTypeControls()
+        private void BindPagePickerControls()
         {
             if ( _hasLaunched )
             {
-                wtpWorkflowType.Visible = false;
-                ddlWorkflowType.Visible = false;
-                lWorkflowType.Visible = false;
+                ppCommunicationPage.Visible = false;
                 return;
             }
 
             // If a page parameter is set, then it overrides everything else
-            var workflowTypeId = PageParameter( PageParameterKey.WorkflowTypeId ).AsIntegerOrNull();
+            var communicationPageId = PageParameter( PageParameterKey.CommunicationPageId ).AsIntegerOrNull();
+            var selectedPage = GetAttributeValue( AttributeKey.CommunicationPage );
 
-            if ( workflowTypeId.HasValue )
+            if ( communicationPageId.HasValue )
             {
-                var workflowType = WorkflowTypeCache.Get( workflowTypeId.Value );
+                var communicationPage = PageCache.Get( communicationPageId.Value );
 
-                if ( workflowType != null && workflowType.IsAuthorized( Authorization.VIEW, CurrentPerson ) )
+                if ( communicationPage != null && communicationPage.IsAuthorized( Authorization.VIEW, CurrentPerson ) )
                 {
-                    lWorkflowType.Text = GetLockedWorkflowTypeHtml( workflowType );
-                    lWorkflowType.Visible = true;
-                    wtpWorkflowType.Visible = false;
-                    ddlWorkflowType.Visible = false;
+                    //lWorkflowType.Text = GetLockedWorkflowTypeHtml( workflowType );
+                    //lWorkflowType.Visible = true;
+                    ppCommunicationPage.Visible = false;
                     return;
                 }
             }
-
-            // If no valid page parameter, then use the block settings
-            var workflowTypes = GetAttributeValues( AttributeKey.WorkflowTypes )
-                .Select( WorkflowTypeCache.Get )
-                .ToList();
-
-            wtpWorkflowType.Visible = workflowTypes.Count == 0;
-            lWorkflowType.Visible = workflowTypes.Count == 1;
-            ddlWorkflowType.Visible = workflowTypes.Count >= 2;
-
-            if ( workflowTypes.Count == 1 )
+            else if ( selectedPage.IsNotNullOrWhiteSpace() )
             {
-                var workflowType = workflowTypes.Single();
-                lWorkflowType.Text = GetLockedWorkflowTypeHtml( workflowType );
+                var ppFieldType = new PageReferenceFieldType();
+                ppFieldType.SetEditValue( ppCommunicationPage, null, selectedPage );
             }
-            else if ( workflowTypes.Any() )
-            {
-                ddlWorkflowType.DataSource = workflowTypes;
-                ddlWorkflowType.DataBind();
-            }
-        }
 
-        /// <summary>
-        /// Gets the locked workflow type HTML.
-        /// </summary>
-        /// <param name="workflowTypeCache">The workflow type cache.</param>
-        /// <returns></returns>
-        private string GetLockedWorkflowTypeHtml( WorkflowTypeCache workflowTypeCache )
-        {
-            return string.Format( "<strong>Workflow Type</strong><br />{0}", workflowTypeCache.Name );
+
         }
 
         /// <summary>
@@ -742,6 +791,15 @@ namespace RockWeb.Blocks.WorkFlow
         private int GetEntitySetId()
         {
             return PageParameter( PageParameterKey.EntitySetId ).AsInteger();
+        }
+
+        /// <summary>
+        /// Gets the communication identifier.
+        /// </summary>
+        /// <returns></returns>
+        private int GetCommunicationId()
+        {
+            return PageParameter( PageParameterKey.CommunicationId ).AsInteger();
         }
 
         /// <summary>
