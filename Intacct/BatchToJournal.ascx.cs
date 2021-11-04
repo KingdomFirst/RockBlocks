@@ -39,23 +39,164 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
     #region Block Settings
 
-    [TextField( "Journal Id", "The Intacct Symbol of the Journal that the Entry should be posted to. For example: GJ", true, "", "", 0 )]
-    [TextField( "Button Text", "The text to use in the Export Button.", false, "Export to Intacct", "", 1 )]
-    [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.", true, "", 2 )]
-    [BooleanField( "Log Response", "Flag indicating if the Intacct Response should be logged to the Batch Audit Log", true, "", 3 )]
-    [EncryptedTextField( "Sender Id", "The permanent Web Services sender Id.", true, "", "Configuration", 0 )]
-    [EncryptedTextField( "Sender Password", "The permanent Web Services sender password.", true, "", "Configuration", 1 )]
-    [EncryptedTextField( "Company Id", "The Intacct Company Id. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 2 )]
-    [EncryptedTextField( "User Id", "The Intacct User Id. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 3 )]
-    [EncryptedTextField( "User Password", "The Intacct User Password. This is the same information you use when you log into the Sage Intacct UI.", true, "", "Configuration", 4 )]
-    [EncryptedTextField( "Location Id", "The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.", false, "", "Configuration", 5 )]
-    [LavaField( "Journal Memo Lava", "Lava for the journal memo per line. Default: Batch.Id: Batch.Name", true, "{{ Batch.Id }}: {{ Batch.Name }}" )]
-    [BooleanField( "Enable Debug", "Outputs the object graph to help create your Lava syntax. (Debug data will show after clicking export.)", false )]
+    [TextField(
+        "Journal Id",
+        Description = "The Intacct Symbol of the Journal that the Entry should be posted to. For example: GJ",
+        IsRequired = true,
+        DefaultValue = "",
+        Order = 0,
+        Key = AttributeKey.JournalId )]
+
+    [TextField(
+        "Button Text",
+        Description = "The text to use in the Export Button.",
+        IsRequired = false,
+        DefaultValue = "Export to Intacct",
+        Order = 1,
+        Key = AttributeKey.ButtonText )]
+
+    [BooleanField(
+        "Close Batch",
+        Description = "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.",
+        DefaultBooleanValue = true,
+        Order = 2,
+        Key = AttributeKey.CloseBatch )]
+
+    [BooleanField(
+        "Log Response",
+        Description = "Flag indicating if the Intacct Response should be logged to the Batch Audit Log",
+        DefaultBooleanValue = true,
+        Order = 3,
+        Key = AttributeKey.LogResponse )]
+
+    [EncryptedTextField(
+        "Sender Id",
+        Description = "The permanent Web Services sender Id.",
+        IsRequired = true,
+        DefaultValue = "",
+        Category = "Configuration",
+        Order = 0,
+        Key = AttributeKey.SenderId )]
+
+    [EncryptedTextField(
+        "Sender Password",
+        Description = "The permanent Web Services sender password.",
+        IsRequired = true,
+        DefaultValue = "",
+        Category = "Configuration",
+        Order = 1,
+        Key = AttributeKey.SenderPassword )]
+
+    [EncryptedTextField(
+        "Company Id",
+        Description = "The Intacct Company Id. This is the same information you use when you log into the Sage Intacct UI.",
+        IsRequired = true,
+        DefaultValue = "",
+        Category = "Configuration",
+        Order = 2,
+        Key = AttributeKey.CompanyId )]
+
+    [EncryptedTextField(
+        "User Id",
+        Description = "The Intacct User Id. This is the same information you use when you log into the Sage Intacct UI.",
+        IsRequired = true,
+        DefaultValue = "",
+        Category = "Configuration",
+        Order = 3,
+        Key = AttributeKey.UserId )]
+
+    [EncryptedTextField(
+        "User Password",
+        Description = "The Intacct User Password. This is the same information you use when you log into the Sage Intacct UI.",
+        IsRequired = true,
+        DefaultValue = "",
+        Category = "Configuration",
+        Order = 4,
+        Key = AttributeKey.UserPassword )]
+
+    [EncryptedTextField(
+        "Location Id",
+        Description ="The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.",
+        IsRequired = false,
+        DefaultValue = "",
+        Category = "Configuration",
+        Order = 5,
+        Key = AttributeKey.LocationId )]
+
+    [LavaField(
+        "Journal Memo Lava",
+        Description = "Lava for the journal memo per line. Default: Batch.Id: Batch.Name",
+        IsRequired = true,
+        DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
+        Order = 4,
+        Key = AttributeKey.JournalMemoLava )]
+
+    [BooleanField(
+        "Enable Debug",
+        Description = "Outputs the object graph to help create your Lava syntax. (Debug data will show after clicking export.)",
+        DefaultBooleanValue = false,
+        Order = 5,
+        Key = AttributeKey.EnableDebug )]
 
     #endregion
 
     public partial class BatchToJournal : RockBlock
     {
+        #region Keys
+
+        /// <summary>
+        /// Attribute Keys
+        /// </summary>
+        private static class AttributeKey
+        {
+            public const string JournalId = "JournalId";
+            public const string ButtonText = "ButtonText";
+            public const string CloseBatch = "CloseBatch";
+            public const string LogResponse = "LogResponse";
+            public const string SenderId = "SenderId";
+            public const string SenderPassword = "SenderPassword";
+            public const string CompanyId = "CompanyId";
+            public const string UserId = "UserId";
+            public const string UserPassword = "UserPassword";
+            public const string LocationId = "LocationId";
+            public const string JournalMemoLava = "JournalMemoLava";
+            public const string EnableDebug = "EnableDebug";
+        }
+
+        /// <summary>
+        /// User Preference Key
+        /// </summary>
+        private static class UserPreferenceKey
+        {
+            public const string StartDate = "Start Date";
+            public const string EndDate = "End Date";
+            public const string FirstName = "First Name";
+            public const string LastName = "Last Name";
+            public const string SubmittedBy = "Submitted By";
+            public const string Category = "Category";
+            public const string Status = "Status";
+            public const string Campus = "Campus";
+            public const string AssignedToMe = "Assigned to Me";
+            public const string StartDateFollowUp = "FollowUp Start Date";
+            public const string EndDateFollowUp = "FollowUp End Date";
+            public const string FirstNameFollowUp = "FollowUp First Name";
+            public const string LastNameFollowUp = "FollowUp Last Name";
+            public const string SubmittedByFollowUp = "FollowUp Submitted By";
+            public const string CategoryFollowUp = "FollowUp Category";
+            public const string StatusFollowUp = "FollowUp Status";
+            public const string CampusFollowUp = "FollowUp Campus";
+            public const string AssignedToMeFollowUp = "FollowUp Assigned to Me";
+        }
+
+        /// <summary>
+        /// View State Keys
+        /// </summary>
+        private static class ViewStateKey
+        {
+            public const string AvailableAttributes = "AvailableAttributes";
+        }
+
+        #endregion Keys
         private int _batchId = 0;
         private FinancialBatch _financialBatch = null;
 
@@ -97,7 +238,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             var rockContext = new RockContext();
             var isExported = false;
-            var debugEnabled = GetAttributeValue( "EnableDebug" ).AsBoolean();
+            var debugEnabled = GetAttributeValue( AttributeKey.EnableDebug ).AsBoolean();
 
             _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
             DateTime? dateExported = null;
@@ -134,7 +275,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
             if ( ValidSettings() && !isExported )
             {
-                btnExportToIntacct.Text = GetAttributeValue( "ButtonText" );
+                btnExportToIntacct.Text = GetAttributeValue( AttributeKey.ButtonText );
                 btnExportToIntacct.Visible = true;
                 if ( variance == 0 )
                 {
@@ -167,12 +308,12 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                 var intacctAuth = new IntacctAuth()
                 {
-                    SenderId = Encryption.DecryptString( GetAttributeValue( "SenderId" ) ),
-                    SenderPassword = Encryption.DecryptString( GetAttributeValue( "SenderPassword" ) ),
-                    CompanyId = Encryption.DecryptString( GetAttributeValue( "CompanyId" ) ),
-                    UserId = Encryption.DecryptString( GetAttributeValue( "UserId" ) ),
-                    UserPassword = Encryption.DecryptString( GetAttributeValue( "UserPassword" ) ),
-                    LocationId = Encryption.DecryptString( GetAttributeValue( "LocationId" ) )
+                    SenderId = Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderId ) ),
+                    SenderPassword = Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderPassword ) ),
+                    CompanyId = Encryption.DecryptString( GetAttributeValue( AttributeKey.CompanyId ) ),
+                    UserId = Encryption.DecryptString( GetAttributeValue( AttributeKey.UserId ) ),
+                    UserPassword = Encryption.DecryptString( GetAttributeValue( AttributeKey.UserPassword ) ),
+                    LocationId = Encryption.DecryptString( GetAttributeValue( AttributeKey.LocationId ) )
                 };
 
                 //
@@ -181,11 +322,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                 var journal = new IntacctJournal();
                 var endpoint = new IntacctEndpoint();
-                var debugLava = GetAttributeValue( "EnableDebug" );
+                var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
 
-                var postXml = journal.CreateJournalEntryXML( intacctAuth, _financialBatch.Id, GetAttributeValue( "JournalId" ), ref debugLava, GetAttributeValue( "JournalMemoLava" ) );
+                var postXml = journal.CreateJournalEntryXML( intacctAuth, _financialBatch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
                 var resultXml = endpoint.PostToIntacct( postXml );
-                var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, GetAttributeValue( "LogResponse" ).AsBoolean() );
+                var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, GetAttributeValue( AttributeKey.LogResponse ).AsBoolean() );
 
                 if ( success )
                 {
@@ -198,7 +339,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     //
                     // Close Batch if we're supposed to
                     //
-                    if ( GetAttributeValue( "CloseBatch" ).AsBoolean() )
+                    if ( GetAttributeValue( AttributeKey.CloseBatch ).AsBoolean() )
                     {
                         History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Closed );
                         financialBatch.Status = BatchStatus.Closed;
@@ -247,7 +388,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 //
                 // Open Batch is we Closed it
                 //
-                if ( GetAttributeValue( "CloseBatch" ).AsBoolean() )
+                if ( GetAttributeValue( AttributeKey.CloseBatch ).AsBoolean() )
                 {
                     History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Open );
                     financialBatch.Status = BatchStatus.Open;
@@ -291,12 +432,12 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             if (
                 _batchId > 0 &&
                 (
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( "SenderId" ) ) ) &&
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( "SenderPassword" ) ) ) &&
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( "CompanyId" ) ) ) &&
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( "UserId" ) ) ) &&
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( "UserPassword" ) ) ) &&
-                !string.IsNullOrWhiteSpace( GetAttributeValue( "JournalId" ) )
+                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderId ) ) ) &&
+                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderPassword ) ) ) &&
+                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.CompanyId ) ) ) &&
+                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.UserId ) ) ) &&
+                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.UserPassword ) ) ) &&
+                !string.IsNullOrWhiteSpace( GetAttributeValue( AttributeKey.JournalId ) )
                 )
              )
             {
