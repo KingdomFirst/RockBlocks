@@ -15,9 +15,10 @@
 // </copyright>
 //
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-
+using System.Web.UI.WebControls;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -26,6 +27,7 @@ using Rock.Security;
 using Rock.Web.UI;
 
 using rocks.kfs.Intacct;
+using rocks.kfs.Intacct.Enums;
 
 namespace RockWeb.Plugins.rocks_kfs.Intacct
 {
@@ -123,6 +125,15 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Order = 5,
         Key = AttributeKey.LocationId )]
 
+    [CustomDropdownListField(
+        "Export Mode",
+        Description = "Determines the type of object to create in Intacct. Selecting \"JournalEntry\" will result in creating journal entries of the type set in the \"Journal Id\" setting. Selecting \"OtherReceipt\" will result in creating Other Receipts in the Cash Management area of Intacct.",
+        ListSource = "JournalEntry,OtherReceipt",
+        DefaultValue = "JournalEntry",
+        Category = "Configuration",
+        Order = 6,
+        Key = AttributeKey.ExportMode )]
+
     [LavaField(
         "Journal Memo Lava",
         Description = "Lava for the journal memo per line. Default: Batch.Id: Batch.Name",
@@ -161,6 +172,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             public const string LocationId = "LocationId";
             public const string JournalMemoLava = "JournalMemoLava";
             public const string EnableDebug = "EnableDebug";
+            public const string ExportMode = "ExportMode";
         }
 
         /// <summary>
@@ -188,17 +200,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             public const string AssignedToMeFollowUp = "FollowUp Assigned to Me";
         }
 
-        /// <summary>
-        /// View State Keys
-        /// </summary>
-        private static class ViewStateKey
-        {
-            public const string AvailableAttributes = "AvailableAttributes";
-        }
-
         #endregion Keys
+
         private int _batchId = 0;
         private FinancialBatch _financialBatch = null;
+        private IntacctAuth _intacctAuth = null;
 
         #region Control Methods
 
@@ -239,6 +245,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             var rockContext = new RockContext();
             var isExported = false;
             var debugEnabled = GetAttributeValue( AttributeKey.EnableDebug ).AsBoolean();
+            var exportMode = GetAttributeValue( AttributeKey.ExportMode );
 
             _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
             DateTime? dateExported = null;
@@ -277,6 +284,32 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             {
                 btnExportToIntacct.Text = GetAttributeValue( AttributeKey.ButtonText );
                 btnExportToIntacct.Visible = true;
+                if ( exportMode == "JournalEntry" )
+                {
+                    pnlOtherReceipt.Visible = false;
+                }
+                else
+                {
+                    pnlOtherReceipt.Visible = true;
+                    ddlPaymentMethods.Items.Clear();
+                    foreach ( PaymentMethod pm in Enum.GetValues( typeof( PaymentMethod ) ) )
+                    {
+                        var listItem = new ListItem
+                        {
+                            Value = ( ( int ) pm ).ToString(),
+                            Text = pm.GetDescription()
+                        };
+                        ddlPaymentMethods.Items.Add( listItem );
+                    }
+                    if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
+                    {
+                        var bankAccounts = GetIntacctBankAccountIds();
+                        ddlBankAccounts.DataSource = bankAccounts;
+                        ddlBankAccounts.DataTextField = "BankName";
+                        ddlBankAccounts.DataValueField = "BankAccountId";
+                        ddlBankAccounts.DataBind();
+                    }
+                }
                 if ( variance == 0 )
                 {
                     btnExportToIntacct.Enabled = true;
@@ -298,33 +331,52 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             }
         }
 
+        private List<CheckingAccount> GetIntacctBankAccountIds()
+        {
+            if ( _intacctAuth == null )
+            {
+                _intacctAuth = GetIntactAuth();
+            }
+            var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
+            var checkingAccountList = new IntacctCheckingAccountList();
+            var accountFields = new List<string>();
+            accountFields.Add( "BANKACCOUNTID" );
+            var postXml = checkingAccountList.GetBankAccountsXML( _intacctAuth, _financialBatch.Id, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+
+            var endpoint = new IntacctEndpoint();
+            var resultXml = endpoint.PostToIntacct( postXml );
+            return endpoint.ParseListCheckingAccountsResponse( resultXml, _financialBatch.Id, GetAttributeValue( AttributeKey.LogResponse ).AsBoolean() );
+
+        }
+
         protected void btnExportToIntacct_Click( object sender, EventArgs e )
         {
             if ( _financialBatch != null )
             {
-                //
-                // Get Intacct Auth
-                //
-
-                var intacctAuth = new IntacctAuth()
+                if ( _intacctAuth == null )
                 {
-                    SenderId = Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderId ) ),
-                    SenderPassword = Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderPassword ) ),
-                    CompanyId = Encryption.DecryptString( GetAttributeValue( AttributeKey.CompanyId ) ),
-                    UserId = Encryption.DecryptString( GetAttributeValue( AttributeKey.UserId ) ),
-                    UserPassword = Encryption.DecryptString( GetAttributeValue( AttributeKey.UserPassword ) ),
-                    LocationId = Encryption.DecryptString( GetAttributeValue( AttributeKey.LocationId ) )
-                };
+                    _intacctAuth = GetIntactAuth();
+                }
 
                 //
                 // Create Intacct Journal XML and Post to Intacct
                 //
 
-                var journal = new IntacctJournal();
                 var endpoint = new IntacctEndpoint();
                 var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
+                var postXml = new System.Xml.XmlDocument();
 
-                var postXml = journal.CreateJournalEntryXML( intacctAuth, _financialBatch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                if ( GetAttributeValue( AttributeKey.ExportMode ) == "JournalEntry" )
+                {
+                    var journal = new IntacctJournal();
+                    postXml = journal.CreateJournalEntryXML( _intacctAuth, _financialBatch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                }
+                else   // Export Mode is Other Receipt
+                {
+                    var otherReceipt = new IntacctOtherReceipt();
+                    postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, _financialBatch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), "bankAccountId", "unDepGlAccountId", GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                }
+
                 var resultXml = endpoint.PostToIntacct( postXml );
                 var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, GetAttributeValue( AttributeKey.LogResponse ).AsBoolean() );
 
@@ -375,6 +427,19 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             }
 
             Response.Redirect( Request.RawUrl );
+        }
+
+        private IntacctAuth GetIntactAuth()
+        {
+            return new IntacctAuth()
+            {
+                SenderId = Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderId ) ),
+                SenderPassword = Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderPassword ) ),
+                CompanyId = Encryption.DecryptString( GetAttributeValue( AttributeKey.CompanyId ) ),
+                UserId = Encryption.DecryptString( GetAttributeValue( AttributeKey.UserId ) ),
+                UserPassword = Encryption.DecryptString( GetAttributeValue( AttributeKey.UserPassword ) ),
+                LocationId = Encryption.DecryptString( GetAttributeValue( AttributeKey.LocationId ) )
+            };
         }
 
         protected void btnRemoveDateExported_Click( object sender, EventArgs e )
@@ -437,7 +502,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.CompanyId ) ) ) &&
                 !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.UserId ) ) ) &&
                 !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.UserPassword ) ) ) &&
-                !string.IsNullOrWhiteSpace( GetAttributeValue( AttributeKey.JournalId ) )
+                !string.IsNullOrWhiteSpace( GetAttributeValue( AttributeKey.JournalId ) ) &&
+                !string.IsNullOrWhiteSpace( GetAttributeValue( AttributeKey.ExportMode ) )
                 )
              )
             {
