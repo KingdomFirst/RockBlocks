@@ -82,7 +82,7 @@
                             <Rock:RockCheckBox ID="cbAssignedToMe" runat="server" Label="Assigned to Me" />
                             <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
                         </Rock:GridFilter>
-                        <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gList_Edit" OnRowCreated="gList_RowCreated" ExportSource="DataSource">
+                        <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" ExportSource="DataSource">
                             <Columns>
                                 <Rock:ColorField DataField="Category.AttributeValues.Color" ToolTipDataField="Category.Value" HeaderText="Cat" SortExpression="Category.Value" />
                                 <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name">
@@ -119,7 +119,7 @@
                             <Rock:RockCheckBox ID="cbFollowUpAssignedToMe" runat="server" Label="Assigned to Me" Checked="true" />
                             <asp:PlaceHolder ID="phFollowUpAttributeFilters" runat="server" />
                         </Rock:GridFilter>
-                        <Rock:Grid ID="gFollowUp" runat="server" DisplayType="Full" AllowSorting="true" OnRowSelected="gList_Edit" OnRowCreated="gList_RowCreated" ExportSource="DataSource">
+                        <Rock:Grid ID="gFollowUp" runat="server" DisplayType="Full" AllowSorting="true" ExportSource="DataSource">
                             <Columns>
                                 <Rock:ColorField DataField="Category.AttributeValues.Color" ToolTipDataField="Category.Value" HeaderText="Cat" SortExpression="Category.Value" />
                                 <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name">
