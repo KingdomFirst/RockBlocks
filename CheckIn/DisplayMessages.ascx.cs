@@ -1,11 +1,11 @@
 ﻿// <copyright>
-// Copyright by the Spark Development Network
+// Copyright 2021 by Kingdom First Solutions
 //
-// Licensed under the Rock Community License (the "License");
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.rockrms.com/license
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -57,17 +57,33 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         ListSource = "-3^None,-2^Log Only,-1^Append to Existing,0^Alert,1^Information,2^Warning,3^No Heading",
         DefaultValue = "-3" )]
 
+    [BooleanField( "Clear Messages on Display",
+        Description = "When the message gets displayed or logged, clear the check-in state messages. In the event you want the messages to stick through multiple actions, disable this.",
+        DefaultBooleanValue = true,
+        Key = AttributeKey.ClearMessages )]
+
+    [BooleanField( "Process Messages on Postback Only",
+        Description = "Process messages on page load every time (false) or only on postback (true)?",
+        DefaultBooleanValue = true,
+        Key = AttributeKey.PostbackOnly )]
+
+    [TextField( "Append to Container",
+        Description = "jQuery selector of the tag you would like to append your message to.",
+        DefaultValue = ".bootbox-body",
+        IsRequired = true,
+        Key = AttributeKey.AppendToContainer )]
+
     #endregion Block Attributes
 
     public partial class DisplayMessages : CheckInBlock
     {
-        /* 2021-05/07 ETD
-         * Use new here because the parent CheckInBlock also has inherited class AttributeKey.
-         */
-        private new static class AttributeKey
+        private static class AttributeKey
         {
             public const string DetailMessage = "DetailMessage";
             public const string TypeOfAlert = "TypeOfAlert";
+            public const string ClearMessages = "ClearMessages";
+            public const string PostbackOnly = "PostbackOnly";
+            public const string AppendToContainer = "AppendToContainer";
         }
 
         /// <summary>
@@ -93,12 +109,15 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             }
             else
             {
-                if ( Page.IsPostBack )
+                var clearMessages = GetAttributeValue( AttributeKey.ClearMessages ).AsBoolean();
+                var postbackOnly = GetAttributeValue( AttributeKey.PostbackOnly ).AsBoolean();
+                if ( !postbackOnly || Page.IsPostBack )
                 {
                     try
                     {
                         string detailMsg = GetAttributeValue( AttributeKey.DetailMessage );
                         int? typeOfAlert = GetAttributeValue( AttributeKey.TypeOfAlert ).AsIntegerOrNull();
+                        string classToAppend = GetAttributeValue( AttributeKey.AppendToContainer );
 
                         var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, null, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
                         mergeFields.Add( "CurrentFamily", CurrentCheckInState.CheckIn.CurrentFamily );
@@ -119,12 +138,13 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                                 }
                             }
 
+                            if ( detailMsg.IsNotNullOrWhiteSpace() )
+                            {
+                                messageStr = detailMsg.ResolveMergeFields( mergeFields );
+                            }
+
                             if ( messageStr.IsNotNullOrWhiteSpace() )
                             {
-                                if ( detailMsg.IsNotNullOrWhiteSpace() )
-                                {
-                                    messageStr = detailMsg.ResolveMergeFields( mergeFields );
-                                }
                                 messageStr = messageStr.RemoveCrLf();
                                 if ( typeOfAlert.HasValue && typeOfAlert.Value >= 0 )
                                 {
@@ -138,7 +158,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                                             LogEvent( null, "LogMessages", messageStr, string.Format( "Message Count: {0}", CurrentCheckInState.Messages.Count.ToString() ) );
                                             break;
                                         case -1:
-                                            var script = $"$('.bootbox-body').append('{messageStr}');";
+                                            var script = string.Format( "$('{0}').append('{1}');", classToAppend, messageStr.Replace( "'", "\\'" ) );
                                             ScriptManager.RegisterStartupScript( this, this.GetType(), "DisplayMessages", script, true );
                                             break;
                                         default:
@@ -146,7 +166,10 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                                     }
                                 }
                             }
-                            CurrentCheckInState.Messages.Clear();
+                            if ( clearMessages )
+                            {
+                                CurrentCheckInState.Messages.Clear();
+                            }
                         }
 
                     }
