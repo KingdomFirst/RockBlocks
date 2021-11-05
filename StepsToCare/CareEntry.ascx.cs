@@ -328,6 +328,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     careNeed.DateEntered = dpDate.SelectedDateTime.Value;
                 }
 
+                careNeed.WorkersOnly = cbWorkersOnly.Checked;
+
                 var newlyAssignedPersons = new List<AssignedPerson>();
                 if ( careNeed.AssignedPersons != null )
                 {
@@ -677,6 +679,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             dtbDetailsText.Text = ( careNeed.Details.IsNotNullOrWhiteSpace() ) ? careNeed.Details : PageParameter( PageParameterKey.Details ).ToString();
             dpDate.SelectedDateTime = careNeed.DateEntered ?? PageParameter( PageParameterKey.DateEntered ).AsDateTime();
+
+            cbWorkersOnly.Checked = careNeed.WorkersOnly;
 
             var paramCampusId = PageParameter( PageParameterKey.CampusId ).AsIntegerOrNull();
             if ( careNeed.Campus != null )

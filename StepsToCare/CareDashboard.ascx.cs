@@ -294,7 +294,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <summary>
         /// Holds whether or not the person can add, edit, and delete.
         /// </summary>
-        private bool _canAddEditDelete = false;
+        private bool _canEdit = false;
+
+        /// <summary>
+        /// Holds whether or not the person can Administrate and delete.
+        /// </summary>
+        private bool _canAdministrate = false;
 
         private readonly string _photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
 
@@ -368,22 +373,35 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
             rFollowUpFilter.ApplyFilterClick += rFollowUpFilter_ApplyFilterClick;
 
-            _canAddEditDelete = IsUserAuthorized( Authorization.EDIT );
+            _canEdit = IsUserAuthorized( Authorization.EDIT );
+            _canAdministrate = IsUserAuthorized( Authorization.ADMINISTRATE );
 
             gList.GridRebind += gList_GridRebind;
             gList.RowDataBound += gList_RowDataBound;
+            gList.RowCreated += gList_RowCreated;
+            if ( _canEdit )
+            {
+                gList.RowSelected += gList_Edit;
+            }
             gList.DataKeyNames = new string[] { "Id" };
-            gList.Actions.ShowAdd = _canAddEditDelete;
+            gList.Actions.ShowAdd = _canEdit;
             gList.Actions.AddClick += gList_AddClick;
-            gList.IsDeleteEnabled = _canAddEditDelete;
+            gList.IsDeleteEnabled = _canAdministrate;
 
             gFollowUp.GridRebind += gList_GridRebind;
             gFollowUp.RowDataBound += gList_RowDataBound;
+            gFollowUp.RowCreated += gList_RowCreated;
+            if ( _canEdit )
+            {
+                gFollowUp.RowSelected += gList_Edit;
+            }
             gFollowUp.DataKeyNames = new string[] { "Id" };
             gFollowUp.Actions.ShowAdd = false;
             gFollowUp.Actions.ShowMergeTemplate = false;
 
             mdMakeNote.Footer.Visible = false;
+
+            lbCareConfigure.Visible = _canAdministrate;
 
             // in case this is used as a Person Block, set the TargetPerson, future expansion point
             TargetPerson = ContextEntity<Person>();
@@ -858,7 +876,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             lbLaunchPrayer.Command += lbNeedAction_Click;
                             lbLaunchPrayer.CommandArgument = careNeed.Id.ToString();
                             lbLaunchPrayer.CommandName = "prayer";
-                            lbLaunchPrayer.Text = "Convert to Prayer Request";
+                            lbLaunchPrayer.Text = "Add Prayer Request";
                             actionItem3.Controls.Add( lbLaunchPrayer );
                         }
 
@@ -872,7 +890,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             lbLaunchBenevolence.Command += lbNeedAction_Click;
                             lbLaunchBenevolence.CommandArgument = careNeed.Id.ToString();
                             lbLaunchBenevolence.CommandName = "benevolence";
-                            lbLaunchBenevolence.Text = "Convert to Benevolence Request";
+                            lbLaunchBenevolence.Text = "Add Benevolence Request";
                             actionItem4.Controls.Add( lbLaunchBenevolence );
                         }
 
@@ -886,7 +904,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             lbLaunchConnection.Command += lbNeedAction_Click;
                             lbLaunchConnection.CommandArgument = careNeed.Id.ToString();
                             lbLaunchConnection.CommandName = "connection";
-                            lbLaunchConnection.Text = "Convert to Connection Request";
+                            lbLaunchConnection.Text = "Add Connection Request";
                             actionItem5.Controls.Add( lbLaunchConnection );
                         }
 
@@ -1322,14 +1340,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="RowEventArgs" /> instance containing the event data.</param>
         protected void gList_Edit( object sender, RowEventArgs e )
         {
-            var qryParams = new Dictionary<string, string>();
-            qryParams.Add( "CareNeedId", e.RowKeyId.ToString() );
-            if ( TargetPerson != null )
+            if ( _canEdit )
             {
-                qryParams.Add( "PersonId", TargetPerson.Id.ToString() );
-            }
+                var qryParams = new Dictionary<string, string>();
+                qryParams.Add( "CareNeedId", e.RowKeyId.ToString() );
+                if ( TargetPerson != null )
+                {
+                    qryParams.Add( "PersonId", TargetPerson.Id.ToString() );
+                }
 
-            NavigateToLinkedPage( "DetailPage", qryParams );
+                NavigateToLinkedPage( "DetailPage", qryParams );
+            }
         }
 
         /// <summary>
