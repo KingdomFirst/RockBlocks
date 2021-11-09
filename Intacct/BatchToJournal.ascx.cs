@@ -118,7 +118,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
     [EncryptedTextField(
         "Location Id",
-        Description ="The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.",
+        Description = "The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.",
         IsRequired = false,
         DefaultValue = "",
         Category = "Configuration",
