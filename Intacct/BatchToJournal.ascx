@@ -23,9 +23,11 @@
                 <Rock:RockDropDownList ID="ddlUndepositedFundAccounts" runat="server" Label="Bank Account" Required="true" ValidationGroup="KFSIntacctExport" Visible="false" />
             </asp:Panel>
             <div class="col-sm-2">
-                <label>&nbsp;</label>
-                <div>
-                    <Rock:BootstrapButton runat="server" Visible="false" ID="btnExportToIntacct" OnClick="btnExportToIntacct_Click" CssClass="btn btn-primary" ValidationGroup="KFSIntacctExport" />
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <div class="control-wrapper">
+                        <Rock:BootstrapButton runat="server" Visible="false" ID="btnExportToIntacct" OnClick="btnExportToIntacct_Click" CssClass="btn btn-primary" ValidationGroup="KFSIntacctExport" />
+                    </div>
                 </div>
             </div>
             <asp:Literal ID="lDebug" runat="server" Visible="false" />
