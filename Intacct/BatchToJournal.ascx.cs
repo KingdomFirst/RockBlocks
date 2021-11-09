@@ -213,10 +213,25 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         private int _batchId = 0;
         private decimal _variance = 0;
+        private string _selectedBankAccountId;
+        private string _selectedPaymentMethod;
+        private string _selectedReceiptAccountType;
         private FinancialBatch _financialBatch = null;
         private IntacctAuth _intacctAuth = null;
 
         #region Control Methods
+
+        /// <summary>
+        /// Restores the view-state information from a previous user control request that was saved by the <see cref="M:System.Web.UI.UserControl.SaveViewState" /> method.
+        /// </summary>
+        /// <param name="savedState">An <see cref="T:System.Object" /> that represents the user control state to be restored.</param>
+        protected override void LoadViewState( object savedState )
+        {
+            base.LoadViewState( savedState );
+            _selectedReceiptAccountType = ViewState["ReceiptAccountType"] as string;
+            _selectedPaymentMethod = ViewState["PaymentMethod"] as string;
+            _selectedBankAccountId = ViewState["BankAccountId"] as string;
+        }
 
         /// <summary>
         /// Raises the <see cref="E:System.Web.UI.Control.Init" /> event.
@@ -243,14 +258,35 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnLoad( EventArgs e )
         {
-            ShowDetail();
+            base.OnLoad( e );
+            if ( !Page.IsPostBack )
+            {
+                _selectedReceiptAccountType = GetBlockUserPreference( "ReceiptAccountType" );
+                _selectedPaymentMethod = GetBlockUserPreference( "PaymentMethod" );
+                _selectedBankAccountId = GetBlockUserPreference( "BankAccountId" );
+            }
+            ShowDetail( !Page.IsPostBack );
+        }
+
+        /// <summary>
+        /// Saves any user control view-state changes that have occurred since the last page postback.
+        /// </summary>
+        /// <returns>
+        /// Returns the user control's current view state. If there is no view state associated with the control, it returns null.
+        /// </returns>
+        protected override object SaveViewState()
+        {
+            ViewState["ReceiptAccountType"] = _selectedReceiptAccountType;
+            ViewState["PaymentMethod"] = _selectedPaymentMethod;
+            ViewState["BankAccountId"] = _selectedBankAccountId;
+            return base.SaveViewState();
         }
 
         #endregion Control Methods
 
         #region Methods
 
-        protected void ShowDetail()
+        protected void ShowDetail( bool setSelectControlValues = true )
         {
             var rockContext = new RockContext();
             var isExported = false;
@@ -300,7 +336,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 }
                 else
                 {
-                    SetupOtherReceipts();
+                    SetupOtherReceipts( setSelectControlValues );
                 }
                 SetExportButtonVisibility();
             }
@@ -329,7 +365,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             }
         }
 
-        private void SetupOtherReceipts()
+        private void SetupOtherReceipts( bool setSelectControlValues = true )
         {
             pnlOtherReceipt.Visible = true;
             if ( ddlPaymentMethods.Items.Count == 0 )
@@ -344,6 +380,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     ddlPaymentMethods.Items.Add( listItem );
                 }
             }
+            if ( setSelectControlValues )
+            {
+                ddlPaymentMethods.SetValue( _selectedPaymentMethod );
+            }
             var undepFundAccountId = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
             if ( string.IsNullOrWhiteSpace( undepFundAccountId ) )
             {
@@ -355,6 +395,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 ddlReceiptAccountType.Items[1].Enabled = true;
                 ddlReceiptAccountType.Items[1].Text = string.Format( "Undeposited Funds ({0})", undepFundAccountId );
             }
+            if ( setSelectControlValues )
+            {
+                ddlReceiptAccountType.SetValue( _selectedReceiptAccountType );
+            }
             if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
             {
                 if ( ddlBankAccounts.Items.Count == 0 )
@@ -364,6 +408,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     ddlBankAccounts.DataTextField = "BankName";
                     ddlBankAccounts.DataValueField = "BankAccountId";
                     ddlBankAccounts.DataBind();
+                }
+                if ( setSelectControlValues )
+                {
+                    ddlBankAccounts.SetValue( _selectedBankAccountId );
                 }
                 ddlBankAccounts.Visible = true;
             }
@@ -395,6 +443,17 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             if ( _financialBatch != null )
             {
+                if ( GetAttributeValue( AttributeKey.ExportMode ) == "OtherReceipt" )
+                {
+                    //
+                    // Capture ddl values as user preferences
+                    //
+
+                    SetBlockUserPreference( "ReceiptAccountType", ddlReceiptAccountType.SelectedValue ?? "" );
+                    SetBlockUserPreference( "PaymentMethod", ddlPaymentMethods.SelectedValue ?? "" );
+                    SetBlockUserPreference( "BankAccountId", ddlBankAccounts.SelectedValue ?? "" );
+                }
+
                 if ( _intacctAuth == null )
                 {
                     _intacctAuth = GetIntactAuth();
@@ -559,6 +618,9 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         protected void ddlReceiptAccountType_SelectedIndexChanged( object sender, EventArgs e )
         {
+            _selectedReceiptAccountType = ddlReceiptAccountType.SelectedValue;
+            _selectedPaymentMethod = ddlPaymentMethods.SelectedValue;
+            _selectedBankAccountId = ddlBankAccounts.SelectedValue;
             SetupOtherReceipts();
             SetExportButtonVisibility();
         }
