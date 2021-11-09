@@ -212,6 +212,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         #endregion Keys
 
         private int _batchId = 0;
+        private decimal _variance = 0;
         private FinancialBatch _financialBatch = null;
         private IntacctAuth _intacctAuth = null;
 
@@ -259,14 +260,14 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
             DateTime? dateExported = null;
 
-            decimal variance = 0;
+            _variance = 0;
 
             if ( _financialBatch != null )
             {
                 var financialTransactionDetailService = new FinancialTransactionDetailService( rockContext );
                 var qryTransactionDetails = financialTransactionDetailService.Queryable().Where( a => a.Transaction.BatchId == _financialBatch.Id );
                 decimal txnTotal = qryTransactionDetails.Select( a => ( decimal? ) a.Amount ).Sum() ?? 0;
-                variance = txnTotal - _financialBatch.ControlAmount;
+                _variance = txnTotal - _financialBatch.ControlAmount;
 
                 _financialBatch.LoadAttributes();
 
@@ -415,7 +416,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 else   // Export Mode is Other Receipt
                 {
                     var otherReceipt = new IntacctOtherReceipt();
-                    postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, _financialBatch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), "bankAccountId", "unDepGlAccountId", GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                    postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, _financialBatch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), ddlBankAccounts.SelectedValue, GetAttributeValue( AttributeKey.UndepositedFundsAccount ), GetAttributeValue( AttributeKey.JournalMemoLava ) );
                 }
 
                 var resultXml = endpoint.PostToIntacct( postXml );
@@ -555,5 +556,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         }
 
         #endregion Methods
+
+        protected void ddlReceiptAccountType_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            SetupOtherReceipts();
+            SetExportButtonVisibility();
+        }
     }
 }

@@ -7,10 +7,10 @@
                 <asp:Literal runat="server" ID="litDateExported" Visible="false"></asp:Literal>
                 <Rock:BootstrapButton runat="server" Visible="false" ID="btnRemoveDate" Text="Remove Date Exported" OnClick="btnRemoveDateExported_Click" CssClass="btn btn-link" />
             </asp:Panel>
-            <asp:Panel runat="server" ID="pnlOtherReceipt" >
+            <asp:Panel runat="server" ID="pnlOtherReceipt" Visible="false">
                 <div class="col-sm-2">
-                    <Rock:RockDropDownList ID="ddlReceiptAccountType" runat="server" Label="Deposit To" Required="true" ValidationGroup="KFSIntacctExport" >
-                        <asp:ListItem Value="BankAccount" Text="Bank Account" Selected="True" ></asp:ListItem>
+                    <Rock:RockDropDownList ID="ddlReceiptAccountType" runat="server" Label="Deposit To" Required="true" ValidationGroup="KFSIntacctExport" OnSelectedIndexChanged="ddlReceiptAccountType_SelectedIndexChanged" AutoPostBack="true" >
+                        <asp:ListItem Value="BankAccount" Text="Bank Account" ></asp:ListItem>
                         <asp:ListItem Value="UnDepFundAcct" Text="Undeposited Funds"></asp:ListItem>
                     </Rock:RockDropDownList>
                 </div>
