@@ -134,6 +134,14 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Order = 6,
         Key = AttributeKey.ExportMode )]
 
+    [TextField(
+        "Undeposited Funds Account",
+        Description = "The GL AccountId to use when Other Receipt mode is being used with Undeposited Funds option selected.",
+        IsRequired = false,
+        DefaultValue = "",
+        Order = 7,
+        Key = AttributeKey.UndepositedFundsAccount )]
+
     [LavaField(
         "Journal Memo Lava",
         Description = "Lava for the journal memo per line. Default: Batch.Id: Batch.Name",
@@ -173,6 +181,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             public const string JournalMemoLava = "JournalMemoLava";
             public const string EnableDebug = "EnableDebug";
             public const string ExportMode = "ExportMode";
+            public const string UndepositedFundsAccount = "UndepositedFundsAccount";
         }
 
         /// <summary>
