@@ -144,7 +144,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
     [LavaField(
         "Journal Memo Lava",
-        Description = "Lava for the journal memo per line. Default: Batch.Id: Batch.Name",
+        Description = "Lava for the journal (or other receipt if configured) memo per line. Default: Batch.Id: Batch.Name",
         IsRequired = true,
         DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
         Order = 4,
