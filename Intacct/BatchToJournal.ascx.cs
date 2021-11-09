@@ -299,34 +299,9 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 }
                 else
                 {
-                    pnlOtherReceipt.Visible = true;
-                    ddlPaymentMethods.Items.Clear();
-                    foreach ( PaymentMethod pm in Enum.GetValues( typeof( PaymentMethod ) ) )
-                    {
-                        var listItem = new ListItem
-                        {
-                            Value = ( ( int ) pm ).ToString(),
-                            Text = pm.GetDescription()
-                        };
-                        ddlPaymentMethods.Items.Add( listItem );
-                    }
-                    if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
-                    {
-                        var bankAccounts = GetIntacctBankAccountIds();
-                        ddlBankAccounts.DataSource = bankAccounts;
-                        ddlBankAccounts.DataTextField = "BankName";
-                        ddlBankAccounts.DataValueField = "BankAccountId";
-                        ddlBankAccounts.DataBind();
-                    }
+                    SetupOtherReceipts();
                 }
-                if ( variance == 0 )
-                {
-                    btnExportToIntacct.Enabled = true;
-                }
-                else
-                {
-                    btnExportToIntacct.Enabled = false;
-                }
+                SetExportButtonVisibility();
             }
             else if ( isExported )
             {
@@ -335,8 +310,65 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                 if ( UserCanEdit )
                 {
+                    pnlExportedDetails.Visible = true;
                     btnRemoveDate.Visible = true;
                 }
+            }
+        }
+
+        private void SetExportButtonVisibility()
+        {
+            if ( _variance == 0 )
+            {
+                btnExportToIntacct.Enabled = true;
+            }
+            else
+            {
+                btnExportToIntacct.Enabled = false;
+            }
+        }
+
+        private void SetupOtherReceipts()
+        {
+            pnlOtherReceipt.Visible = true;
+            if ( ddlPaymentMethods.Items.Count == 0 )
+            {
+                foreach ( PaymentMethod pm in Enum.GetValues( typeof( PaymentMethod ) ) )
+                {
+                    var listItem = new ListItem
+                    {
+                        Value = ( ( int ) pm ).ToString(),
+                        Text = pm.GetDescription()
+                    };
+                    ddlPaymentMethods.Items.Add( listItem );
+                }
+            }
+            var undepFundAccountId = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
+            if ( string.IsNullOrWhiteSpace( undepFundAccountId ) )
+            {
+                ddlReceiptAccountType.Items[1].Enabled = false;
+                ddlReceiptAccountType.Items[1].Text = "Undeposited Funds";
+            }
+            else
+            {
+                ddlReceiptAccountType.Items[1].Enabled = true;
+                ddlReceiptAccountType.Items[1].Text = string.Format( "Undeposited Funds ({0})", undepFundAccountId );
+            }
+            if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
+            {
+                if ( ddlBankAccounts.Items.Count == 0 )
+                {
+                    var bankAccounts = GetIntacctBankAccountIds();
+                    ddlBankAccounts.DataSource = bankAccounts;
+                    ddlBankAccounts.DataTextField = "BankName";
+                    ddlBankAccounts.DataValueField = "BankAccountId";
+                    ddlBankAccounts.DataBind();
+                }
+                ddlBankAccounts.Visible = true;
+            }
+            else
+            {
+                ddlBankAccounts.Visible = false;
             }
         }
 
