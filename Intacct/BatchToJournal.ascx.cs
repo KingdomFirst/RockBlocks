@@ -139,7 +139,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Description = "The GL AccountId to use when Other Receipt mode is being used with Undeposited Funds option selected.",
         IsRequired = false,
         DefaultValue = "",
-        Order = 7,
+        Order = 6,
         Key = AttributeKey.UndepositedFundsAccount )]
 
     [LavaField(
