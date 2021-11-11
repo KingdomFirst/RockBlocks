@@ -184,31 +184,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             public const string UndepositedFundsAccount = "UndepositedFundsAccount";
         }
 
-        /// <summary>
-        /// User Preference Key
-        /// </summary>
-        private static class UserPreferenceKey
-        {
-            public const string StartDate = "Start Date";
-            public const string EndDate = "End Date";
-            public const string FirstName = "First Name";
-            public const string LastName = "Last Name";
-            public const string SubmittedBy = "Submitted By";
-            public const string Category = "Category";
-            public const string Status = "Status";
-            public const string Campus = "Campus";
-            public const string AssignedToMe = "Assigned to Me";
-            public const string StartDateFollowUp = "FollowUp Start Date";
-            public const string EndDateFollowUp = "FollowUp End Date";
-            public const string FirstNameFollowUp = "FollowUp First Name";
-            public const string LastNameFollowUp = "FollowUp Last Name";
-            public const string SubmittedByFollowUp = "FollowUp Submitted By";
-            public const string CategoryFollowUp = "FollowUp Category";
-            public const string StatusFollowUp = "FollowUp Status";
-            public const string CampusFollowUp = "FollowUp Campus";
-            public const string AssignedToMeFollowUp = "FollowUp Assigned to Me";
-        }
-
         #endregion Keys
 
         private int _batchId = 0;
