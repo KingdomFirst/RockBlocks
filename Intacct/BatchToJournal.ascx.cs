@@ -428,7 +428,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                     SetBlockUserPreference( "ReceiptAccountType", ddlReceiptAccountType.SelectedValue ?? "" );
                     SetBlockUserPreference( "PaymentMethod", ddlPaymentMethods.SelectedValue ?? "" );
-                    SetBlockUserPreference( "BankAccountId", ddlBankAccounts.SelectedValue ?? "" );
                 }
 
                 if ( _intacctAuth == null )
@@ -608,7 +607,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             _selectedReceiptAccountType = ddlReceiptAccountType.SelectedValue;
             _selectedPaymentMethod = ddlPaymentMethods.SelectedValue;
-            _selectedBankAccountId = ddlBankAccounts.SelectedValue;
+            if ( ddlReceiptAccountType.SelectedValue != "BankAccount" )
+            {
+                _selectedBankAccountId = ddlBankAccounts.SelectedValue;  
+            }
             SetupOtherReceipts();
             SetExportButtonVisibility();
         }
