@@ -452,7 +452,18 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 else   // Export Mode is Other Receipt
                 {
                     var otherReceipt = new IntacctOtherReceipt();
-                    postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, _financialBatch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), ddlBankAccounts.SelectedValue, GetAttributeValue( AttributeKey.UndepositedFundsAccount ), GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                    string bankAccountId = null;
+                    string undepFundAccount = null;
+                    if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
+                    {
+                        SetBlockUserPreference( "BankAccountId", ddlBankAccounts.SelectedValue ?? "" );
+                        bankAccountId = ddlBankAccounts.SelectedValue;
+                    }
+                    else
+                    {
+                        undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
+                    }
+                    postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, _financialBatch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
                 }
 
                 var resultXml = endpoint.PostToIntacct( postXml );
