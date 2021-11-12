@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Web.UI.WebControls;
 using Rock;
@@ -70,6 +71,29 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         DefaultBooleanValue = true,
         Order = 3,
         Key = AttributeKey.LogResponse )]
+
+    [LavaField(
+        "Journal Memo Lava",
+        Description = "Lava for the journal (or other receipt if configured) memo per line. Default: Batch.Id: Batch.Name",
+        IsRequired = true,
+        DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
+        Order = 4,
+        Key = AttributeKey.JournalMemoLava )]
+
+    [BooleanField(
+        "Enable Debug",
+        Description = "Outputs the object graph to help create your Lava syntax. (Debug data will show after clicking export.)",
+        DefaultBooleanValue = false,
+        Order = 5,
+        Key = AttributeKey.EnableDebug )]
+
+    [TextField(
+        "Undeposited Funds Account",
+        Description = "The GL AccountId to use when Other Receipt mode is being used with Undeposited Funds option selected.",
+        IsRequired = false,
+        DefaultValue = "",
+        Order = 6,
+        Key = AttributeKey.UndepositedFundsAccount )]
 
     [EncryptedTextField(
         "Sender Id",
@@ -133,29 +157,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Category = "Configuration",
         Order = 6,
         Key = AttributeKey.ExportMode )]
-
-    [TextField(
-        "Undeposited Funds Account",
-        Description = "The GL AccountId to use when Other Receipt mode is being used with Undeposited Funds option selected.",
-        IsRequired = false,
-        DefaultValue = "",
-        Order = 6,
-        Key = AttributeKey.UndepositedFundsAccount )]
-
-    [LavaField(
-        "Journal Memo Lava",
-        Description = "Lava for the journal (or other receipt if configured) memo per line. Default: Batch.Id: Batch.Name",
-        IsRequired = true,
-        DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
-        Order = 4,
-        Key = AttributeKey.JournalMemoLava )]
-
-    [BooleanField(
-        "Enable Debug",
-        Description = "Outputs the object graph to help create your Lava syntax. (Debug data will show after clicking export.)",
-        DefaultBooleanValue = false,
-        Order = 5,
-        Key = AttributeKey.EnableDebug )]
 
     #endregion
 
@@ -319,10 +320,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             {
                 litDateExported.Text = string.Format( "<div class=\"small\">Exported: {0}</div>", dateExported.ToRelativeDateString() );
                 litDateExported.Visible = true;
+                pnlExportedDetails.Visible = true;
 
                 if ( UserCanEdit )
                 {
-                    pnlExportedDetails.Visible = true;
                     btnRemoveDate.Visible = true;
                 }
             }
@@ -350,7 +351,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     var listItem = new ListItem
                     {
                         Value = ( ( int ) pm ).ToString(),
-                        Text = pm.GetDescription()
+                        Text = pm.GetAttribute<DisplayAttribute>().Name
                     };
                     ddlPaymentMethods.Items.Add( listItem );
                 }
@@ -388,11 +389,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 {
                     ddlBankAccounts.SetValue( _selectedBankAccountId );
                 }
-                ddlBankAccounts.Visible = true;
+                pnlBankAccounts.Visible = true;
             }
             else
             {
-                ddlBankAccounts.Visible = false;
+                pnlBankAccounts.Visible = false;
             }
         }
 
@@ -406,11 +407,12 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             var checkingAccountList = new IntacctCheckingAccountList();
             var accountFields = new List<string>();
             accountFields.Add( "BANKACCOUNTID" );
-            var postXml = checkingAccountList.GetBankAccountsXML( _intacctAuth, _financialBatch.Id, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+            accountFields.Add( "BANKNAME" );
+            var postXml = checkingAccountList.GetBankAccountsXML( _intacctAuth, _financialBatch.Id, accountFields );
 
             var endpoint = new IntacctEndpoint();
             var resultXml = endpoint.PostToIntacct( postXml );
-            return endpoint.ParseListCheckingAccountsResponse( resultXml, _financialBatch.Id, GetAttributeValue( AttributeKey.LogResponse ).AsBoolean() );
+            return endpoint.ParseListCheckingAccountsResponse( resultXml, _financialBatch.Id );
 
         }
 
