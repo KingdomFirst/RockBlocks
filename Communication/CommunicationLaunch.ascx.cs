@@ -41,12 +41,12 @@ using Rock.Web.UI.Controls;
 namespace RockWeb.Plugins.rocks_kfs.Communication
 {
     /// <summary>
-    /// Block that enables previewing an entity set and then launching a workflow for each item within the set. This block was designed to
-    /// work in tandem with <see cref="Rock.Web.UI.Controls.GridActions.ShowLaunchWorkflow"/>.
+    /// Block that enables previewing an entity set and then launching a communication with recipients generated from the items within the set. This block was designed to
+    /// work in tandem with <see cref="Rock.Web.UI.Controls.GridActions.AddCustomActionControl(Control)"/>.
     /// </summary>
     [DisplayName( "Communication Launch" )]
     [Category( "KFS > Communication" )]
-    [Description( "Block that enables previewing an entity set and then launching a communication from it." )]
+    [Description( "Block that enables previewing an entity set and then launching a communication from it. For use with Custom Grid Actions." )]
 
     #region Block Attributes
 
@@ -410,7 +410,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 }
                 else
                 {
-                    ShowError( string.Format( "The entity set that was passed in is currently not supported. Please contact Kingdom First Solutions for more information. EntityType: {0}", entityTypeCache.FriendlyName ) );
+                    ShowError( string.Format( "The grid items that were passed in are currently not supported, the currently supported grid entities are Person, Group Members, or Groups. Please contact Kingdom First Solutions for more information. EntityType: {0}", entityTypeCache.FriendlyName ) );
                     return;
                 }
 
@@ -644,8 +644,6 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
 
                 if ( communicationPage != null && communicationPage.IsAuthorized( Authorization.VIEW, CurrentPerson ) )
                 {
-                    //lWorkflowType.Text = GetLockedWorkflowTypeHtml( workflowType );
-                    //lWorkflowType.Visible = true;
                     ppCommunicationPage.Visible = false;
                     return;
                 }
@@ -655,8 +653,6 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 var ppFieldType = new PageReferenceFieldType();
                 ppFieldType.SetEditValue( ppCommunicationPage, null, selectedPage );
             }
-
-
         }
 
         /// <summary>
