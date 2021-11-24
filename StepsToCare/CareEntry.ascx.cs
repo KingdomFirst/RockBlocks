@@ -20,12 +20,14 @@ using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Rock;
 using Rock.Attribute;
 using Rock.Communication;
 using Rock.Data;
+using Rock.Logging;
 using Rock.Model;
 using Rock.Web;
 using Rock.Web.Cache;
@@ -404,26 +406,69 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         careNeed = new CareNeedService( new RockContext() ).Get( careNeed.Id );
                         assignedPersons = careNeed.AssignedPersons;
                     }
-                    if ( assignedPersons != null && assignedPersons.Any() && assignmentEmailTemplateGuid.HasValue )
+                    if ( assignedPersons != null && assignedPersons.Any() && assignmentEmailTemplateGuid.HasValue && ( isNew || newlyAssignedPersons.Any() ) )
                     {
+                        var errors = new List<string>();
+                        var errorsSms = new List<string>();
                         Dictionary<string, object> linkedPages = new Dictionary<string, object>();
                         linkedPages.Add( "CareDetail", CurrentPageReference.BuildUrl() );
                         linkedPages.Add( "CareDashboard", GetParentPage().BuildUrl() );
 
-                        var emailMessage = new RockEmailMessage( assignmentEmailTemplateGuid.Value );
-                        emailMessage.AppRoot = ResolveRockUrl( "~/" );
-                        emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
+                        var systemCommunication = new SystemCommunicationService( rockContext ).Get( assignmentEmailTemplateGuid.Value );
+                        var emailMessage = new RockEmailMessage( systemCommunication );
+                        var smsMessage = new RockSMSMessage( systemCommunication );
+                        emailMessage.AppRoot = smsMessage.AppRoot = ResolveRockUrl( "~/" );
+                        emailMessage.ThemeRoot = smsMessage.ThemeRoot = ResolveRockUrl( "~~/" );
                         foreach ( var assignee in assignedPersons )
                         {
+                            assignee.PersonAlias.Person.LoadAttributes();
+                            var smsNumber = assignee.PersonAlias.Person.PhoneNumbers.GetFirstSmsNumber();
+
                             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                             mergeFields.Add( "CareNeed", careNeed );
                             mergeFields.Add( "LinkedPages", linkedPages );
                             mergeFields.Add( "AssignedPerson", assignee );
                             mergeFields.Add( "Person", assignee.PersonAlias.Person );
 
-                            emailMessage.AddRecipient( new RockEmailMessageRecipient( assignee.PersonAlias.Person, mergeFields ) );
+                            var notificationType = assignee.PersonAlias.Person.GetAttributeValue( rocks.kfs.StepsToCare.SystemGuid.PersonAttribute.NOTIFICATION.AsGuid() );
+
+                            if ( notificationType == null || notificationType == "Email" || notificationType == "Both" )
+                            {
+                                emailMessage.AddRecipient( new RockEmailMessageRecipient( assignee.PersonAlias.Person, mergeFields ) );
+                            }
+
+                            if ( notificationType == "SMS" || notificationType == "Both" )
+                            {
+                                if ( string.IsNullOrWhiteSpace( smsNumber ) )
+                                {
+                                    var smsWarningMessage = string.Format( "No SMS number could be found for {0}.", assignee.PersonAlias.Person.FullName );
+                                    RockLogger.Log.Warning( "RockWeb.Plugins.rocks_kfs.StepsToCare.CareEntry", smsWarningMessage );
+                                    errors.Add( smsWarningMessage );
+                                }
+
+                                smsMessage.AddRecipient( new RockSMSMessageRecipient( assignee.PersonAlias.Person, smsNumber, mergeFields ) );
+                            }
                         }
-                        emailMessage.Send();
+                        if ( emailMessage.GetRecipients().Count > 0 )
+                        {
+                            emailMessage.Send( out errors );
+                        }
+                        if ( smsMessage.GetRecipients().Count > 0 )
+                        {
+                            smsMessage.Send( out errorsSms );
+                        }
+
+                        if ( errors.Any() || errorsSms.Any() )
+                        {
+                            StringBuilder sb = new StringBuilder();
+                            sb.Append( string.Format( "{0} Errors Sending Care Assignment Notification: ", errors.Count+errorsSms.Count ) );
+                            errors.ForEach( es => { sb.AppendLine(); sb.Append( es ); } );
+                            errorsSms.ForEach( es => { sb.AppendLine(); sb.Append( es ); } );
+                            string errorStr = sb.ToString();
+                            var exception = new Exception( errorStr );
+                            HttpContext context = HttpContext.Current;
+                            ExceptionLogService.LogException( exception, context );
+                        }
                     }
 
                     // redirect back to parent
