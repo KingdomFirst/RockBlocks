@@ -19,6 +19,7 @@
     .care-dashboard .table-responsive {
         overflow-y: auto;
     }
+
     .popover-content {
         text-align: center;
     }
@@ -32,6 +33,7 @@
                 <div class="panel-heading">
                     <h1 class="panel-title"><i class="fa fa-hand-holding-heart mr-2"></i>Care Needs</h1>
                     <div class="pull-right d-flex align-items-center">
+                        <asp:LinkButton ID="lbNotificationType" runat="server" CssClass="btn btn-xs btn-square btn-default pull-right" OnClick="lbNotificationType_Click" CausesValidation="false"> <i title="Choose Notification Type" class="fas fa-comment-alt"></i></asp:LinkButton>
                         <asp:LinkButton ID="lbCareConfigure" runat="server" CssClass="btn btn-xs btn-square btn-default pull-right" OnClick="lbCareConfigure_Click" CausesValidation="false"> <i title="Options" class="fa fa-gear"></i></asp:LinkButton>
                     </div>
                 </div>
@@ -219,6 +221,14 @@
                 </asp:Panel>
 
                 <Rock:RockTextBox ID="tbComments" Label="Comments" runat="server" TextMode="MultiLine" Rows="4" ValidateRequestMode="Disabled" />
+            </Content>
+        </Rock:ModalDialog>
+        <Rock:ModalDialog ID="mdNotificationType" runat="server" Title="Choose Notification Type" ValidationGroup="Notification" ClickBackdropToClose="true" OnSaveClick="mdNotificationType_SaveClick" SaveButtonCausesValidation="true" Content-CssClass="modal-kfsnotification">
+            <Content>
+                <asp:ValidationSummary ID="vsNotificationType" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="Notification" />
+                <Rock:DynamicPlaceholder ID="phNotificationAttribute" runat="server" />
+
+                <Rock:NotificationBox ID="nbNotificationWarning" runat="server" NotificationBoxType="Warning" Visible="false"></Rock:NotificationBox>
             </Content>
         </Rock:ModalDialog>
     </ContentTemplate>

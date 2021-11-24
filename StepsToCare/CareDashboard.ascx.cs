@@ -456,6 +456,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( !Page.IsPostBack )
             {
                 SetFilter();
+                AddNotificationAttributeControl( true );
             }
             BindGrid();
             if ( !string.IsNullOrWhiteSpace( hfCareNeedId.Value ) )
@@ -512,6 +513,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         protected void lbCareConfigure_Click( object sender, EventArgs e )
         {
             NavigateToLinkedPage( AttributeKey.ConfigurationPage );
+        }
+
+        /// <summary>
+        /// Handles the Click event of the lbNotificationType control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void lbNotificationType_Click( object sender, EventArgs e )
+        {
+            AddNotificationAttributeControl( true );
+
+            mdNotificationType.Show();
         }
 
         /// <summary>
@@ -1470,6 +1483,25 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             BindGrid();
         }
 
+        protected void mdNotificationType_SaveClick( object sender, EventArgs e )
+        {
+            var rockContext = new RockContext();
+            var attribute = AttributeCache.Get( rocks.kfs.StepsToCare.SystemGuid.PersonAttribute.NOTIFICATION );
+
+            if ( CurrentPerson != null )
+            {
+                Control attributeControl = phNotificationAttribute.FindControl( string.Format( "attribute_field_{0}", attribute.Id ) );
+                if ( attributeControl != null )
+                {
+                    string originalValue = CurrentPerson.GetAttributeValue( attribute.Key );
+                    string newValue = attribute.FieldType.Field.GetEditValue( attributeControl, attribute.QualifierValues );
+                    Rock.Attribute.Helper.SaveAttributeValue( CurrentPerson, attribute, newValue, rockContext );
+                }
+            }
+
+            mdNotificationType.Hide();
+        }
+
         #endregion Events
 
         #region Methods
@@ -2190,6 +2222,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             return resolvedValues.AsDelimited( ", " );
+        }
+
+        private void AddNotificationAttributeControl( bool setValues )
+        {
+            phNotificationAttribute.Controls.Clear();
+
+            var attribute = AttributeCache.Get( rocks.kfs.StepsToCare.SystemGuid.PersonAttribute.NOTIFICATION );
+            CurrentPerson.LoadAttributes();
+            string attributeValue = CurrentPerson.GetAttributeValue( attribute.Key );
+            string attributeLabel = attribute.Name;
+            attribute.AddControl( phNotificationAttribute.Controls, attributeValue, "Notification", setValues, true, true, "Choose how you would like to receive Steps to Care notifications", "" );
+
+            if ( CurrentPerson.CanReceiveEmail( false ) )
+            {
+                nbNotificationWarning.Text = "Please ensure your email address is setup properly on your profile. ";
+            }
+            if ( CurrentPerson.PhoneNumbers.GetFirstSmsNumber() == "" )
+            {
+                nbNotificationWarning.Text += "Please ensure you have a valid phone number attached to your profile and SMS is allowed. ";
+            }
         }
 
         #endregion Methods
