@@ -624,13 +624,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void bddlAddWorker_SelectionChanged( object sender, EventArgs e )
         {
-            var selectedVal = bddlAddWorker.SelectedValueAsInt();
-            if ( selectedVal != null && !AssignedPersons.Any( ap => ap.PersonAliasId == bddlAddWorker.SelectedValueAsInt() ) )
+            var selectedVal = bddlAddWorker.SelectedValue.SplitDelimitedValues( "^" );
+            if ( selectedVal.IsNotNull() && selectedVal.Length > 1 && !AssignedPersons.Any( ap => ap.PersonAliasId == selectedVal[0].AsIntegerOrNull() ) )
             {
                 var addPerson = new AssignedPerson
                 {
-                    PersonAliasId = bddlAddWorker.SelectedValueAsInt() ?? 0,
-                    NeedId = hfCareNeedId.Value.AsInteger()
+                    PersonAliasId = selectedVal[0].AsIntegerOrNull() ?? 0,
+                    NeedId = hfCareNeedId.Value.AsInteger(),
+                    FollowUpWorker = !AssignedPersons.Any( ap => ap.FollowUpWorker.HasValue && ap.FollowUpWorker.Value ),
+                    WorkerId = selectedVal[1].AsIntegerOrNull()
                 };
                 AssignedPersons.Add( addPerson );
                 BindAssignedPersonsGrid();
@@ -766,11 +768,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 AssignedPersons = careNeed.AssignedPersons.ToList();
                 BindAssignedPersonsGrid();
+                pwAssigned.Visible = UserCanAdministrate;
             }
             else
             {
                 pwAssigned.Visible = false;
             }
+
 
             careNeed.LoadAttributes();
             Helper.AddEditControls( careNeed, phAttributes, true, BlockValidationGroup, 2 );
@@ -793,15 +797,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var careWorkerService = new CareWorkerService( rockContext );
                 var careWorkers = careWorkerService.Queryable()
                     .AsNoTracking()
-                    .Where( cw => cw.IsActive && cw.PersonAlias != null )
+                    .Where( cw => cw.IsActive && cw.PersonAlias != null && !cw.GeoFenceId.HasValue )
                     .OrderBy( cw => cw.PersonAlias.Person.LastName )
                     .ThenBy( cw => cw.PersonAlias.Person.NickName )
+                    .DistinctBy( cw => cw.PersonAliasId )
                     .Select( cw => new
                     {
-                        Value = cw.PersonAlias.Id,
+                        Value = cw.PersonAlias.Id + "^" + cw.Id,
                         Label = cw.PersonAlias.Person.NickName + " " + cw.PersonAlias.Person.LastName
                     } )
-                    .Distinct()
                     .ToList();
 
                 bddlAddWorker.DataSource = careWorkers;
