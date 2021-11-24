@@ -196,6 +196,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 19,
         Key = AttributeKey.NoteViewLavaTemplate )]
 
+    [SecurityAction(
+        SecurityActionKey.CareWorkers,
+        "The roles and/or users that have access to view 'Care Worker Only' needs." )]
+
+    [SecurityAction(
+        SecurityActionKey.ViewAll,
+        "The roles and/or users that have access to view all care needs minus 'Care Worker Only' those are protected by 'Care Workers'." )]
+
     #endregion Block Settings
 
     public partial class CareDashboard : Rock.Web.UI.RockBlock
@@ -254,6 +262,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         }
 
         /// <summary>
+        /// Security Action Keys
+        /// </summary>
+        private static class SecurityActionKey
+        {
+            public const string ViewAll = "ViewAll";
+            public const string CareWorkers = "CareWorkers";
+        }
+
+        /// <summary>
         /// View State Keys
         /// </summary>
         private static class ViewStateKey
@@ -292,7 +309,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         #region Private Members
 
         /// <summary>
-        /// Holds whether or not the person can add, edit, and delete.
+        /// Holds whether or not the person can edit requests.
         /// </summary>
         private bool _canEdit = false;
 
@@ -300,6 +317,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// Holds whether or not the person can Administrate and delete.
         /// </summary>
         private bool _canAdministrate = false;
+
+        /// <summary>
+        /// Holds whether or not the person can view needs, by default View will only give permission to view needs assigned to the user.
+        /// </summary>
+        private bool _canView = false;
+
+        /// <summary>
+        /// Holds whether or not the person can view all needs.
+        /// </summary>
+        private bool _canViewAll = false;
+
+        /// <summary>
+        /// Holds whether or not the person can view Care Worker Only needs.
+        /// </summary>
+        private bool _canViewCareWorker = false;
 
         private readonly string _photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
 
@@ -375,6 +407,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             _canEdit = IsUserAuthorized( Authorization.EDIT );
             _canAdministrate = IsUserAuthorized( Authorization.ADMINISTRATE );
+            _canView = IsUserAuthorized( Authorization.VIEW );
+            _canViewAll = IsUserAuthorized( SecurityActionKey.ViewAll );
+            _canViewCareWorker = IsUserAuthorized( SecurityActionKey.CareWorkers );
 
             gList.GridRebind += gList_GridRebind;
             gList.RowDataBound += gList_RowDataBound;
@@ -398,6 +433,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gFollowUp.DataKeyNames = new string[] { "Id" };
             gFollowUp.Actions.ShowAdd = false;
             gFollowUp.Actions.ShowMergeTemplate = false;
+            gFollowUp.IsDeleteEnabled = _canAdministrate;
 
             mdMakeNote.Footer.Visible = false;
 
@@ -832,12 +868,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var actionItem1 = new HtmlGenericControl( "li" );
                         ddlMenu.Controls.Add( actionItem1 );
 
-                        var lbCompleteNeed = new LinkButton();
-                        lbCompleteNeed.Command += lbNeedAction_Click;
-                        lbCompleteNeed.CommandArgument = careNeed.Id.ToString();
-                        lbCompleteNeed.CommandName = "complete";
-                        lbCompleteNeed.Text = "Complete";
-                        actionItem1.Controls.Add( lbCompleteNeed );
+                        if ( _canEdit )
+                        {
+                            var lbCompleteNeed = new LinkButton();
+                            lbCompleteNeed.Command += lbNeedAction_Click;
+                            lbCompleteNeed.CommandArgument = careNeed.Id.ToString();
+                            lbCompleteNeed.CommandName = "complete";
+                            lbCompleteNeed.Text = "Complete";
+                            actionItem1.Controls.Add( lbCompleteNeed );
+                        }
 
                         if ( followUpGrid )
                         {
@@ -1360,20 +1399,23 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         protected void gList_Delete( object sender, RowEventArgs e )
         {
-            var rockContext = new RockContext();
-            CareNeedService service = new CareNeedService( rockContext );
-            CareNeed careNeed = service.Get( e.RowKeyId );
-            if ( careNeed != null )
+            if ( _canAdministrate )
             {
-                string errorMessage;
-                if ( !service.CanDelete( careNeed, out errorMessage ) )
+                var rockContext = new RockContext();
+                CareNeedService service = new CareNeedService( rockContext );
+                CareNeed careNeed = service.Get( e.RowKeyId );
+                if ( careNeed != null )
                 {
-                    mdGridWarning.Show( errorMessage, ModalAlertType.Information );
-                    return;
-                }
+                    string errorMessage;
+                    if ( !service.CanDelete( careNeed, out errorMessage ) )
+                    {
+                        mdGridWarning.Show( errorMessage, ModalAlertType.Information );
+                        return;
+                    }
 
-                service.Delete( careNeed );
-                rockContext.SaveChanges();
+                    service.Delete( careNeed );
+                    rockContext.SaveChanges();
+                }
             }
 
             BindGrid();
@@ -1520,6 +1562,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     cbFollowUpAssignedToMe.Checked = true;
                 }
+                cbAssignedToMe.Visible = cbFollowUpAssignedToMe.Visible = _canViewAll;
 
                 var template = GetAttributeValue( AttributeKey.CategoriesTemplate );
 
@@ -1663,17 +1706,22 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     gList.Columns.Add( actionTemplateField );
                     gFollowUp.Columns.Add( actionTemplateField );
 
-                    // Add delete column
-                    var deleteField = new DeleteField();
-                    gList.Columns.Add( deleteField );
-                    deleteField.Click += gList_Delete;
+                    if ( _canAdministrate )
+                    {
+                        // Add delete column
+                        var deleteField = new DeleteField();
+                        gList.Columns.Add( deleteField );
+                        deleteField.Click += gList_Delete;
 
-                    // Add delete column
-                    var deleteFieldFollowUp = new DeleteField();
-                    gFollowUp.Columns.Add( deleteFieldFollowUp );
-                    deleteFieldFollowUp.Click += gList_Delete;
+                        // Add delete column
+                        var deleteFieldFollowUp = new DeleteField();
+                        gFollowUp.Columns.Add( deleteFieldFollowUp );
+                        deleteFieldFollowUp.Click += gList_Delete;
+                    }
                 }
             }
+
+            AddNotificationAttributeControl( false );
         }
 
         /// <summary>
@@ -1718,6 +1766,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( qry == null )
             {
                 qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
+            }
+
+            if ( !_canViewCareWorker )
+            {
+                qry = qry.Where( cn => !cn.WorkersOnly );
+            }
+
+            if ( !_canViewAll )
+            {
+                qry = qry.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) );
             }
 
             // Filter by Start Date
@@ -1852,6 +1910,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( qry == null )
             {
                 qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
+            }
+
+            if ( !_canViewCareWorker )
+            {
+                qry = qry.Where( cn => !cn.WorkersOnly );
+            }
+
+            if ( !_canViewAll )
+            {
+                qry = qry.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) );
             }
 
             // Filter by Start Date
