@@ -1493,7 +1493,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 Control attributeControl = phNotificationAttribute.FindControl( string.Format( "attribute_field_{0}", attribute.Id ) );
                 if ( attributeControl != null )
                 {
-                    string originalValue = CurrentPerson.GetAttributeValue( attribute.Key );
                     string newValue = attribute.FieldType.Field.GetEditValue( attributeControl, attribute.QualifierValues );
                     Rock.Attribute.Helper.SaveAttributeValue( CurrentPerson, attribute, newValue, rockContext );
                 }
@@ -2231,16 +2230,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var attribute = AttributeCache.Get( rocks.kfs.StepsToCare.SystemGuid.PersonAttribute.NOTIFICATION );
             CurrentPerson.LoadAttributes();
             string attributeValue = CurrentPerson.GetAttributeValue( attribute.Key );
-            string attributeLabel = attribute.Name;
             attribute.AddControl( phNotificationAttribute.Controls, attributeValue, "Notification", setValues, true, true, "Choose how you would like to receive Steps to Care notifications", "" );
 
-            if ( CurrentPerson.CanReceiveEmail( false ) )
+            if ( !CurrentPerson.CanReceiveEmail( false ) )
             {
                 nbNotificationWarning.Text = "Please ensure your email address is setup properly on your profile. ";
+                nbNotificationWarning.Visible = true;
             }
-            if ( CurrentPerson.PhoneNumbers.GetFirstSmsNumber() == "" )
+            if ( CurrentPerson.PhoneNumbers.GetFirstSmsNumber().IsNullOrWhiteSpace() )
             {
-                nbNotificationWarning.Text += "Please ensure you have a valid phone number attached to your profile and SMS is allowed. ";
+                var notificationTxt = "Please ensure you have a valid phone number attached to your profile and SMS is allowed. ";
+                if ( !nbNotificationWarning.Text.Contains( notificationTxt ) )
+                {
+                    nbNotificationWarning.Text += notificationTxt;
+                }
+                nbNotificationWarning.Visible = true;
             }
         }
 
