@@ -101,7 +101,6 @@
                         ID="gAssignedPersons"
                         runat="server"
                         DisplayType="Light"
-                        OnRowDataBound="gAssignedPersons_RowDataBound"
                         HideDeleteButtonForIsSystem="false"
                         ShowConfirmDeleteDialog="false">
                         <Columns>
@@ -121,6 +120,7 @@
 
                 <asp:LinkButton ID="lbSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="lbSave_Click" />
                 <asp:LinkButton ID="lbCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="lbCancel_Click" />
+                <Rock:RockCheckBox ID="cbWorkersOnly" runat="server" Text="Workers Only" DisplayInline="true" FormGroupCssClass="d-inline-block" />
             </div>
         </asp:Panel>
 

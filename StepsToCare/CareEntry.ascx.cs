@@ -20,12 +20,14 @@ using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Rock;
 using Rock.Attribute;
 using Rock.Communication;
 using Rock.Data;
+using Rock.Logging;
 using Rock.Model;
 using Rock.Web;
 using Rock.Web.Cache;
@@ -328,6 +330,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     careNeed.DateEntered = dpDate.SelectedDateTime.Value;
                 }
 
+                careNeed.WorkersOnly = cbWorkersOnly.Checked;
+
                 var newlyAssignedPersons = new List<AssignedPerson>();
                 if ( careNeed.AssignedPersons != null )
                 {
@@ -335,27 +339,27 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         var assignedPersonsLookup = AssignedPersons;
 
-                        foreach ( var alias in assignedPersonsLookup )
+                        foreach ( var existingAssigned in assignedPersonsLookup )
                         {
-                            if ( !careNeed.AssignedPersons.Any( ap => ap.PersonAliasId == alias.PersonAliasId ) )
+                            if ( !careNeed.AssignedPersons.Any( ap => ap.PersonAliasId == existingAssigned.PersonAliasId ) )
                             {
-                                var personAlias = alias.PersonAlias;
+                                var personAlias = existingAssigned.PersonAlias;
                                 if ( personAlias == null )
                                 {
-                                    personAlias = new PersonAliasService( rockContext ).Get( alias.PersonAliasId.Value );
+                                    personAlias = new PersonAliasService( rockContext ).Get( existingAssigned.PersonAliasId.Value );
                                 }
                                 var assignedPerson = new AssignedPerson
                                 {
                                     PersonAlias = personAlias,
                                     PersonAliasId = personAlias.Id,
-                                    FollowUpWorker = alias.FollowUpWorker,
-                                    WorkerId = alias.WorkerId
+                                    FollowUpWorker = existingAssigned.FollowUpWorker,
+                                    WorkerId = existingAssigned.WorkerId
                                 };
                                 careNeed.AssignedPersons.Add( assignedPerson );
                                 newlyAssignedPersons.Add( assignedPerson );
                             }
                         }
-                        var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.PersonAliasId ).ToList().Contains( ap.PersonAliasId.Value ) ).ToList();
+                        var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.Id ).ToList().Contains( ap.Id ) ).ToList();
                         assignedPersonService.DeleteRange( removePersons );
                         careNeed.AssignedPersons.RemoveAll( removePersons );
                     }
@@ -402,26 +406,82 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         careNeed = new CareNeedService( new RockContext() ).Get( careNeed.Id );
                         assignedPersons = careNeed.AssignedPersons;
                     }
-                    if ( assignedPersons != null && assignedPersons.Any() && assignmentEmailTemplateGuid.HasValue )
+                    if ( assignedPersons != null && assignedPersons.Any() && assignmentEmailTemplateGuid.HasValue && ( isNew || newlyAssignedPersons.Any() ) )
                     {
+                        var errors = new List<string>();
+                        var errorsSms = new List<string>();
                         Dictionary<string, object> linkedPages = new Dictionary<string, object>();
                         linkedPages.Add( "CareDetail", CurrentPageReference.BuildUrl() );
                         linkedPages.Add( "CareDashboard", GetParentPage().BuildUrl() );
 
-                        var emailMessage = new RockEmailMessage( assignmentEmailTemplateGuid.Value );
-                        emailMessage.AppRoot = ResolveRockUrl( "~/" );
-                        emailMessage.ThemeRoot = ResolveRockUrl( "~~/" );
+                        var systemCommunication = new SystemCommunicationService( rockContext ).Get( assignmentEmailTemplateGuid.Value );
+                        var emailMessage = new RockEmailMessage( systemCommunication );
+                        var smsMessage = new RockSMSMessage( systemCommunication );
+                        emailMessage.AppRoot = smsMessage.AppRoot = ResolveRockUrl( "~/" );
+                        emailMessage.ThemeRoot = smsMessage.ThemeRoot = ResolveRockUrl( "~~/" );
                         foreach ( var assignee in assignedPersons )
                         {
+                            assignee.PersonAlias.Person.LoadAttributes();
+                            var smsNumber = assignee.PersonAlias.Person.PhoneNumbers.GetFirstSmsNumber();
+                            if ( !assignee.PersonAlias.Person.CanReceiveEmail( false ) && smsNumber.IsNullOrWhiteSpace() )
+                            {
+                                continue;
+                            }
+
                             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                             mergeFields.Add( "CareNeed", careNeed );
                             mergeFields.Add( "LinkedPages", linkedPages );
                             mergeFields.Add( "AssignedPerson", assignee );
                             mergeFields.Add( "Person", assignee.PersonAlias.Person );
 
-                            emailMessage.AddRecipient( new RockEmailMessageRecipient( assignee.PersonAlias.Person, mergeFields ) );
+                            var notificationType = assignee.PersonAlias.Person.GetAttributeValue( rocks.kfs.StepsToCare.SystemGuid.PersonAttribute.NOTIFICATION.AsGuid() );
+
+                            if ( notificationType == null || notificationType == "Email" || notificationType == "Both" )
+                            {
+                                if ( !assignee.PersonAlias.Person.CanReceiveEmail( false ) )
+                                {
+                                    var emailWarningMessage = string.Format( "{0} does not have a valid email address.", assignee.PersonAlias.Person.FullName );
+                                    RockLogger.Log.Warning( "RockWeb.Plugins.rocks_kfs.StepsToCare.CareEntry", emailWarningMessage );
+                                    errors.Add( emailWarningMessage );
+                                }
+                                else
+                                {
+                                    emailMessage.AddRecipient( new RockEmailMessageRecipient( assignee.PersonAlias.Person, mergeFields ) );
+                                }
+                            }
+
+                            if ( notificationType == "SMS" || notificationType == "Both" )
+                            {
+                                if ( string.IsNullOrWhiteSpace( smsNumber ) )
+                                {
+                                    var smsWarningMessage = string.Format( "No SMS number could be found for {0}.", assignee.PersonAlias.Person.FullName );
+                                    RockLogger.Log.Warning( "RockWeb.Plugins.rocks_kfs.StepsToCare.CareEntry", smsWarningMessage );
+                                    errorsSms.Add( smsWarningMessage );
+                                }
+
+                                smsMessage.AddRecipient( new RockSMSMessageRecipient( assignee.PersonAlias.Person, smsNumber, mergeFields ) );
+                            }
                         }
-                        emailMessage.Send();
+                        if ( emailMessage.GetRecipients().Count > 0 )
+                        {
+                            emailMessage.Send( out errors );
+                        }
+                        if ( smsMessage.GetRecipients().Count > 0 )
+                        {
+                            smsMessage.Send( out errorsSms );
+                        }
+
+                        if ( errors.Any() || errorsSms.Any() )
+                        {
+                            StringBuilder sb = new StringBuilder();
+                            sb.Append( string.Format( "{0} Errors Sending Care Assignment Notification: ", errors.Count + errorsSms.Count ) );
+                            errors.ForEach( es => { sb.AppendLine(); sb.Append( es ); } );
+                            errorsSms.ForEach( es => { sb.AppendLine(); sb.Append( es ); } );
+                            string errorStr = sb.ToString();
+                            var exception = new Exception( errorStr );
+                            HttpContext context = HttpContext.Current;
+                            ExceptionLogService.LogException( exception, context );
+                        }
                     }
 
                     // redirect back to parent
@@ -622,13 +682,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void bddlAddWorker_SelectionChanged( object sender, EventArgs e )
         {
-            var selectedVal = bddlAddWorker.SelectedValueAsInt();
-            if ( selectedVal != null && !AssignedPersons.Any( ap => ap.PersonAliasId == bddlAddWorker.SelectedValueAsInt() ) )
+            var selectedVal = bddlAddWorker.SelectedValue.SplitDelimitedValues( "^" );
+            if ( selectedVal.IsNotNull() && selectedVal.Length > 1 && !AssignedPersons.Any( ap => ap.PersonAliasId == selectedVal[0].AsIntegerOrNull() ) )
             {
                 var addPerson = new AssignedPerson
                 {
-                    PersonAliasId = bddlAddWorker.SelectedValueAsInt() ?? 0,
-                    NeedId = hfCareNeedId.Value.AsInteger()
+                    PersonAliasId = selectedVal[0].AsIntegerOrNull() ?? 0,
+                    NeedId = hfCareNeedId.Value.AsInteger(),
+                    FollowUpWorker = !AssignedPersons.Any( ap => ap.FollowUpWorker.HasValue && ap.FollowUpWorker.Value ),
+                    WorkerId = selectedVal[1].AsIntegerOrNull()
                 };
                 AssignedPersons.Add( addPerson );
                 BindAssignedPersonsGrid();
@@ -677,6 +739,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             dtbDetailsText.Text = ( careNeed.Details.IsNotNullOrWhiteSpace() ) ? careNeed.Details : PageParameter( PageParameterKey.Details ).ToString();
             dpDate.SelectedDateTime = careNeed.DateEntered ?? PageParameter( PageParameterKey.DateEntered ).AsDateTime();
+
+            cbWorkersOnly.Checked = careNeed.WorkersOnly;
 
             var paramCampusId = PageParameter( PageParameterKey.CampusId ).AsIntegerOrNull();
             if ( careNeed.Campus != null )
@@ -762,11 +826,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 AssignedPersons = careNeed.AssignedPersons.ToList();
                 BindAssignedPersonsGrid();
+                pwAssigned.Visible = UserCanAdministrate;
             }
             else
             {
                 pwAssigned.Visible = false;
             }
+
 
             careNeed.LoadAttributes();
             Helper.AddEditControls( careNeed, phAttributes, true, BlockValidationGroup, 2 );
@@ -789,15 +855,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var careWorkerService = new CareWorkerService( rockContext );
                 var careWorkers = careWorkerService.Queryable()
                     .AsNoTracking()
-                    .Where( cw => cw.IsActive && cw.PersonAlias != null )
+                    .Where( cw => cw.IsActive && cw.PersonAlias != null && !cw.GeoFenceId.HasValue )
                     .OrderBy( cw => cw.PersonAlias.Person.LastName )
                     .ThenBy( cw => cw.PersonAlias.Person.NickName )
+                    .DistinctBy( cw => cw.PersonAliasId )
                     .Select( cw => new
                     {
-                        Value = cw.PersonAlias.Id,
+                        Value = cw.PersonAlias.Id + "^" + cw.Id,
                         Label = cw.PersonAlias.Person.NickName + " " + cw.PersonAlias.Person.LastName
                     } )
-                    .Distinct()
                     .ToList();
 
                 bddlAddWorker.DataSource = careWorkers;
