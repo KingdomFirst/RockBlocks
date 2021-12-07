@@ -339,27 +339,27 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         var assignedPersonsLookup = AssignedPersons;
 
-                        foreach ( var alias in assignedPersonsLookup )
+                        foreach ( var existingAssigned in assignedPersonsLookup )
                         {
-                            if ( !careNeed.AssignedPersons.Any( ap => ap.PersonAliasId == alias.PersonAliasId ) )
+                            if ( !careNeed.AssignedPersons.Any( ap => ap.PersonAliasId == existingAssigned.PersonAliasId ) )
                             {
-                                var personAlias = alias.PersonAlias;
+                                var personAlias = existingAssigned.PersonAlias;
                                 if ( personAlias == null )
                                 {
-                                    personAlias = new PersonAliasService( rockContext ).Get( alias.PersonAliasId.Value );
+                                    personAlias = new PersonAliasService( rockContext ).Get( existingAssigned.PersonAliasId.Value );
                                 }
                                 var assignedPerson = new AssignedPerson
                                 {
                                     PersonAlias = personAlias,
                                     PersonAliasId = personAlias.Id,
-                                    FollowUpWorker = alias.FollowUpWorker,
-                                    WorkerId = alias.WorkerId
+                                    FollowUpWorker = existingAssigned.FollowUpWorker,
+                                    WorkerId = existingAssigned.WorkerId
                                 };
                                 careNeed.AssignedPersons.Add( assignedPerson );
                                 newlyAssignedPersons.Add( assignedPerson );
                             }
                         }
-                        var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.PersonAliasId ).ToList().Contains( ap.PersonAliasId.Value ) ).ToList();
+                        var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.Id ).ToList().Contains( ap.Id ) ).ToList();
                         assignedPersonService.DeleteRange( removePersons );
                         careNeed.AssignedPersons.RemoveAll( removePersons );
                     }
@@ -423,6 +423,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         {
                             assignee.PersonAlias.Person.LoadAttributes();
                             var smsNumber = assignee.PersonAlias.Person.PhoneNumbers.GetFirstSmsNumber();
+                            if ( !assignee.PersonAlias.Person.CanReceiveEmail( false ) && smsNumber.IsNullOrWhiteSpace() )
+                            {
+                                continue;
+                            }
 
                             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                             mergeFields.Add( "CareNeed", careNeed );
@@ -434,7 +438,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                             if ( notificationType == null || notificationType == "Email" || notificationType == "Both" )
                             {
-                                emailMessage.AddRecipient( new RockEmailMessageRecipient( assignee.PersonAlias.Person, mergeFields ) );
+                                if ( !assignee.PersonAlias.Person.CanReceiveEmail( false ) )
+                                {
+                                    var emailWarningMessage = string.Format( "{0} does not have a valid email address.", assignee.PersonAlias.Person.FullName );
+                                    RockLogger.Log.Warning( "RockWeb.Plugins.rocks_kfs.StepsToCare.CareEntry", emailWarningMessage );
+                                    errors.Add( emailWarningMessage );
+                                }
+                                else
+                                {
+                                    emailMessage.AddRecipient( new RockEmailMessageRecipient( assignee.PersonAlias.Person, mergeFields ) );
+                                }
                             }
 
                             if ( notificationType == "SMS" || notificationType == "Both" )
@@ -443,7 +456,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 {
                                     var smsWarningMessage = string.Format( "No SMS number could be found for {0}.", assignee.PersonAlias.Person.FullName );
                                     RockLogger.Log.Warning( "RockWeb.Plugins.rocks_kfs.StepsToCare.CareEntry", smsWarningMessage );
-                                    errors.Add( smsWarningMessage );
+                                    errorsSms.Add( smsWarningMessage );
                                 }
 
                                 smsMessage.AddRecipient( new RockSMSMessageRecipient( assignee.PersonAlias.Person, smsNumber, mergeFields ) );
@@ -461,7 +474,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         if ( errors.Any() || errorsSms.Any() )
                         {
                             StringBuilder sb = new StringBuilder();
-                            sb.Append( string.Format( "{0} Errors Sending Care Assignment Notification: ", errors.Count+errorsSms.Count ) );
+                            sb.Append( string.Format( "{0} Errors Sending Care Assignment Notification: ", errors.Count + errorsSms.Count ) );
                             errors.ForEach( es => { sb.AppendLine(); sb.Append( es ); } );
                             errorsSms.ForEach( es => { sb.AppendLine(); sb.Append( es ); } );
                             string errorStr = sb.ToString();
