@@ -125,8 +125,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.BenevolenceDetailPage )]
 
     [BooleanField(
-        "Enable Convert to Connection Request",
-        Description = "Enable Convert to Connection Request Action",
+        "Enable Add Connection Request",
+        Description = "Enable Add Connection Request Action",
         IsRequired = false,
         DefaultBooleanValue = false,
         Order = 10,
