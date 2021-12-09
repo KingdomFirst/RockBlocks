@@ -202,7 +202,7 @@
                 <Rock:NoteContainer ID="notesTimeline" runat="server" ShowHeading="false"></Rock:NoteContainer>
             </Content>
         </Rock:ModalDialog>
-        <Rock:ModalDialog ID="mdConnectionRequest" runat="server" Title="Convert to Connection Request" ValidationGroup="ConnectionRequest" ClickBackdropToClose="true" OnSaveClick="mdConnectionRequest_SaveClick" SaveButtonCausesValidation="true" Content-CssClass="modal-kfsconnectionrequest">
+        <Rock:ModalDialog ID="mdConnectionRequest" runat="server" Title="Add Connection Request" ValidationGroup="ConnectionRequest" ClickBackdropToClose="true" OnSaveClick="mdConnectionRequest_SaveClick" SaveButtonCausesValidation="true" Content-CssClass="modal-kfsconnectionrequest">
             <Content>
                 <asp:HiddenField ID="hfConnectionCareNeedId" runat="server" />
 
