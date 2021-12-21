@@ -53,6 +53,7 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
     {
         private string _apiKey = null;
         private string _apiSecret = null;
+        private string _webhookURL = null;
 
         #region Control Methods
 
@@ -76,6 +77,7 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
 
             _apiKey = Settings.GetApiKey();
             _apiSecret = Settings.GetApiSecret();
+            _webhookURL = string.Format( "{0}Plugins/rocks_kfs/Zoom/Webhook.ashx", GlobalAttributesCache.Get().GetValue( "InternalApplicationRoot" ) );
 
             if ( !Page.IsPostBack )
             {
