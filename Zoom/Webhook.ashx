@@ -62,6 +62,14 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
                 postedData = reader.ReadToEnd();
             }
 
+            // Check and ensure payload is in JSON format. 
+            if ( !( ( postedData.StartsWith( "{" ) && postedData.EndsWith( "}" ) )
+                || ( postedData.StartsWith( "[" ) && postedData.EndsWith( "]" ) ) ) )
+            {
+                var payloadCollection = HttpUtility.ParseQueryString( postedData );
+                postedData = JsonConvert.SerializeObject( payloadCollection.AllKeys.ToDictionary( y => y, y => payloadCollection[y] ) );
+            }
+
             var zoomRoomData = JsonConvert.DeserializeObject<ScheduleMeetingWebhookResponse>( postedData );
             if ( zoomRoomData == null )
             {
@@ -70,17 +78,23 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
                 return;
             }
 
-            int roomOccurrenceId = 42;
+            int roomOccurrenceId = request.QueryString["token"].AsInteger();
             var meetingId = zoomRoomData.meeting_number;
             var zrOccurrenceService = new RoomOccurrenceService( rockContext );
             var roomOccurrence = zrOccurrenceService.Queryable().FirstOrDefault( ro => ro.Id == roomOccurrenceId );
 
             if ( roomOccurrence != null )
             {
-                roomOccurrence.MeetingId = Int64.Parse( meetingId );
+                var meetingIdLong = long.Parse( meetingId );
+                roomOccurrence.ZoomMeetingId = meetingIdLong;
+                try
+                {
+                    var meeting = rocks.kfs.Zoom.Zoom.Api().GetZoomMeeting( meetingIdLong );
+                    roomOccurrence.ZoomMeetingJoinUrl = meeting.Join_Url;
+                }
+                catch { }
             }
-
-
+            rockContext.SaveChanges();
         }
 
         /// <summary>
