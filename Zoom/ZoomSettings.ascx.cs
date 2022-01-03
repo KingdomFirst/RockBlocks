@@ -45,12 +45,26 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
 
     #region Block Settings
 
-    [BooleanField( "Enable Logging", "Enable logging for Zoom sync methods from this block.", false )]
+    [BooleanField(
+        "Enable Logging",
+        Description = "Enable logging for Zoom sync methods from this block.",
+        IsRequired = false,
+        DefaultBooleanValue = false,
+        Order = 1,
+        Key = AttributeKey.EnableLogging )]
 
     #endregion Block Settings
 
     public partial class ZoomSettings : Rock.Web.UI.RockBlock
     {
+        /// <summary>
+        /// Attribute Keys
+        /// </summary>
+        private static class AttributeKey
+        {
+            public const string EnableLogging = "EnableLogging";
+        }
+
         private string _apiKey = null;
         private string _apiSecret = null;
         private string _webhookURL = null;
@@ -150,10 +164,7 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
 
         protected void btnSyncNow_Click( object sender, EventArgs e )
         {
-            using ( var rockContext = new RockContext() )
-            {
-                rocks.kfs.Zoom.Zoom.SyncZoomRoomDT( rockContext, enableLogging: GetAttributeValue( "EnableLogging" ).AsBoolean() );
-            }
+            rocks.kfs.Zoom.Zoom.SyncZoomRoomDT( enableLogging: GetAttributeValue( "EnableLogging" ).AsBoolean() );
             Response.Redirect( Request.RawUrl, false );
         }
 
