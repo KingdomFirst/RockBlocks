@@ -31,7 +31,7 @@ using rocks.kfs.Zoom.Model;
 namespace RockWeb.Plugins.rocks_kfs.Zoom
 {
     /// <summary>
-    /// Handles retrieving file data from storage
+    /// Handles retrieving Zoom meeting data from api
     /// </summary>
     public class ZoomRoomWebhook : IHttpHandler
     {
