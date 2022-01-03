@@ -1980,7 +1980,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         private void BuildEditControls( bool setValues = false, Guid? activeFormGuid = null )
         {
             ddlFieldSource.BindToEnum<FormFieldSource>();
-            ddlPersonField.BindToEnum<PersonFieldType>();
+            ddlPersonField.BindToEnum<PersonFieldType>( sortAlpha: true );
 
             phForms.Controls.Clear();
 
