@@ -370,6 +370,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                                 break;
                                             }
 
+                                        case PersonFieldType.MiddleName:
+                                            {
+                                                person.MiddleName = fieldValue.ToString() ?? string.Empty;
+                                                break;
+                                            }
+
                                         case PersonFieldType.Campus:
                                             {
                                                 if ( fieldValue != null )
@@ -421,6 +427,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                                 break;
                                             }
 
+                                        case PersonFieldType.AnniversaryDate:
+                                            {
+                                                person.AnniversaryDate = fieldValue.AsDateTime();
+                                                break;
+                                            }
+
                                         case PersonFieldType.MobilePhone:
                                             {
                                                 SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() );
@@ -445,6 +457,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                                 person.Email = newEmail;
                                                 break;
                                             }
+
                                         case PersonFieldType.ConnectionStatus:
                                             {
                                                 var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT ).Id;
@@ -1069,12 +1082,23 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                             }
                                             break;
                                         }
+
                                     case PersonFieldType.LastName:
                                         {
                                             var value = CurrentPerson.LastName;
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.LastName, value );
+                                            }
+                                            break;
+                                        }
+
+                                    case PersonFieldType.MiddleName:
+                                        {
+                                            var value = CurrentPerson.MiddleName;
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.MiddleName, value );
                                             }
                                             break;
                                         }
@@ -1135,6 +1159,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.MaritalStatus, value );
+                                            }
+                                            break;
+                                        }
+
+                                    case PersonFieldType.AnniversaryDate:
+                                        {
+                                            var value = CurrentPerson.AnniversaryDate.ToString();
+                                            if ( !string.IsNullOrWhiteSpace( value ) )
+                                            {
+                                                PersonValueState.AddOrReplace( PersonFieldType.AnniversaryDate, value );
                                             }
                                             break;
                                         }
@@ -1354,6 +1388,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                     break;
                                 }
 
+                            case PersonFieldType.MiddleName:
+                                {
+                                    Control control = phContent.FindControl( "tbMiddleName" );
+                                    if ( control != null )
+                                    {
+                                        value = ( ( RockTextBox ) control ).Text;
+                                    }
+                                    break;
+                                }
+
                             case PersonFieldType.Campus:
                                 {
                                     Control control = phContent.FindControl( "cpHomeCampus" );
@@ -1425,6 +1469,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                     if ( control != null )
                                     {
                                         value = ( ( RockDropDownList ) control ).SelectedValue;
+                                    }
+                                    break;
+                                }
+
+                            case PersonFieldType.AnniversaryDate:
+                                {
+                                    Control control = phContent.FindControl( "dpAnniversary" );
+                                    if ( control != null )
+                                    {
+                                        value = ( ( DatePicker ) control ).SelectedDate.ToString();
                                     }
                                     break;
                                 }
@@ -1547,6 +1601,23 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         if ( setValue && fieldValue != null )
                         {
                             tbLastName.Text = fieldValue.ToString();
+                        }
+
+                        break;
+                    }
+
+                case PersonFieldType.MiddleName:
+                    {
+                        var tbMiddleName = new RockTextBox();
+                        tbMiddleName.ID = "tbMiddleName";
+                        tbMiddleName.Label = "Middle Name";
+                        tbMiddleName.Required = field.IsRequired;
+                        tbMiddleName.ValidationGroup = BlockValidationGroup;
+                        phContent.Controls.Add( tbMiddleName );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            tbMiddleName.Text = fieldValue.ToString();
                         }
 
                         break;
@@ -1697,6 +1768,23 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             ddlMaritalStatus.SetValue( value );
                         }
 
+                        break;
+                    }
+
+                case PersonFieldType.AnniversaryDate:
+                    {
+                        var dpAnniversary = new DatePicker();
+                        dpAnniversary.ID = "dpAnniversary";
+                        dpAnniversary.Label = "Anniversary";
+                        dpAnniversary.Required = field.IsRequired;
+                        dpAnniversary.ValidationGroup = BlockValidationGroup;
+                        phContent.Controls.Add( dpAnniversary );
+
+                        if ( setValue && fieldValue != null )
+                        {
+                            var value = fieldValue.AsDateTime();
+                            dpAnniversary.SelectedDate = value;
+                        }
                         break;
                     }
 
@@ -2860,6 +2948,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
         public AttributeForm()
         {
             Fields = new List<AttributeFormField>();
+            
         }
 
         public override string ToString()
@@ -2995,6 +3084,16 @@ $('.template-form > .panel-body').on('validation-error', function() {
         /// The connection status
         /// </summary>
         ConnectionStatus = 12,
+
+        /// <summary>
+        /// The anniversary date
+        /// </summary>
+        AnniversaryDate = 13,
+
+        /// <summary>
+        /// The middle name
+        /// </summary>
+        MiddleName = 14
     }
 
     #endregion Helper Classes
