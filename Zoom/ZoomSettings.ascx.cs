@@ -130,7 +130,7 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
             HideSecondaryBlocks( false );
             nbNotification.Visible = true;
             nbNotification.Title = "";
-            nbNotification.NotificationBoxType = Rock.Web.UI.Controls.NotificationBoxType.Info;
+            nbNotification.NotificationBoxType = Rock.Web.UI.Controls.NotificationBoxType.Success;
             nbNotification.Dismissable = true;
             ShowDetail( true );
         }
