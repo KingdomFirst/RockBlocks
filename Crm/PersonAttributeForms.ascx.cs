@@ -1775,7 +1775,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     {
                         var dpAnniversary = new DatePicker();
                         dpAnniversary.ID = "dpAnniversary";
-                        dpAnniversary.Label = "Anniversary";
+                        dpAnniversary.Label = "Anniversary Date";
                         dpAnniversary.Required = field.IsRequired;
                         dpAnniversary.ValidationGroup = BlockValidationGroup;
                         phContent.Controls.Add( dpAnniversary );
