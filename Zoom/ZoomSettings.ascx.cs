@@ -164,7 +164,7 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
 
         protected void btnSyncNow_Click( object sender, EventArgs e )
         {
-            rocks.kfs.Zoom.Zoom.SyncZoomRoomDT( enableLogging: GetAttributeValue( "EnableLogging" ).AsBoolean() );
+            rocks.kfs.Zoom.Zoom.SyncZoomRoomDT( enableLogging: GetAttributeValue( AttributeKey.EnableLogging ).AsBoolean() );
             Response.Redirect( Request.RawUrl, false );
         }
 
