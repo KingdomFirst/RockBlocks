@@ -160,6 +160,8 @@
                                         <Rock:RockTextBox ID="tbKeywordLabel" runat="server" Label="Keyword Label" Help="The text above the Keyword filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbFilterLabel" runat="server" Label="Collapse/Expand Filter Button Text" Help="When using collapsible filters, what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbMoreFiltersLabel" runat="server" Label="Initial Load Collapse/Expand Filters Button Text" Help="When using initial load hidden filters, what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
+                                        <Rock:DefinedValuesPicker ID="dvpCampusTypes" runat="server" Label="Campus Types" Help="The campus types to filter the list of campuses on." />
+                                        <Rock:DefinedValuesPicker ID="dvpCampusStatuses" runat="server" Label="Campus Statuses" Help="The campus statuses to filter the list of campuses on." />
                                     </div>
                                     <div class="col-md-6">
                                         <Rock:RockRadioButtonList ID="rblFilterDOW" runat="server" Label="Display Day of Week Filter" RepeatDirection="Horizontal"
