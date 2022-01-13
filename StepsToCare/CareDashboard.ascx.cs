@@ -1721,7 +1721,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     var makeNoteField = new LinkButtonField();
                     makeNoteField.HeaderText = "Make Note";
-                    makeNoteField.CssClass = "btn btn-primary btn-make-note btn-sm w-auto";
+                    makeNoteField.CssClass = "btn btn-primary btn-make-note btn-sm w-auto px-2";
                     makeNoteField.Text = "Make Note";
                     makeNoteField.Click += gMakeNote_Click;
                     makeNoteField.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
