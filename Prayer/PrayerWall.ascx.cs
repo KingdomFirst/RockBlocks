@@ -387,8 +387,8 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
         /// <summary>
         /// 
         /// </summary>
-        /// <seealso cref="DotLiquid.Drop" />
-        public class Pagination : DotLiquid.Drop
+        /// <seealso cref="LavaDataObject" />
+        public class Pagination : LavaDataObject
         {
 
             /// <summary>
@@ -511,8 +511,8 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
         /// <summary>
         /// 
         /// </summary>
-        /// <seealso cref="DotLiquid.Drop" />
-        public class PaginationPage : DotLiquid.Drop
+        /// <seealso cref="LavaDataObject" />
+        public class PaginationPage : LavaDataObject
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="PaginationPage"/> class.
