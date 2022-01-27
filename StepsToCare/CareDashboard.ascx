@@ -172,7 +172,7 @@
                             }).responseText;
 
                             var resultObject = JSON.parse(result);
-                            var resultHtml = resultObject.PickerItemDetailsHtml.replace(/<small>.*<\/small>/ig, "").replace(/<div class='body'>.*<\/div>$/ig, "").replace(/header/g, "div").replace(/65/g, '120');
+                            var resultHtml = resultObject.PickerItemDetailsHtml.replace(/<small>.*<\/small>/ig, "").replace(/<div class='body'>.*<\/div>$/ig, "").replace(/header/g, "div").replace(/maxwidth=65/g, 'maxwidth=120').replace(/maxheight=65/g, 'maxheight=120');
                             return resultHtml;
                         }
                     }).on('mouseenter', function () {
