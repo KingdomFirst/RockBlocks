@@ -25,8 +25,8 @@ using System.Net;
 using Rock;
 using Rock.Data;
 using Newtonsoft.Json;
-using rocks.kfs.Zoom;
 using rocks.kfs.Zoom.Model;
+using rocks.kfs.Zoom.Enums;
 
 namespace RockWeb.Plugins.rocks_kfs.Zoom
 {
@@ -86,13 +86,16 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
             if ( roomOccurrence != null )
             {
                 var meetingIdLong = long.Parse( meetingId );
-                roomOccurrence.ZoomMeetingId = meetingIdLong;
                 try
                 {
                     var meeting = rocks.kfs.Zoom.Zoom.Api().GetZoomMeeting( meetingIdLong );
+                    roomOccurrence.ZoomMeetingId = meeting.Id;
                     roomOccurrence.ZoomMeetingJoinUrl = meeting.Join_Url;
+                    roomOccurrence.ZoomMeetingRequestStatus = ZoomMeetingRequestStatus.Success;
                 }
-                catch { }
+                catch {
+                    roomOccurrence.ZoomMeetingRequestStatus = ZoomMeetingRequestStatus.Failed;
+                }
             }
             rockContext.SaveChanges();
         }
