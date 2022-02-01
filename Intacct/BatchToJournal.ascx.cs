@@ -283,7 +283,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                 _financialBatch.LoadAttributes();
 
-                dateExported = ( DateTime? ) _financialBatch.AttributeValues["rocks.kfs.Intacct.DateExported"].ValueAsType;
+                dateExported = ( DateTime? ) _financialBatch.GetAttributeValueAsType( "rocks.kfs.Intacct.DateExported" );
 
                 if ( dateExported != null && dateExported > DateTime.MinValue )
                 {
@@ -609,7 +609,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             _selectedPaymentMethod = ddlPaymentMethods.SelectedValue;
             if ( ddlReceiptAccountType.SelectedValue != "BankAccount" )
             {
-                _selectedBankAccountId = ddlBankAccounts.SelectedValue;  
+                _selectedBankAccountId = ddlBankAccounts.SelectedValue;
             }
             SetupOtherReceipts();
             SetExportButtonVisibility();
