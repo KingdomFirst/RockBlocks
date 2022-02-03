@@ -2,9 +2,9 @@
 
 
 # Vimeo Sync
-_Tested/Supported in Rock Version:  8.0-12.0_  
+_Tested/Supported in Rock Version:  8.0-13.0_  
 _Released:  1/13/2019_     
-_Updated:  8/28/2019_ 
+_Updated:  2/2/2022_ 
 
 ## Summary
 
