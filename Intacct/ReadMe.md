@@ -3,9 +3,9 @@
 
 
 # Intacct Export to Journal 
-_Tested/Supported in Rock Version:  8.0-12.0_    
+_Tested/Supported in Rock Version:  8.0-13.0_    
 _Released:  10/9/2018_   
-_Updated:  1/20/2020_   
+_Updated:  2/2/2022_   
 
 
 
