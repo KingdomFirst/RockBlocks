@@ -1,9 +1,9 @@
 ![KFSBanner](https://user-images.githubusercontent.com/81330042/121249398-2bb06080-c86a-11eb-9795-8c0dfb0a7693.jpg)
 
 # Advanced Group Finder
-*Tested/Supported in Rock version:  8.0-12.5*   
+*Tested/Supported in Rock version:  8.0-13.0*   
 *Created:  6/8/2021*   
-*Updated: 9/30/2021*   
+*Updated: 2/2/2022*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/161*   
 
 ## Summary

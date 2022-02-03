@@ -1,9 +1,9 @@
 ![KFSBanner (4)](https://user-images.githubusercontent.com/81330042/118964662-5a9f7a80-b92d-11eb-88a2-aa5018457f7b.jpg)
 
 # Person Attributes Form Advanced Block
-*Tested/Supported in Rock version:  8.0-12.0*   
+*Tested/Supported in Rock version:  8.0-13.0*   
 *Created:  11/20/2018*  
-*Updated:  6/11/2020*   
+*Updated:  2/2/2022*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/101*
 
 ## Summary
