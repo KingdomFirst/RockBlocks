@@ -2,8 +2,9 @@
 
 # Eventbrite Integration
 
-*Tested/Supported in Rock version: 10.2-11.2*   
+*Tested/Supported in Rock version: 10.2-13.0*   
 *Released: 7/28/2020*
+*Updated: 2/3/2022*
 
 ## Summary
 
