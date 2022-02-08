@@ -849,6 +849,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( actionsColumn.Visible )
                     {
                         var actionsCell = e.Row.Cells[gList.Columns.IndexOf( actionsColumn )];
+                        actionsCell.CssClass += " align-middle";
 
                         if ( followUpGrid )
                         {
