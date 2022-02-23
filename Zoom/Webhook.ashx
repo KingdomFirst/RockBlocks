@@ -27,6 +27,7 @@ using Rock.Data;
 using Newtonsoft.Json;
 using rocks.kfs.Zoom.Model;
 using rocks.kfs.Zoom.Enums;
+using ZoomDotNetFramework.Responses;
 
 namespace RockWeb.Plugins.rocks_kfs.Zoom
 {
@@ -70,7 +71,7 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
                 postedData = JsonConvert.SerializeObject( payloadCollection.AllKeys.ToDictionary( y => y, y => payloadCollection[y] ) );
             }
 
-            var zoomRoomData = JsonConvert.DeserializeObject<ScheduleMeetingWebhookResponse>( postedData );
+            var zoomRoomData = JsonConvert.DeserializeObject<ZRScheduleMeetingWebhookResponse>( postedData );
             if ( zoomRoomData == null )
             {
                 response.Write( "Invalid Data." );
