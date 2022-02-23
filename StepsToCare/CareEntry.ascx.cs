@@ -71,11 +71,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultSystemCommunicationGuid = rocks.kfs.StepsToCare.SystemGuid.SystemCommunication.CARE_NEED_ASSIGNED,
         Key = AttributeKey.NewAssignmentNotification )]
 
-    [BooleanField( "Verbose Logging",
-        Description = "Enable verbose Logging to help in determining issues with adding needs or auto assigning workers. Not recommended for normal use.",
-        DefaultBooleanValue = false,
-        Key = AttributeKey.VerboseLogging )]
-
     #endregion
 
     public partial class CareEntry : Rock.Web.UI.RockBlock
@@ -91,7 +86,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string AutoAssignWorkerGeofence = "AutoAssignWorkerGeofence";
             public const string AutoAssignWorker = "AutoAssignWorker";
             public const string NewAssignmentNotification = "NewAssignmentNotification";
-            public const string VerboseLogging = "VerboseLogging";
         }
         private static class PageParameterKey
         {
@@ -896,35 +890,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             var addedWorkerAliasIds = new List<int?>();
 
-            var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
-
             // auto assign Deacon/Worker by Geofence
             if ( autoAssignWorkerGeofence )
             {
-                if ( enableLogging )
-                {
-                    LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, CareWorkers Count: {1}", careNeed.Guid, careWorkers.Count() ), "Geofence assignment start." );
-                }
                 var careWorkersWithFence = careWorkers.Where( cw => cw.GeoFenceId != null );
                 foreach ( var worker in careWorkersWithFence )
                 {
                     var geofenceLocation = new LocationService( rockContext ).Get( worker.GeoFenceId.Value );
-                    if ( enableLogging )
-                    {
-                        LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, geofenceLocation: {1}", careNeed.Guid, geofenceLocation.Id ), "Care Workers with Fence" );
-                    }
                     var homeLocation = careNeed.PersonAlias.Person.GetHomeLocation();
-                    if ( enableLogging )
-                    {
-                        LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, geofenceLocation: {1}, homeLocation: {2}", careNeed.Guid, geofenceLocation.Id, ( homeLocation != null ) ? homeLocation.Id.ToString() : "null" ), "Care Workers with Fence" );
-                    }
-                    if ( homeLocation != null && homeLocation.GeoPoint != null )
+                    if ( homeLocation != null )
                     {
                         var geofenceIntersect = homeLocation.GeoPoint.Intersects( geofenceLocation.GeoFence );
-                        if ( enableLogging )
-                        {
-                            LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, geofenceIntersect: {1}, homeLocation: {2}", careNeed.Guid, geofenceIntersect, homeLocation.Id ), "geofenceIntersect" );
-                        }
                         if ( geofenceIntersect )
                         {
                             var careAssignee = new AssignedPerson { Id = 0 };
@@ -937,24 +913,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
                         }
                     }
-                    else if ( homeLocation != null && homeLocation.GeoPoint == null )
-                    {
-                        LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Id: {0}, homeLocation: {1}", careNeed.Id, homeLocation.Id ), "Home Location does not have a valid GeoPoint. Please verify their address and manually assign their geo worker." );
-                    }
-                }
-                if ( enableLogging )
-                {
-                    LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkersWithFence Count: {1} addedWorkerAliasIds Count: {2}", careNeed.Guid, careWorkersWithFence.Count(), addedWorkerAliasIds.Count() ), "Geofence assignment end." );
                 }
             }
 
             //auto assign worker/pastor by load balance assignment
             if ( autoAssignWorker )
             {
-                if ( enableLogging )
-                {
-                    LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, CareWorkers Count: {1}", careNeed.Guid, careWorkers.Count() ), "Auto Assign Worker start." );
-                }
                 var careWorkersNoFence = careWorkers.Where( cw => cw.GeoFenceId == null );
                 var workerAssigned = false;
                 var closedId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
@@ -973,11 +937,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
                     .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
 
-                if ( enableLogging )
-                {
-                    LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkersNoFence Count: {1}, careWorkerCount1 Count: {2}", careNeed.Guid, careWorkersNoFence.Count(), careWorkerCount1.Count() ), "careWorkerCount1, Category AND Campus" );
-                }
-
                 var careWorkerCount2 = careWorkersNoFence
                     .Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
                     .Select( cw => new
@@ -992,12 +951,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     .OrderBy( cw => cw.Count )
                     .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
                     .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
-
-                if ( enableLogging )
-                {
-                    LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkerCount2 Count: {1}", careNeed.Guid, careWorkerCount2.Count() ), "careWorkerCount2, Category NOT Campus" );
-                }
-
 
                 var careWorkerCount3 = careWorkersNoFence
                     .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
@@ -1014,11 +967,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
                     .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
 
-                if ( enableLogging )
-                {
-                    LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkerCount3 Count: {1}", careNeed.Guid, careWorkerCount3.Count() ), "careWorkerCount3, Campus NOT Category" );
-                }
-
                 var careWorkerCount4 = careWorkersNoFence
                     .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
                     .Select( cw => new
@@ -1034,11 +982,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
                     .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
 
-                if ( enableLogging )
-                {
-                    LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkerCount4 Count: {1}", careNeed.Guid, careWorkerCount4.Count() ), "careWorkerCount4, NOT Campus or Category" );
-                }
-
                 var careWorkerCounts = careWorkerCount1
                     .Concat( careWorkerCount2 )
                     .Concat( careWorkerCount3 )
@@ -1047,11 +990,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     .ThenByDescending( ct => ct.HasCategoryAndCampus )
                     .ThenByDescending( ct => ct.HasCategory )
                     .ThenByDescending( ct => ct.HasCampus );
-
-                if ( enableLogging )
-                {
-                    LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkerCounts Count: {1}", careNeed.Guid, careWorkerCounts.Count() ), "Combined careWorkerCounts" );
-                }
 
                 foreach ( var workerCount in careWorkerCounts )
                 {
@@ -1068,11 +1006,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
 
                         workerAssigned = true;
-
-                        if ( enableLogging )
-                        {
-                            LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, Worker PersonAliasId: {1}, WorkerId: {2}", careNeed.Guid, worker.PersonAliasId, worker.Id ), "Worker Assigned" );
-                        }
                     }
                 }
             }
@@ -1080,11 +1013,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             // auto assign Small Group Leader by Role
             var leaderRoleGuid = GetAttributeValue( AttributeKey.GroupTypeAndRole ).AsGuidOrNull() ?? Guid.Empty;
             var leaderRole = new GroupTypeRoleService( rockContext ).Get( leaderRoleGuid );
-            if ( enableLogging )
-            {
-                LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, Leader Role Guid: {1}, Leader Role: {2}", careNeed.Guid, leaderRoleGuid, leaderRole.Id ), "Get Leader Role" );
-            }
-
             if ( leaderRole != null )
             {
                 var groupMemberService = new GroupMemberService( rockContext );
@@ -1092,11 +1020,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 if ( inGroups.Any() )
                 {
-                    if ( enableLogging )
-                    {
-                        LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, In Groups Count: {1}, leaderRole.GroupTypeId: {2}", careNeed.Guid, inGroups.Count(), leaderRole.GroupTypeId ), "In Small Groups" );
-                    }
                     var groupLeaders = groupMemberService.GetByGroupRoleId( leaderRole.Id ).Where( gm => inGroups.Contains( gm.GroupId ) && !gm.IsArchived && gm.GroupMemberStatus == GroupMemberStatus.Active );
+
                     foreach ( var member in groupLeaders )
                     {
                         if ( !addedWorkerAliasIds.Contains( member.Person.PrimaryAliasId ) && careAssigneeService.GetByPersonAliasAndCareNeed( member.Person.PrimaryAliasId, careNeed.Id ) == null && member.PersonId != careNeed.PersonAlias.Person.Id )
@@ -1108,10 +1033,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             careAssigneeService.Add( careAssignee );
                             addedWorkerAliasIds.Add( careAssignee.PersonAliasId );
                         }
-                    }
-                    if ( enableLogging )
-                    {
-                        LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, groupLeaders Count: {1} addedWorkerAliasIds Count: {2}", careNeed.Guid, groupLeaders.Count(), addedWorkerAliasIds.Count() ), "In Small Groups, Leader Count" );
                     }
 
                 }
@@ -1156,29 +1077,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
             return new PageReference( pageCache.Guid.ToString() );
         }
-
-        private ServiceLog LogEvent( RockContext rockContext, string type, string input, string result )
-        {
-            if ( rockContext == null )
-            {
-                rockContext = new RockContext();
-            }
-
-            var rockLogger = new ServiceLogService( rockContext );
-            ServiceLog serviceLog = new ServiceLog
-            {
-                Name = "Steps To Care",
-                Type = type,
-                LogDateTime = RockDateTime.Now,
-                Input = input,
-                Result = result,
-                Success = true
-            };
-            rockLogger.Add( serviceLog );
-            rockContext.SaveChanges();
-            return serviceLog;
-        }
-
 
         #endregion
     }
