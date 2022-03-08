@@ -242,7 +242,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     int? workerId = PageParameter( "CareWorkerId" ).AsIntegerOrNull();
                     var personCampus = person.GetCampus();
 
-                    if ( !cpCampus.SelectedCampusIds.Contains( personCampus.Id ) && ( e != null || ( workerId.HasValue && workerId == 0 ) ) )
+                    if ( personCampus != null && !cpCampus.SelectedCampusIds.Contains( personCampus.Id ) && ( e != null || ( workerId.HasValue && workerId == 0 ) ) )
                     {
                         cpCampus.SelectedValue = personCampus?.Id.ToString();
                     }
@@ -524,12 +524,39 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( careWorker.GeoFenceId != null )
             {
                 var location = new LocationService( rockContext ).Get( careWorker.GeoFenceId.Value );
-                lpGeofenceLocation.SetBestPickerModeForLocation( location );
+                //lpGeofenceLocation.SetBestPickerModeForLocation( location );
                 lpGeofenceLocation.Location = location;
             }
             else
             {
                 lpGeofenceLocation.Location = null;
+            }
+
+            if ( careWorker.AgeRangeMax.HasValue )
+            {
+                nreAgeRange.UpperValue = careWorker.AgeRangeMax.Value;
+            }
+            else
+            {
+                nreAgeRange.UpperValue = null;
+            }
+
+            if ( careWorker.AgeRangeMin.HasValue )
+            {
+                nreAgeRange.LowerValue = careWorker.AgeRangeMin.Value;
+            }
+            else
+            {
+                nreAgeRange.LowerValue = null;
+            }
+
+            if ( careWorker.Gender.HasValue )
+            {
+                ddlGender.SetValue( careWorker.Gender.Value.ToString() );
+            }
+            else
+            {
+                ddlGender.ClearSelection();
             }
 
             careWorker.LoadAttributes();
@@ -571,6 +598,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 careWorker.IsActive = cbActive.Checked;
 
                 careWorker.GeoFenceId = lpGeofenceLocation.Location?.Id;
+
+                careWorker.AgeRangeMin = nreAgeRange.LowerValue;
+
+                careWorker.AgeRangeMax = nreAgeRange.UpperValue;
+
+                careWorker.Gender = ddlGender.SelectedValueAsEnumOrNull<Gender>();
 
                 if ( careWorker.IsValid )
                 {
