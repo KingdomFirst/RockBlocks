@@ -337,6 +337,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         private List<NoteTypeCache> _careNeedNoteTypes = new List<NoteTypeCache>();
 
+
         #endregion Private Members
 
         #region Base Control Methods
@@ -799,7 +800,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 sbPersonHtml.AppendFormat( _photoFormat, person.Id, person.PhotoUrl, ResolveUrl( "~/Assets/Images/person-no-photo-unknown.svg" ) );
                                 if ( assignedPerson.PersonAliasId == CurrentPersonAliasId )
                                 {
-                                    e.Row.CssClass += " assigned";
+                                    e.Row.AddCssClass( "assigned" );
                                 }
                                 if ( assignedPerson.WorkerId.HasValue && assignedPerson.FollowUpWorker.HasValue && assignedPerson.FollowUpWorker.Value )
                                 {
@@ -807,6 +808,38 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 }
                             }
                             lAssigned.Text = sbPersonHtml.ToString();
+                        }
+                    }
+
+                    var hasChildNeeds = false;
+                    var hasParentNeed = false;
+                    if ( careNeed.ChildNeeds != null && ( ( careNeed.ChildNeeds.Any( cn => !cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) && _canViewAll ) || ( careNeed.ChildNeeds.Any( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) && !_canViewAll ) ) )
+                    {
+                        hasChildNeeds = true;
+                        e.Row.AddCssClass( "hasChildNeeds" );
+                        e.Row.AddCssClass( string.Format( "parentNeed{0}", careNeed.Id ) );
+                    }
+
+                    if ( careNeed.ParentNeedId.HasValue )
+                    {
+                        hasParentNeed = true;
+                        e.Row.AddCssClass( "hasParentNeed" );
+                        if ( !e.Row.HasCssClass( "assigned" ) || careNeed.ParentNeed.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
+                        {
+                            e.Row.AddCssClass( "hide" );
+                            e.Row.AddCssClass( string.Format( "hasParentNeed{0}", careNeed.ParentNeedId.Value ) );
+
+                            if ( careNeed.Details == careNeed.ParentNeed.Details )
+                            {
+                                var rbfName = e.Row.Controls[1] as DataControlFieldCell;
+                                var rbfDetails = e.Row.Controls[2] as DataControlFieldCell;
+                                if ( rbfName != null && rbfDetails != null )
+                                {
+                                    rbfName.ColumnSpan = 2;
+                                    rbfDetails.Text = "";
+                                    rbfDetails.Visible = false;
+                                }
+                            }
                         }
                     }
 
@@ -970,17 +1003,34 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var careNeedFlag = ( dateDifference.TotalHours >= minimumCareTouchHours && careTouchCount <= minimumCareTouches );
                         var careNeedFollowUpWorkerTouch = ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
                         var careNeedFlagStr = "";
+                        var childNeedStr = "";
+                        var parentNeedStr = "";
                         if ( careNeedFlag )
                         {
-                            careNeedFlagStr = "<i class=\"fas fa-flag text-danger\"  data-toggle=\"tooltip\" title=\"Not enough Care Touches\"></i>";
+                            careNeedFlagStr = "<i class=\"fas fa-flag text-danger mx-2\"  data-toggle=\"tooltip\" title=\"Not enough Care Touches\"></i>";
                         }
                         else if ( careNeedFollowUpWorkerTouch )
                         {
-                            careNeedFlagStr = "<i class=\"fas fa-flag text-danger\"  data-toggle=\"tooltip\" title=\"Follow up worker Care Touch Needed!\"></i>";
+                            careNeedFlagStr = "<i class=\"fas fa-flag text-danger mx-2\"  data-toggle=\"tooltip\" title=\"Follow up worker Care Touch Needed!\"></i>";
+                        }
+                        if ( hasChildNeeds )
+                        {
+                            childNeedStr = string.Format( "<a href=\"javascript:toggleNeeds('{0}');\" class=\"mr-2\" id=\"toggleLink{0}\"><i class=\"fas fa-plus fa-lg\" data-toggle=\"tooltip\" title=\"Toggle Child Needs\" id=\"toggleIcon{0}\"></i></a>", careNeed.Id );
+                        }
+                        if ( hasParentNeed )
+                        {
+                            if ( _canViewAll || careNeed.ParentNeed.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
+                            {
+                                parentNeedStr = string.Format( "<a href=\"{0}\"><i class=\"fas fa-child mx-2\" data-toggle=\"tooltip\" title=\"Has a Parent Need\"></i></a>", ResolveUrl( string.Format( "{0}/{1}", LinkedPageRoute( AttributeKey.DetailPage ), careNeed.ParentNeedId ) ) );
+                            }
+                            else
+                            {
+                                parentNeedStr = string.Format( "<i class=\"fas fa-child mx-2\" data-toggle=\"tooltip\" title=\"Has a Parent Need: {0} - {1}\"></i></a>", careNeed.ParentNeed.Details.StripHtml().Truncate( 30 ), careNeed.ParentNeed.PersonAlias.Person.FullName );
+                            }
                         }
                         if ( careNeed.PersonAlias != null )
                         {
-                            lName.Text = string.Format( "<a href=\"{0}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr );
+                            lName.Text = string.Format( "{3} {4} <a href=\"{0}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr, childNeedStr, parentNeedStr );
                         }
                     }
 
@@ -1807,7 +1857,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( !_canViewAll )
             {
-                qry = qry.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) );
+                qry = qry.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) && ( !cn.ParentNeedId.HasValue || ( cn.ParentNeedId.HasValue && !cn.ParentNeed.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) ) );
+            }
+            else
+            {
+                qry = qry.Where( cn => !cn.ParentNeedId.HasValue || cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) );
             }
 
             // Filter by Start Date
@@ -1842,7 +1896,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 string firstName = tbFirstName.Text;
                 if ( !string.IsNullOrWhiteSpace( firstName ) )
                 {
-                    qry = qry.Where( b => b.PersonAlias.Person.FirstName.StartsWith( firstName ) );
+                    qry = qry.Where( b => b.PersonAlias.Person.FirstName.StartsWith( firstName ) || b.PersonAlias.Person.NickName.StartsWith( firstName ) );
                 }
 
                 // Filter by Last Name
@@ -1889,12 +1943,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         qry = qry.OrderBy( a => a.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
                             .ThenBy( a => a.DateEntered )
+                            .ThenBy( a => a.ParentNeedId )
                             .ThenBy( a => a.Id );
                     }
                     else
                     {
                         qry = qry.OrderByDescending( a => a.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
                             .ThenByDescending( a => a.DateEntered )
+                            .ThenBy( a => a.ParentNeedId )
                             .ThenByDescending( a => a.Id );
                     }
                 }
@@ -1907,6 +1963,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 qry = qry.OrderByDescending( a => a.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
                     .ThenByDescending( a => a.DateEntered )
+                    .ThenBy( a => a.ParentNeedId )
                     .ThenByDescending( a => a.Id );
             }
 
@@ -1921,6 +1978,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             var list = qry.ToList();
+            var _savedChildNeeds = new Dictionary<CareNeed, IEnumerable<CareNeed>>();
+            foreach ( var li in list )
+            {
+                if ( li.ChildNeeds != null && li.ChildNeeds.Any() )
+                {
+                    if ( _canViewAll )
+                    {
+                        _savedChildNeeds.Add( li, li.ChildNeeds.Where( cn => !cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) );
+                    }
+                    else
+                    {
+                        _savedChildNeeds.Add( li, li.ChildNeeds.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) );
+                    }
+                }
+            }
+            foreach ( var di in _savedChildNeeds )
+            {
+                var index = list.IndexOf( di.Key );
+                list.InsertRange( index + 1, di.Value );
+            }
 
             gList.DataSource = list;
             gList.DataBind();
