@@ -767,7 +767,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         }
 
         /// <summary>
-        /// Handles the RowDataBound event of the gGroupMembers control.
+        /// Handles the RowDataBound event of the gList control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="System.Web.UI.WebControls.GridViewRowEventArgs"/> instance containing the event data.</param>
@@ -823,9 +823,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( careNeed.ParentNeedId.HasValue )
                     {
                         hasParentNeed = true;
-                        e.Row.AddCssClass( "hasParentNeed" );
                         if ( !e.Row.HasCssClass( "assigned" ) || careNeed.ParentNeed.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) )
                         {
+                            e.Row.AddCssClass( "hasParentNeed" );
                             e.Row.AddCssClass( "hide" );
                             e.Row.AddCssClass( string.Format( "hasParentNeed{0}", careNeed.ParentNeedId.Value ) );
 
@@ -840,6 +840,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     rbfDetails.Visible = false;
                                 }
                             }
+                        }
+                        else
+                        {
+                            e.Row.AddCssClass( "hasParentNeedAssigned" );
                         }
                     }
 

@@ -414,6 +414,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 if ( careNeed.IsValid )
                 {
+                    var childNeedsCreated = false;
                     if ( careNeed.Id.Equals( 0 ) )
                     {
                         careNeedService.Add( careNeed );
@@ -423,7 +424,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     careNeed.LoadAttributes();
                     Helper.GetEditValues( phAttributes, careNeed );
 
-                    if ( cbIncludeFamily.Visible && cbIncludeFamily.Checked && isNew )
+                    if ( cbIncludeFamily.Visible && cbIncludeFamily.Checked && ( isNew || ( careNeed.ChildNeeds == null || ( careNeed.ChildNeeds != null && !careNeed.ChildNeeds.Any() ) ) ) )
                     {
                         var family = person.GetFamilyMembers( false, rockContext );
                         foreach ( var fm in family )
@@ -432,6 +433,22 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             copyNeed.Id = 0;
                             copyNeed.Guid = Guid.NewGuid();
                             copyNeed.PersonAliasId = fm.Person.PrimaryAliasId;
+                            if ( copyNeed.Campus != null )
+                            {
+                                copyNeed.Campus = null;
+                            }
+                            if ( copyNeed.Status != null )
+                            {
+                                copyNeed.Status = null;
+                            }
+                            if ( copyNeed.Category != null )
+                            {
+                                copyNeed.Category = null;
+                            }
+                            if ( copyNeed.AssignedPersons != null && copyNeed.AssignedPersons.Any() )
+                            {
+                                copyNeed.AssignedPersons = new List<AssignedPerson>();
+                            }
 
                             if ( careNeed.ChildNeeds == null )
                             {
@@ -439,6 +456,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             }
                             careNeed.ChildNeeds.Add( copyNeed );
                         }
+                        childNeedsCreated = true;
                     }
 
                     rockContext.WrapTransaction( () =>
@@ -450,22 +468,23 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( isNew )
                     {
                         AutoAssignWorkers( careNeed );
-                        if ( careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any() )
-                        {
-                            var familyGroupType = GroupTypeCache.GetFamilyGroupType();
-                            var adultRoleId = familyGroupType.Roles.FirstOrDefault( a => a.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ).Id;
-                            foreach ( var need in careNeed.ChildNeeds )
-                            {
+                    }
 
-                                if ( need.PersonAlias != null && need.PersonAlias.Person.GetFamilyRole().Id != adultRoleId )
-                                {
-                                    AutoAssignWorkers( need, true, true );
-                                }
-                                else
-                                {
-                                    var adultFamilyWorkers = GetAttributeValue( AttributeKey.AdultFamilyWorkers );
-                                    AutoAssignWorkers( need, adultFamilyWorkers == "Workers Only" );
-                                }
+                    if ( childNeedsCreated && careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any() )
+                    {
+                        var familyGroupType = GroupTypeCache.GetFamilyGroupType();
+                        var adultRoleId = familyGroupType.Roles.FirstOrDefault( a => a.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ).Id;
+                        foreach ( var need in careNeed.ChildNeeds )
+                        {
+
+                            if ( need.PersonAlias != null && need.PersonAlias.Person.GetFamilyRole().Id != adultRoleId )
+                            {
+                                AutoAssignWorkers( need, true, true );
+                            }
+                            else
+                            {
+                                var adultFamilyWorkers = GetAttributeValue( AttributeKey.AdultFamilyWorkers );
+                                AutoAssignWorkers( need, adultFamilyWorkers == "Workers Only" );
                             }
                         }
                     }
