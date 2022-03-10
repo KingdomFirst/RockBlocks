@@ -89,7 +89,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.EnableFamilyNeeds,
         Category = AttributeCategory.FamilyNeeds )]
 
-    [CustomDropdownListField( "Adults in Family Workers",
+    [CustomDropdownListField( "Adults in Family Worker Assignment",
         Description = "How should workers be assigned to other adults in family when using 'Family Needs'. Normal behavior, use the same settings as a normal Care Need (Group Leader, Geofence and load balanced), or assign to Care Workers Only (load balanced).",
         ListSource = "Normal,Workers Only",
         DefaultValue = "Normal",
