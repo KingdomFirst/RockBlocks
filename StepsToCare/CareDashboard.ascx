@@ -25,15 +25,19 @@
     }
 
     .hasParentNeed {
-        background-color: #e6e6e6 !important;
+        background-color: #ececec !important;
     }
 
-    .table-striped > tbody > tr.assigned.hasParentNeed:nth-of-type(odd) {
+    .table-striped > tbody > tr.assigned.hasParentNeedAssigned:nth-of-type(odd) {
         background-color: oldlace !important;
     }
 
-    .table-striped > tbody > tr.assigned.hasParentNeed:nth-of-type(even) {
+    .table-striped > tbody > tr.assigned.hasParentNeedAssigned:nth-of-type(even) {
         background-color: #fff2da !important;
+    }
+
+    .assigned.hasParentNeed {
+        background-color: #feefd2 !important;
     }
 
     .grid-select-cell .photo-icon {
