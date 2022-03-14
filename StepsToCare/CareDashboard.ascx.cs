@@ -1835,6 +1835,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             lCareNeedsCount.Text = outstandingCareNeeds.ToString();
             lTotalNeedsCount.Text = totalCareNeeds.ToString();
 
+            qry = PermissionFilterQuery( qry );
+
             BindMainGrid( rockContext, careNeedService, qry );
             BindFollowUpGrid( rockContext, careNeedService, qry );
         }
@@ -1852,20 +1854,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( qry == null )
             {
                 qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
-            }
 
-            if ( !_canViewCareWorker )
-            {
-                qry = qry.Where( cn => !cn.WorkersOnly );
-            }
-
-            if ( !_canViewAll )
-            {
-                qry = qry.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) && ( !cn.ParentNeedId.HasValue || ( cn.ParentNeedId.HasValue && !cn.ParentNeed.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) ) );
-            }
-            else
-            {
-                qry = qry.Where( cn => !cn.ParentNeedId.HasValue || cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) );
+                qry = PermissionFilterQuery( qry );
             }
 
             // Filter by Start Date
@@ -1982,26 +1972,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             var list = qry.ToList();
-            var _savedChildNeeds = new Dictionary<CareNeed, IEnumerable<CareNeed>>();
-            foreach ( var li in list )
-            {
-                if ( li.ChildNeeds != null && li.ChildNeeds.Any() )
-                {
-                    if ( _canViewAll )
-                    {
-                        _savedChildNeeds.Add( li, li.ChildNeeds.Where( cn => !cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) );
-                    }
-                    else
-                    {
-                        _savedChildNeeds.Add( li, li.ChildNeeds.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) );
-                    }
-                }
-            }
-            foreach ( var di in _savedChildNeeds )
-            {
-                var index = list.IndexOf( di.Key );
-                list.InsertRange( index + 1, di.Value );
-            }
+            AddChildNeedsToList( list );
 
             gList.DataSource = list;
             gList.DataBind();
@@ -2023,16 +1994,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( qry == null )
             {
                 qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
-            }
 
-            if ( !_canViewCareWorker )
-            {
-                qry = qry.Where( cn => !cn.WorkersOnly );
-            }
-
-            if ( !_canViewAll )
-            {
-                qry = qry.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) );
+                qry = PermissionFilterQuery( qry );
             }
 
             // Filter by Start Date
@@ -2144,12 +2107,51 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             var list = qry.ToList();
+            AddChildNeedsToList( list );
 
             gFollowUp.DataSource = list;
             gFollowUp.DataBind();
 
             // Hide the campus column if the campus filter is not visible.
             gFollowUp.ColumnsOfType<RockBoundField>().First( c => c.DataField == "Campus.Name" ).Visible = cpFollowUpCampus.Visible;
+        }
+
+        private IQueryable<CareNeed> PermissionFilterQuery( IQueryable<CareNeed> qry )
+        {
+            if ( !_canViewAll )
+            {
+                qry = qry.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) && ( !cn.ParentNeedId.HasValue || ( cn.ParentNeedId.HasValue && !cn.ParentNeed.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) ) );
+            }
+            else
+            {
+                qry = qry.Where( cn => !cn.ParentNeedId.HasValue || cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) );
+            }
+
+            return qry;
+        }
+
+        private void AddChildNeedsToList( List<CareNeed> list )
+        {
+            var _savedChildNeeds = new Dictionary<CareNeed, IEnumerable<CareNeed>>();
+            foreach ( var li in list )
+            {
+                if ( li.ChildNeeds != null && li.ChildNeeds.Any() )
+                {
+                    if ( _canViewAll )
+                    {
+                        _savedChildNeeds.Add( li, li.ChildNeeds.Where( cn => !cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) );
+                    }
+                    else
+                    {
+                        _savedChildNeeds.Add( li, li.ChildNeeds.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) );
+                    }
+                }
+            }
+            foreach ( var di in _savedChildNeeds )
+            {
+                var index = list.IndexOf( di.Key );
+                list.InsertRange( index + 1, di.Value );
+            }
         }
 
         /// <summary>
