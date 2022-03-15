@@ -2035,7 +2035,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 string firstName = tbFollowUpFirstName.Text;
                 if ( !string.IsNullOrWhiteSpace( firstName ) )
                 {
-                    qry = qry.Where( b => b.PersonAlias.Person.FirstName.StartsWith( firstName ) );
+                    qry = qry.Where( b => b.PersonAlias.Person.FirstName.StartsWith( firstName ) || b.PersonAlias.Person.NickName.StartsWith( firstName ) );
                 }
 
                 // Filter by Last Name
