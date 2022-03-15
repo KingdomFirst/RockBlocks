@@ -29,6 +29,9 @@
                             <Rock:PersonField DataField="PersonAlias.Person" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name"></Rock:PersonField>
                             <Rock:DefinedValueField DataField="CategoryValues" HeaderText="Category"></Rock:DefinedValueField>
                             <Rock:CampusField DataField="Campuses" HeaderText="Campus" SortExpression="Campuses" />
+                            <Rock:RockBoundField DataField="AgeRangeMin" HeaderText="Age Min"></Rock:RockBoundField>
+                            <Rock:RockBoundField DataField="AgeRangeMax" HeaderText="Age Max"></Rock:RockBoundField>
+                            <Rock:RockBoundField DataField="Gender" HeaderText="Gender"></Rock:RockBoundField>
                             <Rock:RockBoundField DataField="GeoFenceId" HeaderText="Geofence"></Rock:RockBoundField>
                             <Rock:BoolField DataField="IsActive" HeaderText="Active"></Rock:BoolField>
                         </Columns>
