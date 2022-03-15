@@ -813,7 +813,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     var hasChildNeeds = false;
                     var hasParentNeed = false;
-                    if ( careNeed.ChildNeeds != null && ( ( careNeed.ChildNeeds.Any( cn => !cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) && _canViewAll ) || ( careNeed.ChildNeeds.Any( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) && !_canViewAll ) ) )
+                    if ( careNeed.ChildNeeds != null &&
+                            (
+                                ( careNeed.ChildNeeds.Any( cn => !cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) && _canViewAll ) ||
+                                ( careNeed.ChildNeeds.Any( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) && !_canViewAll )
+                            )
+                       )
                     {
                         hasChildNeeds = true;
                         e.Row.AddCssClass( "hasChildNeeds" );
