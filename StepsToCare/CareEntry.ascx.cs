@@ -1060,64 +1060,25 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var careWorkersNoFence = careWorkers.Where( cw => cw.GeoFenceId == null );
                 var workerAssigned = false;
                 var closedId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
-                var careWorkerCount1 = careWorkersNoFence
-                    .Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new WorkerResult
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategory = true,
-                        HasCampus = true,
-                        HasAgeRange = false,
-                        HasGender = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+
+                // Campus, Category, Ignore Age Range and Gender
+                var careWorkerCount1 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, true, true, true );
 
                 if ( enableLogging )
                 {
                     LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkersNoFence Count: {1}, careWorkerCount1 Count: {2}", careNeed.Guid, careWorkersNoFence.Count(), careWorkerCount1.Count() ), "careWorkerCount1, Category AND Campus" );
                 }
 
-                var careWorkerCount2 = careWorkersNoFence
-                    .Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new WorkerResult
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategory = true,
-                        HasCampus = false,
-                        HasAgeRange = false,
-                        HasGender = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+                // Category, Ignore Age Range and Gender
+                var careWorkerCount2 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, false, true, true );
 
                 if ( enableLogging )
                 {
                     LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkerCount2 Count: {1}", careNeed.Guid, careWorkerCount2.Count() ), "careWorkerCount2, Category NOT Campus" );
                 }
 
-
-                var careWorkerCount3 = careWorkersNoFence
-                    .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new WorkerResult
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategory = false,
-                        HasCampus = true,
-                        HasAgeRange = false,
-                        HasGender = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+                // Campus, Ignore Age Range and Gender
+                var careWorkerCount3 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, true, false, true );
 
                 if ( enableLogging )
                 {
@@ -1125,21 +1086,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
 
                 // None, doesn't include parameters for other values though.
-                var careWorkerCount4 = careWorkersNoFence
-                    .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new WorkerResult
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategory = false,
-                        HasCampus = false,
-                        HasAgeRange = false,
-                        HasGender = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+                var careWorkerCount4 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, false, false, true );
 
                 if ( enableLogging )
                 {
@@ -1426,7 +1373,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             rockContext.SaveChanges();
         }
 
-        private static IOrderedQueryable<WorkerResult> GenerateAgeQuery( CareNeed careNeed, IQueryable<CareWorker> careWorkersNoFence, int closedId, bool includeAgeRange, bool includeGender, bool includeCampus, bool includeCategory )
+        private static IOrderedQueryable<WorkerResult> GenerateAgeQuery( CareNeed careNeed, IQueryable<CareWorker> careWorkersNoFence, int closedId, bool includeAgeRange, bool includeGender, bool includeCampus, bool includeCategory, bool ignoreAgeRangeAndGender = false )
         {
             var ageAsDecimal = ( decimal ) careNeed.PersonAlias.Person.AgePrecise;
             var tempQuery = careWorkersNoFence;
@@ -1440,7 +1387,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                                    )
                                             );
             }
-            else
+            else if ( !ignoreAgeRangeAndGender )
             {
                 tempQuery = tempQuery.Where( cw => !(
                                                      ( cw.AgeRangeMin.HasValue && cw.AgeRangeMax.HasValue && ( ageAsDecimal > cw.AgeRangeMin.Value && ageAsDecimal < cw.AgeRangeMax.Value ) ) ||
@@ -1454,7 +1401,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 tempQuery = tempQuery.Where( cw => cw.Gender == careNeed.PersonAlias.Person.Gender );
             }
-            else
+            else if ( !ignoreAgeRangeAndGender )
             {
                 tempQuery = tempQuery.Where( cw => cw.Gender != careNeed.PersonAlias.Person.Gender );
             }
