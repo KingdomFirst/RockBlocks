@@ -23,6 +23,7 @@ using System.Text;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using NuGet;
 using Rock;
 using Rock.Attribute;
 using Rock.Communication;
@@ -76,6 +77,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultBooleanValue = false,
         Key = AttributeKey.VerboseLogging )]
 
+    [CustomDropdownListField( "Load Balanced Workers assignment type",
+        Description = "How should the auto assign worker load balancing work? Default: Exclusive. \"Prioritize\", it will prioritize the workers being assigned based on campus, category and any other parameters on the worker but still assign to any worker if their workload matches. \"Exclusive\", if there are workers with matching campus, category or other parameters it will only load balance between those workers.",
+        ListSource = "Prioritize,Exclusive",
+        DefaultValue = "Exclusive",
+        Key = AttributeKey.LoadBalanceWorkersType )]
+
+    [BooleanField( "Enable Family Needs",
+        Description = "Show a checkbox to 'Include Family' which will create duplicate Care Needs for each family member with their own workers.",
+        DefaultBooleanValue = false,
+        Key = AttributeKey.EnableFamilyNeeds,
+        Category = AttributeCategory.FamilyNeeds )]
+
+    [CustomDropdownListField( "Adults in Family Worker Assignment",
+        Description = "How should workers be assigned to spouses and other adults in the family when using 'Family Needs'. Normal behavior, use the same settings as a normal Care Need (Group Leader, Geofence and load balanced), or assign to Care Workers Only (load balanced).",
+        ListSource = "Normal,Workers Only",
+        DefaultValue = "Normal",
+        Key = AttributeKey.AdultFamilyWorkers,
+        Category = AttributeCategory.FamilyNeeds )]
+
+
     #endregion
 
     public partial class CareEntry : Rock.Web.UI.RockBlock
@@ -92,6 +113,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string AutoAssignWorker = "AutoAssignWorker";
             public const string NewAssignmentNotification = "NewAssignmentNotification";
             public const string VerboseLogging = "VerboseLogging";
+            public const string EnableFamilyNeeds = "EnableFamilyNeeds";
+            public const string AdultFamilyWorkers = "AdultFamilyWorkers";
+            public const string LoadBalanceWorkersType = "LoadBalanceWorkersType";
         }
         private static class PageParameterKey
         {
@@ -101,6 +125,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string CampusId = "CampusId";
             public const string Category = "Category";
             public const string Details = "Details";
+            public const string CareNeedId = "CareNeedId";
+        }
+
+        private static class AttributeCategory
+        {
+            public const string FamilyNeeds = "Family Needs";
         }
 
         private bool _allowNewPerson = false;
@@ -151,7 +181,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gAssignedPersons.Actions.ShowAdd = false;
             gAssignedPersons.ShowActionRow = false;
 
-            _allowNewPerson = GetAttributeValue( "AllowNewPerson" ).AsBoolean();
+            _allowNewPerson = GetAttributeValue( AttributeKey.AllowNewPerson ).AsBoolean();
         }
 
         /// <summary>
@@ -165,7 +195,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( !Page.IsPostBack )
             {
                 cpCampus.Campuses = CampusCache.All();
-                ShowDetail( PageParameter( "CareNeedId" ).AsInteger() );
+                ShowDetail( PageParameter( PageParameterKey.CareNeedId ).AsInteger() );
             }
             else
             {
@@ -195,7 +225,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
-            ShowDetail( PageParameter( "CareNeedId" ).AsInteger() );
+            ShowDetail( PageParameter( PageParameterKey.CareNeedId ).AsInteger() );
         }
 
         /// <summary>
@@ -212,7 +242,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
 
                 CareNeed careNeed = null;
-                int careNeedId = PageParameter( "CareNeedId" ).AsInteger();
+                int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
                 var isNew = false;
 
                 if ( !careNeedId.Equals( 0 ) )
@@ -231,10 +261,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 careNeed.PersonAliasId = ppPerson.PersonAliasId;
 
+                Person person = null;
+
                 if ( _allowNewPerson && ppPerson.PersonId == null )
                 {
                     var personService = new PersonService( new RockContext() );
-                    var person = personService.FindPerson( new PersonService.PersonMatchQuery( dtbFirstName.Text, dtbLastName.Text, ebEmail.Text, pnbCellPhone.Number ), false, true, false );
+                    person = personService.FindPerson( new PersonService.PersonMatchQuery( dtbFirstName.Text, dtbLastName.Text, ebEmail.Text, pnbCellPhone.Number ), false, true, false );
 
                     if ( person == null && dtbFirstName.Text.IsNotNullOrWhiteSpace() && dtbLastName.Text.IsNotNullOrWhiteSpace() && ( !string.IsNullOrWhiteSpace( ebEmail.Text ) || !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbHomePhone.Number ) ) || !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbCellPhone.Number ) ) ) )
                     {
@@ -325,6 +357,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         return;
                     }
                 }
+                else if ( ppPerson.PersonId.HasValue )
+                {
+                    person = new PersonService( rockContext ).Get( ppPerson.PersonId.Value );
+                }
 
                 careNeed.SubmitterAliasId = ppSubmitter.PersonAliasId;
 
@@ -378,6 +414,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 if ( careNeed.IsValid )
                 {
+                    var childNeedsCreated = false;
                     if ( careNeed.Id.Equals( 0 ) )
                     {
                         careNeedService.Add( careNeed );
@@ -386,6 +423,41 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     // get attributes
                     careNeed.LoadAttributes();
                     Helper.GetEditValues( phAttributes, careNeed );
+
+                    if ( cbIncludeFamily.Visible && cbIncludeFamily.Checked && ( isNew || ( careNeed.ChildNeeds == null || ( careNeed.ChildNeeds != null && !careNeed.ChildNeeds.Any() ) ) ) )
+                    {
+                        var family = person.GetFamilyMembers( false, rockContext );
+                        foreach ( var fm in family )
+                        {
+                            var copyNeed = ( CareNeed ) careNeed.Clone();
+                            copyNeed.Id = 0;
+                            copyNeed.Guid = Guid.NewGuid();
+                            copyNeed.PersonAliasId = fm.Person.PrimaryAliasId;
+                            if ( copyNeed.Campus != null )
+                            {
+                                copyNeed.Campus = null;
+                            }
+                            if ( copyNeed.Status != null )
+                            {
+                                copyNeed.Status = null;
+                            }
+                            if ( copyNeed.Category != null )
+                            {
+                                copyNeed.Category = null;
+                            }
+                            if ( copyNeed.AssignedPersons != null && copyNeed.AssignedPersons.Any() )
+                            {
+                                copyNeed.AssignedPersons = new List<AssignedPerson>();
+                            }
+
+                            if ( careNeed.ChildNeeds == null )
+                            {
+                                careNeed.ChildNeeds = new List<CareNeed>();
+                            }
+                            careNeed.ChildNeeds.Add( copyNeed );
+                        }
+                        childNeedsCreated = true;
+                    }
 
                     rockContext.WrapTransaction( () =>
                     {
@@ -396,6 +468,24 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( isNew )
                     {
                         AutoAssignWorkers( careNeed );
+                    }
+
+                    if ( childNeedsCreated && careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any() )
+                    {
+                        var familyGroupType = GroupTypeCache.GetFamilyGroupType();
+                        var adultRoleId = familyGroupType.Roles.FirstOrDefault( a => a.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ).Id;
+                        foreach ( var need in careNeed.ChildNeeds )
+                        {
+                            if ( need.PersonAlias != null && need.PersonAlias.Person.GetFamilyRole().Id != adultRoleId )
+                            {
+                                AutoAssignWorkers( need, true, true );
+                            }
+                            else
+                            {
+                                var adultFamilyWorkers = GetAttributeValue( AttributeKey.AdultFamilyWorkers );
+                                AutoAssignWorkers( need, adultFamilyWorkers == "Workers Only" );
+                            }
+                        }
                     }
 
                     // if a NewAssignmentNotificationEmailTemplate is configured, send an email
@@ -411,7 +501,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         // Reload Care Need after save changes
                         careNeed = new CareNeedService( new RockContext() ).Get( careNeed.Id );
                         assignedPersons = careNeed.AssignedPersons;
+                        if ( careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any() )
+                        {
+                            foreach ( var need in careNeed.ChildNeeds )
+                            {
+                                assignedPersons.AddRange( need.AssignedPersons );
+                            }
+                        }
                     }
+
                     if ( assignedPersons != null && assignedPersons.Any() && assignmentEmailTemplateGuid.HasValue && ( isNew || newlyAssignedPersons.Any() ) )
                     {
                         var errors = new List<string>();
@@ -740,6 +838,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 pdAuditDetails.Visible = false;
             }
 
+            cbIncludeFamily.Visible = GetAttributeValue( AttributeKey.EnableFamilyNeeds ).AsBoolean();
+
             pnlNewPersonFields.Visible = _allowNewPerson;
             ppPerson.Required = !_allowNewPerson;
 
@@ -747,6 +847,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             dpDate.SelectedDateTime = careNeed.DateEntered ?? PageParameter( PageParameterKey.DateEntered ).AsDateTime();
 
             cbWorkersOnly.Checked = careNeed.WorkersOnly;
+            cbIncludeFamily.Checked = careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any();
 
             var paramCampusId = PageParameter( PageParameterKey.CampusId ).AsIntegerOrNull();
             if ( careNeed.Campus != null )
@@ -878,12 +979,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             ppSubmitter.Visible = true;
         }
 
-        private void AutoAssignWorkers( CareNeed careNeed )
+        private void AutoAssignWorkers( CareNeed careNeed, bool roundRobinOnly = false, bool childAssignment = false )
         {
             var rockContext = new RockContext();
 
             var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
             var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
+            var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
 
             var careNeedService = new CareNeedService( rockContext );
             var careWorkerService = new CareWorkerService( rockContext );
@@ -899,7 +1001,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
 
             // auto assign Deacon/Worker by Geofence
-            if ( autoAssignWorkerGeofence )
+            if ( autoAssignWorkerGeofence && !roundRobinOnly )
             {
                 if ( enableLogging )
                 {
@@ -958,95 +1060,247 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var careWorkersNoFence = careWorkers.Where( cw => cw.GeoFenceId == null );
                 var workerAssigned = false;
                 var closedId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
-                var careWorkerCount1 = careWorkersNoFence
-                    .Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategoryAndCampus = true,
-                        HasCategory = false,
-                        HasCampus = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+
+                // Campus, Category, Ignore Age Range and Gender
+                var careWorkerCount1 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, true, true, true );
 
                 if ( enableLogging )
                 {
                     LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkersNoFence Count: {1}, careWorkerCount1 Count: {2}", careNeed.Guid, careWorkersNoFence.Count(), careWorkerCount1.Count() ), "careWorkerCount1, Category AND Campus" );
                 }
 
-                var careWorkerCount2 = careWorkersNoFence
-                    .Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategoryAndCampus = false,
-                        HasCategory = true,
-                        HasCampus = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+                // Category, Ignore Age Range and Gender
+                var careWorkerCount2 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, false, true, true );
 
                 if ( enableLogging )
                 {
                     LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkerCount2 Count: {1}", careNeed.Guid, careWorkerCount2.Count() ), "careWorkerCount2, Category NOT Campus" );
                 }
 
-
-                var careWorkerCount3 = careWorkersNoFence
-                    .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategoryAndCampus = false,
-                        HasCategory = false,
-                        HasCampus = true
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+                // Campus, Ignore Age Range and Gender
+                var careWorkerCount3 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, true, false, true );
 
                 if ( enableLogging )
                 {
                     LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkerCount3 Count: {1}", careNeed.Guid, careWorkerCount3.Count() ), "careWorkerCount3, Campus NOT Category" );
                 }
 
-                var careWorkerCount4 = careWorkersNoFence
-                    .Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) && !cw.Campuses.Contains( careNeed.CampusId.ToString() ) )
-                    .Select( cw => new
-                    {
-                        Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
-                        Worker = cw,
-                        HasCategoryAndCampus = false,
-                        HasCategory = false,
-                        HasCampus = false
-                    }
-                    )
-                    .OrderBy( cw => cw.Count )
-                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
-                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
+                // None, doesn't include parameters for other values though.
+                var careWorkerCount4 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, false, false, true );
 
                 if ( enableLogging )
                 {
                     LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, careWorkerCount4 Count: {1}", careNeed.Guid, careWorkerCount4.Count() ), "careWorkerCount4, NOT Campus or Category" );
                 }
 
-                var careWorkerCounts = careWorkerCount1
-                    .Concat( careWorkerCount2 )
-                    .Concat( careWorkerCount3 )
-                    .Concat( careWorkerCount4 )
-                    .OrderBy( ct => ct.Count )
-                    .ThenByDescending( ct => ct.HasCategoryAndCampus )
-                    .ThenByDescending( ct => ct.HasCategory )
-                    .ThenByDescending( ct => ct.HasCampus );
+                IOrderedQueryable<WorkerResult> careWorkersCountChild1 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild2 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild3 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild4 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild5 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild6 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild7 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild8 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild9 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild10 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild11 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild12 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild13 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild14 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild15 = null;
+                IOrderedQueryable<WorkerResult> careWorkersCountChild16 = null;
+                if ( childAssignment )
+                {
+                    // AgeRange, Gender, Campus, Category
+                    careWorkersCountChild1 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, true, true, true, true );
+
+                    // AgeRange, Gender, Category
+                    careWorkersCountChild2 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, true, true, false, true );
+
+                    // AgeRange, Gender, Campus
+                    careWorkersCountChild3 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, true, true, true, false );
+
+                    // AgeRange, Campus, Category
+                    careWorkersCountChild4 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, true, false, true, true );
+
+                    // Gender, Campus, Category
+                    careWorkersCountChild5 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, true, true, true );
+
+                    // AgeRange, Gender
+                    careWorkersCountChild6 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, true, true, false, false );
+
+                    // AgeRange, Category
+                    careWorkersCountChild7 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, true, false, false, true );
+
+                    // AgeRange, Campus
+                    careWorkersCountChild8 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, true, false, true, false );
+
+                    // Gender, Category
+                    careWorkersCountChild9 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, true, false, true );
+
+                    // Gender, Campus
+                    careWorkersCountChild10 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, true, true, false );
+
+                    // Campus, Category
+                    careWorkersCountChild11 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, true, true );
+
+                    // AgeRange
+                    careWorkersCountChild12 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, true, false, false, false );
+
+                    // Gender 
+                    careWorkersCountChild13 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, true, false, false );
+
+                    // Category
+                    careWorkersCountChild14 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, false, true );
+
+                    // Campus
+                    careWorkersCountChild15 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, true, false );
+
+                    // None
+                    careWorkersCountChild16 = GenerateAgeQuery( careNeed, careWorkersNoFence, closedId, false, false, false, false );
+
+                }
+
+                var careWorkerCounts = careWorkerCount1;
+                if ( loadBalanceType == "Prioritize" )
+                {
+                    if ( childAssignment )
+                    {
+                        careWorkerCounts = careWorkersCountChild1
+                                            .Concat( careWorkersCountChild2 )
+                                            .Concat( careWorkersCountChild3 )
+                                            .Concat( careWorkersCountChild4 )
+                                            .Concat( careWorkersCountChild5 )
+                                            .Concat( careWorkersCountChild6 )
+                                            .Concat( careWorkersCountChild7 )
+                                            .Concat( careWorkersCountChild8 )
+                                            .Concat( careWorkersCountChild9 )
+                                            .Concat( careWorkersCountChild10 )
+                                            .Concat( careWorkersCountChild11 )
+                                            .Concat( careWorkersCountChild12 )
+                                            .Concat( careWorkersCountChild13 )
+                                            .Concat( careWorkersCountChild14 )
+                                            .Concat( careWorkersCountChild15 )
+                                            .Concat( careWorkersCountChild16 )
+                                            .OrderBy( ct => ct.Count )
+                                            .ThenByDescending( ct => ct.HasAgeRange && ct.HasGender && ct.HasCampus && ct.HasCategory )         // AgeRange, Gender, Campus, Category
+                                            .ThenByDescending( ct => ct.HasAgeRange && ct.HasGender && !ct.HasCampus && ct.HasCategory )        // AgeRange, Gender, Category
+                                            .ThenByDescending( ct => ct.HasAgeRange && ct.HasGender && ct.HasCampus && !ct.HasCategory )        // AgeRange, Gender, Campus
+                                            .ThenByDescending( ct => ct.HasAgeRange && !ct.HasGender && ct.HasCampus && ct.HasCategory )        // AgeRange, Campus, Category
+                                            .ThenByDescending( ct => !ct.HasAgeRange && ct.HasGender && ct.HasCampus && ct.HasCategory )        // Gender, Campus, Category
+                                            .ThenByDescending( ct => ct.HasAgeRange && ct.HasGender && !ct.HasCampus && !ct.HasCategory )       // AgeRange, Gender
+                                            .ThenByDescending( ct => ct.HasAgeRange && !ct.HasGender && !ct.HasCampus && ct.HasCategory )       // AgeRange, Category
+                                            .ThenByDescending( ct => ct.HasAgeRange && !ct.HasGender && ct.HasCampus && !ct.HasCategory )       // AgeRange, Campus
+                                            .ThenByDescending( ct => !ct.HasAgeRange && ct.HasGender && !ct.HasCampus && ct.HasCategory )       // Gender, Category
+                                            .ThenByDescending( ct => !ct.HasAgeRange && ct.HasGender && ct.HasCampus && !ct.HasCategory )       // Gender, Campus
+                                            .ThenByDescending( ct => !ct.HasAgeRange && !ct.HasGender && ct.HasCampus && ct.HasCategory )       // Campus, Category
+                                            .ThenByDescending( ct => ct.HasAgeRange && !ct.HasGender && !ct.HasCampus && !ct.HasCategory )      // AgeRange
+                                            .ThenByDescending( ct => !ct.HasAgeRange && ct.HasGender && !ct.HasCampus && !ct.HasCategory )      // Gender
+                                            .ThenByDescending( ct => !ct.HasAgeRange && !ct.HasGender && !ct.HasCampus && ct.HasCategory )      // Category
+                                            .ThenByDescending( ct => !ct.HasAgeRange && !ct.HasGender && ct.HasCampus && !ct.HasCategory )      // Campus
+                                            .ThenByDescending( ct => !ct.HasAgeRange && !ct.HasGender && !ct.HasCampus && !ct.HasCategory );    // None
+                    }
+                    else
+                    {
+                        careWorkerCounts = careWorkerCount1
+                                        .Concat( careWorkerCount2 )
+                                        .Concat( careWorkerCount3 )
+                                        .Concat( careWorkerCount4 )
+                                        .OrderBy( ct => ct.Count )
+                                        .ThenByDescending( ct => ct.HasCategory && ct.HasCampus )
+                                        .ThenByDescending( ct => ct.HasCategory && !ct.HasCampus )
+                                        .ThenByDescending( ct => ct.HasCampus && !ct.HasCategory );
+                    }
+                }
+                else
+                {
+                    if ( childAssignment )
+                    {
+                        if ( careWorkersCountChild1.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild1;
+                        }
+                        else if ( careWorkersCountChild2.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild2;
+                        }
+                        else if ( careWorkersCountChild3.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild3;
+                        }
+                        else if ( careWorkersCountChild4.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild4;
+                        }
+                        else if ( careWorkersCountChild5.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild5;
+                        }
+                        else if ( careWorkersCountChild6.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild6;
+                        }
+                        else if ( careWorkersCountChild7.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild7;
+                        }
+                        else if ( careWorkersCountChild8.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild8;
+                        }
+                        else if ( careWorkersCountChild9.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild9;
+                        }
+                        else if ( careWorkersCountChild10.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild10;
+                        }
+                        else if ( careWorkersCountChild11.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild11;
+                        }
+                        else if ( careWorkersCountChild12.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild12;
+                        }
+                        else if ( careWorkersCountChild13.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild13;
+                        }
+                        else if ( careWorkersCountChild14.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild14;
+                        }
+                        else if ( careWorkersCountChild15.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild15;
+                        }
+                        else if ( careWorkersCountChild16.Any() )
+                        {
+                            careWorkerCounts = careWorkersCountChild16;
+                        }
+                    }
+                    else
+                    {
+                        if ( careWorkerCount1.Any() )
+                        {
+                            careWorkerCounts = careWorkerCount1;
+                        }
+                        else if ( careWorkerCount2.Any() )
+                        {
+                            careWorkerCounts = careWorkerCount2;
+                        }
+                        else if ( careWorkerCount3.Any() )
+                        {
+                            careWorkerCounts = careWorkerCount3;
+                        }
+                        else if ( careWorkerCount4.Any() )
+                        {
+                            careWorkerCounts = careWorkerCount4;
+                        }
+                    }
+                }
 
                 if ( enableLogging )
                 {
@@ -1085,7 +1339,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 LogEvent( null, "AutoAssignWorkers", string.Format( "Care Need Guid: {0}, Leader Role Guid: {1}, Leader Role: {2}", careNeed.Guid, leaderRoleGuid, leaderRole.Id ), "Get Leader Role" );
             }
 
-            if ( leaderRole != null )
+            if ( leaderRole != null && !roundRobinOnly )
             {
                 var groupMemberService = new GroupMemberService( rockContext );
                 var inGroups = groupMemberService.GetByPersonId( careNeed.PersonAlias.PersonId ).Where( gm => gm.Group != null && gm.Group.IsActive && !gm.Group.IsArchived && gm.Group.GroupTypeId == leaderRole.GroupTypeId && !gm.IsArchived && gm.GroupMemberStatus == GroupMemberStatus.Active ).Select( gm => gm.GroupId );
@@ -1117,6 +1371,72 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
             }
             rockContext.SaveChanges();
+        }
+
+        private static IOrderedQueryable<WorkerResult> GenerateAgeQuery( CareNeed careNeed, IQueryable<CareWorker> careWorkersNoFence, int closedId, bool includeAgeRange, bool includeGender, bool includeCampus, bool includeCategory, bool ignoreAgeRangeAndGender = false )
+        {
+            var ageAsDecimal = ( decimal ) careNeed.PersonAlias.Person.AgePrecise;
+            var tempQuery = careWorkersNoFence;
+
+            if ( includeAgeRange )
+            {
+                tempQuery = tempQuery.Where( cw => (
+                                                    ( cw.AgeRangeMin.HasValue && cw.AgeRangeMax.HasValue && ( ageAsDecimal > cw.AgeRangeMin.Value && ageAsDecimal < cw.AgeRangeMax.Value ) ) ||
+                                                    ( !cw.AgeRangeMin.HasValue && cw.AgeRangeMax.HasValue && ageAsDecimal < cw.AgeRangeMax.Value ) ||
+                                                    ( cw.AgeRangeMin.HasValue && !cw.AgeRangeMax.HasValue && ageAsDecimal > cw.AgeRangeMin.Value )
+                                                   )
+                                            );
+            }
+            else if ( !ignoreAgeRangeAndGender )
+            {
+                tempQuery = tempQuery.Where( cw => !(
+                                                     ( cw.AgeRangeMin.HasValue && cw.AgeRangeMax.HasValue && ( ageAsDecimal > cw.AgeRangeMin.Value && ageAsDecimal < cw.AgeRangeMax.Value ) ) ||
+                                                     ( !cw.AgeRangeMin.HasValue && cw.AgeRangeMax.HasValue && ageAsDecimal < cw.AgeRangeMax.Value ) ||
+                                                     ( cw.AgeRangeMin.HasValue && !cw.AgeRangeMax.HasValue && ageAsDecimal > cw.AgeRangeMin.Value )
+                                                    )
+                                            );
+            }
+
+            if ( includeGender )
+            {
+                tempQuery = tempQuery.Where( cw => cw.Gender == careNeed.PersonAlias.Person.Gender );
+            }
+            else if ( !ignoreAgeRangeAndGender )
+            {
+                tempQuery = tempQuery.Where( cw => cw.Gender != careNeed.PersonAlias.Person.Gender );
+            }
+
+            if ( includeCategory )
+            {
+                tempQuery = tempQuery.Where( cw => cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) );
+            }
+            else
+            {
+                tempQuery = tempQuery.Where( cw => !cw.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) );
+            }
+
+            if ( includeCampus )
+            {
+                tempQuery = tempQuery.Where( cw => cw.Campuses.Contains( careNeed.CampusId.ToString() ) );
+            }
+            else
+            {
+                tempQuery = tempQuery.Where( cw => !cw.Campuses.Contains( careNeed.CampusId.ToString() ) );
+            }
+
+            return tempQuery.Select( cw => new WorkerResult
+                                        {
+                                            Count = cw.AssignedPersons.Where( ap => ap.CareNeed != null && ap.CareNeed.StatusValueId != closedId ).Count(),
+                                            Worker = cw,
+                                            HasCategory = includeCategory,
+                                            HasCampus = includeCampus,
+                                            HasAgeRange = includeAgeRange,
+                                            HasGender = includeGender
+                                        }
+                                    )
+                                    .OrderBy( cw => cw.Count )
+                                    .ThenBy( cw => cw.Worker.CategoryValues.Contains( careNeed.CategoryValueId.ToString() ) )
+                                    .ThenBy( cw => cw.Worker.Campuses.Contains( careNeed.CampusId.ToString() ) );
         }
 
         /// <summary>
@@ -1181,5 +1501,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
 
         #endregion
+    }
+
+    public partial class WorkerResult
+    {
+        public int Count { get; set; }
+        public CareWorker Worker { get; set; }
+        public bool HasCategory { get; set; } = false;
+        public bool HasCampus { get; set; } = false;
+        public bool HasAgeRange { get; set; } = false;
+        public bool HasGender { get; set; } = false;
     }
 }
