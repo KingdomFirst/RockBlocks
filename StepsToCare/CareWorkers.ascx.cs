@@ -524,7 +524,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( careWorker.GeoFenceId != null )
             {
                 var location = new LocationService( rockContext ).Get( careWorker.GeoFenceId.Value );
-                //lpGeofenceLocation.SetBestPickerModeForLocation( location );
                 lpGeofenceLocation.Location = location;
             }
             else
