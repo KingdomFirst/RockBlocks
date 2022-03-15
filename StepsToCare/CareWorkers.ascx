@@ -62,10 +62,10 @@
                         <Rock:LocationPicker ID="lpGeofenceLocation" runat="server" Label="Geofence Location" AllowedPickerModes="Named" Help="If geofence is set it is used for auto assignment of care needs based on where the person's home is located. Only named Polygon/Geofence locations are supported to minimize where you can create the area for use in multiple entities such as Groups." />
                     </div>
                     <div class="col-md-4">
-                        <Rock:NumberRangeEditor ID="nreAgeRange" runat="server" Label="Age Range" Help="If using 'Include Family' checkbox on Care Entry it will take into account age ranges for family members" />
+                        <Rock:NumberRangeEditor ID="nreAgeRange" runat="server" Label="Age Range" Help="If using 'Include Family' checkbox on Care Entry it will take into account age ranges for appropriate family members" />
                     </div>
                     <div class="col-md-4">
-                        <Rock:RockDropDownList ID="ddlGender" runat="server" Label="Gender" Help="If using 'Include Family' checkbox on Care Entry it will take into account Gender for family members.">
+                        <Rock:RockDropDownList ID="ddlGender" runat="server" Label="Gender" Help="If using 'Include Family' checkbox on Care Entry it will take into account Gender for appropriate family members.">
                             <asp:ListItem Text="" Value="" />
                             <asp:ListItem Text="Male" Value="Male" />
                             <asp:ListItem Text="Female" Value="Female" />

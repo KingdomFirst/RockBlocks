@@ -78,9 +78,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.VerboseLogging )]
 
     [CustomDropdownListField( "Load Balanced Workers assignment type",
-        Description = "How should the auto assign worker load balancing work? Prioritize, it will prioritize the workers being assigned based on campus, category and any other parameters on the worker but still assign to any worker if their workload matches. Exclusive, if there are workers with matching campus, category or other parameters it will only load balance between those workers.",
+        Description = "How should the auto assign worker load balancing work? Default: Exclusive. \"Prioritize\", it will prioritize the workers being assigned based on campus, category and any other parameters on the worker but still assign to any worker if their workload matches. \"Exclusive\", if there are workers with matching campus, category or other parameters it will only load balance between those workers.",
         ListSource = "Prioritize,Exclusive",
-        DefaultValue = "Prioritize",
+        DefaultValue = "Exclusive",
         Key = AttributeKey.LoadBalanceWorkersType )]
 
     [BooleanField( "Enable Family Needs",
@@ -90,7 +90,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Category = AttributeCategory.FamilyNeeds )]
 
     [CustomDropdownListField( "Adults in Family Worker Assignment",
-        Description = "How should workers be assigned to other adults in family when using 'Family Needs'. Normal behavior, use the same settings as a normal Care Need (Group Leader, Geofence and load balanced), or assign to Care Workers Only (load balanced).",
+        Description = "How should workers be assigned to spouses and other adults in the family when using 'Family Needs'. Normal behavior, use the same settings as a normal Care Need (Group Leader, Geofence and load balanced), or assign to Care Workers Only (load balanced).",
         ListSource = "Normal,Workers Only",
         DefaultValue = "Normal",
         Key = AttributeKey.AdultFamilyWorkers,
@@ -476,7 +476,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var adultRoleId = familyGroupType.Roles.FirstOrDefault( a => a.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ).Id;
                         foreach ( var need in careNeed.ChildNeeds )
                         {
-
                             if ( need.PersonAlias != null && need.PersonAlias.Person.GetFamilyRole().Id != adultRoleId )
                             {
                                 AutoAssignWorkers( need, true, true );

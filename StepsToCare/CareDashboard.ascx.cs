@@ -1034,7 +1034,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             }
                             else
                             {
-                                parentNeedStr = string.Format( "<i class=\"fas fa-child mx-2\" data-toggle=\"tooltip\" title=\"Has a Parent Need: {0} - {1}\"></i></a>", careNeed.ParentNeed.Details.StripHtml().Truncate( 30 ), careNeed.ParentNeed.PersonAlias.Person.FullName );
+                                parentNeedStr = string.Format( "<i class=\"fas fa-child mx-2\" data-toggle=\"tooltip\" title=\"Has a Parent Need: {0} - {1}\"></i>", careNeed.ParentNeed.Details.StripHtml().Truncate( 30 ), careNeed.ParentNeed.PersonAlias.Person.FullName );
                             }
                         }
                         if ( careNeed.PersonAlias != null )
@@ -2123,6 +2123,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         private IQueryable<CareNeed> PermissionFilterQuery( IQueryable<CareNeed> qry )
         {
+            if ( !_canViewCareWorker )
+            {
+                qry = qry.Where( cn => !cn.WorkersOnly );
+            }
+            
             if ( !_canViewAll )
             {
                 qry = qry.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) && ( !cn.ParentNeedId.HasValue || ( cn.ParentNeedId.HasValue && !cn.ParentNeed.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) ) );
