@@ -31,7 +31,6 @@ using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 using rocks.kfs.Zoom;
-using rocks.kfs.Zoom.Utility.ExtensionMethods;
 
 namespace RockWeb.Plugins.rocks_kfs.Zoom
 {
