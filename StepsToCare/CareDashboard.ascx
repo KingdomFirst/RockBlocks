@@ -23,6 +23,30 @@
     .popover-content {
         text-align: center;
     }
+
+    .hasParentNeed {
+        background-color: #ececec !important;
+    }
+
+    .table-striped > tbody > tr.assigned.hasParentNeedAssigned:nth-of-type(odd) {
+        background-color: oldlace !important;
+    }
+
+    .table-striped > tbody > tr.assigned.hasParentNeedAssigned:nth-of-type(even) {
+        background-color: #fff2da !important;
+    }
+
+    .assigned.hasParentNeed {
+        background-color: #feefd2 !important;
+    }
+
+    .grid-select-cell .photo-icon {
+        margin-bottom: 8px;
+    }
+
+    .grid-select-cell.photo-icon-cell {
+        padding-bottom: 8px;
+    }
 </style>
 <asp:UpdatePanel runat="server" ID="upnlCareDashboard" UpdateMode="Always">
     <ContentTemplate>
@@ -87,7 +111,7 @@
                         <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" ExportSource="DataSource">
                             <Columns>
                                 <Rock:ColorField DataField="Category.AttributeValues.Color" ToolTipDataField="Category.Value" HeaderText="Cat" SortExpression="Category.Value" />
-                                <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name">
+                                <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name" ItemStyle-CssClass="text-nowrap">
                                     <ItemTemplate>
                                         <asp:Literal ID="lName" runat="server" />
                                     </ItemTemplate>
@@ -100,7 +124,7 @@
                                         <asp:Literal ID="lCareTouches" runat="server"></asp:Literal>
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
-                                <Rock:RockTemplateField HeaderText="Assigned" SortExpression="AssignedPersons">
+                                <Rock:RockTemplateField HeaderText="Assigned" SortExpression="AssignedPersons" ItemStyle-CssClass="photo-icon-cell align-middle">
                                     <ItemTemplate>
                                         <asp:Literal ID="lAssigned" runat="server"></asp:Literal>
                                     </ItemTemplate>
@@ -124,7 +148,7 @@
                         <Rock:Grid ID="gFollowUp" runat="server" DisplayType="Full" AllowSorting="true" ExportSource="DataSource">
                             <Columns>
                                 <Rock:ColorField DataField="Category.AttributeValues.Color" ToolTipDataField="Category.Value" HeaderText="Cat" SortExpression="Category.Value" />
-                                <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name">
+                                <Rock:RockTemplateField SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name" ItemStyle-CssClass="text-nowrap">
                                     <ItemTemplate>
                                         <asp:Literal ID="lName" runat="server" />
                                     </ItemTemplate>
@@ -137,7 +161,7 @@
                                         <asp:Literal ID="lCareTouches" runat="server"></asp:Literal>
                                     </ItemTemplate>
                                 </Rock:RockTemplateField>
-                                <Rock:RockTemplateField HeaderText="Assigned">
+                                <Rock:RockTemplateField HeaderText="Assigned" SortExpression="AssignedPersons" ItemStyle-CssClass="photo-icon-cell align-middle">
                                     <ItemTemplate>
                                         <asp:Literal ID="lAssigned" runat="server"></asp:Literal>
                                     </ItemTemplate>
@@ -191,6 +215,11 @@
                     });
                 }
                 Sys.Application.add_load(initDashboard);
+
+                function toggleNeeds(needId) {
+                    $('.hasParentNeed' + needId).toggleClass('hide');
+                    $('#toggleIcon' + needId).toggleClass('fa-plus').toggleClass('fa-minus');
+                }
             </script>
         </asp:Panel>
         <Rock:ModalDialog ID="mdMakeNote" runat="server" Title="Add Note" ValidationGroup="MakeNote" ClickBackdropToClose="true" Content-CssClass="modal-kfsmakenote">
