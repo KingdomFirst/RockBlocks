@@ -140,6 +140,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 11,
         Key = AttributeKey.IncludeConnectionTypes )]
 
+    [BooleanField( "Complete Child Needs on Parent Completion",
+        DefaultBooleanValue = true,
+        Category = "Actions",
+        Order = 12,
+        Key = AttributeKey.CompleteChildNeeds )]
+
     [CustomDropdownListField( "Display Type",
         Description = "The format to use for displaying notes.",
         ListSource = "Full,Light",
@@ -234,6 +240,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string ConnectionRequestEnable = "ConnectionRequestEnable";
             public const string IncludeConnectionTypes = "IncludeConnectionTypes";
             public const string WorkflowEnable = "WorkflowEnable";
+            public const string CompleteChildNeeds = "CompleteChildNeeds";
         }
 
         /// <summary>
@@ -1056,13 +1063,30 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     // do something with complete here.
                     using ( var rockContext = new RockContext() )
                     {
+                        var completeChildNeeds = GetAttributeValue( AttributeKey.CompleteChildNeeds ).AsBoolean();
                         var careNeedService = new CareNeedService( rockContext );
                         var careNeed = careNeedService.Get( id );
                         var completeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
                         careNeed.StatusValueId = completeValueId;
+
+                        if ( completeChildNeeds && careNeed.ChildNeeds.Any() )
+                        {
+                            foreach ( var childneed in careNeed.ChildNeeds )
+                            {
+                                childneed.StatusValueId = completeValueId;
+                            }
+                        }
                         rockContext.SaveChanges();
 
                         createNote( rockContext, id, "Marked Complete" );
+
+                        if ( completeChildNeeds && careNeed.ChildNeeds.Any() )
+                        {
+                            foreach ( var childneed in careNeed.ChildNeeds )
+                            {
+                                createNote( rockContext, childneed.Id, "Marked Complete from Parent Need" );
+                            }
+                        }
                     }
                     BindGrid();
                     break;
@@ -2127,7 +2151,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 qry = qry.Where( cn => !cn.WorkersOnly );
             }
-            
+
             if ( !_canViewAll )
             {
                 qry = qry.Where( cn => cn.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) && ( !cn.ParentNeedId.HasValue || ( cn.ParentNeedId.HasValue && !cn.ParentNeed.AssignedPersons.Any( ap => ap.PersonAliasId == CurrentPersonAliasId ) ) ) );
