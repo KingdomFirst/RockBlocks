@@ -255,22 +255,10 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
             mergeFields.Add( "PrayerRequests", currentPrayerRequests );
 
             Template template = null;
-            ILavaTemplate lavaTemplate = null;
             var error = string.Empty;
             try
             {
-                if ( LavaService.RockLiquidIsEnabled )
-                {
-                    template = Template.Parse( GetAttributeValue( "LavaTemplate" ) );
-
-                    LavaHelper.VerifyParseTemplateForCurrentEngine( GetAttributeValue( "LavaTemplate" ) );
-                }
-                else
-                {
-                    var parseResult = LavaService.ParseTemplate( GetAttributeValue( "LavaTemplate" ) );
-
-                    lavaTemplate = parseResult.Template;
-                }
+                template = Template.Parse( GetAttributeValue( "LavaTemplate" ) );
             }
             catch ( Exception ex )
             {
@@ -284,20 +272,10 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
                     nbError.Visible = true;
                 }
 
-                if ( template != null || lavaTemplate != null )
+                if ( template != null )
                 {
-                    if ( LavaService.RockLiquidIsEnabled )
-                    {
-                        template.Registers["EnabledCommands"] = GetAttributeValue( "EnabledLavaCommands" );
-                        lContent.Text = template.Render( Hash.FromDictionary( mergeFields ) );
-                    }
-                    else
-                    {
-                        var lavaContext = LavaService.NewRenderContext( mergeFields, GetAttributeValue( "EnabledLavaCommands" ).SplitDelimitedValues() );
-                        var result = LavaService.RenderTemplate( lavaTemplate, lavaContext );
-
-                        lContent.Text = result.Text;
-                    }
+                    template.Registers["EnabledCommands"] = GetAttributeValue( "EnabledLavaCommands" );
+                    lContent.Text = template.Render( Hash.FromDictionary( mergeFields ) ).ResolveClientIds( upnlContent.ClientID );
                 }
             }
         }
@@ -387,8 +365,8 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
         /// <summary>
         /// 
         /// </summary>
-        /// <seealso cref="LavaDataObject" />
-        public class Pagination : LavaDataObject
+        /// <seealso cref="DotLiquid.Drop" />
+        public class Pagination : DotLiquid.Drop
         {
 
             /// <summary>
@@ -511,8 +489,8 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
         /// <summary>
         /// 
         /// </summary>
-        /// <seealso cref="LavaDataObject" />
-        public class PaginationPage : LavaDataObject
+        /// <seealso cref="DotLiquid.Drop" />
+        public class PaginationPage : DotLiquid.Drop
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="PaginationPage"/> class.
