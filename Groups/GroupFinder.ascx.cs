@@ -51,7 +51,6 @@ using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Field.Types;
-using Rock.Lava;
 using Rock.Model;
 using Rock.Reporting;
 using Rock.Security;
@@ -2161,22 +2160,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 // If a map is to be shown
                 if ( showMap && groups.Any() )
                 {
-                    Template template = null;
-                    ILavaTemplate lavaTemplate = null;
-
-                    if ( LavaService.RockLiquidIsEnabled )
-                    {
-                        template = Template.Parse( GetAttributeValue( AttributeKey.MapInfo ) );
-
-                        LavaHelper.VerifyParseTemplateForCurrentEngine( GetAttributeValue( AttributeKey.MapInfo ) );
-                    }
-                    else
-                    {
-                        var parseResult = LavaService.ParseTemplate( GetAttributeValue( AttributeKey.MapInfo ) );
-
-                        lavaTemplate = parseResult.Template;
-                    }
-
+                    Template template = Template.Parse( GetAttributeValue( AttributeKey.MapInfo ) );
 
                     // Add map items for all the remaining valid group locations
                     var groupMapItems = new List<MapItem>();
@@ -2213,18 +2197,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             securityActions.Add( "Administrate", group.IsAuthorized( Authorization.ADMINISTRATE, CurrentPerson ) );
                             mergeFields.Add( "AllowedActions", securityActions );
 
-                            string infoWindow;
-
-                            if ( LavaService.RockLiquidIsEnabled )
-                            {
-                                infoWindow = template.Render( Hash.FromDictionary( mergeFields ) );
-                            }
-                            else
-                            {
-                                var result = LavaService.RenderTemplate( lavaTemplate, mergeFields );
-
-                                infoWindow = result.Text;
-                            }
+                            string infoWindow = template.Render( Hash.FromDictionary( mergeFields ) );
 
                             // Add a map item for group
                             var mapItem = new FinderMapItem( gl.Location );
