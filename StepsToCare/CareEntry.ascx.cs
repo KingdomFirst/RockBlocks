@@ -1375,12 +1375,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         private static IOrderedQueryable<WorkerResult> GenerateAgeQuery( CareNeed careNeed, IQueryable<CareWorker> careWorkersNoFence, int closedId, bool includeAgeRange, bool includeGender, bool includeCampus, bool includeCategory, bool ignoreAgeRangeAndGender = false )
         {
-            var ageAsDecimal = ( decimal ) careNeed.PersonAlias.Person.AgePrecise;
+            var ageAsDecimal = ( decimal? ) careNeed.PersonAlias.Person.AgePrecise;
             var tempQuery = careWorkersNoFence;
 
             if ( includeAgeRange )
             {
-                tempQuery = tempQuery.Where( cw => (
+                tempQuery = tempQuery.Where( cw => ageAsDecimal.HasValue && (
                                                     ( cw.AgeRangeMin.HasValue && cw.AgeRangeMax.HasValue && ( ageAsDecimal > cw.AgeRangeMin.Value && ageAsDecimal < cw.AgeRangeMax.Value ) ) ||
                                                     ( !cw.AgeRangeMin.HasValue && cw.AgeRangeMax.HasValue && ageAsDecimal < cw.AgeRangeMax.Value ) ||
                                                     ( cw.AgeRangeMin.HasValue && !cw.AgeRangeMax.HasValue && ageAsDecimal > cw.AgeRangeMin.Value )
@@ -1389,7 +1389,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
             else if ( !ignoreAgeRangeAndGender )
             {
-                tempQuery = tempQuery.Where( cw => !(
+                tempQuery = tempQuery.Where( cw => ageAsDecimal.HasValue && !(
                                                      ( cw.AgeRangeMin.HasValue && cw.AgeRangeMax.HasValue && ( ageAsDecimal > cw.AgeRangeMin.Value && ageAsDecimal < cw.AgeRangeMax.Value ) ) ||
                                                      ( !cw.AgeRangeMin.HasValue && cw.AgeRangeMax.HasValue && ageAsDecimal < cw.AgeRangeMax.Value ) ||
                                                      ( cw.AgeRangeMin.HasValue && !cw.AgeRangeMax.HasValue && ageAsDecimal > cw.AgeRangeMin.Value )
