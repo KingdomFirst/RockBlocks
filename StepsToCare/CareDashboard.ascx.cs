@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright 2021 by Kingdom First Solutions
+// Copyright 2022 by Kingdom First Solutions
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -210,6 +210,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         SecurityActionKey.ViewAll,
         "The roles and/or users that have access to view all care needs minus 'Care Worker Only' those are protected by 'Care Workers'." )]
 
+    [SecurityAction(
+        SecurityActionKey.CompleteNeeds,
+        "The roles and/or users that have access to Complete Needs." )]
+
     #endregion Block Settings
 
     public partial class CareDashboard : Rock.Web.UI.RockBlock
@@ -275,6 +279,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             public const string ViewAll = "ViewAll";
             public const string CareWorkers = "CareWorkers";
+            public const string CompleteNeeds = "CompleteNeeds";
         }
 
         /// <summary>
@@ -931,7 +936,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var actionItem1 = new HtmlGenericControl( "li" );
                         ddlMenu.Controls.Add( actionItem1 );
 
-                        if ( _canEdit )
+                        var canCompleteNeeds = IsUserAuthorized( SecurityActionKey.CompleteNeeds );
+                        if ( canCompleteNeeds )
                         {
                             var lbCompleteNeed = new LinkButton();
                             lbCompleteNeed.Command += lbNeedAction_Click;
