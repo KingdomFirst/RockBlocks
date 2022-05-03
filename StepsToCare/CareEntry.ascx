@@ -1,5 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CareEntry.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.StepsToCare.CareEntry" %>
-
+<style type="text/css">fieldset[id*='pwDetails'] .col-md-6:nth-child(odd) { clear: left; }</style>
 <asp:UpdatePanel runat="server" ID="upnlCareEntry">
     <ContentTemplate>
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">

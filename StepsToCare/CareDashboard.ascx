@@ -57,13 +57,14 @@
                 <div class="panel-heading">
                     <h1 class="panel-title"><i class="fa fa-hand-holding-heart mr-2"></i>Care Needs</h1>
                     <div class="pull-right d-flex align-items-center">
+                        <asp:Literal ID="lCategoriesHeader" runat="server" />
                         <asp:LinkButton ID="lbNotificationType" runat="server" CssClass="btn btn-xs btn-square btn-default pull-right" OnClick="lbNotificationType_Click" CausesValidation="false"> <i title="Choose Notification Type" class="fas fa-comment-alt"></i></asp:LinkButton>
                         <asp:LinkButton ID="lbCareConfigure" runat="server" CssClass="btn btn-xs btn-square btn-default pull-right" OnClick="lbCareConfigure_Click" CausesValidation="false"> <i title="Options" class="fa fa-gear"></i></asp:LinkButton>
                     </div>
                 </div>
                 <div class="panel-body">
 
-                    <div class="list-as-blocks clearfix margin-b-lg">
+                    <asp:Panel ID="pnlStepsToCareStats" runat="server" CssClass="list-as-blocks clearfix margin-b-lg">
                         <ul>
                             <li class="block-status care-count-touches">
                                 <a href="#" class="bg-teal-400 text-white text-uppercase">
@@ -93,10 +94,10 @@
                                 <asp:Literal ID="lCategories" runat="server" />
                             </li>
                         </ul>
-                    </div>
+                    </asp:Panel>
 
-                    <div class="grid grid-panel">
-                        <h5 class="pl-2">Care Dashboard</h5>
+                    <asp:Panel ID="pnlGrid" runat="server" CssClass="grid grid-panel">
+                        <h5 class="pl-2" id="hDashboard" runat="server">Care Dashboard</h5>
                         <Rock:GridFilter ID="rFilter" runat="server" OnDisplayFilterValue="rFilter_DisplayFilterValue" OnClearFilterClick="rFilter_ClearFilterClick">
                             <Rock:DateRangePicker ID="drpDate" runat="server" Label="Date Range" />
                             <Rock:RockTextBox ID="tbFirstName" runat="server" Label="First Name" />
@@ -132,8 +133,8 @@
                                 <%-- Columns are dynamically added due to dynamic content --%>
                             </Columns>
                         </Rock:Grid>
-                    </div>
-                    <div class="grid grid-panel">
+                    </asp:Panel>
+                    <asp:Panel ID="pnlFollowUpGrid" runat="server" CssClass="grid grid-panel">
                         <h5 class="pl-2">Care Follow Up</h5>
                         <Rock:GridFilter ID="rFollowUpFilter" runat="server" OnDisplayFilterValue="rFollowUpFilter_DisplayFilterValue" OnApplyFilterClick="rFollowUpFilter_ApplyFilterClick" OnClearFilterClick="rFollowUpFilter_ClearFilterClick">
                             <Rock:DateRangePicker ID="drpFollowUpDate" runat="server" Label="Date Range" />
@@ -169,7 +170,7 @@
                                 <%-- Columns are dynamically added due to dynamic content --%>
                             </Columns>
                         </Rock:Grid>
-                    </div>
+                    </asp:Panel>
                 </div>
             </div>
             <script type="text/javascript">
