@@ -221,7 +221,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Key = AttributeKey.HideFiltersInitialLoad )]
     [CustomCheckboxListField( "Exclude Attribute Values from Filter",
         Description = "Use this setting to hide attribute values from the available options in the search filter",
-        ListSource = "SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
+        ListSource = "SELECT a.Name as Text, CONCAT(a.[Key],'_',a.FieldTypeId) as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
         IsRequired = false, Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.HideAttributeValues )]
 
@@ -1145,14 +1145,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                     var definedType = DefinedTypeCache.Get( definedTypeId.Value );
                                     foreach ( var val in definedType.DefinedValues )
                                     {
-                                        cblAttributeHiddenOptions.Items.Add( new ListItem( ( useDescription ) ? val.Description : val.Value, string.Format( "filter_{0}||{1}", attribute.Value.Id.ToString(), val.Id.ToString() ) ) );
+                                        cblAttributeHiddenOptions.Items.Add( new ListItem( ( useDescription ) ? val.Description : val.Value, string.Format( "filter_{0}_{1}||{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, val.Id.ToString() ) ) );
                                     }
                                 }
                                 else
                                 {
                                     foreach ( var keyVal in Rock.Field.Helper.GetConfiguredValues( configurationValues ) )
                                     {
-                                        cblAttributeHiddenOptions.Items.Add( new ListItem( keyVal.Value, string.Format( "filter_{0}||{1}", attribute.Value.Id.ToString(), keyVal.Key ) ) );
+                                        cblAttributeHiddenOptions.Items.Add( new ListItem( keyVal.Value, string.Format( "filter_{0}_{1}||{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, keyVal.Key ) ) );
                                     }
                                 }
                             }
