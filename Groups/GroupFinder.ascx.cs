@@ -660,8 +660,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     foreach ( var attribute in AttributeFilters )
                     {
-                        var filterControl = phFilterControls.FindControl( "filter_" + attribute.Id.ToString() );
-                        var filterPageParam = PageParameter( "filter_" + attribute.Id.ToString() );
+                        var filterId = $"filter_{attribute.Key}_{attribute.FieldType.Id}";
+                        var filterControl = phFilterControls.FindControl( filterId );
+                        var filterPageParam = PageParameter( filterId );
                         if ( !string.IsNullOrWhiteSpace( filterPageParam ) )
                         {
                             var filterParamList = filterPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
