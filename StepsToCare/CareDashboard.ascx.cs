@@ -101,7 +101,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
     [BooleanField(
         "Target Person Mode Include Family Members",
-        Description = "When running in Target Person mode/a Person Detail tab, should we include family member needs in the list? Default: false.",
+        Description = "When running in Target Person mode (Page has Person specific content), should we include family member needs in the list? Default: false.",
         IsRequired = false,
         DefaultBooleanValue = false,
         Order = 7,
