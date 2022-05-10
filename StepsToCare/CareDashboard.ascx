@@ -8,6 +8,8 @@
         display: inline;
     }
 
+    .grid-table>tbody>tr>td:empty, .grid-table>tbody>tr>th:empty, .grid-table>thead>tr>td:empty, .grid-table>thead>tr>th:empty { padding: 0; }
+
     .table-striped > tbody > tr.assigned:nth-of-type(odd) {
         background-color: oldlace;
     }

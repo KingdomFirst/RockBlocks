@@ -1086,10 +1086,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         protected void lStatus_DataBound( object sender, RowEventArgs e )
         {
-            Literal lStatus = sender as Literal;
-            CareNeed careNeed = e.Row.DataItem as CareNeed;
-            careNeed.Status.LoadAttributes();
-            lStatus.Text = string.Format( "<span class='{0}'>{1}</span>", careNeed.Status.GetAttributeValue( "CssClass" ), careNeed.Status.Value );
+            if ( TargetPerson != null || string.IsNullOrWhiteSpace( dvpStatus.SelectedValue ) )
+            {
+                Literal lStatus = sender as Literal;
+                CareNeed careNeed = e.Row.DataItem as CareNeed;
+                careNeed.Status.LoadAttributes();
+                lStatus.Text = string.Format( "<span class='{0}'>{1}</span>", careNeed.Status.GetAttributeValue( "CssClass" ), careNeed.Status.Value );
+            }
         }
 
         private void lbNeedAction_Click( object sender, CommandEventArgs e )
@@ -1693,7 +1696,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
                 else
                 {
-                    dvpCategory.ClearSelection();
+                    dvpFollowUpCategory.ClearSelection();
                 }
 
                 var statusDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) );
@@ -1818,21 +1821,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( addColumns )
             {
+                var lStatus = new RockLiteralField();
+                lStatus.ID = "NeedStatus";
+                lStatus.HeaderStyle.CssClass = "grid-columnstatus";
+                lStatus.ItemStyle.CssClass = "grid-columnstatus";
+                lStatus.FooterStyle.CssClass = "grid-columnstatus";
+                lStatus.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
+                lStatus.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                lStatus.DataBound += lStatus_DataBound;
+                gList.Columns.Add( lStatus );
+
                 using ( var rockContext = new RockContext() )
                 {
-                    if ( TargetPerson != null )
-                    {
-                        var lStatus = new RockLiteralField();
-                        lStatus.HeaderText = "Status";
-                        lStatus.SortExpression = "StatusValueId";
-                        lStatus.HeaderStyle.CssClass = "grid-columnstatus";
-                        lStatus.ItemStyle.CssClass = "grid-columnstatus";
-                        lStatus.FooterStyle.CssClass = "grid-columnstatus";
-                        lStatus.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
-                        lStatus.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
-                        lStatus.DataBound += lStatus_DataBound;
-                        gList.Columns.Add( lStatus );
-                    }
 
                     var noteTemplates = new NoteTemplateService( rockContext ).Queryable().AsNoTracking().Where( nt => nt.IsActive ).OrderBy( nt => nt.Order );
                     var firstCol = true;
@@ -2078,6 +2078,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             // Hide the campus column if the campus filter is not visible.
             gList.ColumnsOfType<RockBoundField>().First( c => c.DataField == "Campus.Name" ).Visible = cpCampus.Visible;
+
+            var statusColumn = gList.ColumnsOfType<RockLiteralField>().First( c => c.ID.StartsWith( "NeedStatus" ) );
+            if ( TargetPerson != null || !requestStatusValueId.HasValue )
+            {
+                statusColumn.HeaderText = "Status";
+                statusColumn.SortExpression = "Status";
+            }
+            else
+            {
+                statusColumn.HeaderText = "";
+                statusColumn.SortExpression = "";
+            }
         }
 
         private void BindFollowUpGrid( RockContext rockContext, CareNeedService careNeedService, IQueryable<CareNeed> qry )
