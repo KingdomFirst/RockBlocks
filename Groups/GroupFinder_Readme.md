@@ -1,9 +1,9 @@
 ![KFSBanner](https://user-images.githubusercontent.com/81330042/121249398-2bb06080-c86a-11eb-9795-8c0dfb0a7693.jpg)
 
 # Advanced Group Finder
-*Tested/Supported in Rock version:  8.0-13.0*   
+*Tested/Supported in Rock version:  8.0-13.2*   
 *Created:  6/8/2021*   
-*Updated: 2/2/2022*   
+*Updated: 5/10/2022*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/161*   
 
 ## Summary
@@ -124,3 +124,11 @@ The following new goodness will be added to your Rock install with this plugin:
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;8&nbsp;&nbsp;</span>**Show All Groups** When set to yes, all groups will show including those where Is Public is set to false.  This is most often used on a staff internal page.
 >
 > <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;9&nbsp;&nbsp;</span>**Single Select Campus Filter** When set to yes, the campus filter will be a drop down instead of checkbox.
+
+
+## Advanced
+
+
+**How to Set Attribute Filters via URL Parameters**
+
+You can link to fill out attribute filters, or in combination with the *Auto Load* setting run a search automatically, via a URL Parameter. To use this capability the parameters are in the format `filter_<attributeKey>_<fieldTypeId>=<value(s)>` (i.e. /page/236?filter_GroupCategory_16=609)
