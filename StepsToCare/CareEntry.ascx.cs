@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright 2021 by Kingdom First Solutions
+// Copyright 2022 by Kingdom First Solutions
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ using Rock.Communication;
 using Rock.Data;
 using Rock.Logging;
 using Rock.Model;
+using Rock.Security;
 using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
@@ -96,7 +97,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.AdultFamilyWorkers,
         Category = AttributeCategory.FamilyNeeds )]
 
-
+    [SecurityAction(
+        SecurityActionKey.UpdateStatus,
+        "The roles and/or users that have access to update the status of Care Needs." )]
     #endregion
 
     public partial class CareEntry : Rock.Web.UI.RockBlock
@@ -131,6 +134,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         private static class AttributeCategory
         {
             public const string FamilyNeeds = "Family Needs";
+        }
+
+        private static class SecurityActionKey
+        {
+            public const string UpdateStatus = "UpdateStatus";
+
         }
 
         private bool _allowNewPerson = false;
@@ -904,6 +913,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             else
             {
                 dvpStatus.SelectedDefinedValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() ).Id;
+            }
+
+            var canUpdateStatus = IsUserAuthorized( SecurityActionKey.UpdateStatus );
+            if ( !canUpdateStatus )
+            {
+                dvpStatus.Visible = false;
             }
 
             var paramCategory = PageParameter( PageParameterKey.Category ).AsIntegerOrNull();
