@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright 2021 by Kingdom First Solutions
+// Copyright 2022 by Kingdom First Solutions
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,6 +98,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultValue = CategoriesTemplateDefaultValue,
         Order = 6,
         Key = AttributeKey.CategoriesTemplate )]
+
+    [BooleanField(
+        "Target Person Mode Include Family Members",
+        Description = "When running in Target Person mode (Page has Person specific content), should we include family member needs in the list? Default: false.",
+        IsRequired = false,
+        DefaultBooleanValue = false,
+        Order = 7,
+        Key = AttributeKey.TargetModeIncludeFamilyMembers )]
 
     [BooleanField(
         "Enable Launch Workflow",
@@ -210,6 +218,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         SecurityActionKey.ViewAll,
         "The roles and/or users that have access to view all care needs minus 'Care Worker Only' those are protected by 'Care Workers'." )]
 
+    [SecurityAction(
+        SecurityActionKey.CompleteNeeds,
+        "The roles and/or users that have access to Complete Needs." )]
+
     #endregion Block Settings
 
     public partial class CareDashboard : Rock.Web.UI.RockBlock
@@ -241,6 +253,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string IncludeConnectionTypes = "IncludeConnectionTypes";
             public const string WorkflowEnable = "WorkflowEnable";
             public const string CompleteChildNeeds = "CompleteChildNeeds";
+            public const string TargetModeIncludeFamilyMembers = "TargetModeIncludeFamilyMembers";
         }
 
         /// <summary>
@@ -275,6 +288,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             public const string ViewAll = "ViewAll";
             public const string CareWorkers = "CareWorkers";
+            public const string CompleteNeeds = "CompleteNeeds";
         }
 
         /// <summary>
@@ -451,6 +465,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             TargetPerson = ContextEntity<Person>();
 
             _careNeedNoteTypes = NoteTypeCache.GetByEntity( EntityTypeCache.Get( typeof( CareNeed ) ).Id, "", "", true );
+
+            hDashboard.Visible = ( TargetPerson == null );
+
+            pnlStepsToCareStats.Visible = ( TargetPerson == null );
+
+            pnlFollowUpGrid.Visible = ( TargetPerson == null );
         }
 
         /// <summary>
@@ -931,7 +951,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var actionItem1 = new HtmlGenericControl( "li" );
                         ddlMenu.Controls.Add( actionItem1 );
 
-                        if ( _canEdit )
+                        var canCompleteNeeds = IsUserAuthorized( SecurityActionKey.CompleteNeeds );
+                        if ( canCompleteNeeds )
                         {
                             var lbCompleteNeed = new LinkButton();
                             lbCompleteNeed.Command += lbNeedAction_Click;
@@ -941,7 +962,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItem1.Controls.Add( lbCompleteNeed );
                         }
 
-                        if ( followUpGrid )
+                        if ( followUpGrid || ( TargetPerson != null && careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
                         {
                             var actionItemReopen = new HtmlGenericControl( "li" );
                             ddlMenu.Controls.Add( actionItemReopen );
@@ -983,7 +1004,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
 
                         var benevolenceDetailPage = new Rock.Web.PageReference( GetAttributeValue( AttributeKey.BenevolenceDetailPage ) );
-                        if ( benevolenceDetailPage != null && PageCache.Get( benevolenceDetailPage.PageId ).IsAuthorized( Authorization.EDIT, CurrentPerson ) )
+                        if ( benevolenceDetailPage != null && benevolenceDetailPage.PageId > 1 && PageCache.Get( benevolenceDetailPage.PageId ).IsAuthorized( Authorization.EDIT, CurrentPerson ) )
                         {
                             var actionItem4 = new HtmlGenericControl( "li" );
                             ddlMenu.Controls.Add( actionItem4 );
@@ -1044,6 +1065,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 parentNeedStr = string.Format( "<i class=\"fas fa-child mx-2\" data-toggle=\"tooltip\" title=\"Has a Parent Need: {0} - {1}\"></i>", careNeed.ParentNeed.Details.StripHtml().Truncate( 30 ), careNeed.ParentNeed.PersonAlias.Person.FullName );
                             }
                         }
+                        if ( TargetPerson != null )
+                        {
+                            careNeedFlagStr = "";
+                        }
                         if ( careNeed.PersonAlias != null )
                         {
                             lName.Text = string.Format( "{3} {4} <a href=\"{0}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr, childNeedStr, parentNeedStr );
@@ -1051,6 +1076,22 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
 
                 }
+            }
+        }
+
+        /// <summary>
+        /// Handles the DataBound event of the lStatus control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        protected void lStatus_DataBound( object sender, RowEventArgs e )
+        {
+            if ( TargetPerson != null || string.IsNullOrWhiteSpace( dvpStatus.SelectedValue ) )
+            {
+                Literal lStatus = sender as Literal;
+                CareNeed careNeed = e.Row.DataItem as CareNeed;
+                careNeed.Status.LoadAttributes();
+                lStatus.Text = string.Format( "<span class='{0}'>{1}</span>", careNeed.Status.GetAttributeValue( "CssClass" ), careNeed.Status.Value );
             }
         }
 
@@ -1655,13 +1696,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
                 else
                 {
-                    dvpCategory.ClearSelection();
+                    dvpFollowUpCategory.ClearSelection();
                 }
 
                 var statusDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) );
                 dvpStatus.DefinedTypeId = statusDefinedType.Id;
                 var statusValue = rFilter.GetUserPreference( UserPreferenceKey.Status );
-                if ( string.IsNullOrWhiteSpace( statusValue ) )
+                if ( string.IsNullOrWhiteSpace( statusValue ) && TargetPerson == null )
                 {
                     statusValue = new DefinedValueService( rockContext ).Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() ).Id.ToString();
                 }
@@ -1685,6 +1726,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 mergeFields.Add( "Categories", categoryDefinedType.DefinedValues );
                 mergeFields.Add( "Statuses", statusDefinedType.DefinedValues );
                 lCategories.Text = template.ResolveMergeFields( mergeFields );
+
+                if ( TargetPerson != null )
+                {
+                    lCategoriesHeader.Text = template.ResolveMergeFields( mergeFields );
+                }
             }
 
             // set attribute filters
@@ -1775,8 +1821,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( addColumns )
             {
+                var lStatus = new RockLiteralField();
+                lStatus.ID = "NeedStatus";
+                lStatus.HeaderStyle.CssClass = "grid-columnstatus";
+                lStatus.ItemStyle.CssClass = "grid-columnstatus";
+                lStatus.FooterStyle.CssClass = "grid-columnstatus";
+                lStatus.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
+                lStatus.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
+                lStatus.DataBound += lStatus_DataBound;
+                gList.Columns.Add( lStatus );
+
                 using ( var rockContext = new RockContext() )
                 {
+
                     var noteTemplates = new NoteTemplateService( rockContext ).Queryable().AsNoTracking().Where( nt => nt.IsActive ).OrderBy( nt => nt.Order );
                     var firstCol = true;
                     foreach ( var template in noteTemplates )
@@ -1850,19 +1907,24 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             CareNeedService careNeedService = new CareNeedService( rockContext );
             NoteService noteService = new NoteService( rockContext );
             var qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
-            var noteQry = noteService.GetByNoteTypeId( _careNeedNoteTypes.Any() ? _careNeedNoteTypes.FirstOrDefault().Id : 0 ).AsNoTracking();
 
-            var outstandingCareStatuses = GetAttributeValues( AttributeKey.OutstandingCareNeedsStatuses );
-            var totalCareNeeds = qry.Count();
-            var outstandingCareNeeds = qry.Count( cn => outstandingCareStatuses.Contains( cn.Status.Guid.ToString() ) );
+            // Status is hidden at the top in TargetPerson mode, no need to run queries.
+            if ( TargetPerson == null )
+            {
+                var noteQry = noteService.GetByNoteTypeId( _careNeedNoteTypes.Any() ? _careNeedNoteTypes.FirstOrDefault().Id : 0 ).AsNoTracking();
 
-            var currentDateTime = RockDateTime.Now;
-            var last7Days = currentDateTime.AddDays( -7 );
-            var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime );
+                var outstandingCareStatuses = GetAttributeValues( AttributeKey.OutstandingCareNeedsStatuses );
+                var totalCareNeeds = qry.Count();
+                var outstandingCareNeeds = qry.Count( cn => outstandingCareStatuses.Contains( cn.Status.Guid.ToString() ) );
 
-            lTouchesCount.Text = careTouches.ToString();
-            lCareNeedsCount.Text = outstandingCareNeeds.ToString();
-            lTotalNeedsCount.Text = totalCareNeeds.ToString();
+                var currentDateTime = RockDateTime.Now;
+                var last7Days = currentDateTime.AddDays( -7 );
+                var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime );
+
+                lTouchesCount.Text = careTouches.ToString();
+                lCareNeedsCount.Text = outstandingCareNeeds.ToString();
+                lTotalNeedsCount.Text = totalCareNeeds.ToString();
+            }
 
             qry = PermissionFilterQuery( qry );
 
@@ -1909,9 +1971,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( TargetPerson != null )
             {
-                // show care needs for the target person and also for their family members
-                var qryFamilyMembers = TargetPerson.GetFamilyMembers( true, rockContext );
-                qry = qry.Where( a => a.PersonAliasId.HasValue && qryFamilyMembers.Any( b => b.PersonId == a.PersonAlias.PersonId ) );
+                var includeFamilyMembers = GetAttributeValue( AttributeKey.TargetModeIncludeFamilyMembers ).AsBoolean();
+                if ( includeFamilyMembers )
+                {
+                    // show care needs for the target person and also for their family members
+                    var qryFamilyMembers = TargetPerson.GetFamilyMembers( true, rockContext );
+                    qry = qry.Where( a => a.PersonAliasId.HasValue && qryFamilyMembers.Any( b => b.PersonId == a.PersonAlias.PersonId ) );
+                }
+                else
+                {
+                    qry = qry.Where( a => a.PersonAliasId.HasValue && TargetPerson.PrimaryAlias.PersonId == a.PersonAlias.PersonId );
+                }
             }
             else
             {
@@ -2008,10 +2078,27 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             // Hide the campus column if the campus filter is not visible.
             gList.ColumnsOfType<RockBoundField>().First( c => c.DataField == "Campus.Name" ).Visible = cpCampus.Visible;
+
+            var statusColumn = gList.ColumnsOfType<RockLiteralField>().First( c => c.ID.StartsWith( "NeedStatus" ) );
+            if ( TargetPerson != null || !requestStatusValueId.HasValue )
+            {
+                statusColumn.HeaderText = "Status";
+                statusColumn.SortExpression = "Status";
+            }
+            else
+            {
+                statusColumn.HeaderText = "";
+                statusColumn.SortExpression = "";
+            }
         }
 
         private void BindFollowUpGrid( RockContext rockContext, CareNeedService careNeedService, IQueryable<CareNeed> qry )
         {
+            if ( TargetPerson != null )
+            {
+                // Follow up grid is hidden on Person Tab/Target Person mode.
+                return;
+            }
             if ( rockContext == null )
             {
                 rockContext = new RockContext();
