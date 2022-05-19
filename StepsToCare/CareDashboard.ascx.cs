@@ -805,12 +805,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 CareNeed careNeed = e.Row.DataItem as CareNeed;
                 if ( careNeed != null )
                 {
-                    careNeed.Category.LoadAttributes();
-                    var categoryColor = careNeed.Category.GetAttributeValue( "Color" );
-                    var categoryCell = e.Row.Cells[0];
-                    if ( categoryCell != null && categoryColor.IsNotNullOrWhiteSpace() )
+                    if ( careNeed.Category != null )
                     {
-                        categoryCell.Style[HtmlTextWriterStyle.BackgroundColor] = categoryColor;
+                        careNeed.Category.LoadAttributes();
+                        var categoryColor = careNeed.Category.GetAttributeValue( "Color" );
+                        var categoryCell = e.Row.Cells[0];
+                        if ( categoryCell != null && categoryColor.IsNotNullOrWhiteSpace() )
+                        {
+                            categoryCell.Style[HtmlTextWriterStyle.BackgroundColor] = categoryColor;
+                        }
                     }
 
                     AssignedPerson assignedFollowUpWorker = null;
