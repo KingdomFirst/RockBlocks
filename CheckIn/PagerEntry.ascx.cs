@@ -111,7 +111,6 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                     tbPagerNumber.Label = GetAttributeValue( AttributeKey.Caption );
 
                     pnlKeypad.Visible = GetAttributeValue( AttributeKey.DisplayKeypad ).AsBoolean();
-
                 }
             }
         }
