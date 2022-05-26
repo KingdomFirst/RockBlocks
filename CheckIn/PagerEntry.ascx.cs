@@ -119,7 +119,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         private string GetTitleText()
         {
             // The checkinPerson, selectedGroup, and selectedLocation are only needed for individual checkins, so no use running the queries if this is a mutli person checkin.
-            var checkinPerson = CurrentCheckInType.TypeOfCheckin == TypeOfCheckin.Individual
+            var checkinPerson = CurrentCheckInState.CheckInType.TypeOfCheckin == TypeOfCheckin.Individual
                 ? CurrentCheckInState.CheckIn.Families
                     .Where( f => f.Selected )
                     .SelectMany( f => f.People.Where( p => p.Selected ) )
@@ -139,7 +139,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             {
                 { LavaMergeFieldName.Family, CurrentCheckInState.CheckIn.CurrentFamily.Group },
                 { LavaMergeFieldName.SelectedIndividuals, selectedIndividuals },
-                { LavaMergeFieldName.CheckinType, CurrentCheckInType.TypeOfCheckin },
+                { LavaMergeFieldName.CheckinType, CurrentCheckInState.CheckInType.TypeOfCheckin },
                 { LavaMergeFieldName.SelectedGroup, selectedGroup?.Group },
                 { LavaMergeFieldName.SelectedLocation, selectedLocation },
             };
