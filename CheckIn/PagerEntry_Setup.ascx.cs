@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright 2019 by Kingdom First Solutions
+// Copyright 2022 by Kingdom First Solutions
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,19 +16,12 @@
 //
 using System;
 using System.ComponentModel;
-using System.Data.Entity;
-using System.Linq;
 
 using Rock;
-using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
-using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
-
-using rocks.kfs.Checkin.PagerEntry.Migrations;
 
 namespace RockWeb.Plugins.rocks_kfs.CheckIn
 {
@@ -41,16 +34,8 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
     [DisplayName( "Pager Entry Setup" )]
     [Category( "KFS > Check-in" )]
     [Description( "Block that sets up Pager Entry page and block settings." )]
-
-    #endregion
-
-    #region Block Settings
-
-    #endregion
-
     public partial class PagerEntrySetup : RockBlock
     {
-
         #region Base Control Methods
 
         /// <summary>
@@ -75,7 +60,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             base.OnLoad( e );
         }
 
-        #endregion
+        #endregion Base Control Methods
 
         #region Events
 
@@ -128,7 +113,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             }
         }
 
-        #endregion
+        #endregion Events
 
         protected void lbRemovePagerEntry_Click( object sender, EventArgs e )
         {
@@ -166,7 +151,6 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             {
                 nbWarning.Text = ex.Message;
             }
-
         }
     }
 }
