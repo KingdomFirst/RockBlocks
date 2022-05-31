@@ -25,6 +25,7 @@ using Rock;
 using Rock.Attribute;
 using Rock.CheckIn;
 using Rock.Model;
+using Rock.Web.Cache;
 
 namespace RockWeb.Plugins.rocks_kfs.CheckIn
 {
@@ -62,6 +63,12 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         Category = "Options",
         Order = 8 )]
 
+    [CheckinConfigurationTypeField( "Check-in Type",
+        Key = AttributeKey.CheckinType,
+        Description = "Select the check-in type to restrict the display this prompt to. If it is empty it will display for all check-in types.",
+        Category = "Options",
+        Order = 9 )]
+
     public partial class PagerEntry : CheckInBlockMultiPerson
     {
         private new static class AttributeKey
@@ -70,6 +77,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             public const string Caption = "Caption";
             public const string DisplayKeypad = "DisplayKeypad";
             public const string PagerAttribute = "PagerAttribute";
+            public const string CheckinType = "CheckinType";
             public const string MultiPersonFirstPage = CheckInBlockMultiPerson.AttributeKey.MultiPersonFirstPage;
             public const string MultiPersonDonePage = CheckInBlockMultiPerson.AttributeKey.MultiPersonDonePage;
         }
@@ -94,15 +102,25 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             {
                 if ( !Page.IsPostBack )
                 {
-                    CheckInFamily family = CurrentCheckInState.CheckIn.CurrentFamily;
-                    if ( family != null )
+                    CheckInFamily currentFamily = CurrentCheckInState.CheckIn.CurrentFamily;
+                    if ( currentFamily != null )
                     {
-                        family.Group.LoadAttributes();
+                        currentFamily.Group.LoadAttributes();
                     }
                     else
                     {
                         GoBack();
                     }
+                    var checkinTypes = GetAttributeValues( AttributeKey.CheckinType ).AsGuidList();
+                    if ( checkinTypes.Any() && LocalDeviceConfig.CurrentCheckinTypeId.HasValue )
+                    {
+                        var checkinTypeGroup = GroupTypeCache.Get( LocalDeviceConfig.CurrentCheckinTypeId.Value );
+                        if ( !checkinTypes.Contains( checkinTypeGroup.Guid ) )
+                        {
+                            GoToNextPage();
+                        }
+                    }
+
 
                     lTitle.Text = GetTitleText();
                     lbSubmit.Text = "Check In";
@@ -159,15 +177,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                         family.Group.SetAttributeValue( GetAttributeValue( AttributeKey.PagerAttribute ), tbPagerNumber.Text );
                         family.Group.SaveAttributeValue( GetAttributeValue( AttributeKey.PagerAttribute ) );
 
-                        if ( CurrentCheckInState.CheckInType.TypeOfCheckin == TypeOfCheckin.Family )
-                        {
-                            var queryParams = CheckForOverride();
-                            NavigateToLinkedPage( AttributeKey.MultiPersonDonePage, queryParams );
-                        }
-                        else
-                        {
-                            base.NavigateToNextPage();
-                        }
+                        GoToNextPage();
                     }
                     else
                     {
@@ -178,6 +188,19 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                 {
                     maWarning.Show( "We're sorry, your family could not be loaded. Please try again.", Rock.Web.UI.Controls.ModalAlertType.None );
                 }
+            }
+        }
+
+        private void GoToNextPage()
+        {
+            if ( CurrentCheckInState.CheckInType.TypeOfCheckin == TypeOfCheckin.Family )
+            {
+                var queryParams = CheckForOverride();
+                NavigateToLinkedPage( AttributeKey.MultiPersonDonePage, queryParams );
+            }
+            else
+            {
+                base.NavigateToNextPage();
             }
         }
 

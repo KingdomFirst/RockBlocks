@@ -34,6 +34,9 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
     [DisplayName( "Pager Entry Setup" )]
     [Category( "KFS > Check-in" )]
     [Description( "Block that sets up Pager Entry page and block settings." )]
+
+    #endregion Block Attributes
+
     public partial class PagerEntrySetup : RockBlock
     {
         #region Base Control Methods
