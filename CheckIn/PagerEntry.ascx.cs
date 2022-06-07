@@ -65,7 +65,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
 
     [CheckinConfigurationTypeField( "Check-in Type",
         Key = AttributeKey.CheckinType,
-        Description = "Select the check-in type to restrict the display this prompt to. If it is empty it will display for all check-in types.",
+        Description = "Select the check-in type(s) to utilize this capability. This capability will be displayed for all check-in types by default.",
         Category = "Options",
         Order = 9 )]
 
