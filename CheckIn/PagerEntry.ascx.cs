@@ -100,36 +100,33 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             }
             else
             {
-                if ( !Page.IsPostBack )
+                CheckInFamily currentFamily = CurrentCheckInState.CheckIn.CurrentFamily;
+                if ( currentFamily != null )
                 {
-                    CheckInFamily currentFamily = CurrentCheckInState.CheckIn.CurrentFamily;
-                    if ( currentFamily != null )
-                    {
-                        currentFamily.Group.LoadAttributes();
-                    }
-                    else
-                    {
-                        GoBack();
-                    }
-                    var checkinTypes = GetAttributeValues( AttributeKey.CheckinType ).AsGuidList();
-                    if ( checkinTypes.Any() && LocalDeviceConfig.CurrentCheckinTypeId.HasValue )
-                    {
-                        var checkinTypeGroup = GroupTypeCache.Get( LocalDeviceConfig.CurrentCheckinTypeId.Value );
-                        if ( !checkinTypes.Contains( checkinTypeGroup.Guid ) )
-                        {
-                            GoToNextPage();
-                        }
-                    }
-
-
-                    lTitle.Text = GetTitleText();
-                    lbSubmit.Text = "Check In";
-                    lbSubmit.Attributes.Add( "data-loading-text", "Printing..." );
-
-                    tbPagerNumber.Label = GetAttributeValue( AttributeKey.Caption );
-
-                    pnlKeypad.Visible = GetAttributeValue( AttributeKey.DisplayKeypad ).AsBoolean();
+                    currentFamily.Group.LoadAttributes();
                 }
+                else
+                {
+                    GoBack();
+                }
+                var checkinTypes = GetAttributeValues( AttributeKey.CheckinType ).AsGuidList();
+                if ( checkinTypes.Any() && LocalDeviceConfig.CurrentCheckinTypeId.HasValue )
+                {
+                    var checkinTypeGroup = GroupTypeCache.Get( LocalDeviceConfig.CurrentCheckinTypeId.Value );
+                    if ( !checkinTypes.Contains( checkinTypeGroup.Guid ) )
+                    {
+                        GoToNextPage();
+                    }
+                }
+
+
+                lTitle.Text = GetTitleText();
+                lbSubmit.Text = "Check In";
+                lbSubmit.Attributes.Add( "data-loading-text", "Printing..." );
+
+                tbPagerNumber.Label = GetAttributeValue( AttributeKey.Caption );
+
+                pnlKeypad.Visible = GetAttributeValue( AttributeKey.DisplayKeypad ).AsBoolean();
             }
         }
 
@@ -161,8 +158,8 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                 { LavaMergeFieldName.SelectedLocation, selectedLocation },
             };
 
-            var timeSelectHeaderLavaTemplate = CurrentCheckInState.CheckInType.TimeSelectHeaderLavaTemplate ?? string.Empty;
-            return timeSelectHeaderLavaTemplate.ResolveMergeFields( mergeFields );
+            var headerLavaTemplate = GetAttributeValue( AttributeKey.Title ) ?? string.Empty;
+            return headerLavaTemplate.ResolveMergeFields( mergeFields );
         }
 
         protected void lbSubmit_Click( object sender, EventArgs e )
