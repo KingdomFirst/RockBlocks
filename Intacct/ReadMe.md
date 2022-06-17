@@ -245,6 +245,8 @@ Most organizations will mark the GL Project designation by setting a default Pro
   - ID: 10011
   - Rock Value: 10011
 
+![IntacctCustomDimensionSystemInfoScreenshot](https://user-images.githubusercontent.com/2990519/174348414-42ead26f-0dd5-4c3c-b985-d1fb48141508.jpeg)
+
 
 
 
