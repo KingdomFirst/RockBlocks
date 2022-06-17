@@ -233,17 +233,17 @@ Most organizations will mark the GL Project designation by setting a default Pro
 
 **Examples:**
 - *Custom Dimension 1:*
- - Record Name: Restriction
- - Integration Name: restriction
- - Rock Key: GLDIMRESTRICTION
+  - Record Name: Restriction
+  - Integration Name: restriction
+  - Rock Key: GLDIMRESTRICTION
 - *Custom Dimension 2:*
- - Record Name: Custom Project
- - Integration Name: custom_project
- - Rock Key: GLDIMCUSTOM_PROJECT
+  - Record Name: Custom Project
+  - Integration Name: custom_project
+  - Rock Key: GLDIMCUSTOM_PROJECT
 - *Custom Dimension 2 Value:*
- - Custom Project: MT - Event - P1234
- - ID: 10011
- - Rock Value: 10011
+  - Custom Project: MT - Event - P1234
+  - ID: 10011
+  - Rock Value: 10011
 
 
 
