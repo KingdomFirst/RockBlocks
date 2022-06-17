@@ -229,7 +229,7 @@ Most organizations will mark the GL Project designation by setting a default Pro
 - The Name is for internal (Rock) purposes only
 - The Category has to be set to the Intacct Export category in order to be included in the API post
 - The Key is the actual Intacct specific name of the Custom Dimension in all caps, beginning with "GLDIM". Also, you'll notice that the core KFS Dimensions use the format `rocks.kfs.Intacct.CLASSID`. The custom key can be anything you'd like, so long as there is a period before the Dimension name. For example, `org.mychurch.Intacct.GLDIMMYCUSTOMDIM` is a valid Attribute Key.
-- Text attributes are recommended for the Custom Dimensions. However, the value you enter in the attribute on the Financial Account must be the System Info > ID, not the text value. (i.e. Value: MT-Event-P1234, ID: 10011. You must enter 10005 in Rock.)
+- Text attributes are recommended for the Custom Dimensions. However, the value you enter in the attribute on the Financial Account must be the System Info > ID, not the text value. (i.e. Value: MT-Event-P1234, ID: 10005. You must enter 10005 in Rock.)
 
 **Examples:**
 - *Custom Dimension 1:*
