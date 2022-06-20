@@ -13,16 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // </copyright>
-
+//
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * Gives you the ability to generate a Rock grid with all its capabilities (grid, sort, filter, actions, etc.) out of a lava generated JSON object.
+// </notice>
+//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Dynamic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -41,6 +51,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
     [Description( "Block to display dynamic report, html, xml, or transformed xml based on entity lava." )]
 
     #region Block Attributes
+
     // Block Properties
     [BooleanField( "Update Page",
         Description = "If True, provides fields for updating the parent page's Name and Description",
@@ -72,12 +83,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
         IsRequired = false,
         Category = "CustomSetting",
         Key = AttributeKey.QueryParams )]
-
-    [BooleanField( "Stored Procedure",
-        Description = "Is the query a stored procedure?",
-        DefaultBooleanValue = false,
-        Category = "CustomSetting",
-        Key = AttributeKey.StoredProcedure )]
 
     [TextField( "Url Mask",
         Description = "The URL to redirect to when a row is clicked",
@@ -147,13 +152,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
         DefaultBooleanValue = true,
         Category = "CustomSetting",
         Key = AttributeKey.ShowLaunchWorkflow )]
-
-    [IntegerField( "Timeout",
-        Description = "The amount of time in seconds to allow the query to run before timing out.",
-        IsRequired = false,
-        DefaultIntegerValue = 30,
-        Category = "CustomSetting",
-        Key = AttributeKey.Timeout )]
 
     [TextField( "Merge Fields",
         Description = "Any fields to make available as merge fields for any new communications",
@@ -227,8 +225,14 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
         IsRequired = false,
         Category = "CustomSetting",
         Key = AttributeKey.GridFooterContent )]
+
+    [BooleanField( "Output Query Lava",
+        Description = "Show Lava Output of Query for Debug purposes?",
+        DefaultBooleanValue = false,
+        Category = "CustomSetting",
+        Key = AttributeKey.OutputQueryLava )]
     #endregion
-    public partial class DynamicData : RockBlockCustomSettings
+    public partial class DynamicDataLava : RockBlockCustomSettings
     {
         #region Keys
 
@@ -241,7 +245,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             public const string EnabledLavaCommands = "EnabledLavaCommands";
             public const string Query = "Query";
             public const string QueryParams = "QueryParams";
-            public const string StoredProcedure = "StoredProcedure";
             public const string UrlMask = "UrlMask";
             public const string ShowColumns = "ShowColumns";
             public const string Columns = "Columns";
@@ -252,7 +255,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             public const string ShowBulkUpdate = "ShowBulkUpdate";
             public const string ShowExcelExport = "ShowExcelExport";
             public const string ShowMergeTemplate = "ShowMergeTemplate";
-            public const string Timeout = "Timeout";
             public const string MergeFields = "MergeFields";
             public const string CommunicationRecipientPersonIdColumns = "CommunicationRecipientPersonIdColumns";
             public const string EncryptedFields = "EncryptedFields";
@@ -266,6 +268,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             public const string GridHeaderContent = "GridHeaderContent";
             public const string GridFooterContent = "GridFooterContent";
             public const string EnableQuickReturn = "EnableQuickReturn";
+            public const string OutputQueryLava = "OutputQueryLava";
         }
 
         #endregion Keys
@@ -275,7 +278,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
         private Dictionary<int, string> _sortExpressions = new Dictionary<int, string>();
         private bool _updatePage = true;
 
-        #endregion
+        #endregion Fields
 
         #region Properties
 
@@ -283,6 +286,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
         /// Gets or sets the GridFilter.
         /// </summary>
         public GridFilter GridFilter { get; set; }
+
         public Dictionary<Control, string> GridFilterColumnLookup;
 
         /// <summary>
@@ -299,7 +303,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             }
         }
 
-        #endregion
+        #endregion Properties
 
         #region Base Control Methods
 
@@ -319,7 +323,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             _updatePage = GetAttributeValue( AttributeKey.UpdatePage ).AsBoolean( true );
         }
 
-        #endregion
+        #endregion Base Control Methods
 
         #region Events
 
@@ -426,8 +430,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             }
 
             SetAttributeValue( AttributeKey.Query, ceQuery.Text );
-            SetAttributeValue( AttributeKey.Timeout, nbTimeout.Text );
-            SetAttributeValue( AttributeKey.StoredProcedure, cbStoredProcedure.Checked.ToString() );
             SetAttributeValue( AttributeKey.QueryParams, tbParams.Text );
             SetAttributeValue( AttributeKey.UrlMask, tbUrlMask.Text );
             SetAttributeValue( AttributeKey.Columns, tbColumns.Text );
@@ -450,6 +452,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             SetAttributeValue( AttributeKey.WrapInPanel, swWrapInPanel.Checked.ToString() );
             SetAttributeValue( AttributeKey.PanelTitleCssClass, tbPanelIcon.Text );
             SetAttributeValue( AttributeKey.PanelTitle, tbPanelTitle.Text );
+            SetAttributeValue( AttributeKey.OutputQueryLava, cbOutputQueryLava.Checked.ToString() );
             SaveAttributeValues();
 
             mdEdit.Hide();
@@ -510,7 +513,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             upnlContent.Update();
         }
 
-        #endregion
+        #endregion Events
 
         #region Internal Methods
 
@@ -538,35 +541,58 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
                         mergeFields.AddOrReplace( pageParam.Key, pageParam.Value );
                     }
 
+                    var parameters = GetParameters();
+                    if ( parameters != null )
+                    {
+                        foreach ( var param in parameters )
+                        {
+                            query.Replace( string.Format( "@{0}", param.Key ), ( string ) param.Value );
+                        }
+                    }
                     query = query.ResolveMergeFields( mergeFields, enabledLavaCommands );
 
-                    var parameters = GetParameters();
-                    int timeout = GetAttributeValue( AttributeKey.Timeout ).AsInteger();
-
-                    if ( schemaOnly )
+                    var outputQueryLava = GetAttributeValue( AttributeKey.OutputQueryLava ).AsBoolean();
+                    if ( outputQueryLava )
                     {
-                        try
+                        phQueryOutput.Controls.Clear();
+                        phQueryOutput.Controls.Add( new LiteralControl( query ) );
+                        phQueryOutput.Visible = true;
+                    }
+
+                    var jsonList = query.ToStringSafe().FromJsonDynamicOrNull();
+
+                    DataSet dataSet = null;
+
+                    if ( jsonList != null )
+                    {
+                        var listOfDictionaries = new List<Dictionary<string, object>>();
+                        if ( jsonList.GetType().Name.Contains( "List" ) )
                         {
-                            // GetDataSetSchema won't work in some cases, for example, if the SQL references a TEMP table.  So, fall back to use the regular GetDataSet if there is an exception or the schema does not return any tables
-                            var dataSet = DbService.GetDataSetSchema( query, GetAttributeValue( AttributeKey.StoredProcedure ).AsBoolean( false ) ? CommandType.StoredProcedure : CommandType.Text, parameters, timeout );
-                            if ( dataSet != null && dataSet.Tables != null && dataSet.Tables.Count > 0 )
+                            var castList = ( List<ExpandoObject> ) jsonList;
+                            foreach ( var obj in castList )
                             {
-                                return dataSet;
-                            }
-                            else
-                            {
-                                return DbService.GetDataSet( query, GetAttributeValue( AttributeKey.StoredProcedure ).AsBoolean( false ) ? CommandType.StoredProcedure : CommandType.Text, parameters, timeout );
+                                Dictionary<string, object> dict = new Dictionary<string, object>();
+                                GenerateDictionary( obj, dict, "" );
+                                listOfDictionaries.Add( dict );
                             }
                         }
-                        catch
+                        else
                         {
-                            return DbService.GetDataSet( query, GetAttributeValue( AttributeKey.StoredProcedure ).AsBoolean( false ) ? CommandType.StoredProcedure : CommandType.Text, parameters, timeout );
+                            Dictionary<string, object> dict = new Dictionary<string, object>();
+                            GenerateDictionary( ( dynamic ) jsonList, dict, "" );
+                            listOfDictionaries.Add( dict );
                         }
+
+                        var dt = DictionaryToDataTable( listOfDictionaries );
+                        var ds = new DataSet();
+                        ds.Tables.Add( dt );
+                        dataSet = ds;
                     }
                     else
                     {
-                        return DbService.GetDataSet( query, GetAttributeValue( AttributeKey.StoredProcedure ).AsBoolean( false ) ? CommandType.StoredProcedure : CommandType.Text, parameters, timeout );
+                        errorMessage = "Failed to Parse JSON Object. Please check your JSON and try again.";
                     }
+                    return dataSet;
                 }
                 catch ( System.Exception ex )
                 {
@@ -575,6 +601,82 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             }
 
             return null;
+        }
+
+        private DataTable DictionaryToDataTable( List<Dictionary<string, object>> list )
+        {
+            DataTable result = new DataTable();
+            if ( list.Count == 0 )
+                return result;
+
+            var columnNames = list.SelectMany( dict => dict.Keys ).Distinct();
+            var columnNameAndValues = list.DistinctBy( dict => dict.Keys );
+            foreach ( var cn in columnNameAndValues )
+            {
+                foreach ( var k in cn )
+                {
+                    var keyName = k.Key;
+                    var val = k.Value;
+                    var valType = ( val != null ) ? val.GetType() : typeof( string );
+                    if ( !result.Columns.Contains( keyName ) )
+                    {
+                        var dc = new DataColumn( keyName, valType );
+                        dc.AllowDBNull = true;
+                        result.Columns.Add( dc );
+                    }
+                    else
+                    {
+                        var resultColumn = result.Columns[result.Columns.IndexOf( keyName )];
+                        if ( resultColumn != null && resultColumn.DataType != valType )
+                        {
+                            resultColumn.DataType = valType;
+                        }
+                    }
+                }
+            }
+            foreach ( Dictionary<string, object> item in list )
+            {
+                var row = result.NewRow();
+                foreach ( var key in item.Keys )
+                {
+                    row[key] = item[key] ?? DBNull.Value;
+                }
+
+                result.Rows.Add( row );
+            }
+
+            return result;
+        }
+
+        private void GenerateDictionary( System.Dynamic.ExpandoObject output, Dictionary<string, object> dict, string parent )
+        {
+            foreach ( var v in output )
+            {
+                string key = parent + v.Key;
+                object o = v.Value;
+
+                if ( o != null && o.GetType() == typeof( System.Dynamic.ExpandoObject ) )
+                {
+                    GenerateDictionary( ( System.Dynamic.ExpandoObject ) o, dict, key + "." );
+                }
+                else if ( o != null && o.GetType().Name == typeof( List<object> ).Name )
+                {
+                    var i = 0;
+                    var listO = ( List<object> ) o;
+                    foreach ( var l in listO )
+                    {
+                        GenerateDictionary( ( ExpandoObject ) l, dict, string.Format( "{0}.{1}.", key, i ) );
+                        i++;
+                    }
+                }
+                else
+                {
+                    if ( !dict.ContainsKey( key ) )
+                    {
+                        dict.Add( key, o );
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -597,8 +699,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             tbDesc.Visible = _updatePage;
 
             ceQuery.Text = GetAttributeValue( AttributeKey.Query );
-            nbTimeout.Text = GetAttributeValue( AttributeKey.Timeout );
-            cbStoredProcedure.Checked = GetAttributeValue( AttributeKey.StoredProcedure ).AsBoolean();
             tbParams.Text = GetAttributeValue( AttributeKey.QueryParams );
             tbUrlMask.Text = GetAttributeValue( AttributeKey.UrlMask );
             ddlHideShow.SelectedValue = GetAttributeValue( AttributeKey.ShowColumns );
@@ -622,7 +722,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             tbPanelIcon.Text = GetAttributeValue( AttributeKey.PanelTitleCssClass );
             tbPanelTitle.Text = GetAttributeValue( AttributeKey.PanelTitle );
             swLavaCustomization.Checked = ceFormattedOutput.Text.IsNotNullOrWhiteSpace();
-
+            cbOutputQueryLava.Checked = GetAttributeValue( AttributeKey.OutputQueryLava ).AsBoolean();
         }
 
         /// <summary>
@@ -692,7 +792,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
 
                         if ( dataSet == null || dataSet.Tables == null )
                         {
-
                             nbError.Text = errorMessage;
                             nbError.Visible = true;
                             return;
@@ -755,7 +854,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
 
                         if ( dataSet == null || dataSet.Tables == null )
                         {
-
                             nbError.Text = errorMessage;
                             nbError.Visible = true;
                             return;
@@ -791,7 +889,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
                                 hPanelTitle.Controls.Add( iPanelHeaderIcon );
                                 hPanelTitle.Controls.Add( spanPanelHeaderText );
                             }
-
 
                             divPanelBody = new HtmlGenericControl( "div" );
                             divPanelBody.AddCssClass( "panel-body" );
@@ -1274,7 +1371,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             return null;
         }
 
-        #endregion
+        #endregion Internal Methods
 
         /// <summary>
         ///

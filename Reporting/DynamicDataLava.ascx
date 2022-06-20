@@ -6,6 +6,7 @@
         <%-- View Panel --%>
         <asp:Panel ID="pnlView" runat="server">
             <Rock:NotificationBox ID="nbError" runat="server" Title="Query Error!" NotificationBoxType="Danger" Visible="false" />
+            <asp:PlaceHolder ID="phQueryOutput" runat="server" Visible="false" />
             <asp:PlaceHolder ID="phContent" runat="server" Visible="false" />
         </asp:Panel>
 
@@ -32,12 +33,12 @@
                                 </div>
                             </div>
 
-                            <h3>Query Logic</h3>
+                            <h3>Query/JSON Logic</h3>
                             <hr class="mt-0" />
                             <div class="row">
                                 <div class="col-md-12">
-                                    <Rock:CodeEditor ID="ceQuery" EditorHeight="212" EditorMode="Sql" EditorTheme="Rock" runat="server" Label="Query"
-                                        Help="The SQL query or stored procedure name to execute.  If parameters are included they will also need to be in the Parameters field below.
+                                    <Rock:CodeEditor ID="ceQuery" EditorHeight="212" EditorMode="Lava" EditorTheme="Rock" runat="server" Label="Query"
+                                        Help="The lava generated JSON object, must be a valid array JSON Object or what you would expect from '{{ <entity>Items | ToJSON }}' output.  If parameters are included they will also need to be in the Parameters field below.
                                             By default, a grid will be displayed showing all the rows and columns returned by the query.  However, if a 'Formatted Output' value is included below, the results will be formatted
                                             according to the 'Formatted Output' value." />
                                 </div>
@@ -45,22 +46,12 @@
 
                             <div class="row">
                                 <div class="col-md-6">
-                                    <Rock:RockCheckBox ID="cbStoredProcedure" runat="server" Label="Query is a Stored Procedure" Help="Provide only the name of the stored procedure in the Query field. The parameters (if any) for the stored procedure should be configured using the Parameters field." />
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <label>Timeout</label>
-                                        <div class="input-group input-width-md">
-                                            <Rock:NumberBox ID="nbTimeout" CssClass="form-control" runat="server" /><span class="input-group-addon">(sec)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
                                     <Rock:RockTextBox ID="tbParams" runat="server" Label="Parameters" TextMode="MultiLine" Rows="1" CssClass="input-xlarge"
                                         Help="The parameters that the query expects in the format of 'param1=value;param2=value'. The equals sign must be provided for each parameter, but you don't have to provide a default value if you want it to default to blank.  Any parameter with the same name as a page parameter (i.e. querystring,
                                             form, or page route) will have its value replaced with the page's current value.  A parameter with the name of 'CurrentPersonId' will have its value replaced with the currently logged in person's id." />
+                                </div>
+                                <div class="col-md-6">
+                                    <Rock:Switch ID="cbOutputQueryLava" runat="server" Text="Show Lava Output of Query for Debug purposes" CssClass="js-checkbox-output-query-lava" />
                                 </div>
                             </div>
 
@@ -104,7 +95,7 @@
                                 </div>
                             </div>
 
-                           <div class="row js-wrap-in-panel">
+                            <div class="row js-wrap-in-panel">
                                 <div class="col-md-6">
                                     <Rock:RockTextBox ID="tbPanelTitle" runat="server" Label="Panel Title" />
                                 </div>
