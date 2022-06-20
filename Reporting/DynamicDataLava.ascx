@@ -1,4 +1,4 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="DynamicData.ascx.cs" Inherits="RockWeb.Blocks.Reporting.DynamicData" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="DynamicDataLava.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Reporting.DynamicDataLava" %>
 
 <asp:UpdatePanel ID="upnlContent" runat="server" ChildrenAsTriggers="false" UpdateMode="Conditional">
     <ContentTemplate>
@@ -150,6 +150,10 @@
                                     <div class="col-md-12">
                                         <Rock:CodeEditor ID="cePageTitleLava" runat="server" Label="Page Title Lava" EditorMode="Lava" CssClass="input-large" EditorHeight="200"
                                             Help="Optional Lava for setting the page title. If nothing is provided then the page's title will be used. Example '{{rows[0].FullName}}' or if the query returns multiple result sets '{{table1.rows[0].FullName}}'." />
+                                        <Rock:CodeEditor ID="ceGridHeaderLava" runat="server" Label="Grid Header Content" EditorMode="Lava" CssClass="input-large" EditorHeight="200"
+                                            Help="This Lava template will be rendered above the grid. It will have access to the same dataset as the grid." />
+                                        <Rock:CodeEditor ID="ceGridFooterLava" runat="server" Label="Grid Footer Content" EditorMode="Lava" CssClass="input-large" EditorHeight="200"
+                                            Help="This Lava template will be rendered below the grid (best used for custom totaling). It will have access to the same dataset as the grid." />
                                     </div>
                                 </div>
                             </Rock:PanelWidget>
