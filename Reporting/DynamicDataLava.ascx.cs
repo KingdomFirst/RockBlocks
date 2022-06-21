@@ -535,7 +535,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
                 {
                     var mergeFields = GetDynamicDataMergeFields();
 
-                    // NOTE: there is already a PageParameters merge field from GetDynamicDataMergeFields, but for backwords compatibility, also add each of the PageParameters as plain merge fields
+                    // NOTE: there is already a PageParameters merge field from GetDynamicDataMergeFields, but for backwards compatibility, also add each of the PageParameters as plain merge fields
                     foreach ( var pageParam in PageParameters() )
                     {
                         mergeFields.AddOrReplace( pageParam.Key, pageParam.Value );
@@ -546,7 +546,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
                     {
                         foreach ( var param in parameters )
                         {
-                            query.Replace( string.Format( "@{0}", param.Key ), ( string ) param.Value );
+                            query = query.Replace( string.Format( "@{0}", param.Key ), ( string ) param.Value );
                         }
                     }
                     query = query.ResolveMergeFields( mergeFields, enabledLavaCommands );
@@ -609,7 +609,6 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             if ( list.Count == 0 )
                 return result;
 
-            var columnNames = list.SelectMany( dict => dict.Keys ).Distinct();
             var columnNameAndValues = list.DistinctBy( dict => dict.Keys );
             foreach ( var cn in columnNameAndValues )
             {
@@ -648,16 +647,16 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             return result;
         }
 
-        private void GenerateDictionary( System.Dynamic.ExpandoObject output, Dictionary<string, object> dict, string parent )
+        private void GenerateDictionary( dynamic output, Dictionary<string, object> dict, string parent )
         {
             foreach ( var v in output )
             {
                 string key = parent + v.Key;
                 object o = v.Value;
 
-                if ( o != null && o.GetType() == typeof( System.Dynamic.ExpandoObject ) )
+                if ( o != null && o.GetType() == typeof( ExpandoObject ) )
                 {
-                    GenerateDictionary( ( System.Dynamic.ExpandoObject ) o, dict, key + "." );
+                    GenerateDictionary( ( dynamic ) o, dict, key + "." );
                 }
                 else if ( o != null && o.GetType().Name == typeof( List<object> ).Name )
                 {
@@ -665,7 +664,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
                     var listO = ( List<object> ) o;
                     foreach ( var l in listO )
                     {
-                        GenerateDictionary( ( ExpandoObject ) l, dict, string.Format( "{0}.{1}.", key, i ) );
+                        GenerateDictionary( ( dynamic ) l, dict, string.Format( "{0}.{1}.", key, i ) );
                         i++;
                     }
                 }

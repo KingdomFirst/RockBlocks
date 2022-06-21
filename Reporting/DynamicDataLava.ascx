@@ -33,14 +33,14 @@
                                 </div>
                             </div>
 
-                            <h3>Query/JSON Logic</h3>
+                            <h3>JSON Logic</h3>
                             <hr class="mt-0" />
                             <div class="row">
                                 <div class="col-md-12">
-                                    <Rock:CodeEditor ID="ceQuery" EditorHeight="212" EditorMode="Lava" EditorTheme="Rock" runat="server" Label="Query"
-                                        Help="The lava generated JSON object, must be a valid array JSON Object or what you would expect from '{{ <entity>Items | ToJSON }}' output.  If parameters are included they will also need to be in the Parameters field below.
+                                    <Rock:CodeEditor ID="ceQuery" EditorHeight="212" EditorMode="Lava" EditorTheme="Rock" runat="server" Label="JSON Lava"
+                                        Help="The Lava used to generate the JSON formatted output. Which can be as simple as using '{{ entityItems | ToJSON }}' output.  If parameters are included they will also need to be in the Parameters field below.
                                             By default, a grid will be displayed showing all the rows and columns returned by the query.  However, if a 'Formatted Output' value is included below, the results will be formatted
-                                            according to the 'Formatted Output' value." />
+                                            according to the 'Formatted Output' value. <small><span class='tip tip-lava'></span></small>" />
                                 </div>
                             </div>
 
