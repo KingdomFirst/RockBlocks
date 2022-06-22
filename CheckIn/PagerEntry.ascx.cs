@@ -69,6 +69,13 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         Category = "Options",
         Order = 9 )]
 
+    [CustomCheckboxListField( "Groups",
+        Key = AttributeKey.Groups,
+        ListSource = "SELECT g.Guid Value, g.Name as Text FROM [Group] g  JOIN GroupType gt ON g.GroupTypeId = gt.Id LEFT JOIN GroupType igt ON igt.Id = gt.InheritedGroupTypeId LEFT JOIN GroupType igt2 ON igt2.Id = igt.InheritedGroupTypeId WHERE gt.Id = 15 OR igt.Id = 15 OR igt2.Id = 15",
+        Description = "Select the check-in group(s) to utilize this pager entry capability. This capability will be displayed for all groups by default.",
+        Category = "Options",
+        Order = 9 )]
+
     public partial class PagerEntry : CheckInBlockMultiPerson
     {
         private new static class AttributeKey
@@ -78,6 +85,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
             public const string DisplayKeypad = "DisplayKeypad";
             public const string PagerAttribute = "PagerAttribute";
             public const string CheckinType = "CheckinType";
+            public const string Groups = "Groups";
             public const string MultiPersonFirstPage = CheckInBlockMultiPerson.AttributeKey.MultiPersonFirstPage;
             public const string MultiPersonDonePage = CheckInBlockMultiPerson.AttributeKey.MultiPersonDonePage;
         }
@@ -119,6 +127,35 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                     }
                 }
 
+                var groupsSetting = GetAttributeValues( AttributeKey.Groups ).AsGuidList();
+                if ( groupsSetting.Any() && CurrentCheckInState.CheckIn.Families.Any( f => f.Selected ) )
+                {
+                    var family = CurrentCheckInState.CheckIn.Families.FirstOrDefault( f => f.Selected );
+                    if ( family != null )
+                    {
+                        var people = family.People.Where( p => p.Selected );
+                        var redirectToNextPage = true;
+                        foreach ( var person in people )
+                        {
+                            var groupTypes = person.GroupTypes.Where( gt => gt.Selected );
+                            foreach ( var groupType in groupTypes )
+                            {
+                                var groups = groupType.Groups.Where( g => g.Selected );
+                                foreach ( var group in groups )
+                                {
+                                    if ( groupsSetting.Contains( group.Group.Guid ) )
+                                    {
+                                        redirectToNextPage = false;
+                                    }
+                                }
+                            }
+                        }
+                        if ( redirectToNextPage )
+                        {
+                            GoToNextPage();
+                        }
+                    }
+                }
 
                 lTitle.Text = GetTitleText();
                 lbSubmit.Text = "Check In";
