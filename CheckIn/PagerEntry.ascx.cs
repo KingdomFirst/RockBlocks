@@ -74,7 +74,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         ListSource = "SELECT g.Guid Value, g.Name as Text FROM [Group] g  JOIN GroupType gt ON g.GroupTypeId = gt.Id LEFT JOIN GroupType igt ON igt.Id = gt.InheritedGroupTypeId LEFT JOIN GroupType igt2 ON igt2.Id = igt.InheritedGroupTypeId WHERE gt.Id = 15 OR igt.Id = 15 OR igt2.Id = 15",
         Description = "Select the check-in group(s) to utilize this pager entry capability. This capability will be displayed for all groups by default.",
         Category = "Options",
-        Order = 9 )]
+        Order = 10 )]
 
     public partial class PagerEntry : CheckInBlockMultiPerson
     {
