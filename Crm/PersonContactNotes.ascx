@@ -2,7 +2,7 @@
 
 <asp:UpdatePanel ID="upPersonContactNotes" runat="server">
     <ContentTemplate>
-        <div class="row row-eq-height">
+        <div class="row">
             <div class="col-md-4">
                 <asp:Panel ID="pnlSelectPerson" CssClass="panel panel-block" runat="server">
                     <div class="panel-heading">
