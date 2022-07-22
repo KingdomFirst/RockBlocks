@@ -146,38 +146,13 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         {
             base.OnInit( e );
 
-            dvpTitle.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ).Id;
-            dvpSuffix.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) ).Id;
-            dvpMaritalStatus.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS ) ).Id;
-            dvpConnectionStatus.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_CONNECTION_STATUS ) ).Id;
             dvpRecordStatus.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_RECORD_STATUS ) ).Id;
             dvpReason.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_RECORD_STATUS_REASON ) ).Id;
 
-            pnlGivingGroup.Visible = UserCanAdministrate || IsUserAuthorized( SecurityActionKey.EditFinancials );
-
-            bool canEditConnectionStatus = UserCanAdministrate || IsUserAuthorized( SecurityActionKey.EditConnectionStatus );
-            dvpConnectionStatus.Visible = canEditConnectionStatus;
-            lConnectionStatusReadOnly.Visible = !canEditConnectionStatus;
-
             bool canEditRecordStatus = UserCanAdministrate || IsUserAuthorized( SecurityActionKey.EditRecordStatus );
             dvpRecordStatus.Visible = canEditRecordStatus;
-            lRecordStatusReadOnly.Visible = !canEditRecordStatus;
 
             this.CanEditSmsStatus = UserCanAdministrate || IsUserAuthorized( SecurityActionKey.EditSMS );
-
-            ddlGivingGroup.Items.Clear();
-            ddlGivingGroup.Items.Add( new ListItem( None.Text, None.IdValue ) );
-            if ( Person != null )
-            {
-                var personService = new PersonService( new RockContext() );
-                foreach ( var family in personService.GetFamilies( Person.Id ).Select( a => new { a.Name, a.Id, a.Members } ) )
-                {
-                    string familyNameWithFirstNames = GetFamilyNameWithFirstNames( family.Name, family.Members );
-                    ddlGivingGroup.Items.Add( new ListItem( familyNameWithFirstNames, family.Id.ToString() ) );
-                }
-            }
-
-            ScriptManager.RegisterStartupScript( ddlGradePicker, ddlGradePicker.GetType(), "grade-selection-" + BlockId.ToString(), ddlGradePicker.GetJavascriptForYearPicker( ypGraduation ), true );
 
             string smsScript = @"
     $('.js-sms-number').on('click', function () {
@@ -188,19 +163,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 ";
             btnSave.Visible = IsUserAuthorized( Rock.Security.Authorization.EDIT );
 
-            ScriptManager.RegisterStartupScript( rContactInfo, rContactInfo.GetType(), "sms-number-" + BlockId.ToString(), smsScript, true );
-
-            grdPreviousNames.Actions.ShowAdd = true;
-            grdPreviousNames.Actions.AddClick += grdPreviousNames_AddClick;
-
             gAlternateIds.Actions.ShowAdd = true;
             gAlternateIds.Actions.AddClick += gAlternateIds_AddClick;
 
             gSearchKeys.Actions.ShowAdd = true;
             gSearchKeys.Actions.AddClick += gSearchKeys_AddClick;
 
-            pnlGradeGraduation.Visible = !GetAttributeValue( AttributeKey.HideGrade ).AsBoolean();
-            dpAnniversaryDate.Visible = !GetAttributeValue( AttributeKey.HideAnniversaryDate ).AsBoolean();
         }
 
         /// <summary>
@@ -324,22 +292,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             bool canEditRecordStatus = UserCanAdministrate || IsUserAuthorized( "EditRecordStatus" );
             dvpReason.Visible = showInactiveReason && canEditRecordStatus;
-            lReasonReadOnly.Visible = showInactiveReason && !canEditRecordStatus;
-            tbInactiveReasonNote.Visible = showInactiveReason && canEditRecordStatus;
-            lReasonNoteReadOnly.Visible = showInactiveReason && !canEditRecordStatus;
-        }
-
-        /// <summary>
-        /// Handles the SelectedIndexChanged event of the dvpReason control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
-        protected void dvpReason_SelectedIndexChanged( object sender, EventArgs e )
-        {
-            bool isDeceased = ( dvpReason.SelectedValueAsInt() == DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_REASON_DECEASED ) ).Id );
-            bool canEditRecordStatus = UserCanAdministrate || IsUserAuthorized( "EditRecordStatus" );
-            dpDeceasedDate.Visible = isDeceased && canEditRecordStatus;
-            lDeceasedDateReadOnly.Visible = isDeceased && !canEditRecordStatus;
         }
 
         /// <summary>
@@ -359,131 +311,81 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     {
                         var personService = new PersonService( rockContext );
 
-                        var person = personService.Get( Person.Id );
-
-                        int? orphanedPhotoId = null;
-                        if ( person.PhotoId != imgPhoto.BinaryFileId )
+                        Person business = null;
+                        if ( int.Parse( hfBusinessId.Value ) != 0 )
                         {
-                            orphanedPhotoId = person.PhotoId;
-                            person.PhotoId = imgPhoto.BinaryFileId;
+                            business = personService.Get( int.Parse( hfBusinessId.Value ) );
                         }
 
-                        person.TitleValueId = dvpTitle.SelectedValueAsInt();
-                        person.FirstName = tbFirstName.Text;
-                        person.NickName = tbNickName.Text;
-                        person.MiddleName = tbMiddleName.Text;
-                        person.LastName = tbLastName.Text;
-                        person.SuffixValueId = dvpSuffix.SelectedValueAsInt();
-
-                        var birthMonth = person.BirthMonth;
-                        var birthDay = person.BirthDay;
-                        var birthYear = person.BirthYear;
-
-                        var birthday = bpBirthDay.SelectedDate;
-                        if ( birthday.HasValue )
+                        if ( business == null )
                         {
-                            person.BirthMonth = birthday.Value.Month;
-                            person.BirthDay = birthday.Value.Day;
-                            if ( birthday.Value.Year != DateTime.MinValue.Year )
+                            business = new Person();
+                            personService.Add( business );
+                            tbBusinessName.Text = tbBusinessName.Text.FixCase();
+                        }
+
+                        int? orphanedPhotoId = null;
+                        if ( business.PhotoId != imgPhoto.BinaryFileId )
+                        {
+                            orphanedPhotoId = business.PhotoId;
+                            business.PhotoId = imgPhoto.BinaryFileId;
+                        }
+
+                        // Business Name
+                        business.LastName = tbBusinessName.Text;
+
+                        // Phone Number
+                        var businessPhoneTypeId = new DefinedValueService( rockContext ).GetByGuid( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK ) ).Id;
+
+                        var phoneNumber = business.PhoneNumbers.FirstOrDefault( n => n.NumberTypeValueId == businessPhoneTypeId );
+
+                        if ( !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbPhone.Number ) ) )
+                        {
+                            if ( phoneNumber == null )
                             {
-                                person.BirthYear = birthday.Value.Year;
+                                phoneNumber = new PhoneNumber { NumberTypeValueId = businessPhoneTypeId };
+                                business.PhoneNumbers.Add( phoneNumber );
                             }
-                            else
-                            {
-                                person.BirthYear = null;
-                            }
+                            phoneNumber.CountryCode = PhoneNumber.CleanNumber( pnbPhone.CountryCode );
+                            phoneNumber.Number = PhoneNumber.CleanNumber( pnbPhone.Number );
+                            phoneNumber.IsMessagingEnabled = cbSms.Checked;
+                            phoneNumber.IsUnlisted = cbUnlisted.Checked;
                         }
                         else
                         {
-                            person.SetBirthDate( null );
-                        }
-
-                        int? graduationYear = null;
-                        if ( ypGraduation.SelectedYear.HasValue )
-                        {
-                            graduationYear = ypGraduation.SelectedYear.Value;
-                        }
-                        person.GraduationYear = graduationYear;
-
-                        person.MaritalStatusValueId = dvpMaritalStatus.SelectedValueAsInt();
-                        person.AnniversaryDate = person.MaritalStatusValueId == DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_MARITAL_STATUS_MARRIED ).Id ? dpAnniversaryDate.SelectedDate : null;
-                        person.Gender = rblGender.SelectedValue.ConvertToEnum<Gender>();
-                        person.ConnectionStatusValueId = dvpConnectionStatus.SelectedValueAsInt();
-
-                        var phoneNumberTypeIds = new List<int>();
-
-                        bool smsSelected = false;
-
-                        foreach ( RepeaterItem item in rContactInfo.Items )
-                        {
-                            HiddenField hfPhoneType = item.FindControl( "hfPhoneType" ) as HiddenField;
-                            PhoneNumberBox pnbPhone = item.FindControl( "pnbPhone" ) as PhoneNumberBox;
-                            CheckBox cbUnlisted = item.FindControl( "cbUnlisted" ) as CheckBox;
-                            CheckBox cbSms = item.FindControl( "cbSms" ) as CheckBox;
-
-                            if ( hfPhoneType != null &&
-                                pnbPhone != null &&
-                                cbSms != null &&
-                                cbUnlisted != null )
+                            if ( phoneNumber != null )
                             {
-                                if ( !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbPhone.Number ) ) )
-                                {
-                                    int phoneNumberTypeId;
-                                    if ( int.TryParse( hfPhoneType.Value, out phoneNumberTypeId ) )
-                                    {
-                                        var phoneNumber = person.PhoneNumbers.FirstOrDefault( n => n.NumberTypeValueId == phoneNumberTypeId );
-                                        string oldPhoneNumber = string.Empty;
-                                        if ( phoneNumber == null )
-                                        {
-                                            phoneNumber = new PhoneNumber { NumberTypeValueId = phoneNumberTypeId };
-                                            person.PhoneNumbers.Add( phoneNumber );
-                                        }
-                                        else
-                                        {
-                                            oldPhoneNumber = phoneNumber.NumberFormattedWithCountryCode;
-                                        }
-
-                                        phoneNumber.CountryCode = PhoneNumber.CleanNumber( pnbPhone.CountryCode );
-                                        phoneNumber.Number = PhoneNumber.CleanNumber( pnbPhone.Number );
-
-                                        // Only allow one number to have SMS selected
-                                        if ( smsSelected )
-                                        {
-                                            phoneNumber.IsMessagingEnabled = false;
-                                        }
-                                        else
-                                        {
-                                            phoneNumber.IsMessagingEnabled = cbSms.Checked;
-                                            smsSelected = cbSms.Checked;
-                                        }
-
-                                        phoneNumber.IsUnlisted = cbUnlisted.Checked;
-                                        phoneNumberTypeIds.Add( phoneNumberTypeId );
-                                    }
-                                }
+                                business.PhoneNumbers.Remove( phoneNumber );
+                                new PhoneNumberService( rockContext ).Delete( phoneNumber );
                             }
                         }
 
-                        // Remove any blank numbers
-                        var phoneNumberService = new PhoneNumberService( rockContext );
-                        foreach ( var phoneNumber in person.PhoneNumbers
-                            .Where( n => n.NumberTypeValueId.HasValue && !phoneNumberTypeIds.Contains( n.NumberTypeValueId.Value ) )
-                            .ToList() )
-                        {
-                            person.PhoneNumbers.Remove( phoneNumber );
-                            phoneNumberService.Delete( phoneNumber );
-                        }
+                        // Record Type - this is always "business". it will never change.
+                        business.RecordTypeValueId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_BUSINESS.AsGuid() ).Id;
 
-                        person.Email = tbEmail.Text.Trim();
-                        person.IsEmailActive = cbIsEmailActive.Checked;
-                        person.EmailPreference = rblEmailPreference.SelectedValue.ConvertToEnum<EmailPreference>();
+                        // Record Status
+                        business.RecordStatusValueId = dvpRecordStatus.SelectedValueAsInt();
+                        ;
+
+                        // Record Status Reason
+                        int? newRecordStatusReasonId = null;
+                        if ( business.RecordStatusValueId.HasValue && business.RecordStatusValueId.Value == DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_INACTIVE ) ).Id )
+                        {
+                            newRecordStatusReasonId = dvpReason.SelectedValueAsInt();
+                        }
+                        business.RecordStatusReasonValueId = newRecordStatusReasonId;
+
+                        // Email
+                        business.IsEmailActive = true;
+                        business.Email = tbEmail.Text.Trim();
+                        business.EmailPreference = rblEmailPreference.SelectedValue.ConvertToEnum<EmailPreference>();
 
                         /* 2020-10-06 MDP
                          To help prevent a person from setting their communication preference to SMS, even if they don't have an SMS number,
                           we'll require an SMS number in these situations. The goal is to only enforce if they are able to do something about it.
                           1) The block is configured to show both 'Communication Preference' and 'Phone Numbers'
                           2) Communication Preference is set to SMS
-                      
+
                          Edge cases
                            - Both #1 and #2 are true, but no Phone Types are selected in block settings. In this case, still enforce.
                              Think of this as a block configuration issue (they shouldn't have configured it that way)
@@ -495,125 +397,17 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             we return false, with a warning message.
                          */
 
-                        person.CommunicationPreference = rblCommunicationPreference.SelectedValueAsEnum<CommunicationType>();
+                        business.CommunicationPreference = rblCommunicationPreference.SelectedValueAsEnum<CommunicationType>();
 
-                        if ( person.CommunicationPreference == CommunicationType.SMS )
+                        if ( business.CommunicationPreference == CommunicationType.SMS )
                         {
-                            if ( !person.PhoneNumbers.Any( a => a.IsMessagingEnabled ) )
+                            if ( !business.PhoneNumbers.Any( a => a.IsMessagingEnabled ) )
                             {
                                 nbCommunicationPreferenceWarning.Text = "A phone number with SMS enabled is required when Communication Preference is set to SMS.";
                                 nbCommunicationPreferenceWarning.NotificationBoxType = NotificationBoxType.Warning;
                                 nbCommunicationPreferenceWarning.Visible = true;
                                 return false;
                             }
-                        }
-                        
-                        person.GivingGroupId = ddlGivingGroup.SelectedValueAsId();
-                        person.IsLockedAsChild = cbLockAsChild.Checked;
-
-                        // Save the Envelope Number attribute if it exists and has changed
-                        var personGivingEnvelopeAttribute = AttributeCache.Get( Rock.SystemGuid.Attribute.PERSON_GIVING_ENVELOPE_NUMBER.AsGuid() );
-                        if ( GlobalAttributesCache.Get().EnableGivingEnvelopeNumber && personGivingEnvelopeAttribute != null )
-                        {
-                            if ( person.Attributes == null )
-                            {
-                                person.LoadAttributes( rockContext );
-                            }
-
-                            var newEnvelopeNumber = tbGivingEnvelopeNumber.Text;
-                            var oldEnvelopeNumber = person.GetAttributeValue( personGivingEnvelopeAttribute.Key );
-                            if ( newEnvelopeNumber != oldEnvelopeNumber )
-                            {
-                                // If they haven't already confirmed about duplicate, see if the envelope number if assigned to somebody else
-                                if ( !string.IsNullOrWhiteSpace( newEnvelopeNumber ) && hfGivingEnvelopeNumberConfirmed.Value != newEnvelopeNumber )
-                                {
-                                    var otherPersonIdsWithEnvelopeNumber = new AttributeValueService( rockContext ).Queryable()
-                                        .Where( a => a.AttributeId == personGivingEnvelopeAttribute.Id && a.Value == newEnvelopeNumber && a.EntityId != person.Id )
-                                        .Select( a => a.EntityId );
-                                    if ( otherPersonIdsWithEnvelopeNumber.Any() )
-                                    {
-                                        var personList = new PersonService( rockContext ).Queryable().Where( a => otherPersonIdsWithEnvelopeNumber.Contains( a.Id ) ).AsNoTracking().ToList();
-                                        string personListMessage = personList.Select( a => a.FullName ).ToList().AsDelimited( ", ", " and " );
-                                        int maxCount = 5;
-                                        if ( personList.Count > maxCount )
-                                        {
-                                            var otherCount = personList.Count() - maxCount;
-                                            personListMessage = personList.Select( a => a.FullName ).Take( 10 ).ToList().AsDelimited( ", " ) + " and " + otherCount.ToString() + " other " + "person".PluralizeIf( otherCount > 1 );
-                                        }
-
-                                        string givingEnvelopeWarningText = string.Format(
-                                            "The envelope #{0} is already assigned to {1}. Do you want to also assign this number to {2}?",
-                                            newEnvelopeNumber,
-                                            personListMessage,
-                                            person.FullName );
-
-                                        string givingEnvelopeWarningScriptFormat = @"
-                                        Rock.dialogs.confirm('{0}', function (result) {{
-                                            if ( result )
-                                                {{
-                                                   $('#{1}').val('{2}');
-                                                }}
-                                        }})";
-
-                                        string givingEnvelopeWarningScript = string.Format(
-                                            givingEnvelopeWarningScriptFormat,
-                                            givingEnvelopeWarningText,
-                                            hfGivingEnvelopeNumberConfirmed.ClientID,
-                                            newEnvelopeNumber );
-
-                                        ScriptManager.RegisterStartupScript( hfGivingEnvelopeNumberConfirmed, hfGivingEnvelopeNumberConfirmed.GetType(), "confirm-envelope-number", givingEnvelopeWarningScript, true );
-                                        return false;
-                                    }
-                                }
-
-                                person.SetAttributeValue( personGivingEnvelopeAttribute.Key, newEnvelopeNumber );
-                            }
-                        }
-
-                        bool recordStatusChangedToOrFromInactive = false;
-                        var recordStatusInactiveId = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_INACTIVE ) ).Id;
-                        var reasonDeceasedId = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_REASON_DECEASED ) ).Id;
-
-                        int? newRecordStatusId = dvpRecordStatus.SelectedValueAsInt();
-                        // Is the person's record status changing?
-                        if ( person.RecordStatusValueId.HasValue && person.RecordStatusValueId != newRecordStatusId )
-                        {
-                            //  If it was inactive OR if the new status is inactive, flag this for use later below.
-                            if ( person.RecordStatusValueId == recordStatusInactiveId || newRecordStatusId == recordStatusInactiveId )
-                            {
-                                recordStatusChangedToOrFromInactive = true;
-                            }
-                        }
-
-                        person.RecordStatusValueId = dvpRecordStatus.SelectedValueAsInt();
-
-                        int? newRecordStatusReasonId = null;
-                        if ( person.RecordStatusValueId.HasValue && person.RecordStatusValueId.Value == recordStatusInactiveId )
-                        {
-                            newRecordStatusReasonId = dvpReason.SelectedValueAsInt();
-                        }
-                        person.RecordStatusReasonValueId = newRecordStatusReasonId;
-                        person.InactiveReasonNote = tbInactiveReasonNote.Text.Trim();
-
-                        DateTime? deceasedDate = null;
-                        if ( newRecordStatusReasonId.HasValue && newRecordStatusReasonId.Value == reasonDeceasedId )
-                        {
-                            deceasedDate = dpDeceasedDate.SelectedDate;
-                        }
-                        person.DeceasedDate = deceasedDate;
-
-                        // Save any Removed/Added Previous Names
-                        var personPreviousNameService = new PersonPreviousNameService( rockContext );
-                        var databasePreviousNames = personPreviousNameService.Queryable().Where( a => a.PersonAlias.PersonId == person.Id ).ToList();
-                        foreach ( var deletedPreviousName in databasePreviousNames.Where( a => !PersonPreviousNamesState.Any( p => p.Guid == a.Guid ) ) )
-                        {
-                            personPreviousNameService.Delete( deletedPreviousName );
-                        }
-
-                        foreach ( var addedPreviousName in PersonPreviousNamesState.Where( a => !databasePreviousNames.Any( d => d.Guid == a.Guid ) ) )
-                        {
-                            addedPreviousName.PersonAliasId = person.PrimaryAliasId.Value;
-                            personPreviousNameService.Add( addedPreviousName );
                         }
 
                         var personSearchKeyService = new PersonSearchKeyService( rockContext );
@@ -622,7 +416,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         var databaseSearchKeys = personSearchKeyService.Queryable()
                             .Where( a =>
                                 validSearchTypes.Contains( a.SearchTypeValue.Guid ) &&
-                                a.PersonAlias.PersonId == person.Id )
+                                a.PersonAlias.PersonId == business.Id )
                             .ToList();
 
                         foreach ( var deletedSearchKey in databaseSearchKeys.Where( a => !PersonSearchKeysState.Any( p => p.Guid == a.Guid ) ) )
@@ -632,18 +426,24 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                         foreach ( var personSearchKey in PersonSearchKeysState.Where( a => !databaseSearchKeys.Any( d => d.Guid == a.Guid ) ) )
                         {
-                            personSearchKey.PersonAliasId = person.PrimaryAliasId.Value;
+                            personSearchKey.PersonAliasId = business.PrimaryAliasId.Value;
                             personSearchKeyService.Add( personSearchKey );
                         }
 
-                        if ( person.IsValid )
+                        if ( !business.IsValid )
+                        {
+                            // Controls will render the error messages
+                            return false;
+                        }
+
+                        if ( business.IsValid )
                         {
                             var saveChangeResult = rockContext.SaveChanges();
 
                             // if AttributeValues where loaded and set (for example Giving Envelope Number), Save Attribute Values
-                            if ( person.AttributeValues != null )
+                            if ( business.AttributeValues != null )
                             {
-                                person.SaveAttributeValues( rockContext );
+                                business.SaveAttributeValues( rockContext );
                             }
 
                             if ( saveChangeResult > 0 )
@@ -666,7 +466,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 // if they used the ImageEditor, and cropped it, the uncropped file is still in BinaryFile. So clean it up
                                 if ( imgPhoto.CropBinaryFileId.HasValue )
                                 {
-                                    if ( imgPhoto.CropBinaryFileId != person.PhotoId )
+                                    if ( imgPhoto.CropBinaryFileId != business.PhotoId )
                                     {
                                         BinaryFileService binaryFileService = new BinaryFileService( rockContext );
                                         var binaryFile = binaryFileService.Get( imgPhoto.CropBinaryFileId.Value );
@@ -682,35 +482,77 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                     }
                                 }
 
-                                // If the person's record status was changed to or from inactive,
-                                // we need to check if any of their families need to be activated or inactivated.
-                                if ( recordStatusChangedToOrFromInactive )
-                                {
-                                    foreach ( var family in personService.GetFamilies( person.Id ) )
-                                    {
-                                        // Are there any more members of the family who are NOT inactive?
-                                        // If not, mark the whole family inactive.
-                                        if ( !family.Members.Where( m => m.Person.RecordStatusValueId != recordStatusInactiveId ).Any() )
-                                        {
-                                            family.IsActive = false;
-                                        }
-                                        else
-                                        {
-                                            family.IsActive = true;
-                                        }
-                                    }
+                                // Add/Update Family Group
+                                var familyGroupType = GroupTypeCache.GetFamilyGroupType();
+                                int adultRoleId = familyGroupType.Roles
+                                    .Where( r => r.Guid.Equals( Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ) )
+                                    .Select( r => r.Id )
+                                    .FirstOrDefault();
+                                var adultFamilyMember = UpdateGroupMember( business.Id, familyGroupType, business.LastName + " Business", ddlCampus.SelectedValueAsInt(), adultRoleId, rockContext );
+                                business.GivingGroup = adultFamilyMember.Group;
 
-                                    rockContext.SaveChanges();
+                                // Add/Update Known Relationship Group Type
+                                var knownRelationshipGroupType = GroupTypeCache.Get( Rock.SystemGuid.GroupType.GROUPTYPE_KNOWN_RELATIONSHIPS.AsGuid() );
+                                int knownRelationshipOwnerRoleId = knownRelationshipGroupType.Roles
+                                    .Where( r => r.Guid.Equals( Rock.SystemGuid.GroupRole.GROUPROLE_KNOWN_RELATIONSHIPS_OWNER.AsGuid() ) )
+                                    .Select( r => r.Id )
+                                    .FirstOrDefault();
+                                var knownRelationshipOwner = UpdateGroupMember( business.Id, knownRelationshipGroupType, "Known Relationship", null, knownRelationshipOwnerRoleId, rockContext );
+
+                                // Add/Update Implied Relationship Group Type
+                                var impliedRelationshipGroupType = GroupTypeCache.Get( Rock.SystemGuid.GroupType.GROUPTYPE_PEER_NETWORK.AsGuid() );
+                                int impliedRelationshipOwnerRoleId = impliedRelationshipGroupType.Roles
+                                    .Where( r => r.Guid.Equals( Rock.SystemGuid.GroupRole.GROUPROLE_PEER_NETWORK_OWNER.AsGuid() ) )
+                                    .Select( r => r.Id )
+                                    .FirstOrDefault();
+                                var impliedRelationshipOwner = UpdateGroupMember( business.Id, impliedRelationshipGroupType, "Implied Relationship", null, impliedRelationshipOwnerRoleId, rockContext );
+
+                                rockContext.SaveChanges();
+
+                                // Location
+                                int workLocationTypeId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_WORK ).Id;
+
+                                var groupLocationService = new GroupLocationService( rockContext );
+                                var workLocation = groupLocationService.Queryable( "Location" )
+                                    .Where( gl =>
+                                        gl.GroupId == adultFamilyMember.Group.Id &&
+                                        gl.GroupLocationTypeValueId == workLocationTypeId )
+                                    .FirstOrDefault();
+
+                                if ( string.IsNullOrWhiteSpace( acAddress.Street1 ) )
+                                {
+                                    if ( workLocation != null )
+                                    {
+                                        groupLocationService.Delete( workLocation );
+                                    }
                                 }
+                                else
+                                {
+                                    var newLocation = new LocationService( rockContext ).Get(
+                                        acAddress.Street1, acAddress.Street2, acAddress.City, acAddress.State, acAddress.PostalCode, acAddress.Country );
+                                    if ( workLocation == null )
+                                    {
+                                        workLocation = new GroupLocation();
+                                        groupLocationService.Add( workLocation );
+                                        workLocation.GroupId = adultFamilyMember.Group.Id;
+                                        workLocation.GroupLocationTypeValueId = workLocationTypeId;
+                                    }
+                                    workLocation.Location = newLocation;
+                                    workLocation.IsMailingLocation = true;
+                                }
+
+                                rockContext.SaveChanges();
+
+                                hfBusinessId.Value = business.Id.ToString();
                             }
                         }
 
                         return true;
                     } );
 
-                    if (wrapTransactionResult)
+                    if ( wrapTransactionResult )
                     {
-                        Response.Redirect( string.Format( "~/Person/{0}", Person.Id ), false );
+                        Response.Redirect( string.Format( "~/Business/{0}", Person.Id ), false );
                     }
                 }
             }
@@ -761,113 +603,58 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         /// </summary>
         private void ShowDetails()
         {
+            var business = Person;
+
             lTitle.Text = string.Format( "Edit: {0}", Person.FullName ).FormatAsHtmlTitle();
+            hfBusinessId.Value = Person.Id.ToString();
 
             imgPhoto.BinaryFileId = Person.PhotoId;
             imgPhoto.NoPictureUrl = Person.GetPersonNoPictureUrl( this.Person, 400, 400 );
 
-            dvpTitle.SelectedValue = Person.TitleValueId.HasValue ? Person.TitleValueId.Value.ToString() : string.Empty;
-            tbFirstName.Text = Person.FirstName;
-            tbNickName.Text = string.IsNullOrWhiteSpace( Person.NickName ) ? string.Empty : ( Person.NickName.Equals( Person.FirstName, StringComparison.OrdinalIgnoreCase ) ? string.Empty : Person.NickName );
-            tbMiddleName.Text = Person.MiddleName;
-            tbLastName.Text = Person.LastName;
-            dvpSuffix.SelectedValue = Person.SuffixValueId.HasValue ? Person.SuffixValueId.Value.ToString() : string.Empty;
-            bpBirthDay.SelectedDate = Person.BirthDate;
+            lTitle.Text = ActionTitle.Edit( business.FullName ).FormatAsHtmlTitle();
+            tbBusinessName.Text = business.LastName;
 
-            if ( Person.GraduationYear.HasValue )
+            // address
+            Location location = null;
+            var workLocationType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_WORK.AsGuid() );
+            if ( business.GivingGroup != null )     // Giving group is a shortcut to the family group for business
             {
-                ypGraduation.SelectedYear = Person.GraduationYear.Value;
+                ddlCampus.SelectedValue = business.GivingGroup.CampusId.ToString();
+
+                location = business.GivingGroup.GroupLocations
+                    .Where( gl => gl.GroupLocationTypeValueId == workLocationType.Id )
+                    .Select( gl => gl.Location )
+                    .FirstOrDefault();
+            }
+            acAddress.SetValues( location );
+
+            // Phone Number
+            var workPhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() );
+            PhoneNumber phoneNumber = null;
+            if ( workPhoneType != null )
+            {
+                phoneNumber = business.PhoneNumbers.FirstOrDefault( n => n.NumberTypeValueId == workPhoneType.Id );
+            }
+            if ( phoneNumber != null )
+            {
+                pnbPhone.Text = phoneNumber.NumberFormatted;
+                cbSms.Checked = phoneNumber.IsMessagingEnabled;
+                cbUnlisted.Checked = phoneNumber.IsUnlisted;
             }
             else
             {
-                ypGraduation.SelectedYear = null;
+                pnbPhone.Text = string.Empty;
+                cbSms.Checked = false;
+                cbUnlisted.Checked = false;
             }
 
-            if ( !Person.HasGraduated ?? false )
-            {
-                int gradeOffset = Person.GradeOffset.Value;
-                var maxGradeOffset = ddlGradePicker.MaxGradeOffset;
+            tbEmail.Text = business.Email;
+            rblEmailPreference.SelectedValue = business.EmailPreference.ToString();
 
-                // keep trying until we find a Grade that has a gradeOffset that that includes the Person's gradeOffset (for example, there might be combined grades)
-                while ( !ddlGradePicker.Items.OfType<ListItem>().Any( a => a.Value.AsInteger() == gradeOffset ) && gradeOffset <= maxGradeOffset )
-                {
-                    gradeOffset++;
-                }
-
-                ddlGradePicker.SetValue( gradeOffset );
-            }
-            else
-            {
-                ddlGradePicker.SelectedIndex = 0;
-            }
-
-            dpAnniversaryDate.SelectedDate = Person.AnniversaryDate;
-            rblGender.SelectedValue = Person.Gender.ConvertToString( false );
-            dvpMaritalStatus.SetValue( Person.MaritalStatusValueId );
-            ShowAnniversaryDate();
-            dvpConnectionStatus.SetValue( Person.ConnectionStatusValueId );
-            lConnectionStatusReadOnly.Text = Person.ConnectionStatusValueId.HasValue ? Person.ConnectionStatusValue.Value : string.Empty;
-
-            tbEmail.Text = Person.Email;
-            cbIsEmailActive.Checked = Person.IsEmailActive;
-            rblEmailPreference.SelectedValue = Person.EmailPreference.ConvertToString( false );
-            rblCommunicationPreference.SetValue( Person.CommunicationPreference == CommunicationType.SMS ? "2" : "1" );
-            nbCommunicationPreferenceWarning.Visible = false;
-
-            dvpRecordStatus.SetValue( Person.RecordStatusValueId );
-            lRecordStatusReadOnly.Text = Person.RecordStatusValueId.HasValue ? Person.RecordStatusValue.Value : string.Empty;
-            dvpReason.SetValue( Person.RecordStatusReasonValueId );
-            lReasonReadOnly.Text = Person.RecordStatusReasonValueId.HasValue ? Person.RecordStatusReasonValue.Value : string.Empty;
-            dpDeceasedDate.SelectedDate = Person.DeceasedDate;
-            lDeceasedDateReadOnly.Text = Person.DeceasedDate.ToElapsedString();
-
-            tbInactiveReasonNote.Text = Person.InactiveReasonNote;
-            lReasonNoteReadOnly.Text = Person.InactiveReasonNote;
-
-            ddlRecordStatus_SelectedIndexChanged( null, null );
-            dvpReason_SelectedIndexChanged( null, null );
-
-            var mobilePhoneType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE ) );
-
-            var phoneNumbers = new List<PhoneNumber>();
-            var phoneNumberTypes = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE ) );
-            if ( phoneNumberTypes.DefinedValues.Any() )
-            {
-                foreach ( var phoneNumberType in phoneNumberTypes.DefinedValues )
-                {
-                    var phoneNumber = Person.PhoneNumbers.FirstOrDefault( n => n.NumberTypeValueId == phoneNumberType.Id );
-                    if ( phoneNumber == null )
-                    {
-                        var numberType = new DefinedValue();
-                        numberType.Id = phoneNumberType.Id;
-                        numberType.Value = phoneNumberType.Value;
-
-                        phoneNumber = new PhoneNumber { NumberTypeValueId = numberType.Id, NumberTypeValue = numberType };
-                        phoneNumber.IsMessagingEnabled = mobilePhoneType != null && phoneNumberType.Id == mobilePhoneType.Id;
-                    }
-                    else
-                    {
-                        // Update number format, just in case it wasn't saved correctly
-                        phoneNumber.NumberFormatted = PhoneNumber.FormattedNumber( phoneNumber.CountryCode, phoneNumber.Number );
-                    }
-
-                    phoneNumbers.Add( phoneNumber );
-                }
-
-                rContactInfo.DataSource = phoneNumbers;
-                rContactInfo.DataBind();
-            }
-
-            ddlGivingGroup.SetValue( Person.GivingGroupId );
-            cbLockAsChild.Checked = Person.IsLockedAsChild;
-            var personGivingEnvelopeAttribute = AttributeCache.Get( Rock.SystemGuid.Attribute.PERSON_GIVING_ENVELOPE_NUMBER.AsGuid() );
-            rcwEnvelope.Visible = GlobalAttributesCache.Get().EnableGivingEnvelopeNumber && personGivingEnvelopeAttribute != null;
-            if ( personGivingEnvelopeAttribute != null )
-            {
-                tbGivingEnvelopeNumber.Text = Person.GetAttributeValue( personGivingEnvelopeAttribute.Key );
-            }
-
-            this.PersonPreviousNamesState = Person.GetPreviousNames().ToList();
+            dvpRecordStatus.SelectedValue = business.RecordStatusValueId.HasValue ? business.RecordStatusValueId.Value.ToString() : string.Empty;
+            dvpReason.SelectedValue = business.RecordStatusReasonValueId.HasValue ? business.RecordStatusReasonValueId.Value.ToString() : string.Empty;
+            dvpReason.Visible = business.RecordStatusReasonValueId.HasValue &&
+                business.RecordStatusValueId.Value == DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_INACTIVE ) ).Id;
 
             var validSearchTypes = GetValidSearchKeyTypes();
             var searchTypeQry = Person.GetPersonSearchKeys().Where( a => validSearchTypes.Contains( a.SearchTypeValue.Guid ) );
@@ -918,17 +705,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             gSearchKeys.DataKeyNames = new string[] { "Guid" };
             gSearchKeys.DataSource = values;
             gSearchKeys.DataBind();
-        }
-
-        /// <summary>
-        /// Handles the AddClick event of the grdPreviousNames control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void grdPreviousNames_AddClick( object sender, EventArgs e )
-        {
-            tbPreviousLastName.Text = string.Empty;
-            mdPreviousName.Show();
         }
 
         /// <summary>
@@ -996,30 +772,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         }
 
         /// <summary>
-        /// Handles the SaveClick event of the mdPreviousName control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void mdPreviousName_SaveClick( object sender, EventArgs e )
-        {
-            this.PersonPreviousNamesState.Add( new PersonPreviousName { LastName = tbPreviousLastName.Text, Guid = Guid.NewGuid() } );
-            BindPersonPreviousNamesGrid();
-
-            mdPreviousName.Hide();
-        }
-
-        /// <summary>
-        /// Handles the Delete event of the grdPreviousNames control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
-        protected void grdPreviousNames_Delete( object sender, RowEventArgs e )
-        {
-            this.PersonPreviousNamesState.RemoveEntity( ( Guid ) e.RowKeyValue );
-            BindPersonPreviousNamesGrid();
-        }
-
-        /// <summary>
         /// Handles the Delete event of the gSearchKeys control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -1039,49 +791,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         {
             this.PersonSearchKeysState.RemoveEntity( ( Guid ) e.RowKeyValue );
             BindPersonSearchKeysGrid();
-        }
-
-        /// <summary>
-        /// Handles the Click event of the btnGenerateEnvelopeNumber control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void btnGenerateEnvelopeNumber_Click( object sender, EventArgs e )
-        {
-            var personGivingEnvelopeAttribute = AttributeCache.Get( Rock.SystemGuid.Attribute.PERSON_GIVING_ENVELOPE_NUMBER.AsGuid() );
-            var maxEnvelopeNumber = new AttributeValueService( new RockContext() ).Queryable()
-                                    .Where( a => a.AttributeId == personGivingEnvelopeAttribute.Id && a.ValueAsNumeric.HasValue )
-                                    .Max( a => ( int? ) a.ValueAsNumeric );
-            tbGivingEnvelopeNumber.Text = ( ( maxEnvelopeNumber ?? 0 ) + 1 ).ToString();
-        }
-
-        /// <summary>
-        /// Handles the SelectedIndexChanged event of the ddlMaritalStatus control.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void ddlMaritalStatus_SelectedIndexChanged( object sender, EventArgs e )
-        {
-            ShowAnniversaryDate();
-        }
-
-        /// <summary>
-        /// Shows or hides the Anniversary DatePicker according to settings and business rules.
-        /// </summary>
-        protected void ShowAnniversaryDate()
-        {
-            if ( GetAttributeValue( AttributeKey.HideAnniversaryDate ).AsBoolean() == true )
-            {
-                dpAnniversaryDate.Visible = false;
-            }
-            else if ( dvpMaritalStatus.SelectedValueAsInt() == DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_MARITAL_STATUS_MARRIED ).Id )
-            {
-                dpAnniversaryDate.Visible = true;
-            }
-            else
-            {
-                dpAnniversaryDate.Visible = false;
-            }
         }
 
         /// <summary>
@@ -1126,6 +835,48 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     args.IsValid = false;
                 }
             }
+        }
+
+        /// <summary>
+        /// Updates the group member.
+        /// </summary>
+        /// <param name="businessId">The business identifier.</param>
+        /// <param name="groupType">Type of the group.</param>
+        /// <param name="groupName">Name of the group.</param>
+        /// <param name="campusId">The campus identifier.</param>
+        /// <param name="groupRoleId">The group role identifier.</param>
+        /// <param name="rockContext">The rock context.</param>
+        /// <returns></returns>
+        private GroupMember UpdateGroupMember( int businessId, GroupTypeCache groupType, string groupName, int? campusId, int groupRoleId, RockContext rockContext )
+        {
+            var groupMemberService = new GroupMemberService( rockContext );
+
+            GroupMember groupMember = groupMemberService.Queryable( "Group" )
+                .Where( m =>
+                    m.PersonId == businessId &&
+                    m.GroupRoleId == groupRoleId )
+                .FirstOrDefault();
+
+            if ( groupMember == null )
+            {
+                groupMember = new GroupMember();
+                groupMember.Group = new Group();
+            }
+
+            groupMember.PersonId = businessId;
+            groupMember.GroupRoleId = groupRoleId;
+            groupMember.GroupMemberStatus = GroupMemberStatus.Active;
+
+            groupMember.Group.GroupTypeId = groupType.Id;
+            groupMember.Group.Name = groupName;
+            groupMember.Group.CampusId = campusId;
+
+            if ( groupMember.Id == 0 )
+            {
+                groupMemberService.Add( groupMember );
+            }
+
+            return groupMember;
         }
     }
 }
