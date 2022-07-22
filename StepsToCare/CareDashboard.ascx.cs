@@ -210,6 +210,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 19,
         Key = AttributeKey.NoteViewLavaTemplate )]
 
+    [IntegerField( "Threshold of Days For Future Need",
+        Description = "The number of days the need has to be within before displaying on the dashboard.",
+        IsRequired = true,
+        DefaultIntegerValue = 3,
+        Key = AttributeKey.FutureThresholdDays )]
+
     [SecurityAction(
         SecurityActionKey.CareWorkers,
         "The roles and/or users that have access to view 'Care Worker Only' needs." )]
@@ -254,6 +260,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string WorkflowEnable = "WorkflowEnable";
             public const string CompleteChildNeeds = "CompleteChildNeeds";
             public const string TargetModeIncludeFamilyMembers = "TargetModeIncludeFamilyMembers";
+            public const string FutureThresholdDays = "FutureThresholdDays";
         }
 
         /// <summary>
@@ -1074,7 +1081,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                         if ( careNeed.PersonAlias != null )
                         {
-                            lName.Text = string.Format( "{3} {4} <a href=\"{0}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr, childNeedStr, parentNeedStr );
+                            lName.Text = string.Format( "{3} {4} <a href=\"{0}\" class=\"js-person-popover\" personid=\"{5}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr, childNeedStr, parentNeedStr, careNeed.PersonAlias.PersonId );
                         }
                     }
 
