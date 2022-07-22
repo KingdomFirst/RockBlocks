@@ -26,6 +26,7 @@ using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Security;
+using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
@@ -81,9 +82,9 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         Order = 4 )]
 
     [LinkedPage(
-        "Business Detail Page",
-        Key = AttributeKey.BusinessDetailPage,
-        Description = "The page to redirect user to if a business is requested.",
+        "Person Detail Page",
+        Key = AttributeKey.PersonDetailPage,
+        Description = "The page to redirect user to if a person is requested.",
         IsRequired = false,
         Order = 5 )]
 
@@ -100,12 +101,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         Description = "When enabled prepends the country code to all phone numbers.",
         DefaultBooleanValue = false,
         Order = 7 )]
-
-    [BooleanField( "Display Middle Name",
-        Key = AttributeKey.DisplayMiddleName,
-        Description = "Display the middle name of the person.",
-        DefaultBooleanValue = false,
-        Order = 8 )]
 
     [CodeEditorField(
         "Custom Content",
@@ -130,20 +125,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         Description = "Should tags be displayed?",
         DefaultBooleanValue = true,
         Order = 11 )]
-
-    [BooleanField(
-        "Display Graduation",
-        Key = AttributeKey.DisplayGraduation,
-        Description = "Should the Grade/Graduation be displayed?",
-        DefaultBooleanValue = true,
-        Order = 12 )]
-
-    [BooleanField(
-        "Display Anniversary Date",
-        Key = AttributeKey.DisplayAnniversaryDate,
-        Description = "Should the Anniversary Date be displayed?",
-        DefaultBooleanValue = true,
-        Order = 13 )]
 
     [CategoryField(
         "Tag Category",
@@ -194,15 +175,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             public const string AdditionalCustomActions = "Actions";
             public const string EnableImpersonation = "EnableImpersonation";
             public const string ImpersonationStartPage = "ImpersonationStartPage";
-            public const string BusinessDetailPage = "BusinessDetailPage";
+            public const string PersonDetailPage = "PersonDetailPage";
             public const string NamelessPersonDetailPage = "NamelessPersonDetailPage";
             public const string DisplayCountryCode = "DisplayCountryCode";
-            public const string DisplayMiddleName = "DisplayMiddleName";
             public const string CustomContent = "CustomContent";
             public const string AllowFollowing = "AllowFollowing";
             public const string DisplayTags = "DisplayTags";
-            public const string DisplayGraduation = "DisplayGraduation";
-            public const string DisplayAnniversaryDate = "DisplayAnniversaryDate";
             public const string TagCategory = "TagCategory";
             public const string SocialMediaCategory = "SocialMediaCategory";
             public const string EnableCallOrigination = "EnableCallOrigination";
@@ -280,25 +258,36 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                 }
             }
 
+            //if ( Person.Id == 0 )
+            //{
+            //    //referring to aliasPersonId as person might be merged
+            //    var businessId = this.PageParameter( PageParameterKey.BusinessId ).AsIntegerOrNull();
+
+            //    if ( businessId.HasValue )
+            //    {
+            //        var personAlias = new PersonAliasService( new RockContext() ).GetByAliasId( businessId.Value );
+            //        if ( personAlias != null )
+            //        {
+            //            var pageReference = RockPage.PageReference;
+            //            pageReference.Parameters.AddOrReplace( PageParameterKey.BusinessId, personAlias.PersonId.ToString() );
+            //            Response.RedirectPermanent( pageReference.BuildUrl(), false );
+            //        }
+            //    }
+            //}
+
             pnlFollow.Visible = GetAttributeValue( AttributeKey.AllowFollowing ).AsBoolean();
 
-            // Record Type - this is always "business". it will never change.
-            if ( Person.IsBusiness() )
+            if ( !Person.IsBusiness() )
             {
                 var parms = new Dictionary<string, string>();
-                parms.Add( PageParameterKey.BusinessId, Person.Id.ToString() );
-                NavigateToLinkedPage( AttributeKey.BusinessDetailPage, parms );
+                parms.Add( PageParameterKey.PersonId, Person.Id.ToString() );
+                NavigateToLinkedPage( AttributeKey.PersonDetailPage, parms );
             }
             else if ( Person.IsNameless() )
             {
                 var parms = new Dictionary<string, string>();
                 parms.Add( PageParameterKey.NamelessPersonId, Person.Id.ToString() );
                 NavigateToLinkedPage( AttributeKey.NamelessPersonDetailPage, parms );
-            }
-
-            if ( Person.IsDeceased )
-            {
-                divBio.AddCssClass( "deceased" );
             }
 
             // Set the browser page title to include person's name
@@ -321,7 +310,7 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                 }
             }
 
-            lbEditPerson.Visible = IsUserAuthorized( Rock.Security.Authorization.EDIT );
+            lbEditBusiness.Visible = IsUserAuthorized( Rock.Security.Authorization.EDIT );
 
             // only show if the Impersonation button if the feature is enabled, and the current user is authorized to Administrate the person
             bool enableImpersonation = this.GetAttributeValue( AttributeKey.EnableImpersonation ).AsBoolean();
@@ -403,60 +392,58 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                     rptSocial.DataBind();
                 }
 
-                if ( Person.BirthDate.HasValue )
+                var business = Person;
+
+                SetHeadingStatusInfo( business );
+                var detailsLeft = new DescriptionList();
+                var detailsRight = new DescriptionList();
+
+                if ( business.GivingGroup != null )
                 {
-                    var formattedAge = Person.FormatAge();
-                    if ( formattedAge.IsNotNullOrWhiteSpace() )
+                    detailsLeft.Add( "Campus", business.GivingGroup.Campus );
+                }
+
+                if ( business.RecordStatusReasonValue != null )
+                {
+                    detailsLeft.Add( "Record Status Reason", business.RecordStatusReasonValue );
+                }
+
+                // Get address
+                var workLocationType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_WORK.AsGuid() );
+                if ( workLocationType != null )
+                {
+                    if ( business.GivingGroup != null ) // Giving Group is a shortcut to Family Group for business
                     {
-                        formattedAge += " old";
+                        var location = business.GivingGroup.GroupLocations
+                            .Where( gl => gl.GroupLocationTypeValueId == workLocationType.Id )
+                            .Select( gl => gl.Location )
+                            .FirstOrDefault();
+                        if ( location != null )
+                        {
+                            var addTo = detailsLeft;
+                            if ( business.GivingGroup != null && business.RecordStatusReasonValue != null )
+                            {
+                                addTo = detailsRight;
+                            }
+                            addTo.Add( "Address", location.GetFullStreetAddress().ConvertCrLfToHtmlBr() );
+                        }
                     }
-
-                    lAge.Text = string.Format( "<dd>{0} <small>({1})</small></dd>", formattedAge, ( Person.BirthYear.HasValue && Person.BirthYear != DateTime.MinValue.Year ) ? Person.BirthDate.Value.ToShortDateString() : Person.BirthDate.Value.ToMonthDayString() );
                 }
 
-                lGender.Text = string.Format( "<dd>{0}</dd>", Person.Gender.ToString() );
+                lDetailsLeft.Text = detailsLeft.Html;
 
-                if ( GetAttributeValue( AttributeKey.DisplayGraduation ).AsBoolean() )
+                var workPhoneType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() );
+                if ( workPhoneType != null )
                 {
-                    if ( Person.GraduationYear.HasValue && Person.HasGraduated.HasValue )
+                    var phoneNumber = business.PhoneNumbers.FirstOrDefault( n => n.NumberTypeValueId == workPhoneType.Id );
+                    if ( phoneNumber != null )
                     {
-                        lGraduation.Text = string.Format(
-                            "<dd><small>{0} {1}</small></dd>",
-                            Person.HasGraduated.Value ? "Graduated " : "Graduates ",
-                            Person.GraduationYear.Value );
-                    }
-                    lGrade.Text = Person.GradeFormatted;
-                }
-
-                if ( Person.AnniversaryDate.HasValue && GetAttributeValue( AttributeKey.DisplayAnniversaryDate ).AsBoolean() )
-                {
-                    lMaritalStatus.Text = string.Format( "<dd>{0}", Person.MaritalStatusValueId.DefinedValue() );
-                    lAnniversary.Text = string.Format( "{0} yrs <small>({1})</small></dd>", Person.AnniversaryDate.Value.Age(), Person.AnniversaryDate.Value.ToMonthDayString() );
-                }
-                else
-                {
-                    if ( Person.MaritalStatusValueId.HasValue )
-                    {
-                        lMaritalStatus.Text = string.Format( "<dd>{0}</dd>", Person.MaritalStatusValueId.DefinedValue() );
+                        //detailsRight.Add( "Phone Number", phoneNumber.ToString() );
+                        detailsRight.Add( "Phone Number", FormatPhoneNumber( phoneNumber.IsUnlisted, phoneNumber.CountryCode, phoneNumber.ToString(), phoneNumber.NumberTypeValueId ?? 0, phoneNumber.IsMessagingEnabled ) );
                     }
                 }
 
-
-                if ( Person.PhoneNumbers != null )
-                {
-                    var phoneNumbers = Person.PhoneNumbers.AsEnumerable();
-                    var phoneNumberTypes = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE ) );
-                    if ( phoneNumberTypes.DefinedValues.Any() )
-                    {
-                        var phoneNumberTypeIds = phoneNumberTypes.DefinedValues.Select( a => a.Id ).ToList();
-                        phoneNumbers = phoneNumbers.OrderBy( a => phoneNumberTypeIds.IndexOf( a.NumberTypeValueId.Value ) );
-                    }
-
-                    rptPhones.DataSource = phoneNumbers;
-                    rptPhones.DataBind();
-                }
-
-                var communicationLinkedPageValue = this.GetAttributeValue( AttributeKey.CommunicationPage );
+                var communicationLinkedPageValue = this.GetAttributeValue( "CommunicationPage" );
                 Rock.Web.PageReference communicationPageReference;
                 if ( communicationLinkedPageValue.IsNotNullOrWhiteSpace() )
                 {
@@ -467,7 +454,34 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                     communicationPageReference = null;
                 }
 
-                lEmail.Text = Person.GetEmailTag( ResolveRockUrl( "/" ), communicationPageReference );
+                detailsRight.Add( "Email Address", business.GetEmailTag( ResolveRockUrl( "/" ), communicationPageReference ) );
+
+                lDetailsRight.Text = detailsRight.Html;
+
+                //if ( Person.PhoneNumbers != null )
+                //{
+                //    var phoneNumbers = Person.PhoneNumbers.AsEnumerable();
+                //    var phoneNumberTypes = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE ) );
+                //    if ( phoneNumberTypes.DefinedValues.Any() )
+                //    {
+                //        var phoneNumberTypeIds = phoneNumberTypes.DefinedValues.Select( a => a.Id ).ToList();
+                //        phoneNumbers = phoneNumbers.OrderBy( a => phoneNumberTypeIds.IndexOf( a.NumberTypeValueId.Value ) );
+                //    }
+
+                //    rptPhones.DataSource = phoneNumbers;
+                //    rptPhones.DataBind();
+                //}
+
+                //if ( communicationLinkedPageValue.IsNotNullOrWhiteSpace() )
+                //{
+                //    communicationPageReference = new Rock.Web.PageReference( communicationLinkedPageValue );
+                //}
+                //else
+                //{
+                //    communicationPageReference = null;
+                //}
+
+                //lEmail.Text = Person.GetEmailTag( ResolveRockUrl( "/" ), communicationPageReference );
 
                 if ( GetAttributeValue( AttributeKey.DisplayTags ).AsBoolean( true ) )
                 {
@@ -561,6 +575,30 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
         }
 
         /// <summary>
+        /// Sets the heading Status information.
+        /// </summary>
+        /// <param name="business">The business.</param>
+        private void SetHeadingStatusInfo( Person business )
+        {
+            if ( business.RecordStatusValue != null )
+            {
+                hlStatus.Text = business.RecordStatusValue.Value;
+                if ( business.RecordStatusValue.Guid == Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_PENDING.AsGuid() )
+                {
+                    hlStatus.LabelType = LabelType.Warning;
+                }
+                else if ( business.RecordStatusValue.Guid == Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_INACTIVE.AsGuid() )
+                {
+                    hlStatus.LabelType = LabelType.Danger;
+                }
+                else
+                {
+                    hlStatus.LabelType = LabelType.Success;
+                }
+            }
+        }
+
+        /// <summary>
         /// Handles the BlockUpdated event of the control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -596,24 +634,7 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
             }
             else
             {
-                if ( GetAttributeValue( AttributeKey.DisplayMiddleName ).AsBoolean() && !String.IsNullOrWhiteSpace( Person.MiddleName ) )
-                {
-                    nameText = string.Format( "<span class='first-word nickname'>{0}</span> <span class='middlename'>{1}</span> <span class='lastname'>{2}</span>", Person.NickName, Person.MiddleName, Person.LastName );
-                }
-                else
-                {
-                    nameText = string.Format( "<span class='first-word nickname'>{0}</span> <span class='lastname'>{1}</span>", Person.NickName, Person.LastName );
-                }
-
-                // Prefix with Title if they have a Title with IsFormal=True
-                if ( Person.TitleValueId.HasValue )
-                {
-                    var personTitleValue = DefinedValueCache.Get( Person.TitleValueId.Value );
-                    if ( personTitleValue != null && personTitleValue.GetAttributeValue( "IsFormal" ).AsBoolean() )
-                    {
-                        nameText = string.Format( "<span class='title'>{0}</span> ", personTitleValue.Value ) + nameText;
-                    }
-                }
+                nameText = string.Format( "<span class='first-word nickname'>{0}</span> <span class='lastname'>{1}</span>", Person.NickName, Person.LastName );
 
                 // Add First Name if different from NickName.
                 if ( Person.NickName != Person.FirstName )
@@ -624,26 +645,6 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                     }
                 }
 
-                // Add Suffix.
-                if ( Person.SuffixValueId.HasValue )
-                {
-                    var suffix = DefinedValueCache.Get( Person.SuffixValueId.Value );
-                    if ( suffix != null )
-                    {
-                        nameText += " " + suffix.Value;
-                    }
-                }
-
-                // Add Previous Names. 
-                using ( var rockContext = new RockContext() )
-                {
-                    var previousNames = Person.GetPreviousNames( rockContext ).Select( a => a.LastName );
-
-                    if ( previousNames.Any() )
-                    {
-                        nameText += string.Format( Environment.NewLine + "<span class='previous-names'>(Previous Names: {0})</span>", previousNames.ToList().AsDelimited( ", " ) );
-                    }
-                }
             }
 
             lName.Text = nameText;
@@ -663,15 +664,15 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
         #region Events
 
         /// <summary>
-        /// Handles the Click event of the lbEditPerson control.
+        /// Handles the Click event of the lbEditBusiness control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        protected void lbEditPerson_Click( object sender, EventArgs e )
+        protected void lbEditBusiness_Click( object sender, EventArgs e )
         {
             if ( Person != null )
             {
-                Response.Redirect( string.Format( "~/Person/{0}/Edit", Person.Id ), false );
+                Response.Redirect( string.Format( "~/Business/{0}/Edit", Person.Id ), false );
             }
         }
 

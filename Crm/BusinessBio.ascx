@@ -21,20 +21,22 @@
                             <b class="caret"></b>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-right">
-                            <li><asp:LinkButton ID="lbImpersonate" runat="server" Visible="false" OnClick="lbImpersonate_Click"><i class='fa-fw fa fa-unlock'></i>&nbsp;Impersonate</asp:LinkButton></li>
-                            <li><asp:HyperLink ID="hlVCard" runat="server"><i class='fa fa-address-card'></i>&nbsp;Download vCard</asp:HyperLink></li>
+                            <li>
+                                <asp:LinkButton ID="lbImpersonate" runat="server" Visible="false" OnClick="lbImpersonate_Click"><i class='fa-fw fa fa-unlock'></i>&nbsp;Impersonate</asp:LinkButton></li>
+                            <li>
+                                <asp:HyperLink ID="hlVCard" runat="server"><i class='fa fa-address-card'></i>&nbsp;Download vCard</asp:HyperLink></li>
                             <asp:Literal ID="lActions" runat="server" />
                         </ul>
                     </li>
                 </ul>
 
-                <asp:LinkButton ID="lbEditPerson" runat="server" AccessKey="I" ToolTip="Alt+I" CssClass="action" OnClick="lbEditPerson_Click"><i class="fa fa-pencil"></i></asp:LinkButton>
+                <asp:LinkButton ID="lbEditBusiness" runat="server" AccessKey="I" ToolTip="Alt+I" CssClass="action" OnClick="lbEditBusiness_Click"><i class="fa fa-pencil"></i></asp:LinkButton>
             </div>
 
             <div class="row">
                 <div class="col-sm-3 col-md-2 xs-text-center">
                     <div class="photo">
-                        <asp:Literal ID="lImage" runat="server" />  
+                        <asp:Literal ID="lImage" runat="server" />
                         <asp:Panel ID="pnlFollow" runat="server" CssClass="following-status"><i class="fa fa-star"></i></asp:Panel>
                     </div>
                     <div class="social-icons margin-t-sm">
@@ -44,28 +46,24 @@
                             </ItemTemplate>
                         </asp:Repeater>
                     </div>
-
-                
                 </div>
                 <div class="col-sm-9 col-md-10 xs-text-center">
 
-                    <h1 class="title name"><asp:Literal ID="lName" runat="server" /></h1>
-                
+                    <h1 class="title name">
+                        <asp:Literal ID="lName" runat="server" /></h1>
+
                     <Rock:BadgeListControl ID="blStatus" runat="server" />
+                    <Rock:HighlightLabel ID="hlStatus" runat="server" />
 
                     <Rock:TagList ID="taglPersonTags" runat="server" CssClass="clearfix" />
 
                     <div class="summary clearfix">
-                        <dl class="demographics">
-                            <asp:Literal ID="lAge" runat="server" />
-                            <asp:Literal ID="lGender" runat="server" />
-                            <asp:Literal ID="lMaritalStatus" runat="server" />
-                            <asp:Literal ID="lAnniversary" runat="server" />
-                            <asp:Literal ID="lGrade" runat="server" />
-                            <asp:Literal ID="lGraduation" runat="server" />
-                        </dl>
+                        <div class="demographics">
+                            <asp:Literal ID="lDetailsLeft" runat="server" />
+                        </div>
+                        <div class="personcontact">
+                            <asp:Literal ID="lDetailsRight" runat="server" />
 
-                         <div class="personcontact">
                             <ul class="list-unstyled phonenumbers">
                                 <asp:Repeater ID="rptPhones" runat="server">
                                     <ItemTemplate>
