@@ -53,20 +53,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
     #region Block Attributes
 
-    [BooleanField(
-        "Hide Grade",
-        Key = AttributeKey.HideGrade,
-        Description = "Should the Grade (and Graduation Year) fields be hidden?",
-        DefaultBooleanValue = false,
-        Order = 0 )]
-
-    [BooleanField(
-        "Hide Anniversary Date",
-        Key = AttributeKey.HideAnniversaryDate,
-        Description = "Should the Anniversary Date field be hidden?",
-        DefaultBooleanValue = false,
-        Order = 1 )]
-
     [CustomEnhancedListField(
         "Search Key Types",
         Key = AttributeKey.SearchKeyTypes,
@@ -169,31 +155,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             gSearchKeys.Actions.ShowAdd = true;
             gSearchKeys.Actions.AddClick += gSearchKeys_AddClick;
 
-        }
-
-        /// <summary>
-        /// Gets the family name with first names.
-        /// </summary>
-        /// <param name="familyName">Name of the family.</param>
-        /// <param name="familyMembers">The family members.</param>
-        /// <returns></returns>
-        private string GetFamilyNameWithFirstNames( string familyName, ICollection<GroupMember> familyMembers )
-        {
-            var adultFirstNames = familyMembers.Where( a => a.GroupRole.Guid == Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ).OrderBy( a => a.Person.Gender ).ThenBy( a => a.Person.NickName ).Select( a => a.Person.NickName ?? a.Person.FirstName ).ToList();
-            var otherFirstNames = familyMembers.Where( a => a.GroupRole.Guid != Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid() ).OrderBy( a => a.Person.Gender ).ThenBy( a => a.Person.NickName ).Select( a => a.Person.NickName ?? a.Person.FirstName ).ToList();
-            var firstNames = new List<string>();
-            firstNames.AddRange( adultFirstNames );
-            firstNames.AddRange( otherFirstNames );
-            string familyNameWithFirstNames;
-            if ( firstNames.Any() )
-            {
-                familyNameWithFirstNames = string.Format( "{0} ({1})", familyName, firstNames.AsDelimited( ", ", " and " ) );
-            }
-            else
-            {
-                familyNameWithFirstNames = string.Format( "{0} (no family members)", familyName );
-            }
-            return familyNameWithFirstNames;
         }
 
         /// <summary>
@@ -306,12 +267,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 if ( Page.IsValid )
                 {
                     var rockContext = new RockContext();
+                    Person business = null;
 
                     var wrapTransactionResult = rockContext.WrapTransactionIf( () =>
                     {
                         var personService = new PersonService( rockContext );
 
-                        Person business = null;
                         if ( int.Parse( hfBusinessId.Value ) != 0 )
                         {
                             business = personService.Get( int.Parse( hfBusinessId.Value ) );
@@ -325,7 +286,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         }
 
                         int? orphanedPhotoId = null;
-                        if ( business.PhotoId != imgPhoto.BinaryFileId )
+                        if ( business.Id > 0 && business.PhotoId != imgPhoto.BinaryFileId )
                         {
                             orphanedPhotoId = business.PhotoId;
                             business.PhotoId = imgPhoto.BinaryFileId;
@@ -365,7 +326,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                         // Record Status
                         business.RecordStatusValueId = dvpRecordStatus.SelectedValueAsInt();
-                        ;
 
                         // Record Status Reason
                         int? newRecordStatusReasonId = null;
@@ -448,6 +408,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                             if ( saveChangeResult > 0 )
                             {
+                                if ( business.PhotoId != imgPhoto.BinaryFileId )
+                                {
+                                    orphanedPhotoId = business.PhotoId;
+                                    business.PhotoId = imgPhoto.BinaryFileId;
+                                }
+
                                 if ( orphanedPhotoId.HasValue )
                                 {
                                     BinaryFileService binaryFileService = new BinaryFileService( rockContext );
@@ -552,7 +518,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                     if ( wrapTransactionResult )
                     {
-                        Response.Redirect( string.Format( "~/Business/{0}", Person.Id ), false );
+                        Response.Redirect( string.Format( "~/Business/{0}", business.Id ), false );
                     }
                 }
             }
@@ -609,7 +575,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             hfBusinessId.Value = Person.Id.ToString();
 
             imgPhoto.BinaryFileId = Person.PhotoId;
-            imgPhoto.NoPictureUrl = Person.GetPersonNoPictureUrl( this.Person, 400, 400 );
+            imgPhoto.NoPictureUrl = Person.GetPersonPhotoUrl( this.Person.Id, this.Person.PhotoId, null, Gender.Unknown, Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_BUSINESS.AsGuid(), null, 400, 400 );
 
             lTitle.Text = ActionTitle.Edit( business.FullName ).FormatAsHtmlTitle();
             tbBusinessName.Text = business.LastName;
@@ -650,6 +616,10 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             tbEmail.Text = business.Email;
             rblEmailPreference.SelectedValue = business.EmailPreference.ToString();
+            cbIsEmailActive.Checked = business.IsEmailActive;
+
+            rblCommunicationPreference.SetValue( business.CommunicationPreference == CommunicationType.SMS ? "2" : "1" );
+            nbCommunicationPreferenceWarning.Visible = false;
 
             dvpRecordStatus.SelectedValue = business.RecordStatusValueId.HasValue ? business.RecordStatusValueId.Value.ToString() : string.Empty;
             dvpReason.SelectedValue = business.RecordStatusReasonValueId.HasValue ? business.RecordStatusReasonValueId.Value.ToString() : string.Empty;
@@ -660,19 +630,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             var searchTypeQry = Person.GetPersonSearchKeys().Where( a => validSearchTypes.Contains( a.SearchTypeValue.Guid ) );
             this.PersonSearchKeysState = searchTypeQry.ToList();
 
-            BindPersonPreviousNamesGrid();
             BindPersonAlternateIdsGrid();
             BindPersonSearchKeysGrid();
-        }
-
-        /// <summary>
-        /// Binds the person previous names grid.
-        /// </summary>
-        private void BindPersonPreviousNamesGrid()
-        {
-            grdPreviousNames.DataKeyNames = new string[] { "Guid" };
-            grdPreviousNames.DataSource = this.PersonPreviousNamesState;
-            grdPreviousNames.DataBind();
         }
 
         /// <summary>
