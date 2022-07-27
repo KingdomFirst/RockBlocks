@@ -14,6 +14,14 @@
 // limitations under the License.
 // </copyright>
 //
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * To be used similarly to the Person Edit block, minus person specific demographic information, and in conjunction with our Business Bio block.
+// </notice>
+//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -31,11 +39,6 @@ using Rock.Model;
 using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
-
-/*******************************************************************************************************************************
- * NOTE: The Security/AccountEdit.ascx block has very similar functionality.  If updating this block, make sure to check
- * that block also.  It may need the same updates.
- *******************************************************************************************************************************/
 
 namespace RockWeb.Plugins.rocks_kfs.Crm
 {
