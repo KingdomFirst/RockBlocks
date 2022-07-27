@@ -14,6 +14,14 @@
 // limitations under the License.
 // </copyright>
 //
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * This adds the ability to Hide Business Details, primarily for the use of the Business Contacts on their own
+// </notice>
+//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

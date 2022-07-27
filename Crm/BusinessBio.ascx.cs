@@ -14,6 +14,14 @@
 // limitations under the License.
 // </copyright>
 //
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * To be used similarly to the Person Bio block minus person specific demographic information.
+// </notice>
+//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
