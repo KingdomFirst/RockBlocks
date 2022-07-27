@@ -2,9 +2,9 @@
 
 <asp:UpdatePanel ID="upnlBusinesses" runat="server">
     <ContentTemplate>
-        <asp:Panel ID="pnlDetails" runat="server">
+        <asp:Panel ID="pnlBusiness" runat="server">
 
-            <div class="panel panel-block">
+            <asp:Panel ID="pnlDetails" runat="server" CssClass="panel panel-block">
                 <div class="panel-heading">
                     <h1 class="panel-title"><i class="fa fa-briefcase"></i>
                         <asp:Literal ID="lTitle" runat="server" /></h1>
@@ -86,7 +86,7 @@
                         </div>
                     </fieldset>
                 </div>
-            </div>
+            </asp:Panel>
 
             <asp:Panel ID="pnlContactList" runat="server" CssClass="panel panel-block">
                 <div class="panel-heading">
