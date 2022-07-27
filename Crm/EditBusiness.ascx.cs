@@ -561,7 +561,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void btnCancel_Click( object sender, EventArgs e )
         {
-            Response.Redirect( string.Format( "~/Person/{0}", Person.Id ), false );
+            Response.Redirect( string.Format( "~/Business/{0}", Person.Id ), false );
         }
 
         /// <summary>
