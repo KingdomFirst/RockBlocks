@@ -215,6 +215,8 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
         private const string TEXT_TEMPLATE = "texttemplate";
         private const string BASEURL = "baseurl";
 
+        private string _editUrlFormat = "~/Business/{0}/Edit";
+
         #endregion
 
         #region Base Control Methods
@@ -258,22 +260,26 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                 }
             }
 
-            //if ( Person.Id == 0 )
-            //{
-            //    //referring to aliasPersonId as person might be merged
-            //    var businessId = this.PageParameter( PageParameterKey.BusinessId ).AsIntegerOrNull();
+            if ( Person.Id == 0 )
+            {
+                //referring to aliasPersonId as person might be merged
+                var businessId = this.PageParameter( PageParameterKey.BusinessId ).AsIntegerOrNull();
 
-            //    if ( businessId.HasValue )
-            //    {
-            //        var personAlias = new PersonAliasService( new RockContext() ).GetByAliasId( businessId.Value );
-            //        if ( personAlias != null )
-            //        {
-            //            var pageReference = RockPage.PageReference;
-            //            pageReference.Parameters.AddOrReplace( PageParameterKey.BusinessId, personAlias.PersonId.ToString() );
-            //            Response.RedirectPermanent( pageReference.BuildUrl(), false );
-            //        }
-            //    }
-            //}
+                if ( businessId.HasValue )
+                {
+                    var personAlias = new PersonAliasService( new RockContext() ).GetByAliasId( businessId.Value );
+                    if ( personAlias != null )
+                    {
+                        var pageReference = RockPage.PageReference;
+                        pageReference.Parameters.AddOrReplace( PageParameterKey.BusinessId, personAlias.PersonId.ToString() );
+                        Response.RedirectPermanent( pageReference.BuildUrl(), false );
+                    }
+                    else
+                    {
+                        Response.Redirect( string.Format( _editUrlFormat, Person.Id ), false );
+                    }
+                }
+            }
 
             pnlFollow.Visible = GetAttributeValue( AttributeKey.AllowFollowing ).AsBoolean();
 
@@ -334,7 +340,7 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                 // dont' show if there isn't a person, or if it is a 'Nameless" person record type
                 if ( Person == null || Person.Id == 0 || Person.RecordTypeValueId == DefinedValueCache.GetId( Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_NAMELESS.AsGuid() ) )
                 {
-                    nbInvalidPerson.Visible = true;
+                    nbInvalidBusiness.Visible = true;
                     pnlContent.Visible = false;
                     return;
                 }
@@ -672,7 +678,7 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
         {
             if ( Person != null )
             {
-                Response.Redirect( string.Format( "~/Business/{0}/Edit", Person.Id ), false );
+                Response.Redirect( string.Format( _editUrlFormat, Person.Id ), false );
             }
         }
 
