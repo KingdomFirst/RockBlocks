@@ -40,6 +40,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
 
     [LinkedPage( "Person Profile Page", "The page used to view the details of a business contact", order: 0 )]
     [LinkedPage( "Communication Page", "The communication page to use for when the business email address is clicked. Leave this blank to use the default.", false, "", "", 1 )]
+    [BooleanField( "Hide Business Details", "Hide business details and editing of business so you can use this block for Business Contacts only.", false, order: 2 )]
     public partial class BusinessDetail : Rock.Web.UI.RockBlock, IDetailBlock
     {
         #region Base Control Methods
@@ -433,26 +434,36 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
 
             bool readOnly = false;
 
-            nbEditModeMessage.Text = string.Empty;
-            if ( !editAllowed || !IsUserAuthorized( Authorization.EDIT ) )
-            {
-                readOnly = true;
-                nbEditModeMessage.Text = EditModeMessage.ReadOnlyEditActionNotAllowed( Person.FriendlyTypeName );
-            }
+            var hideDetailsPanel = GetAttributeValue( "HideBusinessDetails" ).AsBoolean();
 
-            if ( readOnly )
+            if ( hideDetailsPanel )
             {
-                ShowSummary( businessId );
+                SetEditMode( false );
+                pnlDetails.Visible = false;
             }
             else
             {
-                if ( business.Id > 0 )
+                nbEditModeMessage.Text = string.Empty;
+                if ( !editAllowed || !IsUserAuthorized( Authorization.EDIT ) )
                 {
-                    ShowSummary( business.Id );
+                    readOnly = true;
+                    nbEditModeMessage.Text = EditModeMessage.ReadOnlyEditActionNotAllowed( Person.FriendlyTypeName );
+                }
+
+                if ( readOnly )
+                {
+                    ShowSummary( businessId );
                 }
                 else
                 {
-                    ShowEditDetails( business );
+                    if ( business.Id > 0 )
+                    {
+                        ShowSummary( business.Id );
+                    }
+                    else
+                    {
+                        ShowEditDetails( business );
+                    }
                 }
             }
 
