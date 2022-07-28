@@ -277,6 +277,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string Status = "Status";
             public const string Campus = "Campus";
             public const string AssignedToMe = "Assigned to Me";
+            public const string IncludeFutureNeeds = "Include Future Needs";
             public const string StartDateFollowUp = "FollowUp Start Date";
             public const string EndDateFollowUp = "FollowUp End Date";
             public const string FirstNameFollowUp = "FollowUp First Name";
@@ -578,6 +579,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             rFilter.SaveUserPreference( UserPreferenceKey.Status, "Status", dvpStatus.SelectedItem.Value );
             rFilter.SaveUserPreference( UserPreferenceKey.Campus, "Campus", cpCampus.SelectedCampusId.ToString() );
             rFilter.SaveUserPreference( UserPreferenceKey.AssignedToMe, "Assigned to Me", cbAssignedToMe.Checked.ToString() );
+            rFilter.SaveUserPreference( UserPreferenceKey.IncludeFutureNeeds, "Include Future Needs", cbIncludeFutureNeeds.Checked.ToString() );
 
             if ( AvailableAttributes != null )
             {
@@ -723,6 +725,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     return;
 
                 case UserPreferenceKey.AssignedToMe:
+                case UserPreferenceKey.IncludeFutureNeeds:
                     if ( !e.Value.AsBoolean() )
                     {
                         e.Value = string.Empty;
@@ -1719,6 +1722,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 dvpStatus.SetValue( statusValue );
 
                 cbAssignedToMe.Checked = rFilter.GetUserPreference( UserPreferenceKey.AssignedToMe ).AsBoolean();
+                cbIncludeFutureNeeds.Checked = rFilter.GetUserPreference( UserPreferenceKey.IncludeFutureNeeds ).AsBoolean();
                 var followUpAssignedToMe = rFollowUpFilter.GetUserPreference( UserPreferenceKey.AssignedToMeFollowUp );
                 if ( !string.IsNullOrWhiteSpace( followUpAssignedToMe ) )
                 {
@@ -1959,6 +1963,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 qry = PermissionFilterQuery( qry );
             }
 
+            var futureDate = DateTime.Now.AddDays( GetAttributeValue( AttributeKey.FutureThresholdDays ).AsInteger() );
+
             // Filter by Start Date
             DateTime? startDate = drpDate.LowerValue;
             if ( startDate != null )
@@ -1971,6 +1977,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( endDate != null )
             {
                 qry = qry.Where( b => b.DateEntered <= endDate );
+            }
+
+            if ( !cbIncludeFutureNeeds.Checked )
+            {
+                qry = qry.Where( b => b.DateEntered <= futureDate );
             }
 
             // Filter by Campus
