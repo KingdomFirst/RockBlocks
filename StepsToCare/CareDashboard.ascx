@@ -8,7 +8,9 @@
         display: inline;
     }
 
-    .grid-table>tbody>tr>td:empty, .grid-table>tbody>tr>th:empty, .grid-table>thead>tr>td:empty, .grid-table>thead>tr>th:empty { padding: 0; }
+    .grid-table > tbody > tr > td:empty, .grid-table > tbody > tr > th:empty, .grid-table > thead > tr > td:empty, .grid-table > thead > tr > th:empty {
+        padding: 0;
+    }
 
     .table-striped > tbody > tr.assigned:nth-of-type(odd) {
         background-color: oldlace;
@@ -109,6 +111,7 @@
                             <Rock:RockDropDownList ID="ddlSubmitter" runat="server" Label="Submitted By" EnhanceForLongLists="true" />
                             <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
                             <Rock:RockCheckBox ID="cbAssignedToMe" runat="server" Label="Assigned to Me" />
+                            <Rock:RockCheckBox ID="cbIncludeFutureNeeds" runat="server" Label="Include Future Needs" />
                             <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
                         </Rock:GridFilter>
                         <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" ExportSource="DataSource">
