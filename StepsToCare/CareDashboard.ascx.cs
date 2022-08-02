@@ -210,8 +210,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 19,
         Key = AttributeKey.NoteViewLavaTemplate )]
 
-    [IntegerField( "Threshold of Days For Future Need",
-        Description = "The number of days the need has to be within before displaying on the dashboard.",
+    [IntegerField( "Threshold of Days for Scheduled Needs",
+        Description = "The number of days from today to display scheduled needs on the dashboard.",
         IsRequired = true,
         DefaultIntegerValue = 3,
         Key = AttributeKey.FutureThresholdDays )]
@@ -277,7 +277,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string Status = "Status";
             public const string Campus = "Campus";
             public const string AssignedToMe = "Assigned to Me";
-            public const string IncludeFutureNeeds = "Include Future Needs";
+            public const string IncludeScheduledNeeds = "Include Scheduled Needs";
             public const string StartDateFollowUp = "FollowUp Start Date";
             public const string EndDateFollowUp = "FollowUp End Date";
             public const string FirstNameFollowUp = "FollowUp First Name";
@@ -579,7 +579,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             rFilter.SaveUserPreference( UserPreferenceKey.Status, "Status", dvpStatus.SelectedItem.Value );
             rFilter.SaveUserPreference( UserPreferenceKey.Campus, "Campus", cpCampus.SelectedCampusId.ToString() );
             rFilter.SaveUserPreference( UserPreferenceKey.AssignedToMe, "Assigned to Me", cbAssignedToMe.Checked.ToString() );
-            rFilter.SaveUserPreference( UserPreferenceKey.IncludeFutureNeeds, "Include Future Needs", cbIncludeFutureNeeds.Checked.ToString() );
+            rFilter.SaveUserPreference( UserPreferenceKey.IncludeScheduledNeeds, "Include Scheduled Needs", cbIncludeFutureNeeds.Checked.ToString() );
 
             if ( AvailableAttributes != null )
             {
