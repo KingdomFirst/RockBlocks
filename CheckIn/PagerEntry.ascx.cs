@@ -137,10 +137,10 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                         var redirectToNextPage = true;
                         foreach ( var person in people )
                         {
-                            var groupTypes = person.GroupTypes.Where( gt => gt.Selected );
+                            var groupTypes = person.GroupTypes;
                             foreach ( var groupType in groupTypes )
                             {
-                                var groups = groupType.Groups.Where( g => g.Selected );
+                                var groups = groupType.Groups;
                                 foreach ( var group in groups )
                                 {
                                     if ( groupsSetting.Contains( group.Group.Guid ) )
