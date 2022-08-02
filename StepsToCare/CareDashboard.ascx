@@ -111,7 +111,7 @@
                             <Rock:RockDropDownList ID="ddlSubmitter" runat="server" Label="Submitted By" EnhanceForLongLists="true" />
                             <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
                             <Rock:RockCheckBox ID="cbAssignedToMe" runat="server" Label="Assigned to Me" />
-                            <Rock:RockCheckBox ID="cbIncludeFutureNeeds" runat="server" Label="Include Future Needs" />
+                            <Rock:RockCheckBox ID="cbIncludeFutureNeeds" runat="server" Label="Include Scheduled Needs" />
                             <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
                         </Rock:GridFilter>
                         <Rock:Grid ID="gList" runat="server" DisplayType="Full" AllowSorting="true" ExportSource="DataSource">
