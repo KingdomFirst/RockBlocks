@@ -94,7 +94,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Category = AttributeCategory.FamilyNeeds )]
 
     [IntegerField( "Threshold of Days before Assignment",
-        Description = "The number of days you can schedule a need in the future before a need will be assigned to workers.",
+        Description = "The number of days before a scheduled need is assigned to workers. Default: 3",
         IsRequired = true,
         DefaultIntegerValue = 3,
         Key = AttributeKey.FutureThresholdDays )]
