@@ -184,6 +184,16 @@
                         effect: "fadeIn"
                     });
 
+                    $('#<%=drpDate.ClientID%>').datepicker({
+                        format: 'mm/dd/yyyy',
+                        todayHighlight: true,
+                        assumeNearbyYear: 10,
+                        autoclose: true,
+                        endDate: '+0d',
+                        inputs: $('#<%=drpDate.ClientID%> .form-control'),
+                        zIndexOffset: 1050
+                    });
+
                     // person-link-popover
                     $('.js-person-popover').popover({
                         placement: 'right',
