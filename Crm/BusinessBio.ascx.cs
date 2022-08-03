@@ -412,7 +412,7 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                 var detailsLeft = new DescriptionList();
                 var detailsRight = new DescriptionList();
 
-                if ( business.GivingGroup != null )
+                if ( business.GivingGroup != null && business.GivingGroup.Campus != null )
                 {
                     detailsLeft.Add( "Campus", business.GivingGroup.Campus );
                 }
@@ -435,7 +435,7 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                         if ( location != null )
                         {
                             var addTo = detailsLeft;
-                            if ( business.GivingGroup != null && business.RecordStatusReasonValue != null )
+                            if ( business.GivingGroup != null && business.GivingGroup.Campus != null && business.RecordStatusReasonValue != null )
                             {
                                 addTo = detailsRight;
                             }
@@ -457,7 +457,7 @@ Because the contents of this setting will be rendered inside a &lt;ul&gt; elemen
                     }
                 }
 
-                var communicationLinkedPageValue = this.GetAttributeValue( "CommunicationPage" );
+                var communicationLinkedPageValue = this.GetAttributeValue( AttributeKey.CommunicationPage );
                 Rock.Web.PageReference communicationPageReference;
                 if ( communicationLinkedPageValue.IsNotNullOrWhiteSpace() )
                 {

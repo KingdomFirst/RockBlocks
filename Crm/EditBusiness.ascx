@@ -1,14 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="EditBusiness.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Crm.EditBusiness" %>
 
-
-<%--
-    ******************************************************************************************************************************
-    * NOTE: The Security/AccountEdit.ascx block has very similar functionality.  If updating this block, make sure to check
-    * that block also.  It may need the same updates.
-    ******************************************************************************************************************************
---%>
-
-
 <asp:UpdatePanel ID="upEditBusiness" runat="server">
     <ContentTemplate>
 
@@ -35,7 +26,7 @@
                     <div class="col-md-9">
 
                         <div class="well form-well">
-                            <Rock:DataTextBox ID="tbBusinessName" runat="server" Label="Name" SourceTypeName="Rock.Model.Person, Rock" PropertyName="FirstName" />
+                            <Rock:DataTextBox ID="tbBusinessName" runat="server" Label="Name" SourceTypeName="Rock.Model.Person, Rock" PropertyName="LastName" />
 
                             <Rock:AddressControl ID="acAddress" runat="server" UseStateAbbreviation="true" UseCountryAbbreviation="false" />
 
