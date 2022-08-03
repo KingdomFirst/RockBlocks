@@ -725,7 +725,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     return;
 
                 case UserPreferenceKey.AssignedToMe:
-                case UserPreferenceKey.IncludeFutureNeeds:
+                case UserPreferenceKey.IncludeScheduledNeeds:
                     if ( !e.Value.AsBoolean() )
                     {
                         e.Value = string.Empty;
@@ -1722,7 +1722,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 dvpStatus.SetValue( statusValue );
 
                 cbAssignedToMe.Checked = rFilter.GetUserPreference( UserPreferenceKey.AssignedToMe ).AsBoolean();
-                cbIncludeFutureNeeds.Checked = rFilter.GetUserPreference( UserPreferenceKey.IncludeFutureNeeds ).AsBoolean();
+                cbIncludeFutureNeeds.Checked = rFilter.GetUserPreference( UserPreferenceKey.IncludeScheduledNeeds ).AsBoolean();
                 var followUpAssignedToMe = rFollowUpFilter.GetUserPreference( UserPreferenceKey.AssignedToMeFollowUp );
                 if ( !string.IsNullOrWhiteSpace( followUpAssignedToMe ) )
                 {
