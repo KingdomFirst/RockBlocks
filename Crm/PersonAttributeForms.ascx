@@ -62,6 +62,12 @@
 
             <asp:Literal ID="lHeader" runat="server" />
 
+            <asp:Panel ID="pnlFamilyMembers" runat="server" Visible="false" CssClass="row">
+                <div class="col-md-12">
+                    <Rock:RockDropDownList ID="ddlFamilyMembers" runat="server" Label="Select a Family Member" AutoPostBack="true" OnSelectedIndexChanged="ddlFamilyMembers_SelectedIndexChanged" />
+                </div>
+            </asp:Panel>
+
             <asp:PlaceHolder ID="phContent" runat="server" />
 
             <asp:Literal ID="lFooter" runat="server" />
@@ -96,7 +102,7 @@
                                     <div class="col-md-4">
                                         <Rock:WorkflowTypePicker ID="wtpWorkflow" runat="server" Label="Workflow"
                                             Help="An optional workflow to launch after the person has filled out all of the forms." />
-                                         <Rock:RockDropDownList ID="ddlWorkflowEntity" runat="server" Label="Workflow Entity"
+                                        <Rock:RockDropDownList ID="ddlWorkflowEntity" runat="server" Label="Workflow Entity"
                                             Help="The entity that should be used to initiate the workflow.">
                                             <asp:ListItem Value="Person" Text="Person" />
                                             <asp:ListItem Value="ConnectionRequest" Text="Connection Request" />

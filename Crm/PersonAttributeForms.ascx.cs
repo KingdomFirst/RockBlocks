@@ -67,6 +67,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
     [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "Groups", 3 )]
     [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "Groups", 4 )]
     [BooleanField( "Display SMS Checkbox on Mobile Phone", "Should we show the SMS checkbox when a mobile phone is displayed on the form?", false )]
+    [CustomDropdownListField( "Person Mode", "Person selection mode, should we allow family members, any person guid, or logged in user only.", "Family Members,Anyone,Logged in Person only", true, "Family Members" )]
+    [BooleanField( "Display Family Member Picker", "Should we show the family member picker on the form? (Note: this will only display in Family Members or Anyone mode.) Default: false", false )]
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
@@ -80,6 +82,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
     public partial class PersonAttributeForms : RockBlockCustomSettings
     {
         #region Fields
+
+        private Person _person = null;
 
         private string _mode = "VIEW";
         private bool _saveNavigationHistory = false;
@@ -196,14 +200,89 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             nbMain.Visible = false;
 
-            if ( CurrentPerson != null )
+            var personMode = GetAttributeValue( "PersonMode" );
+
+            if ( personMode == "Logged in Person only" )
+            {
+                _person = CurrentPerson;
+            }
+            else
+            {
+                var paramPersonGuid = PageParameter( "Person" ).AsGuidOrNull();
+                Person paramPerson = null;
+                if ( paramPersonGuid != null )
+                {
+                    paramPerson = new PersonService( new RockContext() ).Get( paramPersonGuid.Value );
+
+                    if ( personMode == "Family Members" )
+                    {
+                        var foundCurrentPerson = false;
+                        foreach ( var member in paramPerson.GetFamilyMembers( true ) )
+                        {
+                            if ( member.PersonId == CurrentPerson.Id )
+                            {
+                                foundCurrentPerson = true;
+                            }
+                        }
+                        if ( !foundCurrentPerson )
+                        {
+                            paramPerson = null;
+
+                            nbMain.Title = "Sorry";
+                            nbMain.Text = "You must be a family member to fill out the form for this person. Continuing as current logged in person.";
+                            nbMain.NotificationBoxType = NotificationBoxType.Warning;
+                            nbMain.Visible = true;
+                        }
+                    }
+                }
+                if ( paramPerson != null )
+                {
+                    _person = paramPerson;
+                }
+                else
+                {
+                    _person = CurrentPerson;
+                }
+            }
+            if ( _person != null )
             {
                 if ( !Page.IsPostBack )
                 {
+                    var displayFamilyMemberPicker = GetAttributeValue( "DisplayFamilyMemberPicker" ).AsBoolean();
+
+                    if ( displayFamilyMemberPicker && personMode != "Logged in Person only" )
+                    {
+
+                        var familyMembers = _person.GetFamilyMembers( true )
+                                        .Select( m => m.Person )
+                                        .ToList();
+
+                        if ( familyMembers.Any() )
+                        {
+                            ddlFamilyMembers.Visible = true;
+                            ddlFamilyMembers.Items.Add( new ListItem() );
+
+                            foreach ( var familyMember in familyMembers )
+                            {
+                                ListItem listItem = new ListItem( familyMember.FullName, familyMember.Guid.ToString() );
+                                listItem.Selected = familyMember.Id == _person.Id;
+                                ddlFamilyMembers.Items.Add( listItem );
+                            }
+                        }
+                        pnlFamilyMembers.Visible = ddlFamilyMembers.Items.Count > 0;
+
+                    }
+                    else
+                    {
+                        pnlFamilyMembers.Visible = false;
+                    }
+
                     ShowDetail();
                 }
                 else
                 {
+                    pnlFamilyMembers.Visible = false;
+
                     ShowDialog();
 
                     if ( _mode == "VIEW" )
@@ -316,11 +395,11 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             bool saveEachPage = GetAttributeValue( "SaveValues" ) == "PAGE";
             if ( saveEachPage || CurrentPageIndex >= FormState.Count )
             {
-                if ( CurrentPersonId.HasValue )
+                if ( _person != null && _person.Id > 0 )
                 {
                     using ( var rockContext = new RockContext() )
                     {
-                        var person = new PersonService( rockContext ).Get( CurrentPersonId.Value );
+                        var person = new PersonService( rockContext ).Get( _person.Id );
                         if ( person != null )
                         {
                             var pagePersonFields = new List<PersonFieldType>();
@@ -845,6 +924,18 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             upnlContent.Update();
         }
 
+        /// <summary>
+        /// Handles the SelectedIndexChanged event of the ddlFamilyMembers control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void ddlFamilyMembers_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            var qs = new Dictionary<string, string>();
+            qs.Add( "Person", ddlFamilyMembers.SelectedValueAsGuid().ToString() );
+            NavigateToCurrentPage( qs );
+        }
+
         #region Form Control Events
 
         /// <summary>
@@ -1056,11 +1147,11 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                 PersonValueState = new Dictionary<PersonFieldType, string>();
                 AttributeValueState = new Dictionary<int, string>();
-                if ( CurrentPerson != null )
+                if ( _person != null )
                 {
-                    if ( CurrentPerson.Attributes == null )
+                    if ( _person.Attributes == null )
                     {
-                        CurrentPerson.LoadAttributes();
+                        _person.LoadAttributes();
                     }
 
                     foreach ( var form in FormState )
@@ -1075,7 +1166,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 {
                                     case PersonFieldType.FirstName:
                                         {
-                                            var value = CurrentPerson.FirstName;
+                                            var value = _person.FirstName;
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.FirstName, value );
@@ -1085,7 +1176,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.LastName:
                                         {
-                                            var value = CurrentPerson.LastName;
+                                            var value = _person.LastName;
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.LastName, value );
@@ -1095,7 +1186,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.MiddleName:
                                         {
-                                            var value = CurrentPerson.MiddleName;
+                                            var value = _person.MiddleName;
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.MiddleName, value );
@@ -1104,7 +1195,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                         }
                                     case PersonFieldType.Campus:
                                         {
-                                            var campus = CurrentPerson.GetCampus();
+                                            var campus = _person.GetCampus();
                                             if ( campus != null )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.Campus, campus.Id.ToString() );
@@ -1114,7 +1205,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.Address:
                                         {
-                                            var homeLocation = CurrentPerson.GetHomeLocation();
+                                            var homeLocation = _person.GetHomeLocation();
                                             if ( homeLocation != null )
                                             {
                                                 int? locationId = homeLocation.Id;
@@ -1125,7 +1216,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.Birthdate:
                                         {
-                                            var value = CurrentPerson.BirthDate.ToString();
+                                            var value = _person.BirthDate.ToString();
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.Birthdate, value );
@@ -1135,7 +1226,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.Grade:
                                         {
-                                            var value = CurrentPerson.GraduationYear.ToString();
+                                            var value = _person.GraduationYear.ToString();
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.Grade, value );
@@ -1145,7 +1236,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.Gender:
                                         {
-                                            var value = CurrentPerson.Gender.ToString();
+                                            var value = _person.Gender.ToString();
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.Gender, value );
@@ -1155,7 +1246,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.MaritalStatus:
                                         {
-                                            var value = CurrentPerson.MaritalStatusValueId.ToString();
+                                            var value = _person.MaritalStatusValueId.ToString();
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.MaritalStatus, value );
@@ -1165,7 +1256,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.AnniversaryDate:
                                         {
-                                            var value = CurrentPerson.AnniversaryDate.ToString();
+                                            var value = _person.AnniversaryDate.ToString();
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.AnniversaryDate, value );
@@ -1175,7 +1266,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.MobilePhone:
                                         {
-                                            var phone = CurrentPerson.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() ) );
+                                            var phone = _person.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() ) );
                                             if ( phone != null )
                                             {
                                                 var value = phone.Number;
@@ -1189,7 +1280,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.HomePhone:
                                         {
-                                            var phone = CurrentPerson.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid() ) );
+                                            var phone = _person.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid() ) );
                                             if ( phone != null )
                                             {
                                                 var value = phone.Number;
@@ -1203,7 +1294,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.WorkPhone:
                                         {
-                                            var phone = CurrentPerson.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() ) );
+                                            var phone = _person.PhoneNumbers.FirstOrDefault( p => p.NumberTypeValue.Guid.Equals( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() ) );
                                             if ( phone != null )
                                             {
                                                 var value = phone.Number;
@@ -1217,7 +1308,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.Email:
                                         {
-                                            var value = CurrentPerson.Email;
+                                            var value = _person.Email;
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.Email, value );
@@ -1227,7 +1318,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                                     case PersonFieldType.ConnectionStatus:
                                         {
-                                            var value = CurrentPerson.ConnectionStatusValueId.ToString();
+                                            var value = _person.ConnectionStatusValueId.ToString();
                                             if ( !string.IsNullOrWhiteSpace( value ) )
                                             {
                                                 PersonValueState.AddOrReplace( PersonFieldType.ConnectionStatus, value );
@@ -1241,7 +1332,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 var attributeCache = AttributeCache.Get( field.AttributeId.Value );
                                 if ( attributeCache != null )
                                 {
-                                    AttributeValueState.AddOrReplace( field.AttributeId.Value, CurrentPerson.GetAttributeValue( attributeCache.Key ) );
+                                    AttributeValueState.AddOrReplace( field.AttributeId.Value, _person.GetAttributeValue( attributeCache.Key ) );
                                 }
                             }
                         }
@@ -1292,7 +1383,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 {
                     var form = FormState[CurrentPageIndex];
 
-                    var mergeFields = LavaHelper.GetCommonMergeFields( RockPage, CurrentPerson );
+                    var mergeFields = LavaHelper.GetCommonMergeFields( RockPage, _person );
                     lTitle.Text = form.Name.ResolveMergeFields( mergeFields );
                     lHeader.Text = form.Header.ResolveMergeFields( mergeFields );
                     lFooter.Text = form.Footer.ResolveMergeFields( mergeFields );
@@ -2102,7 +2193,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     .ThenBy( a => a.Value.Name )
                     .Select( a => a.Value ) )
                 {
-                    if ( attr.IsAuthorized( Authorization.VIEW, CurrentPerson ) )
+                    if ( attr.IsAuthorized( Authorization.VIEW, _person ) )
                     {
                         var li = new ListItem( attr.Name, attr.Id.ToString() );
                         li.Attributes.Add( "optiongroup", attr.Categories.AsDelimited( ", " ) );
@@ -2249,7 +2340,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         /// <param name="phoneTypeGuid">The phone type unique identifier.</param>
         private void SavePhone( string cleanNumber, Person person, Guid phoneTypeGuid )
         {
-            if ( !string.IsNullOrWhiteSpace( cleanNumber ) )
+            if ( !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( cleanNumber ) ) )
             {
                 var numberType = DefinedValueCache.Get( phoneTypeGuid );
                 if ( numberType != null )
