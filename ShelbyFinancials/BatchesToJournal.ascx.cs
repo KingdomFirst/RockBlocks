@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright 2019 by Kingdom First Solutions
+// Copyright 2022 by Kingdom First Solutions
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -352,14 +352,13 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
                 var exportedBatches = batchService.Queryable()
                     .WhereAttributeValue( rockContext, a => a.Attribute.Key == "rocks.kfs.ShelbyFinancials.DateExported" && ( a.Value != null && a.Value != "" ) )
-                    .Select( b => b.Id )
-                    .ToList();
+                    .Select( b => b.Id );
 
                 batchesToUpdate = batchService.Queryable()
                     .Where( b =>
-                        selectedBatches.Contains( b.Id ) &&
-                        !exportedBatches.Contains( b.Id ) )
-                    .ToList();
+                        selectedBatches.Contains( b.Id )
+                        && !exportedBatches.Contains( b.Id )
+                      ).ToList();
 
                 foreach ( var batch in batchesToUpdate )
                 {
@@ -395,7 +394,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     var journalCode = ddlJournalType.SelectedValue;
                     var period = tbAccountingPeriod.Text.AsInteger();
 
-                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( "JournalDescriptionLava") ) );
+                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( "JournalDescriptionLava" ) ) );
 
                     HistoryService.SaveChanges(
                         rockContext,
