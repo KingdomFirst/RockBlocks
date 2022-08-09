@@ -260,14 +260,13 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                     if ( displayFamilyMemberPicker && personMode != "Logged in Person only" )
                     {
-
                         var familyMembers = _person.GetFamilyMembers( true )
                                         .Select( m => m.Person )
                                         .ToList();
 
-                        if ( familyMembers.Any() )
+                        if ( familyMembers.Count() > 1 )
                         {
-                            ddlFamilyMembers.Visible = true;
+                            pnlFamilyMembers.Visible = true;
                             ddlFamilyMembers.Items.Add( new ListItem() );
 
                             foreach ( var familyMember in familyMembers )
@@ -277,8 +276,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 ddlFamilyMembers.Items.Add( listItem );
                             }
                         }
-                        pnlFamilyMembers.Visible = ddlFamilyMembers.Items.Count > 0;
-
                     }
                     else
                     {
@@ -941,7 +938,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         {
             var qs = new Dictionary<string, string>();
             qs.Add( "Person", ddlFamilyMembers.SelectedValueAsGuid().ToString() );
-            NavigateToCurrentPage( qs );
+            NavigateToCurrentPageReference( qs );
         }
 
         #region Form Control Events
