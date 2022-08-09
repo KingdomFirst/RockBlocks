@@ -201,20 +201,22 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             nbMain.Visible = false;
 
             var personMode = GetAttributeValue( "PersonMode" );
+            var errorMsg = "";
+            _person = CurrentPerson;
 
-            if ( personMode == "Logged in Person only" )
+            var paramPersonGuid = PageParameter( "Person" ).AsGuidOrNull();
+            Person paramPerson = null;
+            if ( paramPersonGuid != null )
             {
-                _person = CurrentPerson;
-            }
-            else
-            {
-                var paramPersonGuid = PageParameter( "Person" ).AsGuidOrNull();
-                Person paramPerson = null;
-                if ( paramPersonGuid != null )
+                paramPerson = new PersonService( new RockContext() ).Get( paramPersonGuid.Value );
+
+                if ( paramPerson != null )
                 {
-                    paramPerson = new PersonService( new RockContext() ).Get( paramPersonGuid.Value );
-
-                    if ( personMode == "Family Members" )
+                    if ( personMode == "Logged in Person only" )
+                    {
+                        errorMsg = "You are currently in Logged in Person Only mode.";
+                    }
+                    else if ( personMode == "Family Members" )
                     {
                         var foundCurrentPerson = false;
                         foreach ( var member in paramPerson.GetFamilyMembers( true ) )
@@ -224,25 +226,31 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 foundCurrentPerson = true;
                             }
                         }
-                        if ( !foundCurrentPerson )
+                        if ( foundCurrentPerson )
                         {
-                            paramPerson = null;
-
-                            nbMain.Title = "Sorry";
-                            nbMain.Text = "You must be a family member to fill out the form for this person. Continuing as current logged in person.";
-                            nbMain.NotificationBoxType = NotificationBoxType.Warning;
-                            nbMain.Visible = true;
+                            _person = paramPerson;
+                        }
+                        else
+                        {
+                            errorMsg = "You must be a family member to fill out the form for this person.";
                         }
                     }
-                }
-                if ( paramPerson != null )
-                {
-                    _person = paramPerson;
+                    else
+                    {
+                        _person = paramPerson;
+                    }
                 }
                 else
                 {
-                    _person = CurrentPerson;
+                    errorMsg = "Person not found with selected Guid.";
                 }
+            }
+            if ( errorMsg != "" )
+            {
+                nbMain.Title = "Sorry";
+                nbMain.Text = string.Format( "{0} Continuing as current logged in person.", errorMsg );
+                nbMain.NotificationBoxType = NotificationBoxType.Warning;
+                nbMain.Visible = true;
             }
             if ( _person != null )
             {
