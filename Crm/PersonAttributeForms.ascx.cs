@@ -68,7 +68,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
     [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "Groups", 4 )]
     [BooleanField( "Display SMS Checkbox on Mobile Phone", "Should we show the SMS checkbox when a mobile phone is displayed on the form?", false )]
     [CustomDropdownListField( "Person Mode", "Person selection mode, should we allow family members, any person guid, or logged in user only.", "Family Members,Anyone,Logged in Person only", true, "Family Members" )]
-    [BooleanField( "Display Family Member Picker", "Should we show the family member picker on the form? (Note: this will only display in Family Members or Anyone "Person Mode".) Default: false", false )]
+    [BooleanField( "Display Family Member Picker", "Should we show the family member picker on the form? (Note: this will only display in Family Members or Anyone \"Person Mode\".) Default: false", false )]
     [BooleanField( "Display Progress Bar", "Determines if the progress bar should be show if there is more than one form.", true, "CustomSetting" )]
     [CustomDropdownListField( "Save Values", "", "PAGE,END", true, "END", "CustomSetting" )]
     [WorkflowTypeField( "Workflow", "The workflow to be launched when complete.", false, false, "", "CustomSetting" )]
