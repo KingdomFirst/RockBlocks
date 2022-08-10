@@ -3,7 +3,7 @@
 # Person Attributes Form Advanced Block
 *Tested/Supported in Rock version:  8.0-13.0*   
 *Created:  11/20/2018*  
-*Updated:  2/2/2022*   
+*Updated:  8/9/2022*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/101*
 
 ## Summary
@@ -33,7 +33,8 @@ Quick Links:
 
 The following new goodness will be added to your Rock install with this plugin:
 
-- **New Block**: Person Attribute Forms Advanced
+- Added ability to run this block in **Person Mode** which can be run as any person with guid in the url, family members, or only logged in users. See [Block Properties](#block-properties) for more information.
+- Added an option to **Display Family Member Picker** to work in tandem with this new mode.
 
 
 
@@ -119,17 +120,22 @@ The possibilities are endless. Want to automate your process for Baptisms? Need 
 
 ## Block Properties
 
-![BlockPropertiesBasic (1)](https://user-images.githubusercontent.com/81330042/118964828-90446380-b92d-11eb-8dfa-ed25aa786070.png)
+![BlockProperties](https://user-images.githubusercontent.com/2990519/183775785-c1d960b9-7a68-41dd-8f39-156d6022030e.jpg)
 
-
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Allow Connection Opportunity** Determines if a URL parameter of OpportunityId should be evaluated when complete. 
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Display Family Member Picker** Should we show the family member picker on the form? (Note: this will only display in Family Members or Anyone "Person Mode".)
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**Allow Group Membership** Determines if a URL parameter of GroupGuid or GroupId should be evaluated when complete
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**Display SMS Checkbox on Mobile Phone** Should we show the SMS checkbox when a mobile phone is displayed on the form? 
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Enable Passing Group Id** If enabled, allows the passing of the GroupId instead of the GroupGuid
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Person Mode** You can use this block to edit other person's information by passing a Person Guid via a URL Parameter `?Person=<guid>`, this setting narrows the option down for security purposes, you can allow family members, any person guid, or the logged in user only. The default value is "Family Members" so you can use it with the "Display Family Member Picker" option above.
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4&nbsp;&nbsp;</span>**Allowed Group Types** This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4&nbsp;&nbsp;</span>**Allow Connection Opportunity** Determines if a URL parameter of OpportunityId should be evaluated when complete. 
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5&nbsp;&nbsp;</span>**Group** Optional group to add the person to. If omitted, the group's Guid should be passed via the query string
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5&nbsp;&nbsp;</span>**Allow Group Membership** Determines if a URL parameter of GroupGuid or GroupId should be evaluated when complete
 >
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6&nbsp;&nbsp;</span>**Group Member Status** The group member status to use when adding person to group
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6&nbsp;&nbsp;</span>**Enable Passing Group Id** If enabled, allows the passing of the GroupId instead of the GroupGuid
+>
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;7&nbsp;&nbsp;</span>**Allowed Group Types** This setting restricts which types of groups a person can be added to, however selecting a specific group via the Group setting will override this restriction.
+>
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;8&nbsp;&nbsp;</span>**Group** Optional group to add the person to. If omitted, the group's Guid should be passed via the query string
+>
+> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;9&nbsp;&nbsp;</span>**Group Member Status** The group member status to use when adding person to group
