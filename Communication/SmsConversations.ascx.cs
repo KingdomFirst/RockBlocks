@@ -642,6 +642,8 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 lbPersonFilter.RemoveCssClass( "bg-warning" );
             }
 
+            cbShowInbound.Checked = false;
+
             LoadResponseListing( ppPersonFilter.PersonId );
         }
 
