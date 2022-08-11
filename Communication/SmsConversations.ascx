@@ -45,7 +45,8 @@
                                 <asp:LinkButton ID="lbPersonFilter" runat="server" CssClass="btn btn-default btn-sm btn-square pull-right" OnClientClick="$('.js-person-filter').slideToggle(); return false;"><i class="fa fa-filter"></i></asp:LinkButton>
                             </div>
                             <div id="divPersonFilter" runat="server" class="js-person-filter" style="display: none;">
-                                <Rock:PersonPicker ID="ppPersonFilter" runat="server" Label="Recipient" OnSelectPerson="ppPersonFilter_SelectPerson" FormGroupCssClass="mt-2 mb-0" />
+                                <Rock:PersonPicker ID="ppPersonFilter" runat="server" Label="Recipient" OnSelectPerson="ppPersonFilter_SelectPerson" FormGroupCssClass="mt-2" />
+                                <Rock:RockCheckBox ID="cbShowInbound" runat="server" Text="Show Inbound Only" FormGroupCssClass="mt-2 mb-0" OnCheckedChanged="cbShowInbound_CheckedChanged" AutoPostBack="true" />
                             </div>
                         </div>
                         <asp:UpdatePanel ID="upRecipients" runat="server" class="overflow-scroll">

@@ -317,6 +317,10 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                     var maxConversations = this.GetAttributeValue( AttributeKey.MaxConversations ).AsIntegerOrNull() ?? 1000;
 
                     var responseListItems = communicationResponseService.GetCommunicationResponseRecipients( smsPhoneDefinedValueId.Value, startDateTime, showRead, maxConversations, personId );
+                    if ( cbShowInbound.Checked )
+                    {
+                        responseListItems = responseListItems.Where( r => !r.IsOutbound ).ToList();
+                    }
 
                     // don't display conversations if we're rebinding the recipient list
                     rptConversation.Visible = false;
@@ -629,6 +633,16 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             }
 
             LoadResponseListing( ppPersonFilter.PersonId );
+        }
+
+        /// <summary>
+        /// Handles the CheckedChange event of the cbShowInbound control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void cbShowInbound_CheckedChanged( object sender, EventArgs e )
+        {
+            LoadResponseListing();
         }
 
         /// <summary>
