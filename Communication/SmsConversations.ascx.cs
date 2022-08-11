@@ -13,6 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // </copyright>
+//
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * Add a checkbox to toggle showing inbound texts only.
+// * v13.4+ only.
+// </notice>
+//
 
 using System;
 using System.Collections.Generic;
