@@ -930,13 +930,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
                     if ( actionsColumn.Visible )
                     {
-                        var actionsCell = e.Row.Cells[gList.Columns.IndexOf( actionsColumn )];
-                        actionsCell.CssClass += " align-middle";
-
+                        TableCell actionsCell = null;
                         if ( followUpGrid )
                         {
                             actionsCell = e.Row.Cells[gFollowUp.Columns.IndexOf( actionsColumn )];
                         }
+                        else
+                        {
+                            actionsCell = e.Row.Cells[gList.Columns.IndexOf( actionsColumn )];
+                        }
+                        actionsCell.CssClass += " align-middle";
 
                         var ddlNav = new HtmlGenericControl( "div" );
                         ddlNav.Attributes["class"] = "btn-group";
