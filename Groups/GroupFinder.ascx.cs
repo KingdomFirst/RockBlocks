@@ -1608,10 +1608,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         var valSplit = hideFilter.Value.SplitDelimitedValues();
                         foreach ( var hideVal in valSplit )
                         {
-                            cssStyle.AppendFormat( "[id*=\"{0}\"] [value=\"{1}\"], [id*=\"{0}\"] [value=\"{1}\"] + span, ", hideFilter.Key, hideVal.EscapeQuotes() );
+                            cssStyle.AppendFormat( "[id*=\"{0}\"][value=\"{1}\"], [id*=\"{0}\"][value=\"{1}\"] + span, ", hideFilter.Key, hideVal.EscapeQuotes() );
                         }
                     }
-                    cssStyle.Append( " .hideSpecificValue { display: none; visibility: hidden; }" );
+                    cssStyle.Append( " .hideSpecificValue { visibility: hidden !important; display: none !important; }" );
                     cssStyle.AppendLine( ".field-criteria .in-columns, .field-criteria .checkbox-inline { margin-top: 0px; }" );
                     cssStyle.AppendLine( ".radio input[type=\"radio\"], .radio-inline input[type=\"radio\"], .checkbox input[type=\"checkbox\"], .checkbox-inline input[type=\"checkbox\"] { top: 50%; transform: translateY(-50%); }" );
                     cssStyle.AppendLine( ".in-columns .label-text { margin-top: 8px }" );
