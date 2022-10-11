@@ -274,7 +274,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                         communicationRecipient.Status = CommunicationRecipientStatus.Failed;
                         communicationRecipient.StatusNote = postalServerEvent.Payload.Details + postalServerEvent.Payload.Output;
 
-                        if ( postalServerEvent.Payload.Details.Contains( "Bounced Address" ) )
+                        if ( postalServerEvent.Payload.Details.Contains( "Bounced Address" ) || postalServerEvent.Payload.Output.Contains( "Bounced Address" ) )
                         {
                             Rock.Communication.Email.ProcessBounce(
                                 postalServerEvent.Payload.Message.To,
@@ -282,7 +282,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                                 postalServerEvent.Payload.Details,
                                 timeStamp );
                         }
-                        if ( postalServerEvent.Payload.Output.Contains( "Bounced Address" ) )
+                        if ( postalServerEvent.Payload.Status == "HardFail" )
                         {
                             Rock.Communication.Email.ProcessBounce(
                                 postalServerEvent.Payload.Message.To,
