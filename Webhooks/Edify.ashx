@@ -16,7 +16,7 @@
 // </copyright>
 //
 -->
-<%@ WebHandler Language="C#" Class="RockWeb.Plugins.rocks_kfs.Webhooks.PostalServer" %>
+<%@ WebHandler Language="C#" Class="RockWeb.Plugins.rocks_kfs.Webhooks.Edify" %>
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -34,7 +34,7 @@ using Rock.Workflow.Action;
 namespace RockWeb.Plugins.rocks_kfs.Webhooks
 {
 
-    public class PostalServerEvent : EventData
+    public class EdifyEvent : EventData
     {
         public string WorkflowActionGuid
         {
@@ -74,15 +74,15 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
     }
 
     /// <summary>
-    /// Handles the responses from PostalServer
+    /// Handles the responses from Edify
     /// </summary>
-    public class PostalServer : IHttpAsyncHandler
+    public class Edify : IHttpAsyncHandler
     {
         public IAsyncResult BeginProcessRequest( HttpContext context, AsyncCallback cb, Object extraData )
         {
-            PostalServerResponseAsync postalServerAsync = new PostalServerResponseAsync( cb, context, extraData );
-            postalServerAsync.StartAsyncWork();
-            return postalServerAsync;
+            EdifyResponseAsync edifyAsync = new EdifyResponseAsync( cb, context, extraData );
+            edifyAsync.StartAsyncWork();
+            return edifyAsync;
         }
 
         public void EndProcessRequest( IAsyncResult result ) { }
@@ -101,7 +101,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
         }
     }
 
-    internal class PostalServerResponseAsync : IAsyncResult
+    internal class EdifyResponseAsync : IAsyncResult
     {
         private bool _completed;
         private readonly Object _state;
@@ -115,7 +115,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
 
         private const bool ENABLE_LOGGING = false;
 
-        public PostalServerResponseAsync( AsyncCallback callback, HttpContext context, Object state )
+        public EdifyResponseAsync( AsyncCallback callback, HttpContext context, Object state )
         {
             _callback = callback;
             _context = context;
@@ -183,56 +183,56 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                 }
             }
 
-            var postalEvent = JsonConvert.DeserializeObject<PostalServerEvent>( payload );
+            var edifyEvent = JsonConvert.DeserializeObject<EdifyEvent>( payload );
 
-            if ( postalEvent == null )
+            if ( edifyEvent == null )
             {
                 response.Write( "Invalid content type." );
                 response.StatusCode = ( int ) System.Net.HttpStatusCode.NotAcceptable;
                 return;
             }
 
-            ProcessPostalServerEvent( postalEvent, new Rock.Data.RockContext() );
-            //ProcessPostalServerEventListAsync( eventList );
+            ProcessEdifyEvent( edifyEvent, new Rock.Data.RockContext() );
+            //ProcessEdifyEventListAsync( eventList );
 
             response.StatusCode = ( int ) System.Net.HttpStatusCode.OK;
         }
 
-        private void ProcessPostalServerEventListAsync( List<PostalServerEvent> postalServerEvents )
+        private void ProcessEdifyEventListAsync( List<EdifyEvent> edifyEvents )
         {
             var rockContext = new Rock.Data.RockContext();
 
-            foreach ( var postalServerEvent in postalServerEvents )
+            foreach ( var edifyEvent in edifyEvents )
             {
-                ProcessPostalServerEvent( postalServerEvent, rockContext );
+                ProcessEdifyEvent( edifyEvent, rockContext );
             }
 
         }
 
-        private void ProcessPostalServerEvent( PostalServerEvent postalServerEvent, Rock.Data.RockContext rockContext )
+        private void ProcessEdifyEvent( EdifyEvent edifyEvent, Rock.Data.RockContext rockContext )
         {
 
             Guid? actionGuid = null;
             Guid? communicationRecipientGuid = null;
 
-            if ( !string.IsNullOrWhiteSpace( postalServerEvent.WorkflowActionGuid ) )
+            if ( !string.IsNullOrWhiteSpace( edifyEvent.WorkflowActionGuid ) )
             {
-                actionGuid = postalServerEvent.WorkflowActionGuid.AsGuidOrNull();
+                actionGuid = edifyEvent.WorkflowActionGuid.AsGuidOrNull();
             }
 
-            if ( !string.IsNullOrWhiteSpace( postalServerEvent.CommunicationRecipientGuid ) )
+            if ( !string.IsNullOrWhiteSpace( edifyEvent.CommunicationRecipientGuid ) )
             {
-                communicationRecipientGuid = postalServerEvent.CommunicationRecipientGuid.AsGuidOrNull();
+                communicationRecipientGuid = edifyEvent.CommunicationRecipientGuid.AsGuidOrNull();
             }
 
             if ( actionGuid != null )
             {
-                ProcessForWorkflow( actionGuid, rockContext, postalServerEvent );
+                ProcessForWorkflow( actionGuid, rockContext, edifyEvent );
             }
 
             if ( communicationRecipientGuid != null )
             {
-                ProcessForRecipient( communicationRecipientGuid, rockContext, postalServerEvent );
+                ProcessForRecipient( communicationRecipientGuid, rockContext, edifyEvent );
             }
         }
 
@@ -242,9 +242,9 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
         /// <param name="eventType">Type of the event.</param>
         /// <param name="communicationRecipientGuid">The communication recipient unique identifier.</param>
         /// <param name="rockContext">The rock context.</param>
-        private void ProcessForRecipient( Guid? communicationRecipientGuid, Rock.Data.RockContext rockContext, PostalServerEvent postalServerEvent )
+        private void ProcessForRecipient( Guid? communicationRecipientGuid, Rock.Data.RockContext rockContext, EdifyEvent edifyEvent )
         {
-            RockLogger.Log.Debug( RockLogDomains.Communications, "ProcessForRecipient {@payload}", postalServerEvent );
+            RockLogger.Log.Debug( RockLogDomains.Communications, "ProcessForRecipient {@payload}", edifyEvent );
 
             if ( !communicationRecipientGuid.HasValue )
             {
@@ -261,9 +261,9 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                 rockContext.SaveChanges();
 
                 var interactionService = new InteractionService( rockContext );
-                DateTime timeStamp = RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( postalServerEvent.Timestamp.Value ).ToLocalTime() );
+                DateTime timeStamp = RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( edifyEvent.Timestamp.Value ).ToLocalTime() );
 
-                switch ( postalServerEvent.Event )
+                switch ( edifyEvent.Event )
                 {
                     case "processed":
                         // Do nothing.
@@ -272,22 +272,22 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     case "MessageHeld":
                     case "MessageDeliveryFailed":
                         communicationRecipient.Status = CommunicationRecipientStatus.Failed;
-                        communicationRecipient.StatusNote = postalServerEvent.Payload.Details + postalServerEvent.Payload.Output;
+                        communicationRecipient.StatusNote = edifyEvent.Payload.Details + edifyEvent.Payload.Output;
 
-                        if ( postalServerEvent.Payload.Details.Contains( "Bounced Address" ) || postalServerEvent.Payload.Output.Contains( "Bounced Address" ) )
+                        if ( edifyEvent.Payload.Details.Contains( "Bounced Address" ) || edifyEvent.Payload.Output.Contains( "Bounced Address" ) )
                         {
                             Rock.Communication.Email.ProcessBounce(
-                                postalServerEvent.Payload.Message.To,
+                                edifyEvent.Payload.Message.To,
                                 Rock.Communication.BounceType.HardBounce,
-                                postalServerEvent.Payload.Details,
+                                edifyEvent.Payload.Details,
                                 timeStamp );
                         }
-                        if ( postalServerEvent.Payload.Status == "HardFail" )
+                        if ( edifyEvent.Payload.Status == "HardFail" )
                         {
                             Rock.Communication.Email.ProcessBounce(
-                                postalServerEvent.Payload.Message.To,
+                                edifyEvent.Payload.Message.To,
                                 Rock.Communication.BounceType.HardBounce,
-                                postalServerEvent.Payload.Output,
+                                edifyEvent.Payload.Output,
                                 timeStamp );
                         }
 
@@ -295,7 +295,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     case "delivered":
                     case "MessageSent":
                         communicationRecipient.Status = CommunicationRecipientStatus.Delivered;
-                        communicationRecipient.StatusNote = string.Format( "Confirmed delivered by Postal Server at {0}", timeStamp.ToString() );
+                        communicationRecipient.StatusNote = string.Format( "Confirmed delivered by Edify at {0}", timeStamp.ToString() );
                         break;
                     case "MessageDelayed":
                         // TODO: handle MessageDelayed.
@@ -303,13 +303,13 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     case "bounce":
                     case "MessageBounced":
                         communicationRecipient.Status = CommunicationRecipientStatus.Failed;
-                        communicationRecipient.StatusNote = postalServerEvent.Payload.Details + postalServerEvent.Payload.Output;
-                        //communicationRecipient.StatusNote = postalServerEvent.Payload.Bounce.Subject;
+                        communicationRecipient.StatusNote = edifyEvent.Payload.Details + edifyEvent.Payload.Output;
+                        //communicationRecipient.StatusNote = edifyEvent.Payload.Bounce.Subject;
 
                         Rock.Communication.Email.ProcessBounce(
-                            postalServerEvent.Payload.Message.To,
+                            edifyEvent.Payload.Message.To,
                             Rock.Communication.BounceType.HardBounce,
-                            postalServerEvent.Event,
+                            edifyEvent.Event,
                             timeStamp );
                         break;
                     case "open":
@@ -318,9 +318,9 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                         communicationRecipient.OpenedDateTime = timeStamp;
                         communicationRecipient.OpenedClient = string.Format(
                             "{0} {1} ({2})",
-                            postalServerEvent.Payload.ClientOs ?? "unknown",
-                            postalServerEvent.Payload.ClientBrowser ?? "unknown",
-                            postalServerEvent.Payload.ClientDeviceType ?? "unknown" );
+                            edifyEvent.Payload.ClientOs ?? "unknown",
+                            edifyEvent.Payload.ClientBrowser ?? "unknown",
+                            edifyEvent.Payload.ClientDeviceType ?? "unknown" );
 
                         if ( interactionComponent != null )
                         {
@@ -328,14 +328,14 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                                 interactionComponent.Id,
                                 communicationRecipient.Id,
                                 "Opened",
-                                postalServerEvent.Payload.Message.MessageId,
+                                edifyEvent.Payload.Message.MessageId,
                                 communicationRecipient.PersonAliasId,
                                 timeStamp,
-                                postalServerEvent.Payload.ClientBrowser,
-                                postalServerEvent.Payload.ClientOs,
-                                postalServerEvent.Payload.ClientDeviceType,
-                                postalServerEvent.Payload.ClientDeviceBrand,
-                                postalServerEvent.Payload.IpAddress,
+                                edifyEvent.Payload.ClientBrowser,
+                                edifyEvent.Payload.ClientOs,
+                                edifyEvent.Payload.ClientDeviceType,
+                                edifyEvent.Payload.ClientDeviceBrand,
+                                edifyEvent.Payload.IpAddress,
                                 null );
                         }
 
@@ -349,14 +349,14 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                                 interactionComponent.Id,
                                 communicationRecipient.Id,
                                 "Click",
-                                postalServerEvent.Payload.Url,
+                                edifyEvent.Payload.Url,
                                 communicationRecipient.PersonAliasId,
                                 timeStamp,
-                                postalServerEvent.Payload.ClientBrowser,
-                                postalServerEvent.Payload.ClientOs,
-                                postalServerEvent.Payload.ClientDeviceType,
-                                postalServerEvent.Payload.ClientDeviceBrand,
-                                postalServerEvent.Payload.IpAddress,
+                                edifyEvent.Payload.ClientBrowser,
+                                edifyEvent.Payload.ClientOs,
+                                edifyEvent.Payload.ClientDeviceType,
+                                edifyEvent.Payload.ClientDeviceBrand,
+                                edifyEvent.Payload.IpAddress,
                                 null );
                         }
 
@@ -374,12 +374,12 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
             }
         }
 
-        private void ProcessForWorkflow( Guid? actionGuid, Rock.Data.RockContext rockContext, PostalServerEvent postalServerEvent )
+        private void ProcessForWorkflow( Guid? actionGuid, Rock.Data.RockContext rockContext, EdifyEvent edifyEvent )
         {
-            RockLogger.Log.Debug( RockLogDomains.Communications, "ProcessForWorkflow {@payload}", postalServerEvent );
+            RockLogger.Log.Debug( RockLogDomains.Communications, "ProcessForWorkflow {@payload}", edifyEvent );
 
             string status = string.Empty;
-            switch ( postalServerEvent.Event )
+            switch ( edifyEvent.Event )
             {
                 //case "unsubscribe":
                 //case "delivered":
@@ -405,32 +405,32 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                 case "MessageHeld":
                 case "MessageDeliveryFailed":
                     status = SendEmailWithEvents.FAILED_STATUS;
-                    string message = postalServerEvent.Payload.Output.IsNotNullOrWhiteSpace() ? postalServerEvent.Payload.Output : postalServerEvent.Payload.Details;
+                    string message = edifyEvent.Payload.Output.IsNotNullOrWhiteSpace() ? edifyEvent.Payload.Output : edifyEvent.Payload.Details;
 
                     Rock.Communication.Email.ProcessBounce(
-                            postalServerEvent.Payload.Message.To,
+                            edifyEvent.Payload.Message.To,
                             Rock.Communication.BounceType.HardBounce,
                             message,
-                            RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( postalServerEvent.Timestamp.Value ).ToLocalTime() ) );
+                            RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( edifyEvent.Timestamp.Value ).ToLocalTime() ) );
                     break;
                 case "MessageBounced":
                     status = SendEmailWithEvents.FAILED_STATUS;
-                    string messageBounce = postalServerEvent.Payload.Output.IsNotNullOrWhiteSpace() ? postalServerEvent.Payload.Output : postalServerEvent.Payload.Details;
+                    string messageBounce = edifyEvent.Payload.Output.IsNotNullOrWhiteSpace() ? edifyEvent.Payload.Output : edifyEvent.Payload.Details;
                     if ( messageBounce.IsNullOrWhiteSpace() )
                     {
-                        messageBounce = string.Format( "{0}. Message Bounced event.", postalServerEvent.Payload.Bounce.Subject );
+                        messageBounce = string.Format( "{0}. Message Bounced event.", edifyEvent.Payload.Bounce.Subject );
                     }
                     Rock.Communication.Email.ProcessBounce(
-                            postalServerEvent.Payload.Message.To,
+                            edifyEvent.Payload.Message.To,
                             Rock.Communication.BounceType.HardBounce,
                             messageBounce,
-                            RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( postalServerEvent.Timestamp.Value ).ToLocalTime() ) );
+                            RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( edifyEvent.Timestamp.Value ).ToLocalTime() ) );
                     break;
             }
 
             if ( actionGuid != null && !string.IsNullOrWhiteSpace( status ) )
             {
-                SendEmailWithEvents.UpdateEmailStatus( actionGuid.Value, status, postalServerEvent.Event, rockContext, true );
+                SendEmailWithEvents.UpdateEmailStatus( actionGuid.Value, status, edifyEvent.Event, rockContext, true );
             }
         }
     }
