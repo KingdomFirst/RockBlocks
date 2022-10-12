@@ -36,14 +36,14 @@ namespace RockWeb.Blocks.Event
     [DisplayName( "Event Item Occurrence List By Audience Lava" )]
     [Category( "Event" )]
     [Description( "Block that takes a audience and displays calendar item occurrences for it using Lava." )]
-    
-    [TextField("List Title", "The title to make available in the lava.", false, "Upcoming Events", order: 0)]
-    [DefinedValueField(Rock.SystemGuid.DefinedType.MARKETING_CAMPAIGN_AUDIENCE_TYPE, "Audience", "The audience to show calendar items for.", order: 0)]
-    [EventCalendarField("Calendar", "Filters the events by a specific calendar.", false, order: 1)]
-    [CampusesField("Campuses", "List of which campuses to show occurrences for. This setting will be ignored if 'Use Campus Context' is enabled.", required: false, order:2, includeInactive:true)]
-    [BooleanField("Use Campus Context", "Determine if the campus should be read from the campus context of the page.", order: 3)]
-    [SlidingDateRangeField("Date Range", "Optional date range to filter the occurrences on.", false, enabledSlidingDateRangeTypes: "Next,Upcoming,Current", order:4)]
-    [IntegerField("Max Occurrences", "The maximum number of occurrences to show.", false, 100, order: 5)]
+
+    [TextField( "List Title", "The title to make available in the lava.", false, "Upcoming Events", order: 0 )]
+    [DefinedValueField( Rock.SystemGuid.DefinedType.MARKETING_CAMPAIGN_AUDIENCE_TYPE, "Audience", "The audience to show calendar items for.", order: 0 )]
+    [EventCalendarField( "Calendar", "Filters the events by a specific calendar.", false, order: 1 )]
+    [CampusesField( "Campuses", "List of which campuses to show occurrences for. This setting will be ignored if 'Use Campus Context' is enabled.", required: false, order: 2, includeInactive: true )]
+    [BooleanField( "Use Campus Context", "Determine if the campus should be read from the campus context of the page.", order: 3 )]
+    [SlidingDateRangeField( "Date Range", "Optional date range to filter the occurrences on.", false, enabledSlidingDateRangeTypes: "Next,Upcoming,Current", order: 4 )]
+    [IntegerField( "Max Occurrences", "The maximum number of occurrences to show.", false, 100, order: 5 )]
     [LinkedPage( "Event Detail Page", "The page to use for showing event details.", order: 6 )]
     [LinkedPage( "Registration Page", "The page to use for registrations.", order: 7 )]
     [CodeEditorField( "Lava Template", "The lava template to use for the results", CodeEditorMode.Lava, CodeEditorTheme.Rock, defaultValue: "{% include '~~/Assets/Lava/EventItemOccurrenceListByAudience.lava' %}", order: 8 )]
@@ -123,7 +123,7 @@ namespace RockWeb.Blocks.Event
 
                 // get event occurrences
                 var qry = new EventItemOccurrenceService( rockContext ).Queryable()
-                                            .Where(e => e.EventItem.EventItemAudiences.Any(a => a.DefinedValue.Guid == audienceGuid) && e.EventItem.IsActive);
+                                            .Where( e => e.EventItem.EventItemAudiences.Any( a => a.DefinedValue.Guid == audienceGuid ) && e.EventItem.IsActive );
 
                 var campusFilter = new List<CampusCache>();
 
@@ -201,31 +201,31 @@ namespace RockWeb.Blocks.Event
                 // limit results
                 int maxItems = GetAttributeValue( "MaxOccurrences" ).AsInteger();
                 itemOccurrences = itemOccurrences.OrderBy( i => i.NextStartDateTime ).Take( maxItems ).ToList();
-                
+
                 // make lava merge fields
                 var mergeFields = new Dictionary<string, object>();
 
                 var contextObjects = new Dictionary<string, object>();
-                foreach (var contextEntityType in RockPage.GetContextEntityTypes())
+                foreach ( var contextEntityType in RockPage.GetContextEntityTypes() )
                 {
-                    var contextEntity = RockPage.GetCurrentContext(contextEntityType);
-                    if (contextEntity != null && contextEntity is DotLiquid.ILiquidizable)
+                    var contextEntity = RockPage.GetCurrentContext( contextEntityType );
+                    if ( contextEntity != null && contextEntity is DotLiquid.ILiquidizable )
                     {
-                        var type = Type.GetType(contextEntityType.AssemblyName ?? contextEntityType.Name);
-                        if (type != null)
+                        var type = Type.GetType( contextEntityType.AssemblyName ?? contextEntityType.Name );
+                        if ( type != null )
                         {
-                            contextObjects.Add(type.Name, contextEntity);
+                            contextObjects.Add( type.Name, contextEntity );
                         }
                     }
 
                 }
 
-                if (contextObjects.Any())
+                if ( contextObjects.Any() )
                 {
-                    mergeFields.Add("Context", contextObjects);
+                    mergeFields.Add( "Context", contextObjects );
                 }
 
-                mergeFields.Add( "ListTitle", GetAttributeValue("ListTitle") );
+                mergeFields.Add( "ListTitle", GetAttributeValue( "ListTitle" ) );
                 mergeFields.Add( "EventDetailPage", LinkedPageRoute( "EventDetailPage" ) );
                 mergeFields.Add( "RegistrationPage", LinkedPageRoute( "RegistrationPage" ) );
                 mergeFields.Add( "EventItemOccurrences", itemOccurrences );
