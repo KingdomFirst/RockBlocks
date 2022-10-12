@@ -46,7 +46,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     var tag = this.Payload.Message.Tag;
                     if ( tag.IsNotNullOrWhiteSpace() && tag.Contains( "workflow_action_guid" ) )
                     {
-                        var tagDict = tag.TrimEnd( ';' ).Split( ';' ).ToDictionary( item => item.Split( '=' )[0], item => item.Split( '=' )[1] );
+                        var tagDict = tag.TrimEnd( '|' ).Split( '|' ).ToDictionary( item => item.Split( '=' )[0], item => item.Split( '=' )[1] );
                         retval = tagDict["workflow_action_guid"];
                     }
                 }
@@ -64,7 +64,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     var tag = this.Payload.Message.Tag;
                     if ( tag.IsNotNullOrWhiteSpace() && tag.Contains( "communication_recipient_guid" ) )
                     {
-                        var tagDict = tag.TrimEnd( ';' ).Split( ';' ).ToDictionary( item => item.Split( '=' )[0], item => item.Split( '=' )[1] );
+                        var tagDict = tag.TrimEnd( '|' ).Split( '|' ).ToDictionary( item => item.Split( '=' )[0], item => item.Split( '=' )[1] );
                         retval = tagDict["communication_recipient_guid"];
                     }
                 }
