@@ -14,6 +14,14 @@
 // limitations under the License.
 // </copyright>
 //
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * Added ability to filter to multiple audiences instead of just one.
+// </notice>
+//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -28,17 +36,15 @@ using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
-using Rock.Security;
-using Rock.Lava;
 
-namespace RockWeb.Blocks.Event
+namespace RockWeb.Plugins.rocks_kfs.Event
 {
-    [DisplayName( "Event Item Occurrence List By Audience Lava" )]
-    [Category( "Event" )]
-    [Description( "Block that takes a audience and displays calendar item occurrences for it using Lava." )]
+    [DisplayName( "Event Item Occurrence List By Audiences Lava" )]
+    [Category( "KFS > Event" )]
+    [Description( "Block that takes selected audiences and displays calendar item occurrences for them using Lava." )]
 
     [TextField( "List Title", "The title to make available in the lava.", false, "Upcoming Events", order: 0 )]
-    [DefinedValueField( Rock.SystemGuid.DefinedType.MARKETING_CAMPAIGN_AUDIENCE_TYPE, "Audience", "The audience to show calendar items for.", order: 0 )]
+    [DefinedValueField( Rock.SystemGuid.DefinedType.MARKETING_CAMPAIGN_AUDIENCE_TYPE, "Audience", "The audience to show calendar items for.", order: 0, allowMultiple: true )]
     [EventCalendarField( "Calendar", "Filters the events by a specific calendar.", false, order: 1 )]
     [CampusesField( "Campuses", "List of which campuses to show occurrences for. This setting will be ignored if 'Use Campus Context' is enabled.", required: false, order: 2, includeInactive: true )]
     [BooleanField( "Use Campus Context", "Determine if the campus should be read from the campus context of the page.", order: 3 )]
@@ -47,7 +53,7 @@ namespace RockWeb.Blocks.Event
     [LinkedPage( "Event Detail Page", "The page to use for showing event details.", order: 6 )]
     [LinkedPage( "Registration Page", "The page to use for registrations.", order: 7 )]
     [CodeEditorField( "Lava Template", "The lava template to use for the results", CodeEditorMode.Lava, CodeEditorTheme.Rock, defaultValue: "{% include '~~/Assets/Lava/EventItemOccurrenceListByAudience.lava' %}", order: 8 )]
-    public partial class EventItemOccurrenceListByAudienceLava : Rock.Web.UI.RockBlock
+    public partial class EventItemOccurrenceListByAudiencesLava : Rock.Web.UI.RockBlock
     {
         #region Fields
 
@@ -114,16 +120,16 @@ namespace RockWeb.Blocks.Event
 
         private void LoadContent()
         {
-            var audienceGuid = GetAttributeValue( "Audience" ).AsGuid();
+            var audienceGuids = GetAttributeValues( "Audience" ).AsGuidList();
 
-            if ( audienceGuid != Guid.Empty )
+            if ( audienceGuids.Any() )
             {
                 lMessages.Text = string.Empty;
                 RockContext rockContext = new RockContext();
 
                 // get event occurrences
                 var qry = new EventItemOccurrenceService( rockContext ).Queryable()
-                                            .Where( e => e.EventItem.EventItemAudiences.Any( a => a.DefinedValue.Guid == audienceGuid ) && e.EventItem.IsActive );
+                                            .Where( e => e.EventItem.EventItemAudiences.Any( a => audienceGuids.Contains( a.DefinedValue.Guid ) ) && e.EventItem.IsActive );
 
                 var campusFilter = new List<CampusCache>();
 
@@ -230,8 +236,13 @@ namespace RockWeb.Blocks.Event
                 mergeFields.Add( "RegistrationPage", LinkedPageRoute( "RegistrationPage" ) );
                 mergeFields.Add( "EventItemOccurrences", itemOccurrences );
 
+                var audiences = new List<DefinedValueCache>();
+                foreach ( var audience in audienceGuids )
+                {
+                    audiences.Add( DefinedValueCache.Get( audience ) );
+                }
                 mergeFields.Add( "FilteredCampuses", campusFilter );
-                mergeFields.Add( "Audience", DefinedValueCache.Get( audienceGuid ) );
+                mergeFields.Add( "Audiences", audiences );
 
                 if ( calendarGuid != Guid.Empty )
                 {
@@ -243,7 +254,7 @@ namespace RockWeb.Blocks.Event
             }
             else
             {
-                lMessages.Text = "<div class='alert alert-warning'>No audience is configured for this block.</div>";
+                lMessages.Text = "<div class='alert alert-warning'>No audiences are configured for this block.</div>";
             }
         }
 
