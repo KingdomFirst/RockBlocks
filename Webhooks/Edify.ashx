@@ -282,7 +282,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                                 edifyEvent.Payload.Details,
                                 timeStamp );
                         }
-                        if ( edifyEvent.Payload.Status == "HardFail" )
+                        else if ( edifyEvent.Payload.Status == "HardFail" )
                         {
                             Rock.Communication.Email.ProcessBounce(
                                 edifyEvent.Payload.Message.To,
@@ -290,7 +290,14 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                                 edifyEvent.Payload.Output,
                                 timeStamp );
                         }
-
+                        else
+                        {
+                            Rock.Communication.Email.ProcessBounce(
+                                edifyEvent.Payload.Message.To,
+                                Rock.Communication.BounceType.SoftBounce,
+                                communicationRecipient.StatusNote,
+                                RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( edifyEvent.Timestamp.Value ).ToLocalTime() ) );
+                        }
                         break;
                     case "delivered":
                     case "MessageSent":
@@ -407,11 +414,22 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     status = SendEmailWithEvents.FAILED_STATUS;
                     string message = edifyEvent.Payload.Output.IsNotNullOrWhiteSpace() ? edifyEvent.Payload.Output : edifyEvent.Payload.Details;
 
-                    Rock.Communication.Email.ProcessBounce(
-                            edifyEvent.Payload.Message.To,
-                            Rock.Communication.BounceType.HardBounce,
-                            message,
-                            RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( edifyEvent.Timestamp.Value ).ToLocalTime() ) );
+                    if ( edifyEvent.Payload.Status == "HardFail" )
+                    {
+                        Rock.Communication.Email.ProcessBounce(
+                                edifyEvent.Payload.Message.To,
+                                Rock.Communication.BounceType.HardBounce,
+                                message,
+                                RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( edifyEvent.Timestamp.Value ).ToLocalTime() ) );
+                    }
+                    else
+                    {
+                        Rock.Communication.Email.ProcessBounce(
+                                edifyEvent.Payload.Message.To,
+                                Rock.Communication.BounceType.SoftBounce,
+                                message,
+                                RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( edifyEvent.Timestamp.Value ).ToLocalTime() ) );
+                    }
                     break;
                 case "MessageBounced":
                     status = SendEmailWithEvents.FAILED_STATUS;
