@@ -304,13 +304,25 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                         break;
                     case "MessageBounced":
                         communicationRecipient.Status = CommunicationRecipientStatus.Failed;
-                        communicationRecipient.StatusNote = edifyEvent.Payload.Details + edifyEvent.Payload.Output;
-                        //communicationRecipient.StatusNote = edifyEvent.Payload.Bounce.Subject;
+                        var statusMsg = "";
+                        if ( edifyEvent.Payload != null && edifyEvent.Payload.Details.IsNotNullOrWhiteSpace() || edifyEvent.Payload.Output.IsNotNullOrWhiteSpace() )
+                        {
+                            statusMsg = edifyEvent.Payload.Details + edifyEvent.Payload.Output;
+                        }
+                        else if ( edifyEvent.Payload != null && edifyEvent.Payload.Bounce != null )
+                        {
+                            statusMsg = $"Messaged Bounced - {edifyEvent.Payload.Bounce.Subject}";
+                        }
+                        else
+                        {
+                            statusMsg = "Message Bounced";
+                        }
+                        communicationRecipient.StatusNote = statusMsg;
 
                         Rock.Communication.Email.ProcessBounce(
                             edifyEvent.Payload.Message.To,
                             Rock.Communication.BounceType.HardBounce,
-                            edifyEvent.Event,
+                            statusMsg,
                             timeStamp );
                         break;
                     case "MessageLoaded":
@@ -393,7 +405,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                 case "MessageHeld":
                 case "MessageDeliveryFailed":
                     status = SendEmailWithEvents.FAILED_STATUS;
-                    string message = edifyEvent.Payload.Output.IsNotNullOrWhiteSpace() ? edifyEvent.Payload.Output : edifyEvent.Payload.Details;
+                    string message = edifyEvent.Payload.Details + edifyEvent.Payload.Output;
 
                     if ( edifyEvent.Payload.Status == "HardFail" )
                     {
@@ -414,15 +426,24 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     break;
                 case "MessageBounced":
                     status = SendEmailWithEvents.FAILED_STATUS;
-                    string messageBounce = edifyEvent.Payload.Output.IsNotNullOrWhiteSpace() ? edifyEvent.Payload.Output : edifyEvent.Payload.Details;
-                    if ( messageBounce.IsNullOrWhiteSpace() )
+                    var statusMsg = "";
+                    if ( edifyEvent.Payload != null && edifyEvent.Payload.Details.IsNotNullOrWhiteSpace() || edifyEvent.Payload.Output.IsNotNullOrWhiteSpace() )
                     {
-                        messageBounce = string.Format( "{0}. Message Bounced event.", edifyEvent.Payload.Bounce.Subject );
+                        statusMsg = edifyEvent.Payload.Details + edifyEvent.Payload.Output;
                     }
+                    else if ( edifyEvent.Payload != null && edifyEvent.Payload.Bounce != null )
+                    {
+                        statusMsg = $"Messaged Bounced - {edifyEvent.Payload.Bounce.Subject}";
+                    }
+                    else
+                    {
+                        statusMsg = "Message Bounced";
+                    }
+
                     Rock.Communication.Email.ProcessBounce(
                             edifyEvent.Payload.Message.To,
                             Rock.Communication.BounceType.HardBounce,
-                            messageBounce,
+                            statusMsg,
                             RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( edifyEvent.Timestamp.Value ).ToLocalTime() ) );
                     break;
             }
