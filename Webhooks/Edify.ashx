@@ -397,7 +397,6 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     status = SendEmailWithEvents.CLICKED_STATUS;
                     break;
 
-                //case "open":
                 case "MessageLoaded":
                     status = SendEmailWithEvents.OPENED_STATUS;
                     break;
