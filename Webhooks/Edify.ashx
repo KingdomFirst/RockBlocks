@@ -265,10 +265,6 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
 
                 switch ( edifyEvent.Event )
                 {
-                    case "processed":
-                        // Do nothing.
-                        break;
-                    case "dropped":
                     case "MessageHeld":
                     case "MessageDeliveryFailed":
                         communicationRecipient.Status = CommunicationRecipientStatus.Failed;
@@ -299,7 +295,6 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                                 RockDateTime.ConvertLocalDateTimeToRockDateTime( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( edifyEvent.Timestamp.Value ).ToLocalTime() ) );
                         }
                         break;
-                    case "delivered":
                     case "MessageSent":
                         communicationRecipient.Status = CommunicationRecipientStatus.Delivered;
                         communicationRecipient.StatusNote = string.Format( "Confirmed delivered by Edify at {0}", timeStamp.ToString() );
@@ -307,7 +302,6 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     case "MessageDelayed":
                         // TODO: handle MessageDelayed.
                         break;
-                    case "bounce":
                     case "MessageBounced":
                         communicationRecipient.Status = CommunicationRecipientStatus.Failed;
                         communicationRecipient.StatusNote = edifyEvent.Payload.Details + edifyEvent.Payload.Output;
@@ -319,7 +313,6 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                             edifyEvent.Event,
                             timeStamp );
                         break;
-                    case "open":
                     case "MessageLoaded":
                         communicationRecipient.Status = CommunicationRecipientStatus.Opened;
                         communicationRecipient.OpenedDateTime = timeStamp;
@@ -348,7 +341,6 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
 
                         break;
 
-                    case "click":
                     case "MessageLinkClicked":
                         if ( interactionComponent != null )
                         {
@@ -369,10 +361,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
 
                         break;
 
-                    case "spamreport":
-                    case "unsubscribe":
-                    case "group_unsubscribe":
-                    case "group_resubscribe":
+                    case "DomainDNSError":
                         // Do nothing.
                         break;
                 }
@@ -388,13 +377,10 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
             string status = string.Empty;
             switch ( edifyEvent.Event )
             {
-                //case "unsubscribe":
-                //case "delivered":
                 case "MessageSent":
                     status = SendEmailWithEvents.SENT_STATUS;
                     break;
 
-                //case "click":
                 case "MessageLinkClicked":
                     status = SendEmailWithEvents.CLICKED_STATUS;
                     break;
@@ -404,11 +390,6 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                     status = SendEmailWithEvents.OPENED_STATUS;
                     break;
 
-                case "failed":
-                case "dropped":
-                case "blocked":
-                case "bounce":
-                case "bounced":
                 case "MessageHeld":
                 case "MessageDeliveryFailed":
                     status = SendEmailWithEvents.FAILED_STATUS;
