@@ -83,11 +83,6 @@ class SimpleTextingResponseAsync : IAsyncResult
     }
 
     /// <summary>
-    /// The enable logging
-    /// </summary>
-    public bool EnableLogging { get; set; }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="SimpleTextingResponseAsync"/> class.
     /// </summary>
     /// <param name="callback">The callback.</param>
@@ -219,7 +214,6 @@ class SimpleTextingResponseAsync : IAsyncResult
                 break;
         }
 
-
         if ( unsubscribeReport == null && messageReport == null && deliveryReport == null )
         {
             response.Write( "Invalid content type." );
@@ -271,7 +265,7 @@ class SimpleTextingResponseAsync : IAsyncResult
                 }
                 else
                 {
-                    ExceptionLogService.LogException( "No recipient was found with the specified MessageId value!" );
+                    ExceptionLogService.LogException( $"No recipient was found with the specified MessageId value! ({messageId})" );
                 }
             }
         }
@@ -298,19 +292,19 @@ class SimpleTextingResponseAsync : IAsyncResult
                 if ( communicationRecipient != null )
                 {
                     communicationRecipient.Status = CommunicationRecipientStatus.Delivered;
-                    communicationRecipient.StatusNote = "Message Confirmed delivered by Simple Texting on " + RockDateTime.Now.ToString();
+                    communicationRecipient.StatusNote = $"Message Confirmed delivered by Simple Texting on {RockDateTime.Now.ToString()}";
                     rockContext.SaveChanges();
                 }
                 else
                 {
-                    ExceptionLogService.LogException( "No recipient was found with the specified MessageId value!" );
+                    ExceptionLogService.LogException( $"No recipient was found with the specified MessageId value! ({messageId})" );
                 }
             }
         }
     }
 
     /// <summary>
-    /// Messages the received.
+    /// Messages Received handler
     /// </summary>
     private void MessageReceived( MessageReport messageReport )
     {
@@ -349,6 +343,7 @@ class SimpleTextingResponseAsync : IAsyncResult
     /// <param name="toPhone"></param>
     /// <param name="fromPhone"></param>
     /// <param name="body"></param>
+    /// <param name="messageReport"></param>
     /// <returns>True if message was sent back, false if no message was sent</returns>
     public bool ProcessMessage( HttpRequest request, string toPhone, string fromPhone, string body, MessageReport messageReport )
     {
@@ -367,7 +362,7 @@ class SimpleTextingResponseAsync : IAsyncResult
 
                 if ( message.FromPerson == null )
                 {
-                    // Hard coded to 1 if it does not match someone and is less than 11 characters for now because Simple Texting does not support international text messages.
+                    // Hard coded to adding a 1 at the beginning if it does not match someone and is less than 11 characters for now because Simple Texting does not support international text messages receiving or sending.
                     // This should still try to match if the contact phone is >= 11 though.
                     message.FromNumber = ( message.FromNumber.Length < 11 ) ? $"1{message.FromNumber}" : message.FromNumber;
                     message.FromPerson = new PersonService( rockContext ).GetPersonFromMobilePhoneNumber( message.FromNumber, true );
@@ -385,7 +380,7 @@ class SimpleTextingResponseAsync : IAsyncResult
                     simpleTextingClient = new SimpleTextingDotNet.v2.Client( simpleTextingComponent.GetAttributeValue( rocks.kfs.SimpleTexting.Communications.Transport.SimpleTexting.AttributeKey.ApiKey ) );
                 }
 
-                if ( messageReport != null && messageReport.Values != null && messageReport.Values.MediaItems != null && messageReport.Values.MediaItems.Any() )
+                if ( messageReport != null && messageReport.Values != null && messageReport.Values.MediaItems != null && messageReport.Values.MediaItems.Any() && simpleTextingClient != null )
                 {
                     Guid imageGuid;
                     foreach ( var mediaitem in messageReport.Values.MediaItems )
@@ -456,7 +451,7 @@ class SimpleTextingResponseAsync : IAsyncResult
                     if ( simpleTextingClient != null )
                     {
                         simpleTextingClient.SendMessage( message.FromNumber, smsResponse.Message, accountPhone: message.ToNumber, mediaItems: attachmentUrls );
-                        return true;
+                        return true; // Message was sent back.
                     }
                 }
 
