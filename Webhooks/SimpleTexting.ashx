@@ -58,7 +58,7 @@ public class SimpleTextingAsync : IHttpAsyncHandler
     }
 }
 
-class SimpleTextingResponseAsync : IAsyncResult
+public class SimpleTextingResponseAsync : IAsyncResult
 {
     private bool _completed;
     private readonly Object _state;
@@ -158,14 +158,7 @@ class SimpleTextingResponseAsync : IAsyncResult
                         break;
                     case nameof( DeliveryMessageReport ):
                         var deliveryReport = ( DeliveryMessageReport ) processedObj;
-                        if ( deliveryReport.Type == SimpleTextingDotNet.Enum.Trigger.NON_DELIVERED_REPORT )
-                        {
-                            MessageNotDelivered( deliveryReport );
-                        }
-                        else
-                        {
-                            MessageDelivered( deliveryReport );
-                        }
+                        MessageDelivery( deliveryReport );
                         break;
                 }
 
@@ -212,6 +205,9 @@ class SimpleTextingResponseAsync : IAsyncResult
                 deliveryReport = JsonConvert.DeserializeObject<DeliveryMessageReport>( payload );
                 unsubscribeReport = null;
                 break;
+            default:
+                // Default Type is "UNSUBSCRIBE_REPORT"
+                break;
         }
 
         if ( unsubscribeReport == null && messageReport == null && deliveryReport == null )
@@ -242,7 +238,7 @@ class SimpleTextingResponseAsync : IAsyncResult
     /// <summary>
     /// Mark message as not delivered.
     /// </summary>
-    private void MessageNotDelivered( DeliveryMessageReport deliveryReport )
+    private void MessageDelivery( DeliveryMessageReport deliveryReport )
     {
         if ( deliveryReport != null && deliveryReport.Values != null && deliveryReport.Values.MessageId.IsNotNullOrWhiteSpace() )
         {
@@ -259,40 +255,16 @@ class SimpleTextingResponseAsync : IAsyncResult
 
                 if ( communicationRecipient != null )
                 {
-                    communicationRecipient.Status = CommunicationRecipientStatus.Failed;
-                    communicationRecipient.StatusNote = $"Message failure notification from Simple Texting on {RockDateTime.Now.ToString()}. Carrier: {deliveryReport.Values.Carrier}";
-                    rockContext.SaveChanges();
-                }
-                else
-                {
-                    ExceptionLogService.LogException( $"No recipient was found with the specified MessageId value! ({messageId})" );
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Mark message as delivered.
-    /// </summary>
-    private void MessageDelivered( DeliveryMessageReport deliveryReport )
-    {
-        if ( deliveryReport != null && deliveryReport.Values != null && deliveryReport.Values.MessageId.IsNotNullOrWhiteSpace() )
-        {
-            var messageId = deliveryReport.Values.MessageId;
-
-            using ( RockContext rockContext = new RockContext() )
-            {
-                CommunicationRecipientService recipientService = new CommunicationRecipientService( rockContext );
-
-                var communicationRecipient = recipientService
-                    .Queryable()
-                    .Where( r => r.UniqueMessageId == messageId )
-                    .FirstOrDefault();
-
-                if ( communicationRecipient != null )
-                {
-                    communicationRecipient.Status = CommunicationRecipientStatus.Delivered;
-                    communicationRecipient.StatusNote = $"Message Confirmed delivered by Simple Texting on {RockDateTime.Now.ToString()}";
+                    if ( deliveryReport.Type == SimpleTextingDotNet.Enum.Trigger.NON_DELIVERED_REPORT )
+                    {
+                        communicationRecipient.Status = CommunicationRecipientStatus.Failed;
+                        communicationRecipient.StatusNote = $"Message failure notification from Simple Texting on {RockDateTime.Now}. Carrier: {deliveryReport.Values.Carrier}";
+                    }
+                    else
+                    {
+                        communicationRecipient.Status = CommunicationRecipientStatus.Delivered;
+                        communicationRecipient.StatusNote = $"Message Confirmed delivered by Simple Texting on {RockDateTime.Now}";
+                    }
                     rockContext.SaveChanges();
                 }
                 else
@@ -329,10 +301,9 @@ class SimpleTextingResponseAsync : IAsyncResult
             body = messageReport.Values.Text;
         }
 
-        var processedMessage = false;
         if ( toPhone.IsNotNullOrWhiteSpace() && fromPhone.IsNotNullOrWhiteSpace() )
         {
-            processedMessage = ProcessMessage( request, toPhone, fromPhone, body, messageReport );
+            var processedMessage = ProcessMessage( request, toPhone, fromPhone, body, messageReport );
         }
     }
 
