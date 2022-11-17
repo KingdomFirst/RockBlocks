@@ -490,7 +490,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
                     if ( isNew && dateDifference <= futureThresholdDays )
                     {
-                        CareUtilities.AutoAssignWorkers( careNeed, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuid: leaderRoleGuid );
+                        CareUtilities.AutoAssignWorkers( careNeed, careNeed.WorkersOnly, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuid: leaderRoleGuid );
                     }
 
                     if ( childNeedsCreated && careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any() && dateDifference <= futureThresholdDays )
@@ -506,7 +506,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             else
                             {
                                 var adultFamilyWorkers = GetAttributeValue( AttributeKey.AdultFamilyWorkers );
-                                CareUtilities.AutoAssignWorkers( need, adultFamilyWorkers == "Workers Only", autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuid: leaderRoleGuid );
+                                CareUtilities.AutoAssignWorkers( need, adultFamilyWorkers == "Workers Only" || careNeed.WorkersOnly, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuid: leaderRoleGuid );
                             }
                         }
                     }
