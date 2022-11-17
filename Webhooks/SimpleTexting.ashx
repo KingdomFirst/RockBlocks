@@ -385,18 +385,26 @@ class SimpleTextingResponseAsync : IAsyncResult
                     Guid imageGuid;
                     foreach ( var mediaitem in messageReport.Values.MediaItems )
                     {
-                        var getMediaItem = simpleTextingClient.GetMediaItem( mediaitem );
-
                         string imageUrl = "";
                         string mimeType = "";
                         string fileExtension = "";
-                        if ( getMediaItem != null && getMediaItem.Link.IsNotNullOrWhiteSpace() )
+                        try
                         {
-                            imageUrl = getMediaItem.Link;
-                            mimeType = getMediaItem.ContentType;
-                            fileExtension = getMediaItem.Ext;
+                            var getMediaItem = simpleTextingClient.GetMediaItem( mediaitem );
+
+                            if ( getMediaItem != null && getMediaItem.Link.IsNotNullOrWhiteSpace() )
+                            {
+                                imageUrl = getMediaItem.Link;
+                                mimeType = getMediaItem.ContentType;
+                                fileExtension = getMediaItem.Ext;
+                            }
+                            else
+                            {
+                                // due to the SimpleTexting API not currently being able to return an object for media items not in our organization, we will try a full url to retrieve it.
+                                imageUrl = $"https://app2.simpletexting.com/content/public-files/{mediaitem}";
+                            }
                         }
-                        else
+                        catch ( Exception e )
                         {
                             // due to the SimpleTexting API not currently being able to return an object for media items not in our organization, we will try a full url to retrieve it.
                             imageUrl = $"https://app2.simpletexting.com/content/public-files/{mediaitem}";
