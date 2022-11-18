@@ -359,27 +359,21 @@ public class SimpleTextingResponseAsync : IAsyncResult
                         string imageUrl = "";
                         string mimeType = "";
                         string fileExtension = "";
-                        try
-                        {
-                            var getMediaItem = simpleTextingClient.GetMediaItem( mediaitem );
+                        // var getMediaItem = simpleTextingClient.GetMediaItem( mediaitem );
 
-                            if ( getMediaItem != null && getMediaItem.Link.IsNotNullOrWhiteSpace() )
-                            {
-                                imageUrl = getMediaItem.Link;
-                                mimeType = getMediaItem.ContentType;
-                                fileExtension = getMediaItem.Ext;
-                            }
-                            else
-                            {
-                                // due to the SimpleTexting API not currently being able to return an object for media items not in our organization, we will try a full url to retrieve it.
-                                imageUrl = $"https://app2.simpletexting.com/content/public-files/{mediaitem}";
-                            }
-                        }
-                        catch ( Exception e )
-                        {
-                            // due to the SimpleTexting API not currently being able to return an object for media items not in our organization, we will try a full url to retrieve it.
-                            imageUrl = $"https://app2.simpletexting.com/content/public-files/{mediaitem}";
-                        }
+                        // if ( getMediaItem != null && getMediaItem.Link.IsNotNullOrWhiteSpace() )
+                        // {
+                        //     imageUrl = getMediaItem.Link;
+                        //     mimeType = getMediaItem.ContentType;
+                        //     fileExtension = getMediaItem.Ext;
+                        // }
+                        // else
+                        // {
+                        //     imageUrl = $"https://app2.simpletexting.com/content/public-files/{mediaitem}";
+                        // }
+
+                        // Due to the SimpleTexting API not currently being able to return an object for media items not in our organization, their response was use this url
+                        imageUrl = $"https://app2.simpletexting.com/content/public-files/{mediaitem}";
 
                         imageGuid = Guid.NewGuid();
 
