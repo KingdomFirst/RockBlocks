@@ -481,15 +481,23 @@ public class SimpleTextingResponseAsync : IAsyncResult
             {
                 { "bmp", "image/bmp" },
                 { "gif", "image/gif" },
-                { "jpeg", "image/jpeg" },
                 { "jpg", "image/jpeg" },
+                { "jpeg", "image/jpeg" },
                 { "jpe", "image/jpeg" },
                 { "png", "image/png" },
                 { "sgi", "image/sgi" },
                 { "svg", "image/svg+xml" },
                 { "svgz", "image/svg+xml" },
                 { "tiff", "image/tiff" },
-                { "tif", "image/tiff" }
+                { "tif", "image/tiff" },
+                { "pdf", "application/pdf" },
+                { "mp3", "audio/mpeg" },
+                { "mpg", "video/mpeg" },
+                { "mpeg", "video/mpeg" },
+                { "mp4", "video/mp4" },
+                { "vcf", "text/vcard" },
+                { "3gp", "video/3gpp" },
+                { "3g2", "video3gpp2" }
             };
 
         return mapping.FirstOrDefault( x => x.Value.Contains( contentType ) ).Key ?? string.Empty;
