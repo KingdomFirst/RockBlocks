@@ -35,6 +35,7 @@ using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Field;
 using Rock.Field.Types;
 using Rock.Lava;
 using Rock.Model;
@@ -1099,6 +1100,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             if ( ddlPersonField.Visible )
                             {
                                 field.PersonFieldType = ddlPersonField.SelectedValueAsEnum<PersonFieldType>();
+                                field.RegistrationPersonFieldType = ddlPersonField.SelectedValueAsEnum<RegistrationPersonFieldType>();
                             }
                             break;
                         }
@@ -1397,6 +1399,17 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             phContent.Controls.Add( new LiteralControl( field.PreText.ResolveMergeFields( mergeFields ) ) );
                         }
 
+                        bool hasDependantVisibilityRule = form.Fields.Any( a => a.FieldVisibilityRules.RuleList.Any( r => r.ComparedToFormFieldGuid == field.Guid ) );
+
+                        //if ( field.FieldSource == RegistrationFieldSource.PersonField )
+                        //{
+                        //    CreatePersonField( hasDependantVisibilityRule, field, setValues, value, familyMemberSelected, BlockValidationGroup, phRegistrantControls );
+                        //}
+                        //else
+                        //{
+                        //    CreateAttributeField( hasDependantVisibilityRule, field, setValues, value, GetAttributeValue( AttributeKey.ShowFieldDescriptions ).AsBoolean(), BlockValidationGroup, phRegistrantControls, DynamicControlPostbackMethod );
+                        //}
+
                         string value = null;
                         if ( field.FieldSource == FormFieldSource.PersonField )
                         {
@@ -1406,7 +1419,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 personFieldValue = PersonValueState[field.PersonFieldType];
                             }
 
-                            CreatePersonField( field, setValues, personFieldValue );
+                            CreatePersonField( field, setValues, personFieldValue, hasDependantVisibilityRule );
                         }
                         else if ( field.AttributeId.HasValue && field.FieldSource == FormFieldSource.PersonAttribute )
                         {
@@ -1418,7 +1431,42 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             var attribute = AttributeCache.Get( field.AttributeId.Value );
                             if ( attribute != null )
                             {
-                                attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
+                                //attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
+                                FieldVisibilityWrapper fieldVisibilityWrapper = new FieldVisibilityWrapper
+                                {
+                                    ID = "_fieldVisibilityWrapper_attribute_" + attribute.Id.ToString(),
+                                    FormFieldId = field.AttributeId.Value,
+                                    FieldVisibilityRules = field.FieldVisibilityRules
+                                };
+
+                                fieldVisibilityWrapper.EditValueUpdated += ( object sender, FieldVisibilityWrapper.FieldEventArgs args ) =>
+                                {
+                                    FieldVisibilityWrapper.ApplyFieldVisibilityRules( phContent );
+                                    DynamicControlPostbackMethod();
+                                };
+
+                                phContent.Controls.Add( fieldVisibilityWrapper );
+
+                                if ( !string.IsNullOrWhiteSpace( field.PreText ) )
+                                {
+                                    fieldVisibilityWrapper.Controls.Add( new LiteralControl( field.PreText ) );
+                                }
+
+                                var editControl = attribute.AddControl( fieldVisibilityWrapper.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
+                                fieldVisibilityWrapper.EditControl = editControl;
+
+                                if ( !string.IsNullOrWhiteSpace( field.PostText ) )
+                                {
+                                    fieldVisibilityWrapper.Controls.Add( new LiteralControl( field.PostText ) );
+                                }
+
+                                if ( hasDependantVisibilityRule && attribute.FieldType.Field.HasChangeHandler( editControl ) )
+                                {
+                                    attribute.FieldType.Field.AddChangeHandler( editControl, () =>
+                                    {
+                                        fieldVisibilityWrapper.TriggerEditValueUpdated( editControl, new FieldVisibilityWrapper.FieldEventArgs( attribute, editControl ) );
+                                    } );
+                                }
 
                                 if ( attribute.FieldType.Field is AddressFieldType )
                                 {
@@ -1436,7 +1484,10 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                     }
                                 }
                             }
+
                         }
+
+                        FieldVisibilityWrapper.ApplyFieldVisibilityRules( phContent );
 
                         if ( !string.IsNullOrWhiteSpace( field.PostText ) )
                         {
@@ -1445,6 +1496,18 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Method to run for the dynamic control FieldVisibility.EditValueUpdated event.
+        /// This is to recreate the controls for filter conditions, so it is not used by
+        /// PersonFields.
+        /// </summary>
+        private void DynamicControlPostbackMethod()
+        {
+            //CreateRegistrantControls( true );
+            //ParseDynamicControls();
+            //ShowFamilyMembersPanel();
         }
 
         private void ParseViewControls()
@@ -1659,8 +1722,10 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         /// <param name="field">The field.</param>
         /// <param name="setValue">if set to <c>true</c> [set value].</param>
         /// <param name="fieldValue">The field value.</param>
-        private void CreatePersonField( AttributeFormField field, bool setValue, string fieldValue )
+        private void CreatePersonField( AttributeFormField field, bool setValue, string fieldValue, bool hasDependantVisibilityRule )
         {
+            Control personFieldControl = null;
+
             switch ( field.PersonFieldType )
             {
                 case PersonFieldType.FirstName:
@@ -1671,7 +1736,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         tbFirstName.Required = field.IsRequired;
                         tbFirstName.ValidationGroup = BlockValidationGroup;
                         tbFirstName.AddCssClass( "js-first-name" );
-                        phContent.Controls.Add( tbFirstName );
+                        personFieldControl = tbFirstName;
+                        //phContent.Controls.Add( tbFirstName );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1688,7 +1754,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         tbLastName.Label = "Last Name";
                         tbLastName.Required = field.IsRequired;
                         tbLastName.ValidationGroup = BlockValidationGroup;
-                        phContent.Controls.Add( tbLastName );
+                        personFieldControl = tbLastName;
+                        //phContent.Controls.Add( tbLastName );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1705,7 +1772,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         tbMiddleName.Label = "Middle Name";
                         tbMiddleName.Required = field.IsRequired;
                         tbMiddleName.ValidationGroup = BlockValidationGroup;
-                        phContent.Controls.Add( tbMiddleName );
+                        personFieldControl = tbMiddleName;
+                        //phContent.Controls.Add( tbMiddleName );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1724,7 +1792,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         cpHomeCampus.ValidationGroup = BlockValidationGroup;
                         cpHomeCampus.Campuses = CampusCache.All( false );
 
-                        phContent.Controls.Add( cpHomeCampus );
+                        personFieldControl = cpHomeCampus;
+                        //phContent.Controls.Add( cpHomeCampus );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1750,7 +1819,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             ctrlDDL.SelectedIndexChanged += ddlCountry_indexChanged;
                         }
 
-                        phContent.Controls.Add( acAddress );
+                        personFieldControl = acAddress;
+                        //phContent.Controls.Add( acAddress );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1772,7 +1842,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         tbEmail.Label = "Email";
                         tbEmail.Required = field.IsRequired;
                         tbEmail.ValidationGroup = BlockValidationGroup;
-                        phContent.Controls.Add( tbEmail );
+                        personFieldControl = tbEmail;
+                        //phContent.Controls.Add( tbEmail );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1789,7 +1860,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         bpBirthday.Label = "Birthday";
                         bpBirthday.Required = field.IsRequired;
                         bpBirthday.ValidationGroup = BlockValidationGroup;
-                        phContent.Controls.Add( bpBirthday );
+                        personFieldControl = bpBirthday;
+                        //phContent.Controls.Add( bpBirthday );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1810,7 +1882,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         gpGrade.UseAbbreviation = true;
                         gpGrade.UseGradeOffsetAsValue = true;
                         gpGrade.CssClass = "input-width-md";
-                        phContent.Controls.Add( gpGrade );
+                        personFieldControl = gpGrade;
+                        //phContent.Controls.Add( gpGrade );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1830,10 +1903,11 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         ddlGender.ValidationGroup = BlockValidationGroup;
                         ddlGender.BindToEnum<Gender>( false );
 
-                        // change the 'Unknow' value to be blank instead
+                        // change the 'Unknown' value to be blank instead
                         ddlGender.Items.FindByValue( "0" ).Text = string.Empty;
 
-                        phContent.Controls.Add( ddlGender );
+                        personFieldControl = ddlGender;
+                        //phContent.Controls.Add( ddlGender );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1852,7 +1926,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         dvpMaritalStatus.Required = field.IsRequired;
                         dvpMaritalStatus.ValidationGroup = BlockValidationGroup;
                         dvpMaritalStatus.DefinedTypeId = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ).Id;
-                        phContent.Controls.Add( dvpMaritalStatus );
+                        personFieldControl = dvpMaritalStatus;
+                        //phContent.Controls.Add( dvpMaritalStatus );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1870,7 +1945,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         dpAnniversary.Label = "Anniversary Date";
                         dpAnniversary.Required = field.IsRequired;
                         dpAnniversary.ValidationGroup = BlockValidationGroup;
-                        phContent.Controls.Add( dpAnniversary );
+                        personFieldControl = dpAnniversary;
+                        //phContent.Controls.Add( dpAnniversary );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1886,7 +1962,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         if ( dv != null )
                         {
                             var pnlFrmGroup = new Panel { CssClass = "form-group phonegroup clearfix" };
-                            phContent.Controls.Add( pnlFrmGroup );
+                            personFieldControl = pnlFrmGroup;
+                            //phContent.Controls.Add( pnlFrmGroup );
 
                             var lblMobile = new Label { CssClass = "control-label phonegroup-label" };
                             lblMobile.Text = dv.Value;
@@ -1899,7 +1976,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                             var pnlRow = new Panel { CssClass = string.Format( "form-row {0}", displaySmsCheckbox ? "" : "mr-0" ) };
                             pnlPhoneGroup.Controls.Add( pnlRow );
-
 
                             var pnlCol1 = new Panel { CssClass = displaySmsCheckbox ? "col-sm-11" : "col-sm-12 pr-0" };
                             pnlRow.Controls.Add( pnlCol1 );
@@ -1954,7 +2030,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             ppHome.ValidationGroup = BlockValidationGroup;
                             ppHome.CountryCode = PhoneNumber.DefaultCountryCode();
 
-                            phContent.Controls.Add( ppHome );
+                            personFieldControl = ppHome;
+                            //phContent.Controls.Add( ppHome );
 
                             if ( setValue && fieldValue != null )
                             {
@@ -1977,7 +2054,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             ppWork.ValidationGroup = BlockValidationGroup;
                             ppWork.CountryCode = PhoneNumber.DefaultCountryCode();
 
-                            phContent.Controls.Add( ppWork );
+                            personFieldControl = ppWork;
+                            //phContent.Controls.Add( ppWork );
 
                             if ( setValue && fieldValue != null )
                             {
@@ -1996,7 +2074,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         dvpConnectionStatus.ValidationGroup = BlockValidationGroup;
                         dvpConnectionStatus.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_CONNECTION_STATUS ) ).Id;
 
-                        phContent.Controls.Add( dvpConnectionStatus );
+                        personFieldControl = dvpConnectionStatus;
+                        //phContent.Controls.Add( dvpConnectionStatus );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -2006,6 +2085,46 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                         break;
                     }
+            }
+
+            var fieldVisibilityWrapper = new FieldVisibilityWrapper
+            {
+                ID = "_fieldVisibilityWrapper_field_" + field.Guid.ToString( "N" ),
+                FormFieldId = ( ( int ) field.PersonFieldType ),
+                FieldVisibilityRules = field.FieldVisibilityRules
+            };
+
+            fieldVisibilityWrapper.EditValueUpdated += ( object sender, FieldVisibilityWrapper.FieldEventArgs args ) =>
+            {
+                FieldVisibilityWrapper.ApplyFieldVisibilityRules( phContent );
+            };
+
+            phContent.Controls.Add( fieldVisibilityWrapper );
+
+            if ( !string.IsNullOrWhiteSpace( field.PreText ) )
+            {
+                fieldVisibilityWrapper.Controls.Add( new LiteralControl( field.PreText ) );
+            }
+
+            fieldVisibilityWrapper.Controls.Add( personFieldControl );
+            fieldVisibilityWrapper.EditControl = personFieldControl;
+
+            if ( !string.IsNullOrWhiteSpace( field.PostText ) )
+            {
+                fieldVisibilityWrapper.Controls.Add( new LiteralControl( field.PostText ) );
+            }
+
+            if ( hasDependantVisibilityRule && FieldVisibilityRules.IsFieldSupported( field.RegistrationPersonFieldType ) )
+            {
+                var fieldType = FieldVisibilityRules.GetSupportedFieldTypeCache( field.RegistrationPersonFieldType ).Field;
+
+                if ( fieldType.HasChangeHandler( personFieldControl ) )
+                {
+                    fieldType.AddChangeHandler( personFieldControl, () =>
+                    {
+                        fieldVisibilityWrapper.TriggerEditValueUpdated( personFieldControl, new FieldVisibilityWrapper.FieldEventArgs( null, personFieldControl ) );
+                    } );
+                }
             }
         }
 
@@ -3060,6 +3179,8 @@ $('.template-form > .panel-body').on('validation-error', function() {
 
         public bool IsRequired { get; set; }
 
+        public virtual Rock.Field.FieldVisibilityRules FieldVisibilityRules { get; set; } = new Rock.Field.FieldVisibilityRules();
+
         public int Order { get; set; }
 
         public string PreText { get; set; }
@@ -3069,6 +3190,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
         public FormFieldSource FieldSource { get; set; }
 
         public PersonFieldType PersonFieldType { get; set; }
+        public RegistrationPersonFieldType RegistrationPersonFieldType { get; set; }
 
         [Newtonsoft.Json.JsonIgnore]
         public AttributeCache Attribute
