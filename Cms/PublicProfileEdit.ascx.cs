@@ -20,6 +20,7 @@
 //
 // Modification (including but not limited to):
 // * Allows person impersonation via url for checkin manager purposes.
+// * Modified processing on line 1366 to be != adultGuid instead of == childGuid for supporting other family roles.
 // </notice>
 //
 using System;
@@ -1282,6 +1283,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         {
             lViewPersonContent.Visible = false;
             var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
+            var adultGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid();
 
             RockContext rockContext = new RockContext();
 
@@ -1359,7 +1361,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 rblGender.SelectedValue = person.Gender.ConvertToString();
             }
 
-            if ( group.Members.Where( gm => gm.PersonId == person.Id && gm.GroupRole.Guid == childGuid ).Any() )
+            // Modified due to client having more than just Adult and Child family roles.
+            //if ( group.Members.Where( gm => gm.PersonId == person.Id && gm.GroupRole.Guid == childGuid ).Any() )
+            if ( group.Members.Where( gm => gm.PersonId == person.Id && gm.GroupRole.Guid != adultGuid ).Any() )
             {
                 _isEditRecordAdult = false;
                 tbEmail.Required = false;
