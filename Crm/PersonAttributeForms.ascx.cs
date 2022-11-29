@@ -993,6 +993,20 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         }
 
         /// <summary>
+        /// Handles the filter field click on the registrationTemplateFormEditor.
+        /// </summary>
+        /// <param name="sender">The sender.</param>
+        /// <param name="e">The e.</param>
+        private void tfeForm_FilterFieldClick( object sender, AttributeFormFieldEventArg e )
+        {
+            ParseEditControls();
+
+            ShowFormFieldFilter( e.FormGuid, e.FormFieldGuid );
+
+            BuildEditControls( true );
+        }
+
+        /// <summary>
         /// Tfes the form_ edit attribute click.
         /// </summary>
         /// <param name="sender">The sender.</param>
@@ -1038,6 +1052,22 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 var field = form.Fields.FirstOrDefault( f => f.Guid == e.FormFieldGuid );
                 if ( field != null )
                 {
+                    /*
+                      On Field Delete, we need to also remove all the existing reference of current field in filter rule list
+                    */
+                    var newFormFieldsWithRules = form.Fields
+                        .Where( a => a.FieldVisibilityRules.RuleList.Any()
+                         && a.FieldVisibilityRules.RuleList.Any( b =>
+                             b.ComparedToFormFieldGuid.HasValue
+                             && b.ComparedToFormFieldGuid == e.FormFieldGuid ) );
+
+                    foreach ( var newFormField in newFormFieldsWithRules )
+                    {
+                        newFormField.FieldVisibilityRules.RuleList
+                            .RemoveAll( a => a.ComparedToFormFieldGuid.HasValue
+                            && a.ComparedToFormFieldGuid.Value == e.FormFieldGuid );
+                    }
+
                     form.Fields.Remove( field );
                 }
             }
@@ -1087,6 +1117,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     field.Order = form.Fields.Any() ? form.Fields.Max( a => a.Order ) + 1 : 0;
                     field.Guid = attributeGuid;
                     field.FieldSource = ddlFieldSource.SelectedValueAsEnum<FormFieldSource>();
+                    field.RegistrationFieldSource = ddlFieldSource.SelectedValueAsEnum<RegistrationFieldSource>();
                     form.Fields.Add( field );
                 }
 
@@ -1100,7 +1131,20 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             if ( ddlPersonField.Visible )
                             {
                                 field.PersonFieldType = ddlPersonField.SelectedValueAsEnum<PersonFieldType>();
-                                field.RegistrationPersonFieldType = ddlPersonField.SelectedValueAsEnum<RegistrationPersonFieldType>();
+                                // Due to our Enum and Core RegistrationPersonFieldType Enum not matching we have 
+                                // to manually ensure anniversary date and middle name are the right values.
+                                switch ( field.PersonFieldType )
+                                {
+                                    case PersonFieldType.AnniversaryDate:
+                                        field.RegistrationPersonFieldType = RegistrationPersonFieldType.AnniversaryDate;
+                                        break;
+                                    case PersonFieldType.MiddleName:
+                                        field.RegistrationPersonFieldType = RegistrationPersonFieldType.MiddleName;
+                                        break;
+                                    default:
+                                        field.RegistrationPersonFieldType = ddlPersonField.SelectedValueAsEnum<RegistrationPersonFieldType>();
+                                        break;
+                                }
                             }
                             break;
                         }
@@ -1121,6 +1165,67 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         }
 
         #endregion Field Dialog Events
+
+        #region Registrant Forms/FieldFilter Methods
+
+        /// <summary>
+        /// Shows the form field filter.
+        /// </summary>
+        /// <param name="formGuid">The form unique identifier.</param>
+        /// <param name="formFieldGuid">The form field unique identifier.</param>
+        private void ShowFormFieldFilter( Guid formGuid, Guid formFieldGuid )
+        {
+
+            BuildEditControls( true );
+
+            var form = FormState.FirstOrDefault( f => f.Guid == formGuid );
+
+            if ( form == null && formGuid == Guid.Empty )
+            {
+                form = FormState.FirstOrDefault( f => f.Guid == Guid.Empty );
+            }
+
+            if ( form != null )
+            {
+                ShowDialog( dlgFieldFilter );
+
+                hfFormGuidFilter.Value = formGuid.ToString();
+                hfFormFieldGuidFilter.Value = formFieldGuid.ToString();
+                var formField = form.Fields.FirstOrDefault( a => a.Guid == formFieldGuid );
+                var otherFormFields = form.Fields.Where( a => a != formField ).ToList();
+
+                fvreFieldVisibilityRulesEditor.ValidationGroup = dlgFieldFilter.ValidationGroup;
+                fvreFieldVisibilityRulesEditor.FieldName = formField.ToString();
+                fvreFieldVisibilityRulesEditor.ComparableFields = otherFormFields.ToDictionary( aff => aff.Guid, aff => new FieldVisibilityRuleField
+                {
+                    Guid = aff.Guid,
+                    Attribute = aff.AttributeObj,
+                    PersonFieldType = aff.RegistrationPersonFieldType,
+                    FieldSource = aff.RegistrationFieldSource
+                } );
+                fvreFieldVisibilityRulesEditor.SetFieldVisibilityRules( formField.FieldVisibilityRules );
+            }
+
+            BuildEditControls( true );
+        }
+
+        /// <summary>
+        /// Handles the SaveClick event of the dlgFieldFilter control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void dlgFieldFilter_SaveClick( object sender, EventArgs e )
+        {
+            Guid formGuid = hfFormGuidFilter.Value.AsGuid();
+            Guid formFieldGuid = hfFormFieldGuidFilter.Value.AsGuid();
+            var formField = FormState.FirstOrDefault( f => f.Guid == formGuid ).Fields.FirstOrDefault( a => a.Guid == formFieldGuid );
+            formField.FieldVisibilityRules = fvreFieldVisibilityRulesEditor.GetFieldVisibilityRules();
+
+            HideDialog();
+
+            BuildEditControls( true );
+        }
+        #endregion Registrant Forms/FieldFilter Methods
 
         #endregion Events
 
@@ -2225,6 +2330,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             control.DeleteFieldClick += tfeForm_DeleteFieldClick;
             control.ReorderFieldClick += tfeForm_ReorderFieldClick;
+            control.FilterFieldClick += tfeForm_FilterFieldClick;
             control.EditFieldClick += tfeForm_EditFieldClick;
             control.RebindFieldClick += tfeForm_RebindFieldClick;
             control.DeleteFormClick += tfeForm_DeleteFormClick;
@@ -2344,7 +2450,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 hfFormGuid.Value = formGuid.ToString();
                 hfAttributeGuid.Value = formFieldGuid.ToString();
 
-                ShowDialog( "Attributes" );
+                ShowDialog( dlgField );
             }
 
             BuildEditControls( true );
@@ -2510,36 +2616,34 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         /// </summary>
         /// <param name="dialog">The dialog.</param>
         /// <param name="setValues">if set to <c>true</c> [set values].</param>
-        private void ShowDialog( string dialog, bool setValues = false )
+        private void ShowDialog( ModalDialog dialog, bool setValues = false )
         {
-            hfActiveDialog.Value = dialog.ToUpper().Trim();
+            hfActiveDialog.Value = dialog.ID;
             ShowDialog( setValues );
         }
 
         /// <summary>
-        /// Shows the dialog.
+        /// Shows the active dialog.
         /// </summary>
         /// <param name="setValues">if set to <c>true</c> [set values].</param>
         private void ShowDialog( bool setValues = false )
         {
-            switch ( hfActiveDialog.Value )
+            var activeDialog = this.ControlsOfTypeRecursive<ModalDialog>().FirstOrDefault( a => a.ID == hfActiveDialog.Value );
+            if ( activeDialog != null )
             {
-                case "ATTRIBUTES":
-                    dlgField.Show();
-                    break;
+                activeDialog.Show();
             }
         }
 
         /// <summary>
-        /// Hides the dialog.
+        /// Hides the active dialog.
         /// </summary>
         private void HideDialog()
         {
-            switch ( hfActiveDialog.Value )
+            var activeDialog = this.ControlsOfTypeRecursive<ModalDialog>().FirstOrDefault( a => a.ID == hfActiveDialog.Value );
+            if ( activeDialog != null )
             {
-                case "ATTRIBUTES":
-                    dlgField.Hide();
-                    break;
+                activeDialog.Hide();
             }
 
             hfActiveDialog.Value = string.Empty;
@@ -2748,24 +2852,33 @@ $('.template-form > .panel-body').on('validation-error', function() {
         }
 
         /// <summary>
+        /// The filterable fields count. If there is less than 2, don't show the FilterButton (since there would be no other fields to use as criteria)
+        /// </summary>
+        private int _filterableFieldsCount = 0;
+
+        /// <summary>
         /// Binds the fields grid.
         /// </summary>
         /// <param name="formFields">The fields.</param>
         public void BindFieldsGrid( List<AttributeFormField> formFields )
         {
+            _filterableFieldsCount = formFields.Where( a => a.FieldSource != FormFieldSource.PersonField ).Count();
+            //_gFields.DataSource = formFields
+            //    .OrderBy( a => a.Order )
+            //    .Select( a => new
+            //    {
+            //        a.Guid,
+            //        Name = ( a.FieldSource != FormFieldSource.PersonField && a.Attribute != null ) ?
+            //                a.Attribute.Name : a.PersonFieldType.ConvertToString(),
+            //        FieldSource = a.FieldSource.ConvertToString(),
+            //        FieldType = ( a.FieldSource != FormFieldSource.PersonField && a.Attribute != null ) ?
+            //                a.Attribute.FieldTypeId : 0,
+            //        a.ShowCurrentValue,
+            //        a.IsRequired,
+            //    } )
+            //    .ToList();
             _gFields.DataSource = formFields
                 .OrderBy( a => a.Order )
-                .Select( a => new
-                {
-                    a.Guid,
-                    Name = ( a.FieldSource != FormFieldSource.PersonField && a.Attribute != null ) ?
-                            a.Attribute.Name : a.PersonFieldType.ConvertToString(),
-                    FieldSource = a.FieldSource.ConvertToString(),
-                    FieldType = ( a.FieldSource != FormFieldSource.PersonField && a.Attribute != null ) ?
-                            a.Attribute.FieldTypeId : 0,
-                    a.ShowCurrentValue,
-                    a.IsRequired,
-                } )
                 .ToList();
             _gFields.DataBind();
         }
@@ -2841,19 +2954,19 @@ $('.template-form > .panel-body').on('validation-error', function() {
             var reorderField = new ReorderField();
             _gFields.Columns.Add( reorderField );
 
-            var nameField = new BoundField();
-            nameField.DataField = "Name";
+            var nameField = new RockLiteralField();
             nameField.HeaderText = "Field";
+            nameField.DataBound += NameField_DataBound;
             _gFields.Columns.Add( nameField );
 
-            var fieldSource = new EnumField();
-            fieldSource.DataField = "FieldSource";
+            var fieldSource = new RockLiteralField();
             fieldSource.HeaderText = "Source";
+            fieldSource.DataBound += SourceField_DataBound;
             _gFields.Columns.Add( fieldSource );
 
-            var typeField = new FieldTypeField();
-            typeField.DataField = "FieldType";
+            var typeField = new RockLiteralField();
             typeField.HeaderText = "Type";
+            typeField.DataBound += TypeField_DataBound;
             _gFields.Columns.Add( typeField );
 
             var showCurrentValueField = new BoolField();
@@ -2865,6 +2978,14 @@ $('.template-form > .panel-body').on('validation-error', function() {
             isRequiredField.DataField = "IsRequired";
             isRequiredField.HeaderText = "Required";
             _gFields.Columns.Add( isRequiredField );
+
+            var btnFieldFilterField = new LinkButtonField();
+            btnFieldFilterField.CssClass = "btn btn-default btn-sm attribute-criteria";
+            btnFieldFilterField.Text = "<i class='fa fa-filter'></i>";
+            btnFieldFilterField.Click += gFields_btnFieldFilterField_Click;
+            btnFieldFilterField.DataBound += btnFieldFilterField_DataBound;
+            _gFields.Columns.Add( btnFieldFilterField );
+
 
             var editField = new EditField();
             editField.Click += gFields_Edit;
@@ -3002,6 +3123,20 @@ $('.template-form > .panel-body').on('validation-error', function() {
         }
 
         /// <summary>
+        /// Handles the Click event of the gFields_btnFieldFilterField control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        protected void gFields_btnFieldFilterField_Click( object sender, RowEventArgs e )
+        {
+            if ( FilterFieldClick != null )
+            {
+                var eventArg = new AttributeFormFieldEventArg( FormGuid, ( Guid ) e.RowKeyValue );
+                FilterFieldClick( this, eventArg );
+            }
+        }
+
+        /// <summary>
         /// Handles the Edit event of the gFields control.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -3043,6 +3178,95 @@ $('.template-form > .panel-body').on('validation-error', function() {
             }
         }
 
+
+        /// <summary>
+        /// Handles the DataBound event of the btnFieldFilterField control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        private void btnFieldFilterField_DataBound( object sender, RowEventArgs e )
+        {
+            LinkButton linkButton = sender as LinkButton;
+            AttributeFormField field = e.Row.DataItem as AttributeFormField;
+
+            if ( field != null && linkButton != null )
+            {
+                if ( ( field.FieldSource == FormFieldSource.PersonField ) || _filterableFieldsCount < 2 )
+                {
+                    linkButton.Visible = false;
+                }
+                else
+                {
+                    if ( field.FieldVisibilityRules.RuleList.Any() )
+                    {
+                        linkButton.RemoveCssClass( "btn-default" );
+                        linkButton.AddCssClass( "btn-warning" );
+                        linkButton.AddCssClass( "criteria-exists" );
+                    }
+                    else
+                    {
+                        linkButton.AddCssClass( "btn-default" );
+                        linkButton.RemoveCssClass( "btn-warning" );
+                        linkButton.RemoveCssClass( "criteria-exists" );
+                    }
+
+                    linkButton.Visible = true;
+                }
+            }
+        }
+        /// <summary>
+        /// Handles the DataBound event of the TypeField control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        private void TypeField_DataBound( object sender, RowEventArgs e )
+        {
+            Literal literal = sender as Literal;
+            AttributeFormField field = e.Row.DataItem as AttributeFormField;
+            if ( field != null && literal != null )
+            {
+                if ( field.FieldSource != FormFieldSource.PersonField && field.AttributeId.HasValue )
+                {
+                    var attribute = field.Attribute;
+                    if ( attribute != null )
+                    {
+                        literal.Text = attribute.FieldType.Name;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles the DataBound event of the SourceField control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        private void SourceField_DataBound( object sender, RowEventArgs e )
+        {
+            Literal literal = sender as Literal;
+            AttributeFormField field = e.Row.DataItem as AttributeFormField;
+            if ( field != null && literal != null )
+            {
+                literal.Text = field.FieldSource.ConvertToString();
+            }
+        }
+
+        /// <summary>
+        /// Handles the DataBound event of the NameField control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
+        private void NameField_DataBound( object sender, RowEventArgs e )
+        {
+            Literal literal = sender as Literal;
+            AttributeFormField field = e.Row.DataItem as AttributeFormField;
+            if ( field != null && literal != null )
+            {
+                literal.Text = ( field.FieldSource != FormFieldSource.PersonField && field.Attribute != null ) ?
+                            field.Attribute.Name : field.PersonFieldType.ConvertToString();
+            }
+        }
+
         /// <summary>
         /// Occurs when [delete activity type click].
         /// </summary>
@@ -3057,6 +3281,11 @@ $('.template-form > .panel-body').on('validation-error', function() {
         /// Occurs when [add field click].
         /// </summary>
         public event EventHandler<AttributeFormFieldEventArg> AddFieldClick;
+
+        /// <summary>
+        /// Occurs when [filter field click].
+        /// </summary>
+        public event EventHandler<AttributeFormFieldEventArg> FilterFieldClick;
 
         /// <summary>
         /// Occurs when [edit field click].
@@ -3189,7 +3418,10 @@ $('.template-form > .panel-body').on('validation-error', function() {
 
         public FormFieldSource FieldSource { get; set; }
 
+        public RegistrationFieldSource RegistrationFieldSource { get; set; }
+
         public PersonFieldType PersonFieldType { get; set; }
+
         public RegistrationPersonFieldType RegistrationPersonFieldType { get; set; }
 
         [Newtonsoft.Json.JsonIgnore]
@@ -3200,6 +3432,20 @@ $('.template-form > .panel-body').on('validation-error', function() {
                 if ( AttributeId.HasValue && FieldSource == FormFieldSource.PersonAttribute )
                 {
                     return AttributeCache.Get( AttributeId.Value );
+                }
+
+                return null;
+            }
+        }
+
+        public Rock.Model.Attribute AttributeObj
+        {
+            get
+            {
+                if ( AttributeId.HasValue && FieldSource == FormFieldSource.PersonAttribute )
+                {
+                    var rockContext = new RockContext();
+                    return new AttributeService( rockContext ).Get( AttributeId.Value );
                 }
 
                 return null;
