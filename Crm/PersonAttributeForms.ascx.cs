@@ -1823,7 +1823,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         tbFirstName.ValidationGroup = BlockValidationGroup;
                         tbFirstName.AddCssClass( "js-first-name" );
                         personFieldControl = tbFirstName;
-                        //phContent.Controls.Add( tbFirstName );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1841,7 +1840,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         tbLastName.Required = field.IsRequired;
                         tbLastName.ValidationGroup = BlockValidationGroup;
                         personFieldControl = tbLastName;
-                        //phContent.Controls.Add( tbLastName );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1859,7 +1857,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         tbMiddleName.Required = field.IsRequired;
                         tbMiddleName.ValidationGroup = BlockValidationGroup;
                         personFieldControl = tbMiddleName;
-                        //phContent.Controls.Add( tbMiddleName );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1879,7 +1876,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         cpHomeCampus.Campuses = CampusCache.All( false );
 
                         personFieldControl = cpHomeCampus;
-                        //phContent.Controls.Add( cpHomeCampus );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1906,7 +1902,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         }
 
                         personFieldControl = acAddress;
-                        //phContent.Controls.Add( acAddress );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1929,7 +1924,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         tbEmail.Required = field.IsRequired;
                         tbEmail.ValidationGroup = BlockValidationGroup;
                         personFieldControl = tbEmail;
-                        //phContent.Controls.Add( tbEmail );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1947,7 +1941,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         bpBirthday.Required = field.IsRequired;
                         bpBirthday.ValidationGroup = BlockValidationGroup;
                         personFieldControl = bpBirthday;
-                        //phContent.Controls.Add( bpBirthday );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1969,7 +1962,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         gpGrade.UseGradeOffsetAsValue = true;
                         gpGrade.CssClass = "input-width-md";
                         personFieldControl = gpGrade;
-                        //phContent.Controls.Add( gpGrade );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -1993,7 +1985,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         ddlGender.Items.FindByValue( "0" ).Text = string.Empty;
 
                         personFieldControl = ddlGender;
-                        //phContent.Controls.Add( ddlGender );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -2013,7 +2004,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         dvpMaritalStatus.ValidationGroup = BlockValidationGroup;
                         dvpMaritalStatus.DefinedTypeId = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS.AsGuid() ).Id;
                         personFieldControl = dvpMaritalStatus;
-                        //phContent.Controls.Add( dvpMaritalStatus );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -2032,7 +2022,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         dpAnniversary.Required = field.IsRequired;
                         dpAnniversary.ValidationGroup = BlockValidationGroup;
                         personFieldControl = dpAnniversary;
-                        //phContent.Controls.Add( dpAnniversary );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -2049,7 +2038,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         {
                             var pnlFrmGroup = new Panel { CssClass = "form-group phonegroup clearfix" };
                             personFieldControl = pnlFrmGroup;
-                            //phContent.Controls.Add( pnlFrmGroup );
 
                             var lblMobile = new Label { CssClass = "control-label phonegroup-label" };
                             lblMobile.Text = dv.Value;
@@ -2117,7 +2105,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             ppHome.CountryCode = PhoneNumber.DefaultCountryCode();
 
                             personFieldControl = ppHome;
-                            //phContent.Controls.Add( ppHome );
 
                             if ( setValue && fieldValue != null )
                             {
@@ -2141,7 +2128,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             ppWork.CountryCode = PhoneNumber.DefaultCountryCode();
 
                             personFieldControl = ppWork;
-                            //phContent.Controls.Add( ppWork );
 
                             if ( setValue && fieldValue != null )
                             {
@@ -2161,7 +2147,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         dvpConnectionStatus.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_CONNECTION_STATUS ) ).Id;
 
                         personFieldControl = dvpConnectionStatus;
-                        //phContent.Controls.Add( dvpConnectionStatus );
 
                         if ( setValue && fieldValue != null )
                         {
@@ -2952,7 +2937,6 @@ $('.template-form > .panel-body').on('validation-error', function() {
             btnFieldFilterField.Click += gFields_btnFieldFilterField_Click;
             btnFieldFilterField.DataBound += btnFieldFilterField_DataBound;
             _gFields.Columns.Add( btnFieldFilterField );
-
 
             var editField = new EditField();
             editField.Click += gFields_Edit;
