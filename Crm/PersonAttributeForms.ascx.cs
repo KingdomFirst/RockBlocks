@@ -1151,6 +1151,10 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     case FormFieldSource.PersonAttribute:
                         {
                             field.AttributeId = ddlPersonAttributes.SelectedValueAsInt();
+                            if ( field.AttributeId.HasValue )
+                            {
+                                field.Guid = field.Attribute.Guid;
+                            }
                             break;
                         }
                 }
@@ -1192,7 +1196,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 hfFormGuidFilter.Value = formGuid.ToString();
                 hfFormFieldGuidFilter.Value = formFieldGuid.ToString();
                 var formField = form.Fields.FirstOrDefault( a => a.Guid == formFieldGuid );
-                var otherFormFields = form.Fields.Where( a => a != formField ).ToList();
+                var otherFormFields = form.Fields.Where( a => a != formField && a.FieldSource != FormFieldSource.PersonField ).ToList();
 
                 fvreFieldVisibilityRulesEditor.ValidationGroup = dlgFieldFilter.ValidationGroup;
                 fvreFieldVisibilityRulesEditor.FieldName = formField.ToString();
@@ -1505,16 +1509,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         }
 
                         bool hasDependantVisibilityRule = form.Fields.Any( a => a.FieldVisibilityRules.RuleList.Any( r => r.ComparedToFormFieldGuid == field.Guid ) );
-
-                        //if ( field.FieldSource == RegistrationFieldSource.PersonField )
-                        //{
-                        //    CreatePersonField( hasDependantVisibilityRule, field, setValues, value, familyMemberSelected, BlockValidationGroup, phRegistrantControls );
-                        //}
-                        //else
-                        //{
-                        //    CreateAttributeField( hasDependantVisibilityRule, field, setValues, value, GetAttributeValue( AttributeKey.ShowFieldDescriptions ).AsBoolean(), BlockValidationGroup, phRegistrantControls, DynamicControlPostbackMethod );
-                        //}
-
                         string value = null;
                         if ( field.FieldSource == FormFieldSource.PersonField )
                         {
@@ -1536,7 +1530,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                             var attribute = AttributeCache.Get( field.AttributeId.Value );
                             if ( attribute != null )
                             {
-                                //attribute.AddControl( phContent.Controls, value, BlockValidationGroup, setValues, true, field.IsRequired, null, string.Empty );
                                 FieldVisibilityWrapper fieldVisibilityWrapper = new FieldVisibilityWrapper
                                 {
                                     ID = "_fieldVisibilityWrapper_attribute_" + attribute.Id.ToString(),
@@ -1547,7 +1540,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 fieldVisibilityWrapper.EditValueUpdated += ( object sender, FieldVisibilityWrapper.FieldEventArgs args ) =>
                                 {
                                     FieldVisibilityWrapper.ApplyFieldVisibilityRules( phContent );
-                                    DynamicControlPostbackMethod();
+                                    upnlContent.Update();
                                 };
 
                                 phContent.Controls.Add( fieldVisibilityWrapper );
@@ -1592,27 +1585,15 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                         }
 
-                        FieldVisibilityWrapper.ApplyFieldVisibilityRules( phContent );
-
                         if ( !string.IsNullOrWhiteSpace( field.PostText ) )
                         {
                             phContent.Controls.Add( new LiteralControl( field.PostText.ResolveMergeFields( mergeFields ) ) );
                         }
                     }
+
+                    FieldVisibilityWrapper.ApplyFieldVisibilityRules( phContent );
                 }
             }
-        }
-
-        /// <summary>
-        /// Method to run for the dynamic control FieldVisibility.EditValueUpdated event.
-        /// This is to recreate the controls for filter conditions, so it is not used by
-        /// PersonFields.
-        /// </summary>
-        private void DynamicControlPostbackMethod()
-        {
-            //CreateRegistrantControls( true );
-            //ParseDynamicControls();
-            //ShowFamilyMembersPanel();
         }
 
         private void ParseViewControls()
@@ -2863,20 +2844,6 @@ $('.template-form > .panel-body').on('validation-error', function() {
         public void BindFieldsGrid( List<AttributeFormField> formFields )
         {
             _filterableFieldsCount = formFields.Where( a => a.FieldSource != FormFieldSource.PersonField ).Count();
-            //_gFields.DataSource = formFields
-            //    .OrderBy( a => a.Order )
-            //    .Select( a => new
-            //    {
-            //        a.Guid,
-            //        Name = ( a.FieldSource != FormFieldSource.PersonField && a.Attribute != null ) ?
-            //                a.Attribute.Name : a.PersonFieldType.ConvertToString(),
-            //        FieldSource = a.FieldSource.ConvertToString(),
-            //        FieldType = ( a.FieldSource != FormFieldSource.PersonField && a.Attribute != null ) ?
-            //                a.Attribute.FieldTypeId : 0,
-            //        a.ShowCurrentValue,
-            //        a.IsRequired,
-            //    } )
-            //    .ToList();
             _gFields.DataSource = formFields
                 .OrderBy( a => a.Order )
                 .ToList();
@@ -3262,8 +3229,20 @@ $('.template-form > .panel-body').on('validation-error', function() {
             AttributeFormField field = e.Row.DataItem as AttributeFormField;
             if ( field != null && literal != null )
             {
-                literal.Text = ( field.FieldSource != FormFieldSource.PersonField && field.Attribute != null ) ?
-                            field.Attribute.Name : field.PersonFieldType.ConvertToString();
+                if ( field.FieldSource != FormFieldSource.PersonField && field.Attribute != null )
+                {
+                    // Update Guid for Conditional Field support to match actual attribute Guid, for backwards compatibility without having to re-add/edit every field on the form.
+                    if ( field.Guid != field.Attribute.Guid )
+                    {
+                        field.Guid = field.Attribute.Guid;
+                    }
+
+                    literal.Text = field.Attribute.Name;
+                }
+                else
+                {
+                    literal.Text = field.PersonFieldType.ConvertToString();
+                }
             }
         }
 
