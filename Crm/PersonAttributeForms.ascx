@@ -168,5 +168,18 @@
                     Help="Any HTML to display directly below this field <span class='tip tip-lava'></span>." />
             </Content>
         </Rock:ModalDialog>
+
+        <%-- Field Filter Dialog --%>
+        <Rock:ModalDialog ID="dlgFieldFilter" runat="server" Title="Form Field Filter" OnSaveClick="dlgFieldFilter_SaveClick" OnCancelScript="clearActiveDialog();" ValidationGroup="FieldFilter">
+            <Content>
+                <asp:HiddenField ID="hfFormGuidFilter" runat="server" />
+                <asp:HiddenField ID="hfFormFieldGuidFilter" runat="server" />
+                <asp:ValidationSummary ID="ValidationSummaryFieldFilter" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="FieldFilter" />
+
+                <Rock:FieldVisibilityRulesEditor ID="fvreFieldVisibilityRulesEditor" runat="server" />
+
+            </Content>
+        </Rock:ModalDialog>
+
     </ContentTemplate>
 </asp:UpdatePanel>
