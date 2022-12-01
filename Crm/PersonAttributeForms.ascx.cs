@@ -1585,10 +1585,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                         }
 
-                        if ( !string.IsNullOrWhiteSpace( field.PostText ) )
-                        {
-                            phContent.Controls.Add( new LiteralControl( field.PostText.ResolveMergeFields( mergeFields ) ) );
-                        }
                     }
 
                     FieldVisibilityWrapper.ApplyFieldVisibilityRules( phContent );
