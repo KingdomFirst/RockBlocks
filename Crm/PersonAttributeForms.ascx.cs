@@ -1503,11 +1503,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     foreach ( var field in form.Fields
                         .OrderBy( f => f.Order ) )
                     {
-                        if ( !string.IsNullOrWhiteSpace( field.PreText ) )
-                        {
-                            phContent.Controls.Add( new LiteralControl( field.PreText.ResolveMergeFields( mergeFields ) ) );
-                        }
-
                         bool hasDependantVisibilityRule = form.Fields.Any( a => a.FieldVisibilityRules.RuleList.Any( r => r.ComparedToFormFieldGuid == field.Guid ) );
                         string value = null;
                         if ( field.FieldSource == FormFieldSource.PersonField )
