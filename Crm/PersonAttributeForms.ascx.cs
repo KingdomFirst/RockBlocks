@@ -20,6 +20,7 @@
 //
 // Modification (including but not limited to):
 // * This adds ability to include person properties as form fields
+// * Added Conditional Field/Form Field Filter support to person attributes
 // </notice>
 //
 using System;
@@ -3508,6 +3509,229 @@ $('.template-form > .panel-body').on('validation-error', function() {
         /// The middle name
         /// </summary>
         MiddleName = 14
+    }
+
+    public class FieldVisibilityWrapper : DynamicPlaceholder
+    {
+        /// <summary>
+        /// Gets or sets the field identifier
+        /// </summary>
+        /// <value>
+        /// The field identifier.
+        /// </value>
+        public int FormFieldId
+        {
+            get
+            {
+                return ViewState["FormFieldId"] as int? ?? 0;
+            }
+
+            set
+            {
+                ViewState["FormFieldId"] = value;
+            }
+        }
+
+        /// <summary>
+        /// Get the form field
+        /// </summary>
+        /// <returns></returns>
+        public RegistrationTemplateFormFieldCache GetRegistrationTemplateFormField()
+        {
+            return RegistrationTemplateFormFieldCache.Get( FormFieldId );
+        }
+
+        /// <summary>
+        /// Gets the form field.
+        /// </summary>
+        /// <returns></returns>
+        public AttributeCache GetFormField()
+        {
+            return AttributeCache.Get( FormFieldId );
+        }
+
+        /// <summary>
+        /// Get the attribute id
+        /// </summary>
+        /// <returns></returns>
+        public AttributeCache GetAttributeCache()
+        {
+            var field = GetRegistrationTemplateFormField();
+            var id = field?.AttributeId;
+
+            if ( id.HasValue )
+            {
+                return AttributeCache.Get( id.Value );
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Sets the visibility based on the value of other attributes
+        /// </summary>
+        /// <param name="attributeValues">The attribute values.</param>
+        /// <param name="personFieldValues">The person field values.</param>
+        public void UpdateVisibility( Dictionary<int, AttributeValueCache> attributeValues, Dictionary<RegistrationPersonFieldType, string> personFieldValues )
+        {
+            var visible = FieldVisibilityRules.Evaluate( attributeValues, personFieldValues );
+            if ( visible == false && this.Visible )
+            {
+                // if hiding this field, set the value to null since we don't want to save values that aren't shown
+                this.EditValue = null;
+            }
+
+            this.Visible = visible;
+        }
+
+        /// <summary>
+        /// Gets or sets the edit control for the Attribute
+        /// </summary>
+        /// <value>
+        /// The edit control.
+        /// </value>
+        public Control EditControl { get; set; }
+
+        /// <summary>
+        /// Gets the edit value from the <see cref="EditControl"/> associated with <see cref="FormFieldId"/>
+        /// </summary>
+        /// <value>
+        /// The edit value.
+        /// </value>
+        public string EditValue
+        {
+            get
+            {
+                var field = GetRegistrationTemplateFormField();
+                var attribute = GetAttributeCache() ?? GetFormField();
+
+                if ( attribute != null )
+                {
+                    return attribute.FieldType.Field.GetEditValue( this.EditControl, attribute.QualifierValues );
+                }
+                else if ( field != null && FieldVisibilityRules.IsFieldSupported( field.PersonFieldType ) )
+                {
+                    var fieldType = FieldVisibilityRules.GetSupportedFieldTypeCache( field.PersonFieldType );
+                    return fieldType.Field.GetEditValue( this.EditControl, null );
+                }
+                else
+                {
+                    throw new NotImplementedException( "The field type and source are not supported" );
+                }
+            }
+
+            private set
+            {
+                var field = GetRegistrationTemplateFormField();
+                var attribute = GetAttributeCache() ?? GetFormField();
+
+                if ( attribute != null )
+                {
+                    attribute.FieldType.Field.SetEditValue( this.EditControl, attribute.QualifierValues, value );
+                }
+                else if ( field != null && FieldVisibilityRules.IsFieldSupported( field.PersonFieldType ) )
+                {
+                    var fieldType = FieldVisibilityRules.GetSupportedFieldTypeCache( field.PersonFieldType );
+                    fieldType.Field.SetEditValue( this.EditControl, null, value );
+                }
+                else
+                {
+                    throw new NotImplementedException( "The field type and source are not supported" );
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the field visibility rules.
+        /// </summary>
+        /// <value>
+        /// The field visibility rules.
+        /// </value>
+        public FieldVisibilityRules FieldVisibilityRules { get; set; }
+
+        #region Event Handlers
+
+        /// <summary>
+        /// Gets called when an attributes edit control fires a EditValueUpdated
+        /// </summary>
+        public void TriggerEditValueUpdated( Control editControl, FieldEventArgs args )
+        {
+            EditValueUpdated?.Invoke( editControl, args );
+        }
+
+        /// <summary>
+        /// Occurs when [edit value updated].
+        /// </summary>
+        public event EventHandler<FieldEventArgs> EditValueUpdated;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <seealso cref="System.EventArgs" />
+        public class FieldEventArgs : EventArgs
+        {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="FieldEventArgs" /> class.
+            /// </summary>
+            /// <param name="attribute">The attribute.</param>
+            /// <param name="editControl">The edit control.</param>
+            public FieldEventArgs( AttributeCache attribute, Control editControl )
+            {
+                this.AttributeId = attribute?.Id;
+                this.EditControl = editControl;
+            }
+
+            /// <summary>
+            /// Gets or sets the attribute identifier.
+            /// </summary>
+            /// <value>
+            /// The attribute identifier.
+            /// </value>
+            public int? AttributeId { get; set; }
+
+            /// <summary>
+            /// Gets the edit control.
+            /// </summary>
+            /// <value>
+            /// The edit control.
+            /// </value>
+            public Control EditControl { get; private set; }
+        }
+
+        /// <summary>
+        /// Applies the field visibility rules for all FieldVisibilityWrappers contained in the parentControl
+        /// </summary>
+        public static void ApplyFieldVisibilityRules( Control parentControl )
+        {
+            var fieldVisibilityWrappers = parentControl.ControlsOfTypeRecursive<FieldVisibilityWrapper>().ToDictionary( k => k.FormFieldId, v => v );
+            var attributeValues = new Dictionary<int, AttributeValueCache>();
+            var personFieldValues = new Dictionary<RegistrationPersonFieldType, string>();
+
+            foreach ( var fieldVisibilityWrapper in fieldVisibilityWrappers.Values )
+            {
+                var field = fieldVisibilityWrapper.GetRegistrationTemplateFormField();
+                var fieldAttribute = fieldVisibilityWrapper.GetFormField();
+
+                var fieldAttributeId = field?.AttributeId ?? fieldAttribute?.Id;
+                if ( fieldAttributeId.HasValue )
+                {
+                    var attributeId = fieldAttributeId.Value;
+                    attributeValues.Add( attributeId, new AttributeValueCache { AttributeId = attributeId, Value = fieldVisibilityWrapper.EditValue } );
+                }
+                else if ( field != null && FieldVisibilityRules.IsFieldSupported( field.PersonFieldType ) )
+                {
+                    personFieldValues[field.PersonFieldType] = fieldVisibilityWrapper.EditValue;
+                }
+            }
+
+            // This needs to be done AFTER all of the attributeValuse for each fieldVisibilityWrapper are collected in order to work correctly.
+            foreach ( var fieldVisibilityWrapper in fieldVisibilityWrappers.Values )
+            {
+                fieldVisibilityWrapper.UpdateVisibility( attributeValues, personFieldValues );
+            }
+        }
+
+        #endregion
     }
 
     #endregion Helper Classes
