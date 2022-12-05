@@ -3538,7 +3538,7 @@ $('.template-form > .panel-body').on('validation-error', function() {
         /// <returns></returns>
         public RegistrationTemplateFormFieldCache GetRegistrationTemplateFormField()
         {
-            return RegistrationTemplateFormFieldCache.Get( FormFieldId );
+            return null;
         }
 
         /// <summary>
