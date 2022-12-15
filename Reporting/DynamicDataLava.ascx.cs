@@ -78,6 +78,12 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
         Category = "CustomSetting",
         Key = AttributeKey.Query )]
 
+    [PersistedDatasetField( "Persisted Dataset",
+        Description = "If you would like to use a persisted dataset instead of a custom query set this setting. ",
+        IsRequired = false,
+        Category = "CustomSetting",
+        Key = AttributeKey.PersistedDataset )]
+
     [TextField( "Query Params",
         Description = "Parameters to pass to query",
         IsRequired = false,
@@ -269,6 +275,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             public const string GridFooterContent = "GridFooterContent";
             public const string EnableQuickReturn = "EnableQuickReturn";
             public const string OutputQueryLava = "OutputQueryLava";
+            public const string PersistedDataset = "PersistedDataset";
         }
 
         #endregion Keys
@@ -314,6 +321,12 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
+
+            ddlPersistedDataset.DataSource = PersistedDatasetCache.All().Where( pd => pd.IsActive && ( pd.ExpireDateTime >= DateTime.Now || pd.ExpireDateTime == null ) ).ToList();
+            ddlPersistedDataset.DataValueField = "Guid";
+            ddlPersistedDataset.DataTextField = "Name";
+            ddlPersistedDataset.DataBind();
+            ddlPersistedDataset.Items.Insert( 0, "" );
 
             BlockUpdated += DynamicData_BlockUpdated;
             AddConfigurationUpdateTrigger( upnlContent );
@@ -453,6 +466,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             SetAttributeValue( AttributeKey.PanelTitleCssClass, tbPanelIcon.Text );
             SetAttributeValue( AttributeKey.PanelTitle, tbPanelTitle.Text );
             SetAttributeValue( AttributeKey.OutputQueryLava, cbOutputQueryLava.Checked.ToString() );
+            SetAttributeValue( AttributeKey.PersistedDataset, ddlPersistedDataset.SelectedValue );
             SaveAttributeValues();
 
             mdEdit.Hide();
@@ -529,27 +543,46 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
 
             string query = GetAttributeValue( AttributeKey.Query );
             string enabledLavaCommands = this.GetAttributeValue( AttributeKey.EnabledLavaCommands );
+            var persistedDatasetVal = GetAttributeValue( AttributeKey.PersistedDataset );
+            string persistedData = string.Empty;
+
+            if ( persistedDatasetVal.IsNotNullOrWhiteSpace() )
+            {
+                using ( var rockContext = new RockContext() )
+                {
+                    var persistedDatasetService = new PersistedDatasetService( rockContext );
+                    var persistedDataset = persistedDatasetService.Get( persistedDatasetVal.AsGuid() );
+                    persistedData = persistedDataset.ResultData;
+                }
+            }
             if ( !string.IsNullOrWhiteSpace( query ) )
             {
                 try
                 {
-                    var mergeFields = GetDynamicDataMergeFields();
-
-                    // NOTE: there is already a PageParameters merge field from GetDynamicDataMergeFields, but for backwards compatibility, also add each of the PageParameters as plain merge fields
-                    foreach ( var pageParam in PageParameters() )
+                    if ( persistedData.IsNotNullOrWhiteSpace() )
                     {
-                        mergeFields.AddOrReplace( pageParam.Key, pageParam.Value );
+                        query = persistedData;
                     }
-
-                    var parameters = GetParameters();
-                    if ( parameters != null )
+                    else
                     {
-                        foreach ( var param in parameters )
+                        var mergeFields = GetDynamicDataMergeFields();
+
+                        // NOTE: there is already a PageParameters merge field from GetDynamicDataMergeFields, but for backwards compatibility, also add each of the PageParameters as plain merge fields
+                        foreach ( var pageParam in PageParameters() )
                         {
-                            query = query.Replace( string.Format( "@{0}", param.Key ), ( string ) param.Value );
+                            mergeFields.AddOrReplace( pageParam.Key, pageParam.Value );
                         }
+
+                        var parameters = GetParameters();
+                        if ( parameters != null )
+                        {
+                            foreach ( var param in parameters )
+                            {
+                                query = query.Replace( string.Format( "@{0}", param.Key ), ( string ) param.Value );
+                            }
+                        }
+                        query = query.ResolveMergeFields( mergeFields, enabledLavaCommands );
                     }
-                    query = query.ResolveMergeFields( mergeFields, enabledLavaCommands );
 
                     var outputQueryLava = GetAttributeValue( AttributeKey.OutputQueryLava ).AsBoolean();
                     if ( outputQueryLava )
@@ -697,8 +730,11 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
             tbName.Visible = _updatePage;
             tbDesc.Visible = _updatePage;
 
+            ddlPersistedDataset.SelectedValue = GetAttributeValue( AttributeKey.PersistedDataset );
             ceQuery.Text = GetAttributeValue( AttributeKey.Query );
+            ceQuery.Visible = ddlPersistedDataset.SelectedValue.IsNullOrWhiteSpace();
             tbParams.Text = GetAttributeValue( AttributeKey.QueryParams );
+            divParams.Visible = ceQuery.Visible;
             tbUrlMask.Text = GetAttributeValue( AttributeKey.UrlMask );
             ddlHideShow.SelectedValue = GetAttributeValue( AttributeKey.ShowColumns );
             tbColumns.Text = GetAttributeValue( AttributeKey.Columns );
@@ -1393,6 +1429,12 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
 
                 return null;
             }
+        }
+
+        protected void ddlPersistedDataset_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            ceQuery.Visible = ddlPersistedDataset.SelectedValue.IsNullOrWhiteSpace();
+            divParams.Visible = ceQuery.Visible;
         }
     }
 }
