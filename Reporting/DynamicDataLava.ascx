@@ -37,6 +37,13 @@
                             <hr class="mt-0" />
                             <div class="row">
                                 <div class="col-md-12">
+                                    <Rock:RockDropDownList ID="ddlPersistedDataset" runat="server" Label="Persisted Dataset" AutoPostBack="true" OnSelectedIndexChanged="ddlPersistedDataset_SelectedIndexChanged"
+                                        Help="If you would like to use a persisted dataset instead of a custom query select one here. Note this data is pre-rendered to be persisted, you will be limited to the grid filters for filter capability."></Rock:RockDropDownList>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12">
                                     <Rock:CodeEditor ID="ceQuery" EditorHeight="212" EditorMode="Lava" EditorTheme="Rock" runat="server" Label="JSON Lava"
                                         Help="The Lava used to generate the JSON formatted output. Which can be as simple as using '{{ entityItems | ToJSON }}' output.  If parameters are included they will also need to be in the Parameters field below.
                                             By default, a grid will be displayed showing all the rows and columns returned by the query.  However, if a 'Formatted Output' value is included below, the results will be formatted
@@ -45,7 +52,7 @@
                             </div>
 
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-6" id="divParams" runat="server">
                                     <Rock:RockTextBox ID="tbParams" runat="server" Label="Parameters" TextMode="MultiLine" Rows="1" CssClass="input-xlarge"
                                         Help="The parameters that the query expects in the format of 'param1=value;param2=value'. The equals sign must be provided for each parameter, but you don't have to provide a default value if you want it to default to blank.  Any parameter with the same name as a page parameter (i.e. querystring,
                                             form, or page route) will have its value replaced with the page's current value.  A parameter with the name of 'CurrentPersonId' will have its value replaced with the currently logged in person's id." />
