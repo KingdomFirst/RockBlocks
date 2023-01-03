@@ -47,7 +47,6 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
     [Description( "Lists all financial batches and provides filtering by account, campus, status, etc." )]
 
     [LinkedPage( "Detail Page",
-        Description = "",
         Order = 0,
         Key = AttributeKey.DetailPage )]
 
@@ -64,13 +63,13 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
         Key = AttributeKey.ShowAccountsColumn )]
 
     [BooleanField( "Show Only Active Accounts on Filter",
-        Description = "If account filter is displayed, only list active accounts",
+        Description = "If account filter is displayed, only list active accounts.",
         DefaultBooleanValue = false,
         Order = 3,
         Key = AttributeKey.ActiveAccountsOnlyFilter )]
 
     [AccountsField( "Accounts",
-        Description = "Limit the results to batches that match the selected accounts.",
+        Description = "Limit the results to batches with transactions that match the selected accounts. If set, the Account filter will be hidden.",
         IsRequired = false,
         DefaultValue = "",
         Order = 4,
@@ -110,7 +109,6 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
         </div>",
         Key = AttributeKey.SummaryLavaTemplate )]
 
-    [Rock.SystemGuid.BlockTypeGuid( "AB345CE7-5DC6-41AF-BBDC-8D23D52AFE25" )]
     public partial class BatchList : RockBlock, IPostBackEventHandler, ICustomGridColumns
     {
         #region Keys
@@ -431,7 +429,8 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
                         var accountIds = e.Value.SplitDelimitedValues().AsIntegerList().Where( a => a > 0 ).ToList();
                         if ( accountIds.Any() && apAccount.Visible )
                         {
-                            var accountNames = FinancialAccountCache.GetByIds( accountIds ).OrderBy( a => a.Order ).OrderBy( a => a.Name ).Select( a => a.Name ).ToList().AsDelimited( ", ", " or " );
+                            var service = new FinancialAccountService( new RockContext() );
+                            var accountNames = service.GetByIds( accountIds ).OrderBy( a => a.Order ).OrderBy( a => a.Name ).Select( a => a.Name ).ToList().AsDelimited( ", ", " or " );
                             e.Value = accountNames;
                         }
                         else
@@ -463,7 +462,6 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
             gfBatchFilter.SaveUserPreference( "Contains Transaction Type", dvpTransactionType.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Contains Source Type", dvpSourceType.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Account", apAccount.SelectedValue != "-1" ? apAccount.SelectedValue : string.Empty );
-
 
             if ( AvailableAttributes != null )
             {
