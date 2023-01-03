@@ -14,6 +14,14 @@
 // limitations under the License.
 // </copyright>
 //
+// <notice>
+// This file contains modifications by Kingdom First Solutions
+// and is a derivative work.
+//
+// Modification (including but not limited to):
+// * Added the Account Filter to available batch grid filters with appropriate settings.
+// </notice>
+//
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -37,13 +45,51 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
     [DisplayName( "Batch List With Account Filter" )]
     [Category( "KFS > Finance" )]
     [Description( "Lists all financial batches and provides filtering by account, campus, status, etc." )]
-    [LinkedPage( "Detail Page", order: 0 )]
-    [BooleanField( "Show Accounting Code", "Should the accounting code column be displayed.", false, "", 1 )]
-    [BooleanField( "Show Accounts Column", "Should the accounts column be displayed.", true, "", 2 )]
-    [CodeEditorField( "Summary Lava Template", "The lava template for display the content for summary", CodeEditorMode.Lava, CodeEditorTheme.Rock, order: 3, defaultValue: @"
+
+    [LinkedPage( "Detail Page",
+        Description = "",
+        Order = 0,
+        Key = AttributeKey.DetailPage )]
+
+    [BooleanField( "Show Accounting Code",
+        Description = "Should the accounting code column be displayed.",
+        DefaultBooleanValue = false,
+        Order = 1,
+        Key = AttributeKey.ShowAccountingCode )]
+
+    [BooleanField( "Show Accounts Column",
+        Description = "Should the accounts column be displayed.",
+        DefaultBooleanValue = true,
+        Order = 2,
+        Key = AttributeKey.ShowAccountsColumn )]
+
+    [BooleanField( "Show Only Active Accounts on Filter",
+        Description = "If account filter is displayed, only list active accounts",
+        DefaultBooleanValue = false,
+        Order = 3,
+        Key = AttributeKey.ActiveAccountsOnlyFilter )]
+
+    [AccountsField( "Accounts",
+        Description = "Limit the results to batches that match the selected accounts.",
+        IsRequired = false,
+        DefaultValue = "",
+        Order = 4,
+        Key = AttributeKey.Accounts )]
+
+    [CodeEditorField( "Summary Lava Template",
+        Description = "The lava template for display the content for summary",
+        EditorMode = CodeEditorMode.Lava,
+        EditorTheme = CodeEditorTheme.Rock,
+        Order = 5,
+        DefaultValue = @"
          <div class='panel panel-block'>
             <div class='panel-heading'>
                 <h1 class='panel-title'>Total Results</h1>
+                {% if FilteredAccounts %}
+                <div class='panel-labels'>
+                    <span class='label label-default'>Filtered Account List</span>
+                </div>
+                {% endif %}
             </div>
             <div class='panel-body'>
                 {% assign totalAmount = 0 %}
@@ -61,17 +107,51 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
                     </div>
                 </div>
             </div>
-        </div>
-" )]
+        </div>",
+        Key = AttributeKey.SummaryLavaTemplate )]
 
     [Rock.SystemGuid.BlockTypeGuid( "AB345CE7-5DC6-41AF-BBDC-8D23D52AFE25" )]
     public partial class BatchList : RockBlock, IPostBackEventHandler, ICustomGridColumns
     {
-        #region Constants
+        #region Keys
 
-        private const string SUMMARY_LAVA_TEMPLATE = "SummaryLavaTemplate";
+        /// <summary>
+        /// Attribute Keys
+        /// </summary>
+        private static class AttributeKey
+        {
+            /// <summary>
+            /// The Detail Page
+            /// </summary>
+            public const string DetailPage = "DetailPage";
 
-        #endregion
+            /// <summary>
+            /// The Show Accounting Code
+            /// </summary>
+            public const string ShowAccountingCode = "ShowAccountingCode";
+
+            /// <summary>
+            /// The Show Accounts Column
+            /// </summary>
+            public const string ShowAccountsColumn = "ShowAccountsColumn";
+
+            /// <summary>
+            /// The active accounts only filter
+            /// </summary>
+            public const string ActiveAccountsOnlyFilter = "ActiveAccountsOnlyFilter";
+
+            /// <summary>
+            /// The accounts
+            /// </summary>
+            public const string Accounts = "Accounts";
+
+            /// <summary>
+            /// The Summary Lava Template
+            /// </summary>
+            public const string SummaryLavaTemplate = "SummaryLavaTemplate";
+        }
+
+        #endregion Keys
 
         #region Fields
 
@@ -346,6 +426,21 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
 
                         break;
                     }
+                case "Account":
+                    {
+                        var accountIds = e.Value.SplitDelimitedValues().AsIntegerList().Where( a => a > 0 ).ToList();
+                        if ( accountIds.Any() && apAccount.Visible )
+                        {
+                            var accountNames = FinancialAccountCache.GetByIds( accountIds ).OrderBy( a => a.Order ).OrderBy( a => a.Name ).Select( a => a.Name ).ToList().AsDelimited( ", ", " or " );
+                            e.Value = accountNames;
+                        }
+                        else
+                        {
+                            e.Value = string.Empty;
+                        }
+
+                        break;
+                    }
             }
         }
 
@@ -367,6 +462,8 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
             gfBatchFilter.SaveUserPreference( "Campus", campCampus.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Contains Transaction Type", dvpTransactionType.SelectedValue );
             gfBatchFilter.SaveUserPreference( "Contains Source Type", dvpSourceType.SelectedValue );
+            gfBatchFilter.SaveUserPreference( "Account", apAccount.SelectedValue != "-1" ? apAccount.SelectedValue : string.Empty );
+
 
             if ( AvailableAttributes != null )
             {
@@ -480,7 +577,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         protected void gBatchList_Edit( object sender, RowEventArgs e )
         {
-            NavigateToLinkedPage( "DetailPage", "BatchId", e.RowKeyId );
+            NavigateToLinkedPage( AttributeKey.DetailPage, "BatchId", e.RowKeyId );
         }
 
         /// <summary>
@@ -490,7 +587,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void gBatchList_Add( object sender, EventArgs e )
         {
-            NavigateToLinkedPage( "DetailPage", "BatchId", 0 );
+            NavigateToLinkedPage( AttributeKey.DetailPage, "BatchId", 0 );
         }
 
         /// <summary>
@@ -592,7 +689,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
 
         private void SetVisibilityOption()
         {
-            bool showAccountingCode = GetAttributeValue( "ShowAccountingCode" ).AsBoolean();
+            bool showAccountingCode = GetAttributeValue( AttributeKey.ShowAccountingCode ).AsBoolean();
             tbAccountingCode.Visible = showAccountingCode;
             var accountingCodeColumn = gBatchList.ColumnsOfType<RockBoundField>().FirstOrDefault( a => a.DataField == "AccountingSystemCode" );
             if ( accountingCodeColumn != null )
@@ -606,7 +703,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
                 tbAccountingCode.Text = !string.IsNullOrWhiteSpace( accountingCode ) ? accountingCode : string.Empty;
             }
 
-            bool showAccountsColumn = GetAttributeValue( "ShowAccountsColumn" ).AsBoolean();
+            bool showAccountsColumn = GetAttributeValue( AttributeKey.ShowAccountsColumn ).AsBoolean();
             var accountsColumn = gBatchList.ColumnsOfType<RockBoundField>().FirstOrDefault( c => c.HeaderText == "Accounts" );
             if ( accountsColumn != null )
             {
@@ -652,6 +749,20 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
             var definedTypeSourceTypes = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.FINANCIAL_SOURCE_TYPE.AsGuid() );
             dvpSourceType.DefinedTypeId = definedTypeSourceTypes.Id;
             dvpSourceType.SetValue( gfBatchFilter.GetUserPreference( "Contains Source Type" ) );
+
+            apAccount.Visible = string.IsNullOrWhiteSpace( GetAttributeValue( AttributeKey.Accounts ) );
+            apAccount.DisplayActiveOnly = GetAttributeValue( AttributeKey.ActiveAccountsOnlyFilter ).AsBoolean();
+
+            var accountIds = ( gfBatchFilter.GetUserPreference( "Account" ) ?? "" ).SplitDelimitedValues().AsIntegerList().Where( a => a > 0 ).ToList();
+            if ( accountIds.Any() )
+            {
+                var accounts = new FinancialAccountService( new RockContext() ).GetByIds( accountIds ).OrderBy( a => a.Order ).OrderBy( a => a.Name ).ToList();
+                apAccount.SetValues( accounts );
+            }
+            else
+            {
+                apAccount.SetValue( 0 );
+            }
 
             BindAttributes();
             AddDynamicControls();
@@ -803,10 +914,20 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
                 } ).OrderBy( a => a.FinancialAccount.Order )
                 .ToList();
 
+                // check for filtered accounts
+                var accountIds = ( gfBatchFilter.GetUserPreference( "Account" ) ?? "" ).SplitDelimitedValues().AsIntegerList().Where( a => a > 0 ).ToList();
+                var accountsAreFiltered = false;
+                if ( accountIds.Any() && apAccount.Visible )
+                {
+                    accountSummaries = accountSummaries.Where( a => accountIds.Contains( a.FinancialAccount.Id ) ).OrderBy( a => a.FinancialAccount.Order ).ToList();
+                    accountsAreFiltered = true;
+                }
+
                 var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, CurrentPerson );
                 mergeFields.Add( "BatchSummary", accountSummaries );
+                mergeFields.Add( "FilteredAccounts", accountsAreFiltered );
 
-                string lavaTemplate = this.GetAttributeValue( SUMMARY_LAVA_TEMPLATE );
+                string lavaTemplate = this.GetAttributeValue( AttributeKey.SummaryLavaTemplate );
                 lSummary.Text = lavaTemplate.ResolveMergeFields( mergeFields );
             }
             catch ( Exception ex )
@@ -890,6 +1011,22 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
             if ( sourceTypeValueId.HasValue )
             {
                 qry = qry.Where( a => a.Transactions.Any( t => t.SourceTypeValueId == sourceTypeValueId.Value ) );
+            }
+
+            // Filter to configured accounts.
+            var accountGuids = GetAttributeValue( AttributeKey.Accounts ).SplitDelimitedValues().AsGuidList();
+            if ( accountGuids.Any() )
+            {
+                qry = qry.Where( b => b.Transactions.Any( t => t.TransactionDetails.Any( d => accountGuids.Contains( d.Account.Guid ) ) ) );
+            }
+
+            // Account Id
+            var accountIds = ( gfBatchFilter.GetUserPreference( "Account" ) ?? "" ).SplitDelimitedValues().AsIntegerList().Where( a => a > 0 ).ToList();
+            accountIds = accountIds.Distinct().ToList();
+
+            if ( accountIds.Any() && apAccount.Visible )
+            {
+                qry = qry.Where( b => b.Transactions.Any( t => t.TransactionDetails.Any( d => accountIds.Contains( d.AccountId ) ) ) );
             }
 
             // Filter query by any configured attribute filters

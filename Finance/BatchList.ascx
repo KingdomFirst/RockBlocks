@@ -22,6 +22,7 @@
                             <Rock:RockTextBox ID="tbTitle" runat="server" Label="Title"></Rock:RockTextBox>
                             <Rock:RockTextBox ID="tbAccountingCode" runat="server" Label="Accounting Code"></Rock:RockTextBox>
                             <Rock:DefinedValuePicker ID="dvpSourceType" runat="server" Label="Contains Source Type" />
+                            <Rock:AccountPicker ID="apAccount" runat="server" Label="Account" AllowMultiSelect="true" />
                             <asp:PlaceHolder ID="phAttributeFilters" runat="server" />
                         </Rock:GridFilter>
 
