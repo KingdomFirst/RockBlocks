@@ -180,6 +180,11 @@ namespace RockWeb.Plugins.rocks_kfs.Utility
 
             var container = coder.GetExportedEntities();
 
+            foreach ( var entity in container.Entities.Where( et => et.EntityType == "Rock.Model.Page" ) )
+            {
+                entity.Properties.Remove( "CacheControlHeaderSettings" );
+            }
+
             var htmlContentIndexes = new Dictionary<EncodedEntity, EncodedEntity>();
             foreach ( var entity in container.Entities.Where( et => et.EntityType == "Rock.Model.HtmlContent" ) )
             {
