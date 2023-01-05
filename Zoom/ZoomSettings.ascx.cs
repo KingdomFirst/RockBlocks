@@ -64,8 +64,9 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
             public const string EnableLogging = "EnableLogging";
         }
 
-        private string _apiKey = null;
-        private string _apiSecret = null;
+        private string _appAccountId = null;
+        private string _appClientId = null;
+        private string _appClientSecret = null;
         private string _webhookURL = null;
 
         #region Control Methods
@@ -88,8 +89,9 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
         {
             base.OnLoad( e );
 
-            _apiKey = Settings.GetApiKey();
-            _apiSecret = Settings.GetApiSecret();
+            _appAccountId = Settings.GetAppAccountId();
+            _appClientId = Settings.GetAppClientId();
+            _appClientSecret = Settings.GetAppClientSecret();
             _webhookURL = string.Format( "{0}Plugins/rocks_kfs/Zoom/Webhook.ashx", GlobalAttributesCache.Get().GetValue( "InternalApplicationRoot" ) );
 
             if ( !Page.IsPostBack )
@@ -134,9 +136,10 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnSave_Click( object sender, EventArgs e )
         {
-            Settings.SaveApiSettings( tbApiKey.Text, tbApiSecret.Text );
-            _apiKey = tbApiKey.Text;
-            _apiSecret = tbApiSecret.Text;
+            _appAccountId = tbAppAccountId.Text;
+            _appClientId = tbAppClientId.Text;
+            _appClientSecret = tbAppClientSecret.Text;
+            Settings.SaveApiSettings( _appAccountId, _appClientId, _appClientSecret );
             nbNotification.Text = "API Settings Saved!";
 
             pnlApiSettings.Visible = false;
@@ -176,7 +179,7 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
         /// </summary>
         private void ShowDetail( bool showNotificationbox = false )
         {
-            if ( _apiKey.IsNullOrWhiteSpace() || _apiSecret.IsNullOrWhiteSpace() )
+            if ( _appAccountId.IsNullOrWhiteSpace() || _appClientId.IsNullOrWhiteSpace() || _appClientSecret.IsNullOrWhiteSpace() )
             {
                 pnlApiSettings.Visible = true;
                 HideSecondaryBlocks( true );
@@ -186,8 +189,9 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
             }
             else
             {
-                tbApiKey.Text = _apiKey;
-                tbApiSecret.Text = _apiSecret;
+                tbAppAccountId.Text = _appAccountId;
+                tbAppClientId.Text = _appClientId;
+                tbAppClientSecret.Text = _appClientSecret;
                 var isAuthenticated = rocks.kfs.Zoom.Zoom.ZoomAuthCheck();
                 if ( isAuthenticated )
                 {
@@ -200,8 +204,9 @@ namespace RockWeb.Plugins.rocks_kfs.Zoom
                     lblLoginStatus.CssClass = "pull-right label label-danger";
                 }
                 lView.Text = new DescriptionList()
-                    .Add( "API Key", _apiKey )
-                    .Add( "API Secret", _apiSecret )
+                    .Add( "App Account ID", _appAccountId )
+                    .Add( "App Client ID", _appClientId )
+                    .Add( "App Client Secret", _appClientSecret )
                     .Html;
                 pnlApiSettings.Visible = false;
                 nbNotification.Visible = showNotificationbox;
