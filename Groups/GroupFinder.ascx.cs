@@ -1961,10 +1961,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         if ( !string.IsNullOrWhiteSpace( tbPostalCode.Text ) )
                         {
                             try
-                            { 
+                            {
                                 mapCoordinate = new LocationService( rockContext )
                                     .GetMapCoordinateFromPostalCode( tbPostalCode.Text );
-                            } catch { } // handle invalid postal codes by leaving mapCoordinate null
+                            }
+                            catch
+                            {
+                                ShowWarning( "An invalid Postal Code was provided. If postal code is required it will be reset to the default location." );
+                            } // handle invalid postal codes by leaving mapCoordinate null and reverting to default location.
                         }
                     }
                     else
