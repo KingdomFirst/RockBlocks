@@ -31,6 +31,7 @@
 // * Added Keyword search to search name or description of groups
 // * Added an additional setting to include Pending members in Over Capacity checking
 // * Added a setting to override groups Is Public setting to show on the finder.
+// Package Version 1.5
 // </notice>
 //
 using System;
@@ -1959,8 +1960,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     {
                         if ( !string.IsNullOrWhiteSpace( tbPostalCode.Text ) )
                         {
-                            mapCoordinate = new LocationService( rockContext )
-                                .GetMapCoordinateFromPostalCode( tbPostalCode.Text );
+                            try
+                            { 
+                                mapCoordinate = new LocationService( rockContext )
+                                    .GetMapCoordinateFromPostalCode( tbPostalCode.Text );
+                            } catch { } // handle invalid postal codes by leaving mapCoordinate null
                         }
                     }
                     else
