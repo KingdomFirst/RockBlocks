@@ -1967,7 +1967,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             }
                             catch
                             {
-                                ShowWarning( $"An invalid {tbPostalCode.Label} was provided. If {tbPostalCode.Label} is required it will be reset to the default location." );
+                                ShowWarning( $"{tbPostalCode.Text} is an invalid {tbPostalCode.Label}. If {tbPostalCode.Label} is required, it will be reset to the default location." );
                             } // handle invalid postal codes by leaving mapCoordinate null and reverting to default location.
                         }
                     }
