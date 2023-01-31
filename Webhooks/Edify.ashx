@@ -27,8 +27,10 @@ using System.Web;
 using Newtonsoft.Json;
 using PostalServerDotNet.v1.Model.Webhook;
 using Rock;
+using Rock.Data;
 using Rock.Logging;
 using Rock.Model;
+using Rock.Web.Cache;
 using Rock.Workflow.Action;
 
 namespace RockWeb.Plugins.rocks_kfs.Webhooks
@@ -113,7 +115,16 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
         Object IAsyncResult.AsyncState { get { return _state; } }
         bool IAsyncResult.CompletedSynchronously { get { return false; } }
 
-        private const bool ENABLE_LOGGING = false;
+        private double _previousMilliseconds = 0.00;
+
+        // These variables should be considered when making values configurable with Email Transport.
+        // The transport should cache the values when run and the webhook read them from the cache.
+        private static bool _enableLog = false;
+        private int _processingThreshold = 500;
+        private int _processingMillisecondMultiplier = 2;
+        // If the process takes longer than the processing threshold above,
+        // it will then delay that amount of time times this value before allowing another request.
+        // (i.e. a 600 millisecond processing time, it will respond to all requests with a 429 http status in the 600*2 millisecond time frame.)
 
         public EdifyResponseAsync( AsyncCallback callback, HttpContext context, Object state )
         {
@@ -159,7 +170,29 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
 
             if ( request.ContentType.Contains( "application/json" ) )
             {
-                ProcessJsonContent( request, response );
+                var edifyWebhookStart = RockCache.Get( "EdifyWebhookStart" );
+                var edifyWebhookEnd = RockCache.Get( "EdifyWebhookEnd" );
+                if ( edifyWebhookStart != null && edifyWebhookEnd != null )
+                {
+                    _previousMilliseconds = ( ( DateTime ) edifyWebhookEnd - ( DateTime ) edifyWebhookStart ).TotalMilliseconds;
+                }
+                if ( _previousMilliseconds >= _processingThreshold )
+                {
+                    var updateEndDate = ( DateTime ) edifyWebhookEnd;
+                    var timeToReset = updateEndDate.AddMilliseconds( _previousMilliseconds * _processingMillisecondMultiplier );
+                    if ( RockDateTime.Now > timeToReset )
+                    {
+                        RockCache.AddOrUpdate( "EdifyWebhookEnd", updateEndDate.AddMilliseconds( -_previousMilliseconds ) );
+                    }
+                    response.Write( "Too many requests." );
+                    response.AddHeader( "Retry-After", ( _previousMilliseconds * _processingMillisecondMultiplier ).ToString() );
+                    response.StatusCode = 429; // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+                }
+                else
+                {
+                    RockCache.AddOrUpdate( "EdifyWebhookStart", RockDateTime.Now );
+                    ProcessJsonContent( request, response );
+                }
             }
             else
             {
@@ -195,6 +228,8 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
             ProcessEdifyEvent( edifyEvent, new Rock.Data.RockContext() );
             //ProcessEdifyEventListAsync( eventList );
 
+            RockCache.AddOrUpdate( "EdifyWebhookEnd", RockDateTime.Now );
+
             response.StatusCode = ( int ) System.Net.HttpStatusCode.OK;
         }
 
@@ -211,9 +246,9 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
 
         private void ProcessEdifyEvent( EdifyEvent edifyEvent, Rock.Data.RockContext rockContext )
         {
-
             Guid? actionGuid = null;
             Guid? communicationRecipientGuid = null;
+            LogEvent( null, "ProcessEdifyEvent", "Init process", $"" );
 
             if ( !string.IsNullOrWhiteSpace( edifyEvent.WorkflowActionGuid ) )
             {
@@ -225,6 +260,8 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                 communicationRecipientGuid = edifyEvent.CommunicationRecipientGuid.AsGuidOrNull();
             }
 
+            LogEvent( null, "ProcessEdifyEvent", "Start process", $"communicationRecipientGuid {communicationRecipientGuid} previousMilliseconds {_previousMilliseconds}" );
+
             if ( actionGuid != null )
             {
                 ProcessForWorkflow( actionGuid, rockContext, edifyEvent );
@@ -234,6 +271,7 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
             {
                 ProcessForRecipient( communicationRecipientGuid, rockContext, edifyEvent );
             }
+            LogEvent( null, "ProcessEdifyEvent", "End process", $"communicationRecipientGuid {communicationRecipientGuid} previousMilliseconds {_previousMilliseconds}" );
         }
 
         /// <summary>
@@ -245,7 +283,6 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
         private void ProcessForRecipient( Guid? communicationRecipientGuid, Rock.Data.RockContext rockContext, EdifyEvent edifyEvent )
         {
             RockLogger.Log.Debug( RockLogDomains.Communications, "ProcessForRecipient {@payload}", edifyEvent );
-
             if ( !communicationRecipientGuid.HasValue )
             {
                 return;
@@ -450,6 +487,35 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
             if ( actionGuid != null && !string.IsNullOrWhiteSpace( status ) )
             {
                 SendEmailWithEvents.UpdateEmailStatus( actionGuid.Value, status, edifyEvent.Event, rockContext, true );
+            }
+        }
+
+        private static ServiceLog LogEvent( RockContext rockContext, string type, string input, string result )
+        {
+            if ( _enableLog )
+            {
+                if ( rockContext == null )
+                {
+                    rockContext = new RockContext();
+                }
+
+                var rockLogger = new ServiceLogService( rockContext );
+                ServiceLog serviceLog = new ServiceLog
+                {
+                    Name = "Edify",
+                    Type = type,
+                    LogDateTime = RockDateTime.Now,
+                    Input = input,
+                    Result = result,
+                    Success = true
+                };
+                rockLogger.Add( serviceLog );
+                rockContext.SaveChanges();
+                return serviceLog;
+            }
+            else
+            {
+                return null;
             }
         }
     }
