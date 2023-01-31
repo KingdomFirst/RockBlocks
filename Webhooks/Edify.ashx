@@ -115,8 +115,16 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
         Object IAsyncResult.AsyncState { get { return _state; } }
         bool IAsyncResult.CompletedSynchronously { get { return false; } }
 
-        private static bool _enableLog = false;
         private double _previousMilliseconds = 0.00;
+
+        // These variables should be considered when making values configurable with Email Transport.
+        // The transport should cache the values when run and the webhook read them from the cache.
+        private static bool _enableLog = false;
+        private int _processingThreshold = 500;
+        private int _processingMillisecondMultiplier = 2;
+        // If the process takes longer than the processing threshold above,
+        // it will then delay that amount of time times this value before allowing another request.
+        // (i.e. a 600 millisecond processing time, it will respond to all requests with a 429 http status in the 600*2 millisecond time frame.)
 
         public EdifyResponseAsync( AsyncCallback callback, HttpContext context, Object state )
         {
@@ -168,16 +176,16 @@ namespace RockWeb.Plugins.rocks_kfs.Webhooks
                 {
                     _previousMilliseconds = ( ( DateTime ) edifyWebhookEnd - ( DateTime ) edifyWebhookStart ).TotalMilliseconds;
                 }
-                if ( _previousMilliseconds >= 500 )
+                if ( _previousMilliseconds >= _processingThreshold )
                 {
                     var updateEndDate = ( DateTime ) edifyWebhookEnd;
-                    var timeToReset = updateEndDate.AddMilliseconds( _previousMilliseconds * 2 );
+                    var timeToReset = updateEndDate.AddMilliseconds( _previousMilliseconds * _processingMillisecondMultiplier );
                     if ( RockDateTime.Now > timeToReset )
                     {
                         RockCache.AddOrUpdate( "EdifyWebhookEnd", updateEndDate.AddMilliseconds( -_previousMilliseconds ) );
                     }
                     response.Write( "Too many requests." );
-                    response.AddHeader( "Retry-After", ( _previousMilliseconds * 2 ).ToString() );
+                    response.AddHeader( "Retry-After", ( _previousMilliseconds * _processingMillisecondMultiplier ).ToString() );
                     response.StatusCode = 429; // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
                 }
                 else
