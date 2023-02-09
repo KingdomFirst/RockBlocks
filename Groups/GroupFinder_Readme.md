@@ -99,3 +99,12 @@ The following new goodness will be added to your Rock install with this plugin:
 **How to Set Attribute Filters via URL Parameters**
 
 Attribute filters can be filled out using URL Parameters. If used in combination with the *Auto Load* setting, a search can be run automatically. To use this capability the parameters are in the format `filter_<attributeKey>_<fieldTypeId>=<value(s)>` (i.e. /page/236?filter_GroupCategory_16=609)
+
+<style>
+  table {
+    background-color: rgba(220, 220, 220, 0.4);
+  }
+  th {
+    display: none;
+  }
+</style>
