@@ -6,6 +6,12 @@
 *Updated: 1/10/2023*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/161*
 
+## Quick Links
+- [Summary](#summary)
+- [What's New](#whats-new)
+- [Group Finder Configuration](#Group-Finder-Configuration)
+- [Block Properties](#block-properties)
+
 ## Summary
 
 Our Group finder is a significantly modified version of the core Rock version. Including but not limited to these features:
@@ -31,11 +37,6 @@ Our Group finder is a significantly modified version of the core Rock version. I
 ![Filters 3](../.screenshots/GroupFinder/ColllapsibleFilters_3.png)
 <div style="page-break-after: always;"></div>
 
-Quick Links:
-- [What's New](#whats-new)
-- [Group Finder Configuration](#Group-Finder-Configuration)
-- [Block Properties](#block-properties)
-
 ## What's New
 
 The following new goodness will be added to your Rock install with this plugin:
@@ -43,7 +44,6 @@ The following new goodness will be added to your Rock install with this plugin:
 - **New Block** Group Finder KFS
 
 **Note**: This block will not be added automatically to a page. You will need to create a new page or add this block to an existing page.
-<div style="page-break-after: always;"></div>
 
 ## Group Finder Configuration
 ![Filter Settings](../.screenshots/GroupFinder/Filter_Settings.png)
