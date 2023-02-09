@@ -21,6 +21,7 @@ Our Group finder is a significantly modified version of the core Rock version. I
 - Added Custom Schedule Support to Day of Week Filters.
 - Added Keyword search to search name or description of groups.
 - Added an additional setting to include Pending members in Over Capacity checking.
+- Added a setting to override groups Is Public setting to show on the finder.
 <div style="page-break-after: always;"></div>
 
 **Collapsible Filters Screenshots**
@@ -46,17 +47,8 @@ The following new goodness will be added to your Rock install with this plugin:
 
 ## Group Finder Configuration
 ![Filter Settings](../.screenshots/GroupFinder/Filter_Settings.png)
-<style>
-  table {
-    background-color: rgba(220, 220, 220, 0.4);
-  }
-  th {
-    display: none;
-  }
-</style>
 <div style="page-break-after: always;"></div>
 
-### Block Settings
 | | |
 | --- | ---- |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Group Type** The type of groups to look for. |
@@ -88,7 +80,6 @@ The following new goodness will be added to your Rock install with this plugin:
 ![Block Properties](../.screenshots/GroupFinder/Block_Properties.png)
 <div style="page-break-after: always;"></div>
 
-### Block Properties
 | | |
 | --- | ---- |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Allow Search in PersonGuid Mode** When set to yes, PersonGuid mode will allow you to change filters and search in that mode for that person.  Generally used on an internal group finder page. The PersonGuid must be passed as a URL parameter. |
