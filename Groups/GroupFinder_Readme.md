@@ -75,6 +75,8 @@ The following new goodness will be added to your Rock install with this plugin:
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">22</span> | **Custom Sort from Attribute** Select an attribute to sort by if a group contains multiple of the selected attribute filter options. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">23</span> | **Hide Attribute Filter Values** The group attribute values that you would like to hide from the filter options. This could be used to hide internal attributes used for reporting. |
 
+(See the [Rock Your Groups Manual](https://community.rockrms.com/documentation/bookcontent/7/217#groupfinder) for the rest of the setting descriptions.)
+
 ## Block Properties
 
 ![Block Properties](../.screenshots/GroupFinder/Block_Properties.png)
