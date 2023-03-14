@@ -276,7 +276,7 @@ namespace RockWeb.Plugins.rocks_kfs.Vimeo
 
                     if ( completed % _batchSize < 1 )
                     {
-                        SaveContentChannelItems( contentChannelItems );
+                        SaveContentChannelItems( contentChannelItems, lookupContext );
                         contentChannelItems.Clear();
                     }
                 }
@@ -285,14 +285,17 @@ namespace RockWeb.Plugins.rocks_kfs.Vimeo
             // Save leftovers
             if ( contentChannelItems.Any() )
             {
-                SaveContentChannelItems( contentChannelItems );
+                SaveContentChannelItems( contentChannelItems, lookupContext );
                 contentChannelItems.Clear();
             }
         }
 
-        private void SaveContentChannelItems( List<ContentChannelItem> contentChannelItems )
+        private void SaveContentChannelItems( List<ContentChannelItem> contentChannelItems, RockContext rockContext = null )
         {
-            var rockContext = new RockContext();
+            if ( rockContext == null )
+            {
+                rockContext = new RockContext();
+            }
             rockContext.WrapTransaction( () =>
             {
                 rockContext.SaveChanges();
