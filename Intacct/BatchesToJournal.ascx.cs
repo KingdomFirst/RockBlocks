@@ -34,7 +34,6 @@ using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using rocks.kfs.Intacct;
 using rocks.kfs.Intacct.Enums;
-using rocks.kfs.ShelbyFinancials;
 
 namespace RockWeb.Plugins.rocks_kfs.Intacct
 {
@@ -61,7 +60,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         "Button Text",
         Description = "The text to use in the Export Button.",
         IsRequired = false,
-        DefaultValue = "Create Shelby Export",
+        DefaultValue = "Export to Intacct",
         Category = "Batch List Settings",
         Order = 1,
         Key = AttributeKey.ButtonText )]
@@ -260,13 +259,12 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnLoad( EventArgs e )
         {
+            btnExportToIntacct.Text = GetAttributeValue( AttributeKey.ButtonText );
+            _monthsBack = GetAttributeValue( AttributeKey.MonthsBack ).AsInteger() * -1;
+            _enableDebug = GetAttributeValue( AttributeKey.EnableDebug );
+            _exportMode = GetAttributeValue( AttributeKey.ExportMode );
             if ( !Page.IsPostBack )
             {
-                btnExportToIntacct.Text = GetAttributeValue( AttributeKey.ButtonText );
-                _monthsBack = GetAttributeValue( AttributeKey.MonthsBack ).AsInteger() * -1;
-                _enableDebug = GetAttributeValue( AttributeKey.EnableDebug );
-                _exportMode = GetAttributeValue( AttributeKey.ExportMode );
-                btnExportToIntacct.Visible = true;
                 if ( _exportMode == "JournalEntry" )
                 {
                     pnlOtherReceipt.Visible = false;
@@ -478,12 +476,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             var accountFields = new List<string>();
             accountFields.Add( "BANKACCOUNTID" );
             accountFields.Add( "BANKNAME" );
-            var controlId = this.BlockId;
-            var postXml = checkingAccountList.GetBankAccountsXML( _intacctAuth, controlId, accountFields );
+            var postXml = checkingAccountList.GetBankAccountsXML( _intacctAuth, this.BlockId, accountFields );
 
             var endpoint = new IntacctEndpoint();
             var resultXml = endpoint.PostToIntacct( postXml );
-            return endpoint.ParseListCheckingAccountsResponse( resultXml, controlId );
+            return endpoint.ParseListCheckingAccountsResponse( resultXml, this.BlockId );
 
         }
 
@@ -668,7 +665,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     if ( _exportMode == "JournalEntry" )
                     {
                         var journal = new IntacctJournal();
-                        postXml = journal.CreateJournalEntryXML( _intacctAuth, this.BlockId, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                        postXml = journal.CreateJournalEntryXML( _intacctAuth, batch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
                     }
                     else   // Export Mode is Other Receipt
                     {
@@ -684,11 +681,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         {
                             undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
                         }
-                        postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, this.BlockId, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                        postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
                     }
 
                     var resultXml = endpoint.PostToIntacct( postXml );
-                    var success = endpoint.ParseEndpointResponse( resultXml, this.BlockId, GetAttributeValue( AttributeKey.LogResponse ).AsBoolean() );
+                    var success = endpoint.ParseEndpointResponse( resultXml, batch.Id, GetAttributeValue( AttributeKey.LogResponse ).AsBoolean() );
 
                     if ( success )
                     {
@@ -742,6 +739,17 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 nbError.NotificationBoxType = NotificationBoxType.Warning;
                 nbError.Visible = true;
             }
+        }
+
+        protected void ddlReceiptAccountType_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            _selectedReceiptAccountType = ddlReceiptAccountType.SelectedValue;
+            _selectedPaymentMethod = ddlPaymentMethods.SelectedValue;
+            if ( ddlReceiptAccountType.SelectedValue != "BankAccount" )
+            {
+                _selectedBankAccountId = ddlBankAccounts.SelectedValue;
+            }
+            SetupOtherReceipts();
         }
 
         #endregion
