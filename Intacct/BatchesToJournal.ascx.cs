@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright 2022 by Kingdom First Solutions
+// Copyright 2023 by Kingdom First Solutions
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
     [DisplayName( "Intacct Batches to Journal" )]
     [Category( "KFS > Intacct" )]
-    [Description( "Block used to create Journal Entries in Intacct from multiple Rock Financial Batches." )]
+    [Description( "Block used to create Journal Entries or Other Receipts in Intacct from multiple Rock Financial Batches." )]
 
     #endregion
 
@@ -221,15 +221,12 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         #region Global Variables
 
-        //private int _batchId = 0;
-        //private decimal _variance = 0;
         private string _selectedBankAccountId;
         private string _selectedPaymentMethod;
         private string _selectedReceiptAccountType;
         private string _exportMode;
         private int _monthsBack;
         private string _enableDebug;
-        //private FinancialBatch _financialBatch = null;
         private IntacctAuth _intacctAuth = null;
 
         #endregion Global Variables
@@ -271,6 +268,9 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 }
                 else
                 {
+                    _selectedReceiptAccountType = GetBlockUserPreference( "ReceiptAccountType" );
+                    _selectedPaymentMethod = GetBlockUserPreference( "PaymentMethod" );
+                    _selectedBankAccountId = GetBlockUserPreference( "BankAccountId" );
                     SetupOtherReceipts();
                 }
                 BindFilter();
@@ -471,7 +471,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             {
                 _intacctAuth = GetIntactAuth();
             }
-            //var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
             var checkingAccountList = new IntacctCheckingAccountList();
             var accountFields = new List<string>();
             accountFields.Add( "BANKACCOUNTID" );
@@ -635,7 +634,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 foreach ( var batch in batchesToUpdate )
                 {
                     var changes = new History.HistoryChangeList();
-                    History.EvaluateChange( changes, "Status", batch.Status, BatchStatus.Closed );
 
                     string errorMessage;
 
@@ -643,15 +641,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     {
                         errorMessage = string.Format( "{0} is an automated batch and the status can not be modified when the status is pending. The system will automatically set this batch to OPEN when all transactions have been downloaded.", batch.Name );
                         maWarningDialog.Show( errorMessage, ModalAlertType.Warning );
-                        return;
-                    }
-
-                    batch.Status = BatchStatus.Closed;
-
-                    if ( !batch.IsValid )
-                    {
-                        string message = string.Format( "Unable to update status for the selected batches.<br/><br/>{0}", batch.ValidationResults.AsDelimited( "<br/>" ) );
-                        maWarningDialog.Show( message, ModalAlertType.Warning );
                         return;
                     }
 
@@ -697,6 +686,13 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         {
                             History.EvaluateChange( changes, "Status", batch.Status, BatchStatus.Closed );
                             batch.Status = BatchStatus.Closed;
+
+                            if ( !batch.IsValid )
+                            {
+                                string message = string.Format( "Unable to update status for the selected batches.<br/><br/>{0}", batch.ValidationResults.AsDelimited( "<br/>" ) );
+                                maWarningDialog.Show( message, ModalAlertType.Warning );
+                                return;
+                            }
                         }
 
                         //
