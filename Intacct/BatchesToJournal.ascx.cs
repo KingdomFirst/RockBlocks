@@ -469,7 +469,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             if ( _intacctAuth == null )
             {
-                _intacctAuth = GetIntactAuth();
+                _intacctAuth = GetIntacctAuth();
             }
             var checkingAccountList = new IntacctCheckingAccountList();
             var accountFields = new List<string>();
@@ -483,7 +483,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         }
 
-        private IntacctAuth GetIntactAuth()
+        private IntacctAuth GetIntacctAuth()
         {
             return new IntacctAuth()
             {
@@ -614,7 +614,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                 if ( _intacctAuth == null )
                 {
-                    _intacctAuth = GetIntactAuth();
+                    _intacctAuth = GetIntacctAuth();
                 }
 
                 var rockContext = new RockContext();
