@@ -20,11 +20,11 @@ Quick Links:
 
 The following new goodness will be added to your Rock install with this plugin:
 
+- **New Page**: Intacct Projects (Finance > Administration > Intacct Projects)  
 - **New Page**: Intacct Export (Finance > Functions > Intacct Export)  
 - **New Block**: Batch to Journal (added to the Batch Detail Page on install)  
 - **New Block**: Batches to Journal (added to the new Intacct Export Page on install)  
 - **New Account Attributes**: There are a number of new Account attributes that control where transactions are posted in Intacct  
-- **New Page**: Intacct Projects (Finance > Administration > Intacct Projects)  
 - **New Defined Type**: Financial Projects stores the Defined Values that designate what Project a Transaction should be associated with  
 - **New Batch Attribute**: Date Exported 
 - **New Financial Gateway Attributes:** There are 2 new Financial Gateway attributes to control how transaction fees are handled
@@ -149,7 +149,7 @@ You will need to configure the Batch to Journal block settings.
 
     Close Batch: Flag indicating if the Financial Batch should be closed in Rock when successfully posted to Intacct.
     
-    Log Response: Flag indicting if the Intacct Response should be logged to the Batch Audit Log
+    Log Response: Flag indicating if the Intacct Response should be logged to the Batch Audit Log
 
     Undeposited Funds Account: The GL Account Id to use when Other Receipt mode is being used with Undeposited Funds option selected.
     
@@ -179,7 +179,7 @@ When the block is in Other Receipts mode, you will have options for Deposit To, 
 
 ![](../.screenshots/BatchToIntacct/BatchesToJournalBlockOtherReceipts.png)
 
-You will need to configure the Batch to Journal block settings.
+You will need to configure the Batches to Journal block settings.
 
 ![](../.screenshots/BatchToIntacct/BatchesToJournalBlockSettings.png)
 ```
@@ -193,9 +193,9 @@ You will need to configure the Batch to Journal block settings.
 
     Close Batch: Flag indicating if the Financial Batch should be closed in Rock when successfully posted to Intacct.
     
-    Log Response: Flag indicting if the Intacct Response should be logged to the Batch Audit Log.
+    Log Response: Flag indicating if the Intacct Response should be logged to the Batch Audit Log.
     
-    Enable Debug: Turns on/off the Lava debug panel.
+    Enable Debug: Turns on/off the Lava debug panel. The panel will show after export.
 
     Journal Id: The Intacct Symbol of the Journal that the Entry should be posted to (example: GJ)
 
@@ -293,8 +293,24 @@ Most organizations will mark the GL Project designation by setting a default Pro
 **Important Information about Your Custom Dimension**
 - The Name is for internal (Rock) purposes only
 - The Category has to be set to the Intacct Export category in order to be included in the API post
-- The Key is the actual Intacct specific name of the custom Dimension in all caps. Also, you'll notice that the core KFS Dimensions use the format `com.kfs.Intacct.CLASID`. The custom key can be anything you'd like, so long as there is a period before the Dimension name. For example, `org.mychurch.Intacct.MYCUSTOMDIM` is a valid Attribute Key.
-- Since the Dimensions for Accounts are typically plain text, only text attributes are supported for the custom Dimensions
+- The Key is the actual Intacct specific name of the Custom Dimension in all caps, beginning with "GLDIM". Also, you'll notice that the core KFS Dimensions use the format `rocks.kfs.Intacct.CLASSID`. The custom key can be anything you'd like, so long as there is a period before the Dimension name. For example, `org.mychurch.Intacct.GLDIMMYCUSTOMDIM` is a valid Attribute Key.
+- Text attributes are recommended for the Custom Dimensions. However, the value you enter in the attribute on the Financial Account must be the System Info > ID, not the text value. (i.e. Value: MT-Event-P1234, ID: 10005. You must enter 10005 in Rock.)
+
+**Examples:**
+- *Custom Dimension 1:*
+  - Record Name: Restriction
+  - Integration Name: restriction
+  - Rock Key: GLDIMRESTRICTION
+- *Custom Dimension 2:*
+  - Record Name: Custom Project
+  - Integration Name: custom_project
+  - Rock Key: GLDIMCUSTOM_PROJECT
+- *Custom Dimension 2 Value:*
+  - Custom Project: MT - Event - P1234
+  - ID: 10005
+  - Rock Value: 10005
+
+![IntacctCustomDimensionSystemInfoScreenshot](https://user-images.githubusercontent.com/2990519/174348414-42ead26f-0dd5-4c3c-b985-d1fb48141508.jpeg)
 
 
 
