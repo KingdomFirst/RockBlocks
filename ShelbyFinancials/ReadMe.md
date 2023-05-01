@@ -1,10 +1,10 @@
-![Kingdom First Solutions](https://user-images.githubusercontent.com/81330042/113191442-2d82f580-9223-11eb-9e65-81ae5bc740f6.png)
+![Kingdom First Solutions](../.screenshots/KFSBanner.jpg)
 
 
 # Shelby Financials Export
-*Tested/Supported in Rock version:  8.0-13.0*   
+*Tested/Supported in Rock version:  8.0-14.0*   
 *Created:  10/29/2018*  
-*Updated:  2/2/2022*   
+*Updated:  5/1/2023*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/97*
 
 ## Summary
@@ -12,7 +12,6 @@
 
 
 Quick Links:
-
 - [What's New](#whats-new)
 - [Configuration](#configuration)
 - [Exporting to Shelby Financials](#exporting-to-shelby-financials)
@@ -31,7 +30,7 @@ Quick Links:
   - **New Defined Type**: Financial Projects stores the Defined Values that designate what Project a transaction or batch should be associated with  
   - **New Batch Attribute**: Date Exported  
 
-
+<div style="page-break-after: always;"></div>
 
 ## Configuration
 
@@ -39,69 +38,55 @@ Quick Links:
 
 After install, the Shelby Financials Batch to Journal block was added to your Batch Details page. 
 
-![](https://user-images.githubusercontent.com/81330042/113193210-53a99500-9225-11eb-9066-85ebd714e6ae.png)
+![](../.screenshots/ShelbyFinancials/BatchToJournal.png)
 
 
 
+![](../.screenshots/ShelbyFinancials/BatchToJournalProperties.png)
 
+| | |
+| --- | ---- |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Name** Block name |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Button Text** Customize the text on the export button |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Close Batch** Control whether the batch gets marked as closed in Rock after export
 
-
-
-
-![](Images/BatchToJournalProperties.png)
-
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Name** Block name
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**Button Text** Customize the text on the export button
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Close Batch** Control whether the batch gets marked as closed in Rock after export
-
-
+<div style="page-break-after: always;"></div>
 
 #### Shelby Financials Batches to Journal Block
 
-![](https://user-images.githubusercontent.com/81330042/113193298-6fad3680-9225-11eb-95ef-f61edf9b87a7.png)
+![](../.screenshots/ShelbyFinancials/BatchesToJournalProperties.png)
 
+| | |
+| --- | ---- |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span><span> | **Name** Block name</span> |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Detail Page** Link to the Financial Batch Details page |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Button Text** Customize the text for the export button |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Months Back** Number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches |
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Name** Block name
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**Detail Page** Link to the Financial Batch Details page
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Button Text** Customize the text for the export button
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4&nbsp;&nbsp;</span>**Months Back** Number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches
-
-
+<div style="page-break-after: always;"></div>
 
 #### Account Attributes
 
 The export will always create (at a minimum) two lines for a Journal - a debit and a credit line. The Credit and Debit Account attributes are how this is defined. Each of these attributes will need to be set to the Id of the option in your Shelby Financials GL. Only the Attributes that are filled in will be exported.
 
-![](https://user-images.githubusercontent.com/81330042/113193420-8fdcf580-9225-11eb-8b9b-0fa3d2f90a12.png)
+![](../.screenshots/ShelbyFinancials/AccountAttributes.png)
+<div style="page-break-after: always;"></div>
 
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;1&nbsp;&nbsp;</span>**Default Project** Designates the project at the financial account level
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;2&nbsp;&nbsp;</span>**Company** Designates the company
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;3&nbsp;&nbsp;</span>**Fund** Designates the fund
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;4&nbsp;&nbsp;</span>**Debit Account** Account number to be used for the debit column
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;5&nbsp;&nbsp;</span>**Dapartment** Designates the department
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;6&nbsp;&nbsp;</span>**Credit Account** Account number to be used for the credit column
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;7&nbsp;&nbsp;</span>**Region** Designates the region
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;8&nbsp;&nbsp;</span>**Super Fund** Designates the super fund
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;9&nbsp;&nbsp;</span>**Location** Designates the location
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;10&nbsp;&nbsp;</span>**Cost Center** Designates the cost center
->
-> <span style="padding-left: 30px; margin-right: 10px; width: .8em;background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">&nbsp;&nbsp;11&nbsp;&nbsp;</span>**Account Sub** Designates the account sub
-
-
+| | |
+| --- | ---- |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Default Project** Designates the project at the financial account level |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Company** Designates the company |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Fund** Designates the fund |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Debit Account** Account number to be used for the debit column |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Debit Account Sub** Designates the Debit Account sub |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">6</span> | **Revenue Department** Designates the department |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">7</span> | **Revenue Account** Account number to be used for the credit column |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">8</span> | **Revenue Account Sub** Designates the Revenue Account sub |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">9</span> | **Region** Designates the region |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">10</span> | **Super Fund** Designates the super fund |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">11</span> | **Location** Designates the location |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **Cost Center Default/Debit** Cost Center Default will be used on both Credit/Debit lines if Cost Center Credit does not contain a value |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **Cost Center Credit** Designates the cost center for credits |
 
 #### Projects Defined Type
 
@@ -109,9 +94,9 @@ You may want to define the values for the Financial Projects defined type so the
 
 On the Projects page, add a value for each of your organization's Projects. The Value must be the Id from Shelby Financials. Description will be a friendly name for the Project.
 
-![](https://user-images.githubusercontent.com/81330042/113193523-aaaf6a00-9225-11eb-9443-646bbb45c913.png)
+![](/../.screenshots/ShelbyFinancials/Projects.png)
 
-
+<div style="page-break-after: always;"></div>
 
 ## Exporting to Shelby Financials
 
@@ -123,11 +108,11 @@ You can assign Projects to a financial account, a transaction or to a specific a
 
 **To assign a Project to an entire transaction**, select the Transaction Project from the dropdown list when you create the transaction. To assign a project to an existing transaction, edit the transaction and choose a Project from the dropdown list.
 
-![](/Images/TransactionAttribute.png)
+![](/../.screenshots/ShelbyFinancials/TransactionAttribute.png)
 
-**To assign a Project to part of a transaction**, as you add the accounts and amounts to the transaction, select the Project from the dropdown list. You can also assing a project by editing the accounts on an existing transaction.
+**To assign a Project to part of a transaction**, as you add the accounts and amounts to the transaction, select the Project from the dropdown list. You can also a project by editing the accounts on an existing transaction.
 
-![](https://user-images.githubusercontent.com/81330042/113193574-bb5fe000-9225-11eb-9319-f69fb0af4a53.png)
+![1543597303519](../.screenshots/ShelbyFinancials/TransactionDetailAttribute.png)
 
 
 
@@ -135,7 +120,7 @@ You can assign Projects to a financial account, a transaction or to a specific a
 
 On the Batch Detail page, select the Journal Type and enter an Accounting Period for the batch then click the Create Shelby Export button. You will not be able to export a batch if the variance amount is not $0.
 
-![](https://user-images.githubusercontent.com/81330042/113193871-11348800-9226-11eb-9a88-091d43a0ad4f.png)
+![1543597518859](../.screenshots/ShelbyFinancials/ExportBatch.png)
 
 
 
@@ -143,4 +128,14 @@ On the Batch Detail page, select the Journal Type and enter an Accounting Period
 
 To export multiple batches, go to the Shelby GL Export page (Finance > Functions > Shelby GL Export). Select the batches you wish to export, select a Journal Type, enter an Accounting Period and click the Create Shelby Export button.
 
-![](https://user-images.githubusercontent.com/81330042/113193895-1b568680-9226-11eb-9df7-78b8290b4cd9.png)
+![1543598924073](../.screenshots/ShelbyFinancials/ExportMultipleBatches.png)
+
+
+<style>
+  table {
+    background-color: rgba(220, 220, 220, 0.4);
+  }
+  th {
+    display: none;
+  }
+</style>
