@@ -38,15 +38,56 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
     #region Block Settings
 
-    [TextField( "Button Text", "The text to use in the Export Button.", false, "Create Shelby Export", "", 0 )]
-    [BooleanField( "Close Batch", "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.", true, "", 3 )]
-    [LavaField( "Journal Description Lava", "Lava for the journal description column per line. Default: Batch.Id: Batch.Name", true, "{{ Batch.Id }}: {{ Batch.Name }}" )]
-    [BooleanField( "Enable Debug", "Outputs the object graph to help create your Lava syntax.", false )]
+    [TextField(
+        "Button Text",
+        Description = "The text to use in the Export Button.",
+        IsRequired = false,
+        DefaultValue = "Create Shelby Export",
+        Order = 0,
+        Key = AttributeKey.ButtonText )]
+
+    [BooleanField(
+        "Close Batch",
+        Description = "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.",
+        IsRequired = false,
+        DefaultBooleanValue = true,
+        Order = 1,
+        Key = AttributeKey.CloseBatch )]
+
+    [LavaField(
+        "Journal Description Lava",
+        Description = "Lava for the journal description column per line. Default: Batch.Id: Batch.Name",
+        IsRequired = true,
+        DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
+        Order = 2,
+        Key = AttributeKey.JournalMemoLava )]
+
+    [BooleanField(
+        "Enable Debug",
+        Description = "Outputs the object graph to help create your Lava syntax.",
+        DefaultBooleanValue = false,
+        Order = 5,
+        Key = AttributeKey.EnableDebug )]
 
     #endregion
 
     public partial class BatchToJournal : RockBlock
     {
+        #region Keys
+
+        /// <summary>
+        /// Attribute Keys
+        /// </summary>
+        private static class AttributeKey
+        {
+            public const string ButtonText = "ButtonText";
+            public const string CloseBatch = "CloseBatch";
+            public const string JournalMemoLava = "JournalMemoLava";
+            public const string EnableDebug = "EnableDebug";
+        }
+
+        #endregion Keys
+
         private int _batchId = 0;
         private FinancialBatch _financialBatch = null;
 
@@ -99,7 +140,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         {
             var rockContext = new RockContext();
             var isExported = false;
-            var debugEnabled = GetAttributeValue( "EnableDebug" ).AsBoolean();
+            var debugEnabled = GetAttributeValue( AttributeKey.EnableDebug ).AsBoolean();
 
             _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
             DateTime? dateExported = null;
@@ -125,7 +166,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
             if ( !isExported )
             {
-                btnExportToShelbyFinancials.Text = GetAttributeValue( "ButtonText" );
+                btnExportToShelbyFinancials.Text = GetAttributeValue( AttributeKey.ButtonText );
                 btnExportToShelbyFinancials.Visible = true;
                 ddlJournalType.Visible = true;
                 tbAccountingPeriod.Visible = true;
@@ -176,9 +217,9 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                 var journalCode = ddlJournalType.SelectedValue;
                 var period = tbAccountingPeriod.Text.AsInteger();
 
-                var debugLava = GetAttributeValue( "EnableDebug" );
+                var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
 
-                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, ref debugLava, GetAttributeValue( "JournalDescriptionLava" ) );
+                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
 
                 if ( items.Count > 0 )
                 {
@@ -196,7 +237,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     //
                     // Close Batch if we're supposed to
                     //
-                    if ( GetAttributeValue( "CloseBatch" ).AsBoolean() )
+                    if ( GetAttributeValue( AttributeKey.CloseBatch ).AsBoolean() )
                     {
                         History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Closed );
                         financialBatch.Status = BatchStatus.Closed;
@@ -245,7 +286,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                 //
                 // Open Batch is we Closed it
                 //
-                if ( GetAttributeValue( "CloseBatch" ).AsBoolean() )
+                if ( GetAttributeValue( AttributeKey.CloseBatch ).AsBoolean() )
                 {
                     History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Open );
                     financialBatch.Status = BatchStatus.Open;

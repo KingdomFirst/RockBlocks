@@ -57,7 +57,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         "Button Text",
         Description = "The text to use in the Export Button.",
         IsRequired = false,
-        DefaultValue = "Export to Intacct",
+        DefaultValue = "Create Shelby Export",
         Order = 1,
         Key = AttributeKey.ButtonText )]
 
