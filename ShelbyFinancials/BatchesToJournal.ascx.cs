@@ -69,19 +69,28 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         Order = 2,
         Key = AttributeKey.MonthsBack )]
 
+    [EnumField(
+        "GL Account Grouping",
+        Description = "The strategy to follow for grouping GL accounts into a single line.",
+        IsRequired = true,
+        EnumSourceType = typeof( GLEntryGroupingMode ),
+        DefaultEnumValue = ( int ) GLEntryGroupingMode.FinancialAccount,
+        Order = 3,
+        Key = AttributeKey.AccountGroupngMode )]
+
     [LavaField(
         "Journal Description Lava",
         Description = "Lava for the journal description column per line. Default: Batch.Id: Batch.Name",
         IsRequired = true,
         DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
-        Order = 3,
+        Order = 4,
         Key = AttributeKey.JournalMemoLava )]
 
     [BooleanField(
         "Enable Debug",
         Description = "Outputs the object graph to help create your Lava syntax.",
         DefaultBooleanValue = false,
-        Order = 4,
+        Order = 5,
         Key = AttributeKey.EnableDebug )]
 
     #endregion
@@ -98,6 +107,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             public const string DetailPage = "DetailPage";
             public const string ButtonText = "ButtonText";
             public const string MonthsBack = "MonthsBack";
+            public const string AccountGroupngMode = "AccountGroupngMode";
             public const string JournalMemoLava = "JournalMemoLava";
             public const string EnableDebug = "EnableDebug";
         }
@@ -442,8 +452,9 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
                     var journalCode = ddlJournalType.SelectedValue;
                     var period = tbAccountingPeriod.Text.AsInteger();
+                    var groupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupngMode ).AsInteger();
 
-                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) ) );
+                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode: groupingMode ) );
 
                     HistoryService.SaveChanges(
                         rockContext,
