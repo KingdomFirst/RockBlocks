@@ -108,7 +108,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             public const string ButtonText = "ButtonText";
             public const string MonthsBack = "MonthsBack";
             public const string AccountGroupngMode = "AccountGroupngMode";
-            public const string JournalMemoLava = "JournalMemoLava";
+            public const string JournalMemoLava = "JournalDescriptionLava";
             public const string EnableDebug = "EnableDebug";
         }
 
@@ -454,7 +454,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     var period = tbAccountingPeriod.Text.AsInteger();
                     var groupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupngMode ).AsInteger();
 
-                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode: groupingMode ) );
+                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode ) );
 
                     HistoryService.SaveChanges(
                         rockContext,
