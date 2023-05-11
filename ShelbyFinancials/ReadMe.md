@@ -4,7 +4,7 @@
 # Shelby Financials Export
 *Tested/Supported in Rock version:  8.0-14.0*   
 *Created:  10/29/2018*  
-*Updated:  5/1/2023*   
+*Updated:  5/11/2023*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/97*
 
 ## Summary
@@ -40,28 +40,32 @@ After install, the Shelby Financials Batch to Journal block was added to your Ba
 
 ![](../.screenshots/ShelbyFinancials/BatchToJournal.png)
 
-
-
 ![](../.screenshots/ShelbyFinancials/BatchToJournalProperties.png)
+
+<div style="page-break-after: always;"></div>
 
 | | |
 | --- | ---- |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Name** Block name |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Button Text** Customize the text on the export button |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Close Batch** Control whether the batch gets marked as closed in Rock after export
-
-<div style="page-break-after: always;"></div>
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Button Text** Customize the text on the export button |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Close Batch** Control whether the batch gets marked as closed in Rock after export |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **GL Account Grouping** Determines if debit and/or credit lines should be grouped and summed by GL account in the export file |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Journal Description Lava** Lava for the journal description column per line. Default: Batch.Id: Batch.Name |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Enable Debug** Outputs the object graph to help create your Lava syntax |
 
 #### Shelby Financials Batches to Journal Block
 
 ![](../.screenshots/ShelbyFinancials/BatchesToJournalProperties.png)
 
+<div style="page-break-after: always;"></div>
+
 | | |
 | --- | ---- |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span><span> | **Name** Block name</span> |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Detail Page** Link to the Financial Batch Details page |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Button Text** Customize the text for the export button |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Months Back** Number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Detail Page** Link to the Financial Batch Details page |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Button Text** Customize the text for the export button |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Months Back** Number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **GL Account Grouping** Determines if debit and/or credit lines should be grouped and summed by GL account in the export file |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Journal Description Lava** Lava for the journal description column per line. Default: Batch.Id: Batch.Name |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Enable Debug** Outputs the object graph to help create your Lava syntax |
 
 <div style="page-break-after: always;"></div>
 
@@ -86,7 +90,21 @@ The export will always create (at a minimum) two lines for a Journal - a debit a
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">10</span> | **Super Fund** Designates the super fund |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">11</span> | **Location** Designates the location |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **Cost Center Default/Debit** Cost Center Default will be used on both Credit/Debit lines if Cost Center Credit does not contain a value |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **Cost Center Credit** Designates the cost center for credits |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">13</span> | **Cost Center Credit** Designates the cost center for credits |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">14</span> | **Transaction Fee Account** Expense account number for gateway transaction fees |
+
+<div style="page-break-after: always;"></div>
+
+#### Financial Gateway Attributes
+
+If your financial gateway reports transaction fees to Rock in their transaction download, you may want to configure these Financial Gateway attributes to choose how those fees are handled in your export file.
+
+![](../.screenshots/ShelbyFinancials/GatewayAttributes.png)
+
+| | |
+| --- | ---- |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Gateway Fee Processing** How should the Intacct Export plugin process transaction fees? DEFAULT: No special handling of transaction fees will be performed. NET DEBIT: Add credit entries for any transaction fees and use net amount (amount - transaction fees) for debit account entries. GROSS DEBIT: Debit account entries are left untouched (gross) and new debit and credit entries will be added for any transaction fees. NOTE: Both Net Debit and Gross Debit require a Fee Account attribute be set on either the financial gateway or financial account. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Default Fee Account** The default account number for transaction fees. |
 
 #### Projects Defined Type
 
@@ -114,7 +132,7 @@ You can assign Projects to a financial account, a transaction or to a specific a
 
 ![1543597303519](../.screenshots/ShelbyFinancials/TransactionDetailAttribute.png)
 
-
+<div style="page-break-after: always;"></div>
 
 #### Exporting Single Batches
 
@@ -122,7 +140,7 @@ On the Batch Detail page, select the Journal Type and enter an Accounting Period
 
 ![1543597518859](../.screenshots/ShelbyFinancials/ExportBatch.png)
 
-
+<div style="page-break-after: always;"></div>
 
 #### Exporting Multiple Batches
 
