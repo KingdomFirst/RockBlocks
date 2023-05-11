@@ -71,12 +71,12 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
     [EnumField(
         "GL Account Grouping",
-        Description = "The strategy to follow for grouping GL accounts into a single line.",
+        Description = "Determines if debit and/or credit lines should be grouped and summed by GL account in the export file.",
         IsRequired = true,
         EnumSourceType = typeof( GLEntryGroupingMode ),
-        DefaultEnumValue = ( int ) GLEntryGroupingMode.FinancialAccount,
+        DefaultEnumValue = ( int ) GLEntryGroupingMode.DebitAndCreditByFinancialAccount,
         Order = 3,
-        Key = AttributeKey.AccountGroupngMode )]
+        Key = AttributeKey.AccountGroupingMode )]
 
     [LavaField(
         "Journal Description Lava",
@@ -107,7 +107,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             public const string DetailPage = "DetailPage";
             public const string ButtonText = "ButtonText";
             public const string MonthsBack = "MonthsBack";
-            public const string AccountGroupngMode = "AccountGroupngMode";
+            public const string AccountGroupingMode = "AccountGroupingMode";
             public const string JournalMemoLava = "JournalDescriptionLava";
             public const string EnableDebug = "EnableDebug";
         }
@@ -452,7 +452,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
                     var journalCode = ddlJournalType.SelectedValue;
                     var period = tbAccountingPeriod.Text.AsInteger();
-                    var groupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupngMode ).AsInteger();
+                    var groupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
 
                     items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode ) );
 
