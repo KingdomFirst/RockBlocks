@@ -92,7 +92,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             public const string ButtonText = "ButtonText";
             public const string CloseBatch = "CloseBatch";
             public const string AccountGroupngMode = "AccountGroupngMode";
-            public const string JournalMemoLava = "JournalMemoLava";
+            public const string JournalMemoLava = "JournalDescriptionLava";
             public const string EnableDebug = "EnableDebug";
         }
 
@@ -230,7 +230,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                 var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
                 var groupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupngMode ).AsInteger();
 
-                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode: groupingMode );
+                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode );
 
                 if ( items.Count > 0 )
                 {
