@@ -54,19 +54,28 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         Order = 1,
         Key = AttributeKey.CloseBatch )]
 
+    [EnumField(
+        "GL Account Grouping",
+        Description = "The strategy to follow for grouping GL accounts into a single line.",
+        IsRequired = true,
+        EnumSourceType = typeof( GLEntryGroupingMode ),
+        DefaultEnumValue = ( int ) GLEntryGroupingMode.FinancialAccount,
+        Order = 2,
+        Key = AttributeKey.AccountGroupngMode )]
+
     [LavaField(
         "Journal Description Lava",
         Description = "Lava for the journal description column per line. Default: Batch.Id: Batch.Name",
         IsRequired = true,
         DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
-        Order = 2,
+        Order = 3,
         Key = AttributeKey.JournalMemoLava )]
 
     [BooleanField(
         "Enable Debug",
         Description = "Outputs the object graph to help create your Lava syntax.",
         DefaultBooleanValue = false,
-        Order = 5,
+        Order = 4,
         Key = AttributeKey.EnableDebug )]
 
     #endregion
@@ -82,6 +91,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         {
             public const string ButtonText = "ButtonText";
             public const string CloseBatch = "CloseBatch";
+            public const string AccountGroupngMode = "AccountGroupngMode";
             public const string JournalMemoLava = "JournalMemoLava";
             public const string EnableDebug = "EnableDebug";
         }
@@ -218,8 +228,9 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                 var period = tbAccountingPeriod.Text.AsInteger();
 
                 var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
+                var groupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupngMode ).AsInteger();
 
-                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode: groupingMode );
 
                 if ( items.Count > 0 )
                 {
