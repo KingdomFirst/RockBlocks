@@ -71,7 +71,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
     [EnumField(
         "GL Account Grouping",
-        Description = "Determines if debit and/or credit lines should be grouped and summed by GL account in the export file.",
+        Description = "Determines if debit and/or credit lines should be grouped and summed by GL account in the export file. NOTE: Unique Projects, Regions, Funds, etc. may result in multiple lines even if account is grouped.",
         IsRequired = true,
         EnumSourceType = typeof( GLEntryGroupingMode ),
         DefaultEnumValue = ( int ) GLEntryGroupingMode.DebitAndCreditByFinancialAccount,
