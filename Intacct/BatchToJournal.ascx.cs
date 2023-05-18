@@ -512,6 +512,13 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     financialBatch.SetAttributeValue( "rocks.kfs.Intacct.DateExported", newDate );
                     financialBatch.SaveAttributeValue( "rocks.kfs.Intacct.DateExported", rockContext );
                 }
+                else
+                {
+                    string message = "There was an error sending your batch to Intacct. This is either an issue with your credentials or malformed data. Please check your settings and try again.";
+                    maWarningDialog.Show( message, ModalAlertType.Warning );
+                    return;
+                }
+
             }
 
             Response.Redirect( Request.RawUrl );
