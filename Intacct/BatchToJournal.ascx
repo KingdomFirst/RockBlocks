@@ -3,6 +3,7 @@
 <asp:UpdatePanel ID="upnlSync" runat="server">
     <ContentTemplate>
         <div class="row">
+            <Rock:ModalAlert ID="maWarningDialog" runat="server" />
             <asp:Panel runat="server" ID="pnlExportedDetails" CssClass="col-sm-2" Visible="false">
                 <asp:Literal runat="server" ID="litDateExported" Visible="false"></asp:Literal>
                 <Rock:BootstrapButton runat="server" Visible="false" ID="btnRemoveDate" Text="Remove Date Exported" ValidationGroup="KFSIntacctExport"  OnClick="btnRemoveDateExported_Click" CssClass="btn btn-link" />
