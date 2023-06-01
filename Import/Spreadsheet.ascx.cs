@@ -45,7 +45,7 @@ namespace RockWeb.Plugins.rocks_kfs.Import
     #region Block Settings
 
     [CustomDropdownListField( "Default Stored Procedure", "Select the default stored procedure to run when importing a spreadsheet.", "SELECT ROUTINE_NAME AS Text, ROUTINE_NAME AS Value FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_TYPE = 'PROCEDURE' ORDER BY ROUTINE_NAME", false, "", "", 0 )]
-    [BooleanField( "Cleanup Table Parameter", "Select this if the SP has a @CleanupTable parameter.", true )]
+    [BooleanField( "Cleanup Table Parameter", "Select this if the SP has a @CleanupTable parameter and you want the procedure to cleanup the temp table from the import.", true )]
 
     #endregion
 
@@ -189,7 +189,11 @@ namespace RockWeb.Plugins.rocks_kfs.Import
             var cleanupTable = GetAttributeValue( "CleanupTableParameter" ).AsBoolean();
             if ( cleanupTable )
             {
-                paramsList.Add( new SqlParameter { ParameterName = "@CleanupTable", SqlDbType = SqlDbType.NVarChar, Value = 1 } );
+                paramsList.Add( new SqlParameter { ParameterName = "@CleanupTable", SqlDbType = SqlDbType.Bit, Value = 1 } );
+            }
+            else
+            {
+                paramsList.Add( new SqlParameter { ParameterName = "@CleanupTable", SqlDbType = SqlDbType.Bit, Value = 0 } );
             }
 
             var storedProcedure = GetAttributeValue( "DefaultStoredProcedure" );
