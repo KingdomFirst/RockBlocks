@@ -2,6 +2,7 @@
 
 <asp:UpdatePanel ID="upnlSync" runat="server">
     <ContentTemplate>
+        <Rock:ModalAlert ID="maWarningDialog" runat="server" />
         <div class="row">
             <asp:Panel runat="server" ID="pnlExportedDetails" CssClass="col-sm-2" Visible="false">
                 <asp:Literal runat="server" ID="litDateExported" Visible="false"></asp:Literal>
