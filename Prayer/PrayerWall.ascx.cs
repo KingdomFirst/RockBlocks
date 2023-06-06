@@ -255,10 +255,22 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
             mergeFields.Add( "PrayerRequests", currentPrayerRequests );
 
             Template template = null;
+            ILavaTemplate lavaTemplate = null;
             var error = string.Empty;
             try
             {
-                template = Template.Parse( GetAttributeValue( "LavaTemplate" ) );
+                if ( LavaService.RockLiquidIsEnabled )
+                {
+                    template = Template.Parse( GetAttributeValue( "LavaTemplate" ) );
+
+                    LavaHelper.VerifyParseTemplateForCurrentEngine( GetAttributeValue( "LavaTemplate" ) );
+                }
+                else
+                {
+                    var parseResult = LavaService.ParseTemplate( GetAttributeValue( "LavaTemplate" ) );
+
+                    lavaTemplate = parseResult.Template;
+                }
             }
             catch ( Exception ex )
             {
@@ -272,10 +284,20 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
                     nbError.Visible = true;
                 }
 
-                if ( template != null )
+                if ( template != null || lavaTemplate != null )
                 {
-                    template.Registers["EnabledCommands"] = GetAttributeValue( "EnabledLavaCommands" );
-                    lContent.Text = template.Render( Hash.FromDictionary( mergeFields ) ).ResolveClientIds( upnlContent.ClientID );
+                    if ( LavaService.RockLiquidIsEnabled )
+                    {
+                        template.Registers["EnabledCommands"] = GetAttributeValue( "EnabledLavaCommands" );
+                        lContent.Text = template.Render( Hash.FromDictionary( mergeFields ) );
+                    }
+                    else
+                    {
+                        var lavaContext = LavaService.NewRenderContext( mergeFields, GetAttributeValue( "EnabledLavaCommands" ).SplitDelimitedValues() );
+                        var result = LavaService.RenderTemplate( lavaTemplate, lavaContext );
+
+                        lContent.Text = result.Text;
+                    }
                 }
             }
         }
@@ -365,8 +387,8 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
         /// <summary>
         /// 
         /// </summary>
-        /// <seealso cref="DotLiquid.Drop" />
-        public class Pagination : DotLiquid.Drop
+        /// <seealso cref="LavaDataObject" />
+        public class Pagination : LavaDataObject
         {
 
             /// <summary>
@@ -489,8 +511,8 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
         /// <summary>
         /// 
         /// </summary>
-        /// <seealso cref="DotLiquid.Drop" />
-        public class PaginationPage : DotLiquid.Drop
+        /// <seealso cref="LavaDataObject" />
+        public class PaginationPage : LavaDataObject
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="PaginationPage"/> class.
