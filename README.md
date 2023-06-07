@@ -2,7 +2,7 @@
 
 # RockBlocks
 
-This is an open-source repository of [Kingdom First Solutions](https://www.kingdomfirstsolutions.com/rock) for all public Rock RMS Blocks. Remember to check our [RockAssemblies](https://github.com/KingdomFirst/RockAssemblies) repo. Most of our code in this repository is targeted for RockRMS v11 and earlier. There are some changes for v11 that are breaking changes to prior versions, we will tag 10.2 if you would like to use any of our code that was tested on 10.2 and prior.
+This is an open-source repository of [Kingdom First Solutions](https://www.kingdomfirstsolutions.com/rock) for all public Rock RMS Blocks. Remember to check our [RockAssemblies](https://github.com/KingdomFirst/RockAssemblies) repo. Most of our code in this repository is targeted for RockRMS v13 and earlier. There are some changes for v13 that are breaking changes to prior versions, we will tag 12.8 if you would like to use any of our code that was tested on 12.8 and prior.
 
 ## Setup
 
@@ -38,7 +38,7 @@ We've worked with [Rock RMS](https://www.rockrms.com/) since its beginning and h
 
 ## License
 
-### Copyright 2019 by Kingdom First Solutions  
+### Copyright 2023 by Kingdom First Solutions  
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0  
 
