@@ -110,6 +110,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Description = "When set to true, the Hide Overcapacity Groups setting also takes into account pending members.",
         DefaultBooleanValue = false,
         Key = AttributeKey.OvercapacityGroupsincludePending )]
+    [BooleanField( "Auto filter enabled",
+        Description = "When set to true, the various filters will automatically filter the results, whether it is on checkbox checked, selection made, text changed, etc.",
+        DefaultBooleanValue = false,
+        Key = AttributeKey.AutoFilterEnabled )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page",
@@ -425,6 +429,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string AllowSearchPersonGuid = "AllowSearchPersonGuid";
             public const string CollapseFiltersonSearch = "CollapseFiltersonSearch";
             public const string ShowAllGroups = "ShowAllGroups";
+            public const string AutoFilterEnabled = "AutoFilterEnabled";
         }
 
         private static class AttributeDefaultLava
@@ -477,6 +482,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private bool _autoLoad = false;
         private bool _ssFilters = false;
         private bool _allowSearch = false;
+        private bool _autoPostback = false;
         private string _collapseFilters = "false";
         private Dictionary<string, string> _filterValues = new Dictionary<string, string>();
 
@@ -559,6 +565,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             }
             _ssFilters = GetAttributeValue( AttributeKey.SingleSelectFilters ).AsBoolean();
             _allowSearch = GetAttributeValue( AttributeKey.AllowSearchPersonGuid ).AsBoolean();
+            _autoPostback = GetAttributeValue( AttributeKey.AutoFilterEnabled ).AsBoolean();
             _collapseFilters = GetAttributeValue( AttributeKey.CollapseFiltersonSearch );
 
             base.OnInit( e );
@@ -584,6 +591,25 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( GroupTypeLocations == null )
             {
                 GroupTypeLocations = new Dictionary<int, int>();
+            }
+            Page.LoadComplete += Page_LoadComplete;
+        }
+
+        /// <summary>
+        /// Handles the LoadComplete event of the Page control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        private void Page_LoadComplete( object sender, EventArgs e )
+        {
+            // Add postback controls
+            if ( Page.IsPostBack )
+            {
+                var control = Page.FindControl( Request.Form["__EVENTTARGET"] );
+                if ( control != null && ( control.UniqueID.Contains( "attribute_field_" ) || control.UniqueID.Contains( "filter_" ) ) )
+                {
+                    btnSearch_Click( null, null );
+                }
             }
         }
 
@@ -621,15 +647,15 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                     if ( contextCampus != null )
                     {
-                        cblCampus.SetValue( contextCampus.Id.ToString() );
-                        ddlCampus.SetValue( contextCampus.Id.ToString() );
+                        filter_cblCampus.SetValue( contextCampus.Id.ToString() );
+                        filter_ddlCampus.SetValue( contextCampus.Id.ToString() );
                     }
                 }
                 else if ( !string.IsNullOrWhiteSpace( campusPageParam ) )
                 {
                     var pageParamList = campusPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
-                    cblCampus.SetValues( pageParamList );
-                    ddlCampus.SetValue( campusPageParam );
+                    filter_cblCampus.SetValues( pageParamList );
+                    filter_ddlCampus.SetValue( campusPageParam );
                 }
                 if ( !string.IsNullOrWhiteSpace( dowPageParam ) )
                 {
@@ -699,7 +725,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 if ( !string.IsNullOrWhiteSpace( postalcodePageParam ) )
                 {
-                    tbPostalCode.Text = postalcodePageParam;
+                    filter_tbPostalCode.Text = postalcodePageParam;
                 }
 
                 if ( _targetPersonGuid != Guid.Empty )
@@ -880,8 +906,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void btnClear_Click( object sender, EventArgs e )
         {
-            acAddress.SetValues( null );
-            tbPostalCode.Text = "";
+            filter_acAddress.SetValues( null );
+            filter_tbPostalCode.Text = "";
             BuildDynamicControls();
 
             pnlSearch.CssClass = "";
@@ -937,6 +963,16 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         protected void gGroups_GridRebind( object sender, EventArgs e )
         {
             ShowResults();
+        }
+
+        /// <summary>
+        /// Handles the SelectItem event from an ItemPicker (fake event to register the postback)
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ItemPicker_SelectItem( object sender, EventArgs e )
+        {
+            // Hopefully an xhr happens here
         }
 
         #endregion Events
@@ -1198,16 +1234,16 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( targetPerson != null )
             {
                 lTitle.Text = string.Format( "<h4 class='margin-t-none'>Groups for {0}</h4>", targetPerson.FullName );
-                acAddress.SetValues( targetPersonLocation );
-                acAddress.Visible = false;
+                filter_acAddress.SetValues( targetPersonLocation );
+                filter_acAddress.Visible = false;
                 phFilterControls.Visible = _allowSearch;
                 if ( _ssFilters )
                 {
-                    ddlCampus.Visible = _allowSearch;
+                    filter_ddlCampus.Visible = _allowSearch;
                 }
                 else
                 {
-                    cblCampus.Visible = _allowSearch;
+                    filter_cblCampus.Visible = _allowSearch;
                 }
                 btnSearch.Visible = _allowSearch;
                 btnClear.Visible = _allowSearch;
@@ -1240,17 +1276,17 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( fenceTypeGuid.HasValue || GetAttributeValue( AttributeKey.ShowProximity ).AsBoolean() )
             {
                 var enablePostalCode = GetAttributeValue( AttributeKey.EnablePostalCodeSearch ).AsBoolean();
-                acAddress.Visible = !enablePostalCode;
-                tbPostalCode.Visible = enablePostalCode;
+                filter_acAddress.Visible = !enablePostalCode;
+                filter_tbPostalCode.Visible = enablePostalCode;
                 revPostalCode.Enabled = enablePostalCode;
 
                 if ( CurrentPerson != null )
                 {
                     var currentPersonLocation = CurrentPerson.GetHomeLocation();
-                    acAddress.SetValues( currentPersonLocation );
+                    filter_acAddress.SetValues( currentPersonLocation );
                     if ( currentPersonLocation != null )
                     {
-                        tbPostalCode.Text = currentPersonLocation.PostalCode;
+                        filter_tbPostalCode.Text = currentPersonLocation.PostalCode;
                     }
                 }
 
@@ -1259,8 +1295,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             }
             else
             {
-                acAddress.Visible = false;
-                tbPostalCode.Visible = false;
+                filter_acAddress.Visible = false;
+                filter_tbPostalCode.Visible = false;
                 revPostalCode.Visible = false;
 
                 // Check to see if there's any filters
@@ -1347,13 +1383,28 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 phFilterControlsCollapsed.Controls.Clear();
             }
 
-            tbPostalCode.Label = GetAttributeValue( AttributeKey.PostalCodeLabel );
-            tbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( AttributeKey.PostalCodeLabel ) );
+            if ( _autoPostback )
+            {
+                if ( filter_acAddress.Visible )
+                {
+                    foreach ( var ctrl in filter_acAddress.ControlsOfTypeRecursive<RockTextBox>() )
+                    {
+                        ctrl.AutoPostBack = true;
+                    }
+                }
+
+                filter_tbPostalCode.AutoPostBack = true;
+                filter_cblCampus.AutoPostBack = true;
+                filter_ddlCampus.AutoPostBack = true;
+            }
+
+            filter_tbPostalCode.Label = GetAttributeValue( AttributeKey.PostalCodeLabel );
+            filter_tbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( AttributeKey.PostalCodeLabel ) );
             revPostalCode.ErrorMessage = string.Format( "Your {0} is an invalid format, 12345 or 12345-6789 only.", GetAttributeValue( AttributeKey.PostalCodeLabel ) );
             if ( hideFilters.Contains( "filter_postalcode" ) )
             {
-                pnlSearch.Controls.Remove( tbPostalCode );
-                phFilterControlsCollapsed.Controls.Add( tbPostalCode );
+                pnlSearch.Controls.Remove( filter_tbPostalCode );
+                phFilterControlsCollapsed.Controls.Add( filter_tbPostalCode );
             }
 
             var scheduleFilters = GetAttributeValue( AttributeKey.ScheduleFilters ).SplitDelimitedValues().ToList();
@@ -1364,6 +1415,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 dowsFilterControl.Label = GetAttributeValue( AttributeKey.DayOfWeekLabel );
                 dowsFilterControl.BindToEnum<DayOfWeek>();
                 dowsFilterControl.RepeatDirection = RepeatDirection.Horizontal;
+                dowsFilterControl.AutoPostBack = _autoPostback;
+                if ( _autoPostback )
+                {
+                    dowsFilterControl.SelectedIndexChanged += btnSearch_Click;
+                }
 
                 AddFilterControl( dowsFilterControl, "Days of Week", "The day of week that group meets on.", hideFilters.Contains( "filter_dow" ) );
             }
@@ -1414,36 +1470,36 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 if ( _ssFilters )
                 {
-                    ddlCampus.Visible = true;
-                    ddlCampus.Items.Add( new ListItem( string.Empty, string.Empty ) );
+                    filter_ddlCampus.Visible = true;
+                    filter_ddlCampus.Items.Add( new ListItem( string.Empty, string.Empty ) );
                     foreach ( var campus in campuses.OrderBy( c => c.Order ) )
                     {
                         ListItem li = new ListItem( campus.Name, campus.Id.ToString() );
-                        ddlCampus.Items.Add( li );
+                        filter_ddlCampus.Items.Add( li );
                     }
                     if ( hideFilters.Contains( "filter_campus" ) )
                     {
-                        pnlSearch.Controls.Remove( ddlCampus );
-                        phFilterControlsCollapsed.Controls.Add( ddlCampus );
+                        pnlSearch.Controls.Remove( filter_ddlCampus );
+                        phFilterControlsCollapsed.Controls.Add( filter_ddlCampus );
                     }
                 }
                 else
                 {
-                    cblCampus.Visible = true;
-                    cblCampus.DataSource = campuses.OrderBy( c => c.Order );
-                    cblCampus.DataBind();
+                    filter_cblCampus.Visible = true;
+                    filter_cblCampus.DataSource = campuses.OrderBy( c => c.Order );
+                    filter_cblCampus.DataBind();
                     if ( hideFilters.Contains( "filter_campus" ) )
                     {
-                        pnlSearch.Controls.Remove( cblCampus );
-                        phFilterControlsCollapsed.Controls.Add( cblCampus );
+                        pnlSearch.Controls.Remove( filter_cblCampus );
+                        phFilterControlsCollapsed.Controls.Add( filter_cblCampus );
                     }
                 }
-                cblCampus.Label = GetAttributeValue( AttributeKey.CampusLabel );
+                filter_cblCampus.Label = GetAttributeValue( AttributeKey.CampusLabel );
             }
             else
             {
-                ddlCampus.Visible = false;
-                cblCampus.Visible = false;
+                filter_ddlCampus.Visible = false;
+                filter_cblCampus.Visible = false;
             }
 
             btnFilter.InnerHtml = btnFilter.InnerHtml.Replace( "[Filter] ", GetAttributeValue( AttributeKey.FilterLabel ) + " " );
@@ -1464,6 +1520,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, filterId, false, Rock.Reporting.FilterMode.SimpleFilter );
                     if ( control != null )
                     {
+                        if ( _autoPostback )
+                        {
+                            AddAutoPostback( control );
+                        }
+
                         AddFilterControl( control, attribute.Name, attribute.Description, hideFilters.Contains( attribute.Guid.ToString() ) );
                     }
                 }
@@ -1474,6 +1535,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var tbKeyword = new RockTextBox();
                 tbKeyword.Label = GetAttributeValue( AttributeKey.KeywordLabel );
                 tbKeyword.ID = "filter_keyword";
+                tbKeyword.AutoPostBack = _autoPostback;
                 if ( hideFilters.Contains( "filter_keyword" ) )
                 {
                     phFilterControlsCollapsed.Controls.Add( tbKeyword );
@@ -1576,6 +1638,51 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( GetAttributeValue( AttributeKey.SortByDistance ).AsBoolean() )
             {
                 gGroups.AllowSorting = false;
+            }
+        }
+
+        private void AddAutoPostback( Control control )
+        {
+            if ( control is ListControl )
+            {
+                var listControl = control as ListControl;
+                listControl.AutoPostBack = true;
+            }
+
+            // Enable ItemPicker postback event
+            if ( control is ItemPicker )
+            {
+                var itemPicker = control as ItemPicker;
+                itemPicker.SelectItem += ItemPicker_SelectItem;
+            }
+
+            if ( control is RockDropDownList )
+            {
+                var ddl = control as RockDropDownList;
+                ddl.AutoPostBack = true;
+            }
+
+            if ( control is RockCheckBoxList )
+            {
+                var cbl = control as RockCheckBoxList;
+                cbl.AutoPostBack = true;
+            }
+
+            foreach ( var ctrl in control.ControlsOfTypeRecursive<TextBox>() )
+            {
+                ctrl.AutoPostBack = true;
+            }
+            foreach ( var ctrl in control.ControlsOfTypeRecursive<RockDropDownList>() )
+            {
+                ctrl.AutoPostBack = true;
+            }
+            foreach ( var ctrl in control.ControlsOfTypeRecursive<RockCheckBox>() )
+            {
+                ctrl.AutoPostBack = true;
+            }
+            foreach ( var ctrl in control.ControlsOfTypeRecursive<RockCheckBoxList>() )
+            {
+                ctrl.AutoPostBack = true;
             }
         }
 
@@ -1764,14 +1871,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 if ( _ssFilters )
                 {
-                    if ( !string.IsNullOrWhiteSpace( ddlCampus.SelectedValue ) )
+                    if ( !string.IsNullOrWhiteSpace( filter_ddlCampus.SelectedValue ) )
                     {
-                        searchCampuses.Add( ddlCampus.SelectedValue.AsInteger() );
+                        searchCampuses.Add( filter_ddlCampus.SelectedValue.AsInteger() );
                     }
                 }
                 else
                 {
-                    searchCampuses = cblCampus.SelectedValuesAsInt;
+                    searchCampuses = filter_cblCampus.SelectedValuesAsInt;
                 }
                 if ( searchCampuses.Count > 0 )
                 {
@@ -1959,24 +2066,24 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     if ( GetAttributeValue( AttributeKey.EnablePostalCodeSearch ).AsBoolean() )
                     {
-                        if ( !string.IsNullOrWhiteSpace( tbPostalCode.Text ) )
+                        if ( !string.IsNullOrWhiteSpace( filter_tbPostalCode.Text ) )
                         {
                             try
                             {
                                 mapCoordinate = new LocationService( rockContext )
-                                    .GetMapCoordinateFromPostalCode( tbPostalCode.Text );
+                                    .GetMapCoordinateFromPostalCode( filter_tbPostalCode.Text );
                             }
                             catch
                             {
-                                ShowWarning( $"{tbPostalCode.Text} is an invalid {tbPostalCode.Label}. If {tbPostalCode.Label} is required, it will be reset to the default location." );
+                                ShowWarning( $"{filter_tbPostalCode.Text} is an invalid {filter_tbPostalCode.Label}. If {filter_tbPostalCode.Label} is required, it will be reset to the default location." );
                             } // handle invalid postal codes by leaving mapCoordinate null and reverting to default location.
                         }
                     }
                     else
                     {
                         personLocation = new LocationService( rockContext )
-                        .Get( acAddress.Street1, acAddress.Street2, acAddress.City,
-                            acAddress.State, acAddress.PostalCode, acAddress.Country, null, true, false );
+                        .Get( filter_acAddress.Street1, filter_acAddress.Street2, filter_acAddress.City,
+                            filter_acAddress.State, filter_acAddress.PostalCode, filter_acAddress.Country, null, true, false );
                         if ( personLocation != null && personLocation.GeoPoint != null )
                             mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
                     }
@@ -1990,7 +2097,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             personLocation = new LocationService( rockContext ).Get( ( int ) campusLocation );
                             if ( !string.IsNullOrWhiteSpace( personLocation.PostalCode ) )
                             {
-                                tbPostalCode.Text = personLocation.PostalCode.Substring( 0, 5 );
+                                filter_tbPostalCode.Text = personLocation.PostalCode.Substring( 0, 5 );
                             }
                             if ( personLocation.GeoPoint != null )
                                 mapCoordinate = new MapCoordinate( personLocation.Latitude, personLocation.Longitude );
@@ -2028,7 +2135,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     </div>
 </div>
 ",
-                        tbPostalCode.Text );
+                        filter_tbPostalCode.Text );
 
                     personMapItem = new FinderMapItem();
                     personMapItem.Name = "Your Location";
