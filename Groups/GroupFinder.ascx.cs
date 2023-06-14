@@ -240,6 +240,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         ListSource = "SELECT a.Name as Text, CONCAT(a.[Key],'_',a.FieldTypeId) as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
         IsRequired = false, Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.HideAttributeValues )]
+    [AttributeField( "Attributes included in Keyword Search",
+        EntityTypeGuid = Rock.SystemGuid.EntityType.GROUP,
+        IsRequired = false,
+        AllowMultiple = true,
+        Category = AttributeCategory.CustomSetting,
+        Key = AttributeKey.AttributesInKeywords )]
 
     // Map Settings
     [BooleanField( "Show Map",
@@ -442,6 +448,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string AutoFilterEnabled = "AutoFilterEnabled";
             public const string RequirePostalCode = "RequirePostalCode";
             public const string ShowFullGroupsLabel = "ShowFullGroupsLabel";
+            public const string AttributesInKeywords = "AttributesInKeywords";
         }
 
         private static class AttributeDefaultLava
@@ -844,6 +851,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( AttributeKey.HideFiltersInitialLoad, cblInitialLoadFilters.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.AttributeCustomSort, ddlAttributeSort.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.HideAttributeValues, cblAttributeHiddenOptions.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
+            SetAttributeValue( AttributeKey.AttributesInKeywords, cblAttributesInKeywords.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
 
             SetAttributeValue( AttributeKey.ShowMap, cbShowMap.Checked.ToString() );
             SetAttributeValue( AttributeKey.MapStyle, dvpMapStyle.SelectedValue );
@@ -1068,6 +1076,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     li.Selected = true;
                 }
             }
+            foreach ( string attr in GetAttributeValue( AttributeKey.AttributesInKeywords ).SplitDelimitedValues() )
+            {
+                var li = cblAttributesInKeywords.Items.FindByValue( attr );
+                if ( li != null )
+                {
+                    li.Selected = true;
+                }
+            }
 
             ddlMaxZoomLevel.SelectedValue = GetAttributeValue( AttributeKey.MaximumZoomLevel );
             ddlMinZoomLevel.SelectedValue = GetAttributeValue( AttributeKey.MinimumZoomLevel );
@@ -1156,6 +1172,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cblInitialLoadFilters.Items.Clear();
             ddlAttributeSort.Items.Clear();
             cblAttributeHiddenOptions.Items.Clear();
+            cblAttributesInKeywords.Items.Clear();
 
             if ( gtpGroupType.SelectedValuesAsInt != null )
             {
@@ -1184,6 +1201,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         group.GroupTypeId = groupType.Id;
                         group.LoadAttributes();
                         ddlAttributeSort.Items.Add( new ListItem() );
+                        var allowedFieldTypes = new List<Type>();
+                        allowedFieldTypes.Add( typeof( TextFieldType ) );
+                        allowedFieldTypes.Add( typeof( SelectSingleFieldType ) );
+                        allowedFieldTypes.Add( typeof( SelectMultiFieldType ) );
+                        allowedFieldTypes.Add( typeof( MemoFieldType ) );
+                        allowedFieldTypes.Add( typeof( HtmlFieldType ) );
                         foreach ( var attribute in group.Attributes )
                         {
                             if ( attribute.Value.FieldType.Field.HasFilterControl() )
@@ -1213,6 +1236,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                 }
                             }
 
+                            if ( allowedFieldTypes.Contains( attribute.Value.FieldType.Field.GetType() ) )
+                            {
+                                cblAttributesInKeywords.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
+                            }
+
                             cblGridAttributes.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
                         }
                     }
@@ -1236,6 +1264,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cblGridAttributes.Visible = cblAttributes.Items.Count > 0;
             ddlAttributeSort.Visible = ddlAttributeSort.Items.Count > 0;
             cblAttributeHiddenOptions.Visible = cblAttributeHiddenOptions.Items.Count > 0;
+            cblAttributesInKeywords.Visible = cblAttributesInKeywords.Items.Count > 0;
 
             BindGroupTypeLocationGrid();
         }
@@ -1942,7 +1971,30 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var tbKeyword = ( RockTextBox ) phFilterControls.FindControl( "filter_keyword" ) ?? ( RockTextBox ) phFilterControlsCollapsed.FindControl( "filter_keyword" );
                 if ( tbKeyword != null && tbKeyword.Text.IsNotNullOrWhiteSpace() )
                 {
-                    groupQry = groupQry.Where( g => g.Name.Contains( tbKeyword.Text ) || g.Description.Contains( tbKeyword.Text ) );
+                    var keywordStr = tbKeyword.Text.Trim();
+                    var originalQry = groupQry;
+                    groupQry = groupQry.Where( g => g.Name.Contains( keywordStr ) || g.Description.Contains( keywordStr ) );
+
+                    var attributesInKeywords = GetAttributeValue( AttributeKey.AttributesInKeywords ).SplitDelimitedValues();
+                    if ( attributesInKeywords.Length > 0 )
+                    {
+                        var concatQueries = new List<IQueryable<Group>>();
+                        foreach ( string attr in attributesInKeywords )
+                        {
+                            Guid? attributeGuid = attr.AsGuidOrNull();
+                            if ( attributeGuid.HasValue )
+                            {
+                                concatQueries.Add( originalQry.WhereAttributeValue( rockContext, a => a.Attribute.Guid == attributeGuid && a.Value.Contains( keywordStr ) ) );
+                            }
+                        }
+                        foreach ( var qry in concatQueries )
+                        {
+                            groupQry = groupQry.Concat( qry );
+                        }
+
+                        groupQry = groupQry.GroupBy( g => g.Id ).Select( gg => gg.FirstOrDefault() );
+                    }
+
                 }
             }
 
