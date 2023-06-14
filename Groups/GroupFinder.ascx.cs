@@ -182,6 +182,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [TextField( "MoreFiltersLabel", IsRequired = true,
         DefaultValue = "More Filters", Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.MoreFiltersLabel )]
+    [TextField( "Show Full Groups Label",
+        IsRequired = true,
+        DefaultValue = "Show Full Groups",
+        Category = AttributeCategory.CustomSetting,
+        Key = AttributeKey.ShowFullGroupsLabel )]
     [TextField( "ScheduleFilters",
         IsRequired = false,
         Category = AttributeCategory.CustomSetting,
@@ -198,9 +203,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         IsRequired = false,
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.EnableCampusContext )]
-    [BooleanField( "Hide Overcapacity Groups",
+    [CustomDropdownListField( "Hide Overcapacity Groups",
         Description = "When set to true, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden.",
-        DefaultBooleanValue = true,
+        DefaultValue = "true",
+        ListSource = "False^Don't Hide,True^Hide,Filter^Display as Filter",
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.HideOvercapacityGroups )]
     [AttributeField( "Attribute Filters",
@@ -220,8 +226,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         DefaultBooleanValue = false,
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.EnablePostalCodeSearch )]
+    [BooleanField( "Require Postal Code",
+        DefaultBooleanValue = true,
+        Category = AttributeCategory.CustomSetting,
+        Key = AttributeKey.RequirePostalCode )]
     [CustomCheckboxListField( "Hide Selected Filters on Initial Load",
-        ListSource = "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_PostalCode') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
+        ListSource = "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_PostalCode,filter_ShowFullGroups') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
         IsRequired = false,
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.HideFiltersInitialLoad )]
@@ -430,6 +440,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string CollapseFiltersonSearch = "CollapseFiltersonSearch";
             public const string ShowAllGroups = "ShowAllGroups";
             public const string AutoFilterEnabled = "AutoFilterEnabled";
+            public const string RequirePostalCode = "RequirePostalCode";
+            public const string ShowFullGroupsLabel = "ShowFullGroupsLabel";
         }
 
         private static class AttributeDefaultLava
@@ -798,7 +810,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( AttributeKey.CampusLabel, tbCampusLabel.Text );
             SetAttributeValue( AttributeKey.PostalCodeLabel, tbPostalCodeLabel.Text );
             SetAttributeValue( AttributeKey.KeywordLabel, tbKeywordLabel.Text );
+            SetAttributeValue( AttributeKey.ShowFullGroupsLabel, tbShowFullGroupsLabel.Text );
             SetAttributeValue( AttributeKey.EnablePostalCodeSearch, cbPostalCode.Checked.ToString() );
+            SetAttributeValue( AttributeKey.RequirePostalCode, cbRequirePostalCode.Checked.ToString() );
             SetAttributeValue( AttributeKey.DisplayKeywordSearch, cbKeyword.Checked.ToString() );
             SetAttributeValue( AttributeKey.FilterLabel, tbFilterLabel.Text );
             SetAttributeValue( AttributeKey.MoreFiltersLabel, tbMoreFiltersLabel.Text );
@@ -814,7 +828,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             SetAttributeValue( AttributeKey.DisplayCampusFilter, cbFilterCampus.Checked.ToString() );
             SetAttributeValue( AttributeKey.EnableCampusContext, cbCampusContext.Checked.ToString() );
-            SetAttributeValue( AttributeKey.HideOvercapacityGroups, cbHideOvercapacityGroups.Checked.ToString() );
+            SetAttributeValue( AttributeKey.HideOvercapacityGroups, ddlHideOvercapacityGroups.SelectedValue );
             SetAttributeValue( AttributeKey.LoadInitialResults, cbLoadInitialResults.Checked.ToString() );
             SetAttributeValue( AttributeKey.GroupTypeLocations, GroupTypeLocations.ToJson() );
             SetAttributeValue( AttributeKey.MaximumZoomLevel, ddlMaxZoomLevel.SelectedValue );
@@ -1003,6 +1017,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             tbKeywordLabel.Text = GetAttributeValue( AttributeKey.KeywordLabel );
             tbFilterLabel.Text = GetAttributeValue( AttributeKey.FilterLabel );
             tbMoreFiltersLabel.Text = GetAttributeValue( AttributeKey.MoreFiltersLabel );
+            tbShowFullGroupsLabel.Text = GetAttributeValue( AttributeKey.ShowFullGroupsLabel );
 
             var scheduleFilters = GetAttributeValue( AttributeKey.ScheduleFilters ).SplitDelimitedValues( false ).ToList();
             if ( scheduleFilters.Contains( "Day" ) )
@@ -1062,10 +1077,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             ddlLocationPrecisionLevel.SelectedValue = GetAttributeValue( AttributeKey.LocationPrecisionLevel );
             ddlMapMarker.SetValue( GetAttributeValue( AttributeKey.MapMarker ) );
             cpMarkerColor.Text = GetAttributeValue( AttributeKey.MarkerColor );
+            ddlHideOvercapacityGroups.SelectedValue = GetAttributeValue( AttributeKey.HideOvercapacityGroups );
 
             cbFilterCampus.Checked = GetAttributeValue( AttributeKey.DisplayCampusFilter ).AsBoolean();
             cbCampusContext.Checked = GetAttributeValue( AttributeKey.EnableCampusContext ).AsBoolean();
             cbPostalCode.Checked = GetAttributeValue( AttributeKey.EnablePostalCodeSearch ).AsBoolean();
+            cbRequirePostalCode.Checked = GetAttributeValue( AttributeKey.RequirePostalCode ).AsBoolean();
             cbKeyword.Checked = GetAttributeValue( AttributeKey.DisplayKeywordSearch ).AsBoolean();
 
             cbShowMap.Checked = GetAttributeValue( AttributeKey.ShowMap ).AsBoolean();
@@ -1159,6 +1176,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
                         cblInitialLoadFilters.Items.Add( new ListItem( "PostalCode", "filter_postalcode" ) );
                         cblInitialLoadFilters.Items.Add( new ListItem( "Keyword", "filter_keyword" ) );
+                        cblInitialLoadFilters.Items.Add( new ListItem( "Show Full Groups", "filter_showfullgroups" ) );
                         cblInitialLoadFilters.Items.Add( new ListItem( "Search Button", "btnSearch" ) );
                         cblInitialLoadFilters.Items.Add( new ListItem( "Clear Button", "btnClear" ) );
 
@@ -1276,8 +1294,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( fenceTypeGuid.HasValue || GetAttributeValue( AttributeKey.ShowProximity ).AsBoolean() )
             {
                 var enablePostalCode = GetAttributeValue( AttributeKey.EnablePostalCodeSearch ).AsBoolean();
+                var requirePostalCode = GetAttributeValue( AttributeKey.RequirePostalCode ).AsBoolean();
                 filter_acAddress.Visible = !enablePostalCode;
                 filter_tbPostalCode.Visible = enablePostalCode;
+                filter_tbPostalCode.Required = requirePostalCode;
                 revPostalCode.Enabled = enablePostalCode;
 
                 if ( CurrentPerson != null )
@@ -1500,6 +1520,25 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 filter_ddlCampus.Visible = false;
                 filter_cblCampus.Visible = false;
+            }
+
+            if ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ) == "Filter" )
+            {
+                filter_tglShowFullGroups.Visible = true;
+                filter_tglShowFullGroups.Label = GetAttributeValue( AttributeKey.ShowFullGroupsLabel );
+                if ( _autoPostback )
+                {
+                    filter_tglShowFullGroups.CheckedChanged += btnSearch_Click;
+                }
+                if ( hideFilters.Contains( "filter_showfullgroups" ) )
+                {
+                    pnlSearch.Controls.Remove( filter_tglShowFullGroups );
+                    phFilterControlsCollapsed.Controls.Add( filter_tglShowFullGroups );
+                }
+            }
+            else
+            {
+                filter_tglShowFullGroups.Visible = false;
             }
 
             btnFilter.InnerHtml = btnFilter.InnerHtml.Replace( "[Filter] ", GetAttributeValue( AttributeKey.FilterLabel ) + " " );
@@ -1911,7 +1950,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             // 1) If the group has a GroupCapacity, check that we haven't met or exceeded that.
             // 2) When someone registers for a group on the front-end website, they automatically get added with the group's default
             //    GroupTypeRole. If that role exists and has a MaxCount, check that we haven't met or exceeded it yet.
-            if ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ).AsBoolean() )
+
+            if ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ) == "True" || ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ) == "Filter" && !filter_tglShowFullGroups.Checked ) )
             {
                 var includePendingInCapacity = GetAttributeValue( AttributeKey.OvercapacityGroupsincludePending ).AsBoolean();
                 groupQry = groupQry.Where(
@@ -2222,8 +2262,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 // if not sorting by ColumnClick and SortByDistance, then sort the groups by distance
                 if ( gGroups.SortProperty == null && showProximity && GetAttributeValue( AttributeKey.SortByDistance ).AsBoolean() )
                 {
-                    // only show groups with a known location, and sort those by distance
-                    groups = groups.Where( a => distances.Select( b => b.Key ).Contains( a.Id ) ).ToList();
+                    if ( distances.Count > 0 )
+                    {
+                        // only show groups with a known location, and sort those by distance
+                        groups = groups.Where( a => distances.Select( b => b.Key ).Contains( a.Id ) ).ToList();
+                    }
 
                     if ( attributeValList != null && attributeValList.Any() && ( ( attributeValList.Count >= 2 && !string.IsNullOrWhiteSpace( attributeValList[1] ) ) || !string.IsNullOrWhiteSpace( attributeValList[0] ) ) )
                     {
@@ -2261,7 +2304,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             }
                         } );
                     }
-                    else
+                    else if ( distances.Count > 0 )
                     {
                         groups = groups.OrderBy( a => distances[a.Id] ).ThenBy( a => a.Name ).ToList();
                     }
