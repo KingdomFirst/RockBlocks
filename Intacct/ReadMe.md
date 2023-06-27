@@ -3,7 +3,7 @@
 # Intacct Export to Journal 
 _Tested/Supported in Rock Version:  13.0-14.0_    
 _Released:  10/9/2018_   
-_Updated:  4/13/2023_   
+_Updated:  6/27/2023_   
 
 ## Summary 
 
@@ -33,6 +33,8 @@ The following new goodness will be added to your Rock install with this plugin:
 
 There is configuration needed in Intacct. You may need to contact the Intacct Administrator for your organization for help with these steps.
 
+<div style="page-break-after: always;"></div>
+
 ### **Intacct Configuration** 
 
 **Create a new Role**
@@ -53,6 +55,7 @@ After you save the Role, the next screen will allow you to assign subscriptions 
     Application Module: General Ledger
     Click on Permissions
 ```
+<div style="page-break-after: always;"></div>
 
 In the permissions window, grant All permissions for the General Ledger to the Role
 
@@ -64,6 +67,7 @@ In the permissions window, grant All permissions for the General Ledger to the R
 Save to close the window
 
 Then save your changes on the Role Subscriptions page
+<div style="page-break-after: always;"></div>
 
 **Create a new User**
 
@@ -72,7 +76,6 @@ Note: Creating users can cost extra in Intacct. Only create a new user if there 
 Go to Company > Admin > Users to add a user
 
 ![](../.screenshots/BatchToIntacct/IntacctCreateUser.png)
-<div style="page-break-after: always;"></div>
 
 ```
     User Id: RockAPI
@@ -84,6 +87,7 @@ Go to Company > Admin > Users to add a user
     User Type: Business Account
     Admin Privileges: Full
 ```
+<div style="page-break-after: always;"></div>
 
 **Assign User Role**
 
@@ -101,6 +105,7 @@ Find your new or existing API user in the Users page
     In the blank drop down, select your API Journal Role
 ```
 Save your changes
+<div style="page-break-after: always;"></div>
 
 **Create a new Employee**
 
@@ -136,37 +141,25 @@ You will need to configure the Batch to Journal block settings.
 ![](../.screenshots/BatchToIntacct/BatchToJournalBlockSettings.png)
 <div style="page-break-after: always;"></div>
 
-```
-    Name: Block name
-    
-    Enable Debug: Turns on/off the Lava debug panel
+| | |
+| --- | ---- |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Name** Block name. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Journal Id** The Intacct Symbol of the Journal that the Entry should be posted to. (example: GJ) |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Button Text** Customize the text on the export button. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Close Batch** Flag indicating if the Financial Batch should be closed in Rock when successfully posted to Intacct. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Log Response** Flag indicating if the Intacct Response should be logged to the Batch Audit Log. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">6</span> | **Journal Memo Lava** Allows you to use Lava to control what is saved in the memo column of the export. Default: {{ Batch.Id }}: {{ Batch.Name }} |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">7</span> | **Enable Debug** Outputs the object graph to help create your Lava syntax. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">8</span> | **Undeposited Funds Account** The GL Account Id to use when Other Receipt mode is being used with Undeposited Funds option selected. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">9</span> | **Sender Id** The permanent Web Services sender Id. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">10</span> | **Sender Password** The permanent Web Services sender password. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">11</span> | **Company Id** The Intacct company Id. This is the same information you use when you log into the Sage Intacct UI. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **User Id** The Intacct API user Id. This is the same information you use when you log into the Sage Intacct UI. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">13</span> | **User Password** he Intacct API password. This is the same information you use when you log into the Sage UI. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">14</span> | **Location Id** The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">15</span> | **Export Mode** Determines the type of object to create in Intacct. Selecting Journal Entry will result in creating journal entries of the type set in the Journal Id setting. Selecting Other Receipts will result in creating Other Receipts in the Cash Management area of Intacct. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">16</span> | **GL Account Grouping** Determines if debit and/or credit lines should be grouped and summed as follows in the export file:<ul><li>**Debit Accounts**: Company, Region, Super Fund, Cost Center Debit Number, Debit Account, Debit Account Sub, Fund Number, Project, Transaction Fee Account, and Location</li><li>**Credit Accounts**: Company, Region, Department, Super Fund, Cost Center Credit Number, Revenue Account, Revenue Account Sub, Fund Number, Project, and Location</li><li>**Financial Account Grouping**: Both credit and debit lines are grouped by Rock Financial Account, Project, and Transaction Fee Account.</li></ul> |
 
-    Journal Id: The Intacct Symbol of the Journal that the Entry should be posted to (example: GJ)
-    
-    Journal Memo Lava: Allows you to use Lava to control what is saved in the memo column of the export. Default: {{ Batch.Id }}: {{ Batch.Name }}
-
-    Button Text: Customize the text for the export button
-
-    Close Batch: Flag indicating if the Financial Batch should be closed in Rock when successfully posted to Intacct.
-    
-    Log Response: Flag indicating if the Intacct Response should be logged to the Batch Audit Log
-
-    Undeposited Funds Account: The GL Account Id to use when Other Receipt mode is being used with Undeposited Funds option selected.
-    
-    Sender Id: The permanent Web Services sender Id
-    
-    Sender Password: The permanent Web Services sender password
-    
-    Company Id: The Intacct company Id. This is the same information you use when you log into the Sage Intacct UI.
-    
-    User Id: The Intacct API user Id. This is the same information you use when you log into the Sage Intacct UI.
-    
-    User Password: The Intacct API password. This is the same information you use when you log into the Sage UI.
-    
-    Location Id: The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.
-    
-    Export Mode: Determines the type of object to create in Intacct. Selecting Journal Entry will result in creating journal entries of the type set in the Journal Id setting. Selecting Other Receipts will result in creating Other Receipts in the Cash Management area of Intacct.
-```
 <div style="page-break-after: always;"></div>
 
 **Batches to Journal Block**
@@ -178,45 +171,33 @@ The Batches to Journal block was added to a new page under your Finances heading
 When the block is in Other Receipts mode, you will have options for Deposit To, Payment Method and Bank Account next to the Export to Intacct button.
 
 ![](../.screenshots/BatchToIntacct/BatchesToJournalBlockOtherReceipts.png)
+<div style="page-break-after: always;"></div>
 
 You will need to configure the Batches to Journal block settings.
 
 ![](../.screenshots/BatchToIntacct/BatchesToJournalBlockSettings.png)
-```
-    Name: Block name
+<div style="page-break-after: always;"></div>
 
-    Detail Page: The Financial Batch Detail page.
-
-    Button Text: Customize the text for the export button.
-
-    Months Back: Number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches.
-
-    Close Batch: Flag indicating if the Financial Batch should be closed in Rock when successfully posted to Intacct.
-    
-    Log Response: Flag indicating if the Intacct Response should be logged to the Batch Audit Log.
-    
-    Enable Debug: Turns on/off the Lava debug panel. The panel will show after export.
-
-    Journal Id: The Intacct Symbol of the Journal that the Entry should be posted to (example: GJ)
-
-    Undeposited Funds Account: The GL Account Id to use when Other Receipt mode is being used with Undeposited Funds option selected.
-    
-    Journal Description Lava: Allows you to use Lava to control what is saved in the memo column of the export. Default: {{ Batch.Id }}: {{ Batch.Name }}
-    
-    Sender Id: The permanent Web Services sender Id
-    
-    Sender Password: The permanent Web Services sender password
-    
-    Company Id: The Intacct company Id. This is the same information you use when you log into the Sage Intacct UI.
-    
-    User Id: The Intacct API user Id. This is the same information you use when you log into the Sage Intacct UI.
-    
-    User Password: The Intacct API password. This is the same information you use when you log into the Sage UI.
-    
-    Location Id: The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company.
-    
-    Export Mode: Determines the type of object to create in Intacct. Selecting Journal Entry will result in creating journal entries of the type set in the Journal Id setting. Selecting Other Receipts will result in creating Other Receipts in the Cash Management area of Intacct.
-```
+| | |
+| --- | ---- |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Name** Block name. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Detail Page** The Financial Batch Detail page. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Button Text** Customize the text on the export button. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Months Back** Number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Close Batch** Flag indicating if the Financial Batch should be closed in Rock when successfully posted to Intacct. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">6</span> | **Log Response** Flag indicating if the Intacct Response should be logged to the Batch Audit Log. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">7</span> | **Enable Debug** Outputs the object graph to help create your Lava syntax. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">8</span> | **Journal Id** The Intacct Symbol of the Journal that the Entry should be posted to. (example: GJ) |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">9</span> | **Undeposited Funds Account** The GL Account Id to use when Other Receipt mode is being used with Undeposited Funds option selected. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">10</span> | **Journal Description Lava** Allows you to use Lava to control what is saved in the memo column of the export. Default: {{ Batch.Id }}: {{ Batch.Name }} |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">11</span> | **Sender Id** The permanent Web Services sender Id. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **Sender Password** The permanent Web Services sender password. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">13</span> | **Company Id** The Intacct company Id. This is the same information you use when you log into the Sage Intacct UI. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">14</span> | **User Id** The Intacct API user Id. This is the same information you use when you log into the Sage Intacct UI. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">15</span> | **User Password** he Intacct API password. This is the same information you use when you log into the Sage UI. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">16</span> | **Location Id** The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">17</span> | **Export Mode** Determines the type of object to create in Intacct. Selecting Journal Entry will result in creating journal entries of the type set in the Journal Id setting. Selecting Other Receipts will result in creating Other Receipts in the Cash Management area of Intacct. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">18</span> | **GL Account Grouping** Determines if debit and/or credit lines should be grouped and summed as follows in the export file:<ul><li>**Debit Accounts**: Company, Region, Super Fund, Cost Center Debit Number, Debit Account, Debit Account Sub, Fund Number, Project, Transaction Fee Account, and Location</li><li>**Credit Accounts**: Company, Region, Department, Super Fund, Cost Center Credit Number, Revenue Account, Revenue Account Sub, Fund Number, Project, and Location</li><li>**Financial Account Grouping**: Both credit and debit lines are grouped by Rock Financial Account, Project, and Transaction Fee Account.</li></ul> |
 <div style="page-break-after: always;"></div>
 
 **Financial Projects Defined Type**
@@ -233,11 +214,11 @@ If your financial gateway reports transaction fees to Rock in their transaction 
 
 ![](../.screenshots/BatchToIntacct/GatewayAttributes.png)
 
-```
-    Gateway Fee Processing: How should the Intacct Export plugin process transaction fees? DEFAULT: No special handling of transaction fees will be performed. NET DEBIT: Add credit entries for any transaction fees and use net amount (amount - transaction fees) for debit account entries. GROSS DEBIT: Debit account entries are left untouched (gross) and new debit and credit entries will be added for any transaction fees. NOTE: Both Net Debit and Gross Debit require a Fee Account attribute be set on either the financial gateway or financial account.
-    
-    Default Fee Account: Default account number for transaction fees.
-```
+| | |
+| --- | ---- |
+| **Gateway Fee Processing** How should the Intacct Export plugin process transaction fees? DEFAULT: No special handling of transaction fees will be performed. NET DEBIT: Add credit entries for any transaction fees and use net amount (amount - transaction fees) for debit account entries. GROSS DEBIT: Debit account entries are left untouched (gross) and new debit and credit entries will be added for any transaction fees. NOTE: Both Net Debit and Gross Debit require a Fee Account attribute be set on either the financial gateway or financial account. |
+| **Default Fee Account** TDefault account number for transaction fees. |
+<div style="page-break-after: always;"></div>
 
 **Account Attributes**
 
@@ -250,23 +231,16 @@ Most organizations will mark the GL Project designation by setting a default Pro
 ![](../.screenshots/BatchToIntacct/AccountAttributes.png)
 <div style="page-break-after: always;"></div>
 
-```
-    Default Project: Designates the project at the financial account level.
+| | |
+| --- | ---- |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Default Project** Designates the project at the financial account level. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Credit Account** Account number to be used for the credit column. Required by Intacct. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Debit Account** Account number to be used for the debit column. Required by Intacct. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Transaction Fee Account** Expense account number for gateway transaction fees. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Class** The Intacct dimension for Class Id. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">6</span> | **Department** The Intacct dimension for Department Id. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">7</span> | **Location** The Intacct dimension for Location Id. Required if multi-entity enabled. |
 
-    Credit Account: Account number to be used for the credit column. Required by Intacct.
-
-    Debit Account: Account number to be used for the debit column. Required by Intacct.
-
-    Transaction Fee Account: Expense account number for gateway transaction fees.
-
-    Class: The Intacct dimension for Class Id.
-
-    Department: The Intacct dimension for Department Id.
-
-    Location: The Intacct dimension for Location Id. Required if multi-entity enabled.
-
-    Restriction: A custom Intacct dimension included for example purposes. See the Advanced Configuration section to learn how to add custom dimensions to a Rock Account. 
-```
 <div style="page-break-after: always;"></div>
 
 ## Advanced Configuration
@@ -279,15 +253,13 @@ Most organizations will mark the GL Project designation by setting a default Pro
 
 ![](../.screenshots/BatchToIntacct/CustomDimension.png)
 
-```
-    Name: Restriction
-    
-    Categories: Intacct Export
-    
-    Key: GLDIMRESTRICTION
-    
-    Field Type: Text
-```
+| | |
+| --- | ---- |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Name** Restriction |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Categories** Intacct Export |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Keyt** GLDIMRESTRICTION |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Field Type** Text |
+
 <div style="page-break-after: always;"></div>
 
 **Important Information about Your Custom Dimension**
@@ -313,4 +285,11 @@ Most organizations will mark the GL Project designation by setting a default Pro
 ![IntacctCustomDimensionSystemInfoScreenshot](https://user-images.githubusercontent.com/2990519/174348414-42ead26f-0dd5-4c3c-b985-d1fb48141508.jpeg)
 
 
-
+<style>
+  table {
+    background-color: rgba(220, 220, 220, 0.4);
+  }
+  th {
+    display: none;
+  }
+</style>
