@@ -161,7 +161,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
     [EnumField(
         "GL Account Grouping",
-        Description = "Determines if debit and/or credit lines should be grouped and summed by GL account in the export file. NOTE: Unique ProjectIds, DepartmentIds, LocationIds, etc. may result in multiple lines even if account is grouped. Also, DebitLinesOnly mode is unsupported for Other Receipts.",
+        Description = "Determines if debit and/or credit lines should be grouped and summed by GL account in the resulting Intacct Journal Entry or Other Receipt. NOTE: Unique ProjectIds, DepartmentIds, LocationIds, etc. may result in multiple lines even if account is grouped. Also, DebitLinesOnly mode is unsupported for Other Receipts.",
         IsRequired = true,
         EnumSourceType = typeof( GLAccountGroupingMode ),
         DefaultEnumValue = ( int ) GLAccountGroupingMode.DebitAndCreditByFinancialAccount,
