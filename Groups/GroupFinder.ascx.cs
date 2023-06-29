@@ -1470,21 +1470,21 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     dowsFilterControl.SelectedIndexChanged += btnSearch_Click;
                 }
 
-                AddFilterControl( dowsFilterControl, "Days of Week", "The day of week that group meets on.", hideFilters.Contains( "filter_dow" ) );
+                AddFilterControl( dowsFilterControl, "Days of Week", "", hideFilters.Contains( "filter_dow" ) );
             }
 
             if ( scheduleFilters.Contains( "Day" ) )
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field.FilterControl( null, "filter_dow", false, Rock.Reporting.FilterMode.SimpleFilter );
                 string dayOfWeekLabel = GetAttributeValue( AttributeKey.DayOfWeekLabel );
-                AddFilterControl( control, dayOfWeekLabel, "The day of week that group meets on.", hideFilters.Contains( "filter_dow" ) );
+                AddFilterControl( control, dayOfWeekLabel, "", hideFilters.Contains( "filter_dow" ) );
             }
 
             if ( scheduleFilters.Contains( "Time" ) )
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.TIME ).Field.FilterControl( null, "filter_time", false, Rock.Reporting.FilterMode.SimpleFilter );
                 string timeOfDayLabel = GetAttributeValue( AttributeKey.TimeOfDayLabel );
-                AddFilterControl( control, timeOfDayLabel, "The time of day that group meets.", hideFilters.Contains( "filter_time" ) );
+                AddFilterControl( control, timeOfDayLabel, "", hideFilters.Contains( "filter_time" ) );
             }
 
             if ( GetAttributeValue( AttributeKey.DisplayCampusFilter ).AsBoolean() )
@@ -1553,21 +1553,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             if ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ) == "Filter" )
             {
-                filter_tglShowFullGroups.Visible = true;
-                filter_tglShowFullGroups.Label = GetAttributeValue( AttributeKey.ShowFullGroupsLabel );
+                var filter_tglShowFullGroups = new Toggle();
+                filter_tglShowFullGroups.ID = "filter_tglShowFullGroups";
                 if ( _autoPostback )
                 {
+                    filter_tglShowFullGroups.CheckedChanged -= btnSearch_Click;
                     filter_tglShowFullGroups.CheckedChanged += btnSearch_Click;
                 }
-                if ( hideFilters.Contains( "filter_showfullgroups" ) )
-                {
-                    pnlSearch.Controls.Remove( filter_tglShowFullGroups );
-                    phFilterControlsCollapsed.Controls.Add( filter_tglShowFullGroups );
-                }
-            }
-            else
-            {
-                filter_tglShowFullGroups.Visible = false;
+                AddFilterControl( filter_tglShowFullGroups, GetAttributeValue( AttributeKey.ShowFullGroupsLabel ), "", hideFilters.Contains( "filter_showfullgroups" ) );
             }
 
             btnFilter.InnerHtml = btnFilter.InnerHtml.Replace( "[Filter] ", GetAttributeValue( AttributeKey.FilterLabel ) + " " );
@@ -1885,7 +1878,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 if ( dows.Any() )
                 {
-                    _filterValues.Add( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited( "^" ) );
+                    if ( _filterValues.ContainsKey( "FilterDows" ) )
+                    {
+                        _filterValues["FilterDows"] = dowsFilterControl.SelectedValuesAsInt.AsDelimited( "^" );
+                    }
+                    else
+                    {
+                        _filterValues.Add( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited( "^" ) );
+                    }
                     groupQry = groupQry.Where( g =>
                         ( g.Schedule.WeeklyDayOfWeek.HasValue &&
                         dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) ) ||
@@ -1929,7 +1929,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 var filterValues = field.GetFilterValues( timeFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
                 var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyTimeOfDay", typeof( TimeSpan? ) );
-                _filterValues.Add( "FilterTime", filterValues.AsDelimited( "^" ) );
+                if ( _filterValues.ContainsKey( "FilterTime" ) )
+                {
+                    _filterValues["FilterTime"] = filterValues.AsDelimited( "^" );
+                }
+                else
+                {
+                    _filterValues.Add( "FilterTime", filterValues.AsDelimited( "^" ) );
+                }
                 groupQry = groupQry.Where( groupParameterExpression, expression, null );
             }
 
@@ -1950,7 +1957,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 }
                 if ( searchCampuses.Count > 0 )
                 {
-                    _filterValues.Add( "FilterCampus", searchCampuses.AsDelimited( "^" ) );
+                    if ( _filterValues.ContainsKey( "FilterCampus" ) )
+                    {
+                        _filterValues["FilterCampus"] = searchCampuses.AsDelimited( "^" );
+                    }
+                    else
+                    {
+                        _filterValues.Add( "FilterCampus", searchCampuses.AsDelimited( "^" ) );
+                    }
                     groupQry = groupQry.Where( c => searchCampuses.Contains( c.CampusId ?? -1 ) );
                 }
             }
@@ -2002,8 +2016,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             // 1) If the group has a GroupCapacity, check that we haven't met or exceeded that.
             // 2) When someone registers for a group on the front-end website, they automatically get added with the group's default
             //    GroupTypeRole. If that role exists and has a MaxCount, check that we haven't met or exceeded it yet.
-
-            if ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ) == "True" || ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ) == "Filter" && !filter_tglShowFullGroups.Checked ) )
+            var tglShowFullGroups = ( Toggle ) phFilterControls.FindControl( "filter_tglShowFullGroups" ) ?? ( Toggle ) phFilterControlsCollapsed.FindControl( "filter_tglShowFullGroups" );
+            if ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ) == "True" || ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ) == "Filter" && !tglShowFullGroups.Checked ) )
             {
                 var includePendingInCapacity = GetAttributeValue( AttributeKey.OvercapacityGroupsincludePending ).AsBoolean();
                 groupQry = groupQry.Where(
