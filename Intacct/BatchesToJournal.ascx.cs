@@ -188,6 +188,16 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Order = 15,
         Key = AttributeKey.ExportMode )]
 
+    [EnumField(
+        "GL Account Grouping",
+        Description = "Determines if debit and/or credit lines should be grouped and summed by GL account in the resulting Intacct Journal Entry or Other Receipt. NOTE: Unique ProjectIds, DepartmentIds, LocationIds, etc. may result in multiple lines even if account is grouped. Also, DebitLinesOnly mode is unsupported for Other Receipts.",
+        IsRequired = true,
+        EnumSourceType = typeof( GLAccountGroupingMode ),
+        DefaultEnumValue = ( int ) GLAccountGroupingMode.DebitAndCreditByFinancialAccount,
+        Category = "Intacct Settings",
+        Order = 16,
+        Key = AttributeKey.AccountGroupingMode )]
+
     #endregion
 
     public partial class BatchesToJournal : RockBlock, ICustomGridColumns
@@ -215,6 +225,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             public const string EnableDebug = "EnableDebug";
             public const string ExportMode = "ExportMode";
             public const string UndepositedFundsAccount = "UndepositedFundsAccount";
+            public const string AccountGroupingMode = "AccountGroupingMode";
         }
 
         #endregion Keys
@@ -650,11 +661,12 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                     var endpoint = new IntacctEndpoint();
                     var postXml = new System.Xml.XmlDocument();
+                    var groupingMode = ( GLAccountGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
 
                     if ( _exportMode == "JournalEntry" )
                     {
                         var journal = new IntacctJournal();
-                        postXml = journal.CreateJournalEntryXML( _intacctAuth, batch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                        postXml = journal.CreateJournalEntryXML( _intacctAuth, batch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode );
                     }
                     else   // Export Mode is Other Receipt
                     {
@@ -670,7 +682,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         {
                             undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
                         }
-                        postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                        postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
                     }
 
                     var resultXml = endpoint.PostToIntacct( postXml );
