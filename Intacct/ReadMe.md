@@ -214,8 +214,8 @@ If your financial gateway reports transaction fees to Rock in their transaction 
 
 ![](../.screenshots/BatchToIntacct/GatewayAttributes.png)
 
-| | |
-| --- | ---- |
+| |
+| --- |
 | **Gateway Fee Processing** How should the Intacct Export plugin process transaction fees? DEFAULT: No special handling of transaction fees will be performed. NET DEBIT: Add credit entries for any transaction fees and use net amount (amount - transaction fees) for debit account entries. GROSS DEBIT: Debit account entries are left untouched (gross) and new debit and credit entries will be added for any transaction fees. NOTE: Both Net Debit and Gross Debit require a Fee Account attribute be set on either the financial gateway or financial account. |
 | **Default Fee Account** Default account number for transaction fees. |
 <div style="page-break-after: always;"></div>
