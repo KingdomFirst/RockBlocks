@@ -33,11 +33,11 @@
 
                         <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
 
-                        <Rock:AddressControl ID="acAddress" runat="server" Required="true" RequiredErrorMessage="Your Address is Required" />
-                        <Rock:RockTextBox ID="tbPostalCode" runat="server" Required="true" RequiredErrorMessage="Your Postal Code is Required" Label="Postal Code" CssClass="form-control js-postal-code js-postcode js-address-field" />
-                        <asp:RegularExpressionValidator ID="revPostalCode" runat="server" ControlToValidate="tbPostalCode" ValidationExpression="[0-9]*\-*[0-9]*" Text="-" CssClass="hidden hide"></asp:RegularExpressionValidator>
-                        <Rock:RockCheckBoxList ID="cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Visible="false" />
-                        <Rock:RockDropDownList ID="ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
+                        <Rock:AddressControl ID="filter_acAddress" runat="server" Required="true" RequiredErrorMessage="Your Address is Required" />
+                        <Rock:RockTextBox ID="filter_tbPostalCode" runat="server" Required="true" RequiredErrorMessage="Your Postal Code is Required" Label="Postal Code" CssClass="form-control js-postal-code js-postcode js-address-field" />
+                        <asp:RegularExpressionValidator ID="revPostalCode" runat="server" ControlToValidate="filter_tbPostalCode" ValidationExpression="[0-9]*\-*[0-9]*" Text="-" CssClass="hidden hide"></asp:RegularExpressionValidator>
+                        <Rock:RockCheckBoxList ID="filter_cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Visible="false" />
+                        <Rock:RockDropDownList ID="filter_ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
                         <asp:PlaceHolder ID="phFilterControls" runat="server" />
                         <asp:Panel runat="server" ID="pnlBtnFilterControls" class="form-group" Visible="false">
                             <button id="btnFilterControls" runat="server" class="btn btn-default btn-xs btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">[More Filters] <i class='fa fa-caret-down'></i><i class='fa fa-caret-up'></i></button>
@@ -112,12 +112,16 @@
                                             DataTextField="text"
                                             DataValueField="value" />
 
-                                        <Rock:RockCheckBox
-                                            ID="cbHideOvercapacityGroups"
+                                        <Rock:RockDropDownList
+                                            ID="ddlHideOvercapacityGroups"
                                             runat="server"
-                                            Label="Hide Overcapacity Groups"
-                                            Help="When set to true, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden."
-                                            ValidationGroup="GroupFinderSettings" />
+                                            Label="Overcapacity Groups Handling"
+                                            Help="When set to Hide, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden. If Display as Filter is chosen a toggle will show up to show/hide groups that are at capacity."
+                                            ValdationGroup="GroupFinderSettings">
+                                            <asp:ListItem Text="Don't Hide" Value="False"></asp:ListItem>
+                                            <asp:ListItem Text="Hide" Value="True"></asp:ListItem>
+                                            <asp:ListItem Text="Display as Filter" Value="Filter"></asp:ListItem>
+                                        </Rock:RockDropDownList>
 
                                         <Rock:RockCheckBox
                                             ID="cbLoadInitialResults"
@@ -160,6 +164,7 @@
                                         <Rock:RockTextBox ID="tbKeywordLabel" runat="server" Label="Keyword Label" Help="The text above the Keyword filter" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbFilterLabel" runat="server" Label="Collapse/Expand Filter Button Text" Help="When using collapsible filters, what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbMoreFiltersLabel" runat="server" Label="Initial Load Collapse/Expand Filters Button Text" Help="When using initial load hidden filters, what does the dropdown button say on it." AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockTextBox ID="tbShowFullGroupsLabel" runat="server" Label="Show Full Groups Label" Help="The text above the Show Full Groups toggle" AutoPostBack="true" Required="true" ValidationGroup="GroupFinderSettings" />
                                         <Rock:DefinedValuesPicker ID="dvpCampusTypes" runat="server" Label="Campus Types" Help="The campus types to filter the list of campuses on." />
                                         <Rock:DefinedValuesPicker ID="dvpCampusStatuses" runat="server" Label="Campus Statuses" Help="The campus statuses to filter the list of campuses on." />
                                     </div>
@@ -178,6 +183,8 @@
                                             Help="If the page has a campus context its value will be used as a filter" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBox ID="cbPostalCode" runat="server" Label="Enable Postal Code Search" Text="Yes"
                                             Help="Set to true to enable simple Postal code search instead of full address." ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockCheckBox ID="cbRequirePostalCode" runat="server" Label="Require Postal Code" Text="Yes"
+                                            Help="If Postal Code search is enabled, do you want to require a value to search (can be filled out by default with default location or person's location)." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBox ID="cbKeyword" runat="server" Label="Display Keyword Filter" Text="Yes"
                                             Help="Display the Keyword filter" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblAttributes" runat="server" Label="Display Attribute Filters" RepeatDirection="Horizontal"
@@ -188,7 +195,9 @@
                                             Help="Select an attribute to sort by if a group contains multiple of the selected attribute filter options." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values" RepeatDirection="Horizontal"
                                             Help="The group attribute values that you would like to hide from the filter options." ValidationGroup="GroupFinderSettings" />
-                                    </div>
+                                         <Rock:RockCheckBoxList ID="cblAttributesInKeywords" runat="server" Label="Attributes in Keyword Search" RepeatDirection="Horizontal"
+                                            Help="The text-based group attributes that should be included in keyword search." ValidationGroup="GroupFinderSettings" />
+                                   </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
@@ -403,7 +412,7 @@
                                         <Rock:RockCheckBox ID="cbShowCampus" runat="server" Label="Show Campus" Text="Yes"
                                             Help="Should the campus column be displayed? If selected, the Campus column will still only be displayed if one or more of the groups has a campus." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBox ID="cbProximity" runat="server" Label="Show Distance" Text="Yes"
-                                            Help="Should the distance to each group be displayed? Using this option will require the user to enter their address when searching for groups." ValidationGroup="GroupFinderSettings" />
+                                            Help="Should the distance to each group be displayed? Using this option will require the user to enter their address or postal code when searching for groups. Note, groups without a location will not be displayed when enabled." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBox ID="cbSortByDistance" runat="server" Label="Sort by Distance" Text="Yes"
                                             Help="Should the results be sorted from closest to furthest distance?" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbPageSizes" runat="server" Label="Page Sizes" Help="To limit the number of groups displayed and to show a dropdown of page sizes, enter a comma delimited list of page sizes. For example: 10,20 will present a drop down with 10,20,All as options with the default as 10" />
