@@ -110,8 +110,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Description = "When set to true, the Hide Overcapacity Groups setting also takes into account pending members.",
         DefaultBooleanValue = false,
         Key = AttributeKey.OvercapacityGroupsincludePending )]
-    [BooleanField( "Auto filter enabled",
-        Description = "When set to true, the various filters will automatically filter the results, whether it is on checkbox checked, selection made, text changed, etc.",
+    [BooleanField( "Auto Filter Enabled",
+        Description = "When set to yes, the various filters will automatically filter the results, whether it is on checkbox checked, selection made, text changed, etc.",
         DefaultBooleanValue = false,
         Key = AttributeKey.AutoFilterEnabled )]
 
