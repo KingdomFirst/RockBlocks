@@ -196,7 +196,7 @@
                                         <Rock:RockCheckBoxList ID="cblAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values" RepeatDirection="Horizontal"
                                             Help="The group attribute values that you would like to hide from the filter options." ValidationGroup="GroupFinderSettings" />
                                          <Rock:RockCheckBoxList ID="cblAttributesInKeywords" runat="server" Label="Attributes in Keyword Search" RepeatDirection="Horizontal"
-                                            Help="The group attributes that should be included in keyword search. Only select attribute types that store values as text are supported." ValidationGroup="GroupFinderSettings" />
+                                            Help="The text-based group attributes that should be included in keyword search." ValidationGroup="GroupFinderSettings" />
                                    </div>
                                 </div>
                                 <div class="row">
