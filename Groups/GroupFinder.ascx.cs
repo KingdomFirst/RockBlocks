@@ -205,7 +205,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Key = AttributeKey.EnableCampusContext )]
     [CustomDropdownListField( "Hide Overcapacity Groups",
         Description = "When set to true, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden.",
-        DefaultValue = "true",
+        DefaultValue = "True",
         ListSource = "False^Don't Hide,True^Hide,Filter^Display as Filter",
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.HideOvercapacityGroups )]
@@ -1585,6 +1585,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         {
                             AddAutoPostback( control );
                         }
+                        foreach ( var ctrl in control.ControlsOfTypeRecursive<DefinedValuesPickerEnhanced>() )
+                        {
+                            ctrl.Attributes.Add( "data-placeholder", $"Select a {attribute.Name}" );
+                        }
 
                         AddFilterControl( control, attribute.Name, attribute.Description, hideFilters.Contains( attribute.Guid.ToString() ) );
                     }
@@ -1744,6 +1748,16 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             foreach ( var ctrl in control.ControlsOfTypeRecursive<RockCheckBoxList>() )
             {
                 ctrl.AutoPostBack = true;
+            }
+            foreach ( var ctrl in control.ControlsOfTypeRecursive<DefinedValuesPicker>() )
+            {
+                ctrl.AutoPostBack = true;
+            }
+            foreach ( var ctrl in control.ControlsOfTypeRecursive<DefinedValuesPickerEnhanced>() )
+            {
+                ctrl.AutoPostBack = true;
+                ctrl.SelectedIndexChanged -= btnSearch_Click;
+                ctrl.SelectedIndexChanged += btnSearch_Click;
             }
         }
 
