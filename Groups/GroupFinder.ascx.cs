@@ -114,6 +114,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Description = "When set to yes, the various filters will automatically filter the results, whether it is on checkbox checked, selection made, text changed, etc.",
         DefaultBooleanValue = false,
         Key = AttributeKey.AutoFilterEnabled )]
+    [LavaCommandsField( "Formatted Output Enabled Lava Commands",
+        Description = "Choose what commands to enable in formatted output lava.",
+        IsRequired = false,
+        Key = AttributeKey.FormattedOutputEnabledLavaCommands )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page",
@@ -449,6 +453,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string RequirePostalCode = "RequirePostalCode";
             public const string ShowFullGroupsLabel = "ShowFullGroupsLabel";
             public const string AttributesInKeywords = "AttributesInKeywords";
+            public const string FormattedOutputEnabledLavaCommands = "FormattedOutputEnabledLavaCommands";
         }
 
         private static class AttributeDefaultLava
@@ -2523,6 +2528,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( GetAttributeValue( AttributeKey.ShowLavaOutput ).AsBoolean() )
             {
                 string template = GetAttributeValue( AttributeKey.LavaOutput );
+                var enabledCommands = GetAttributeValue( AttributeKey.FormattedOutputEnabledLavaCommands );
 
                 var mergeFields = new Dictionary<string, object>();
                 if ( fences != null )
@@ -2558,7 +2564,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     mergeFields.Add( filter.Key, filter.Value );
                 }
 
-                lLavaOverview.Text = template.ResolveMergeFields( mergeFields );
+                lLavaOverview.Text = template.ResolveMergeFields( mergeFields, enabledCommands );
 
                 pnlLavaOutput.Visible = true;
             }
