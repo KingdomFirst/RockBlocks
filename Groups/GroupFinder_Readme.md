@@ -3,7 +3,7 @@
 # Advanced Group Finder
 *Tested/Supported in Rock version:  8.0-15.1*   
 *Created:  6/8/2021*   
-*Updated: 7/18/2023*   
+*Updated: 8/4/2023*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/161*
 
 ## Quick Links
@@ -98,9 +98,10 @@ The following new goodness will be added to your Rock install with this plugin:
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">6</span> | **Campus Types** Allows selecting which campus types to filter campuses by. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">7</span> | **Collapse Filters on Search** When set to yes, all filters will be collapsed into a single 'Filters' dropdown. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">8</span> | **Default Location** The campus address that should be used as fallback for the search criteria. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">9</span> | **Overcapacity Groups include Pending** When set to yes, the Hide Overcapacity Groups setting also takes into account pending members. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">10</span> | **Show All Groups** When set to yes, all groups will show including those where Is Public is set to false.  This is most often used on a staff internal page. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">11</span> | **Single Select Campus Filter** When set to yes, the campus filter will be a drop down instead of checkbox. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">9</span> | **Formatted Output Enabled Lava Commands** Choose what commands to enable in formatted output lava. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">10</span> | **Overcapacity Groups include Pending** When set to yes, the Hide Overcapacity Groups setting also takes into account pending members. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">11</span> | **Show All Groups** When set to yes, all groups will show including those where Is Public is set to false.  This is most often used on a staff internal page. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **Single Select Campus Filter** When set to yes, the campus filter will be a drop down instead of checkbox. |
 
 
 ## Advanced
