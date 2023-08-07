@@ -1,9 +1,9 @@
 ![Kingdom First Solutions](../.screenshots/KFSBanner.jpg)
 
 # Advanced Group Finder
-*Tested/Supported in Rock version:  8.0-13.2*   
+*Tested/Supported in Rock version:  8.0-15.1*   
 *Created:  6/8/2021*   
-*Updated: 1/10/2023*   
+*Updated: 8/4/2023*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/161*
 
 ## Quick Links
@@ -28,6 +28,8 @@ Our Group finder is a significantly modified version of the core Rock version. I
 - Added Keyword search to search name or description of groups.
 - Added an additional setting to include Pending members in Over Capacity checking.
 - Added a setting to override groups Is Public setting to show on the finder.
+- Added ability to display Over Capacity groups with a filter.
+- Added Auto Load Filter capability on value selection.
 <div style="page-break-after: always;"></div>
 
 **Collapsible Filters Screenshots**
@@ -46,13 +48,13 @@ The following new goodness will be added to your Rock install with this plugin:
 **Note**: This block will not be added automatically to a page. You will need to create a new page or add this block to an existing page.
 
 ## Group Finder Configuration
-![Filter Settings](../.screenshots/GroupFinder/Filter_Settings.png)
+![Filter Settings](../.screenshots/GroupFinder/Filter_Settings.jpg)
 <div style="page-break-after: always;"></div>
 
 | | |
 | --- | ---- |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Group Type** The type of groups to look for. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Hide Overcapacity Groups** When set to true, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Overcapacity Groups Handling** When set to Hide, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden. If Display as Filter is chosen a toggle will show up to show/hide groups that are at capacity. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Geofence Group Type** An optional group type that contains groups with geographic boundary (fence). If specified, user will be prompted for their address, and only groups that are located in the same geographic boundary ( as defined by one or more groups of this type ) will be displayed. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Location Types** The text above the day of the week filter. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Day of the Week Filter Label** The text above the day of the week filter. |
@@ -62,37 +64,44 @@ The following new goodness will be added to your Rock install with this plugin:
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">9</span> | **Keyword Label** The text above the keyword filter. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">10</span> | **Filter Button Text** When using collapsible filters, what the dropdown button says on it. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">11</span> | **More Filters Button Text** When using Hide Filters on Initial Load, what the dropdown button says on it. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **Campus Types** The campus types to filter the list of campuses on. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">13</span> | **Campus Statuses** The campus statuses to filter the list of campuses on. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">14</span> | **Display Day of Week Filter** Flag indicating if and how the Day of the Week filter should be displayed to filter groups with 'Weekly' schedules. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">15</span> | **Display Time of Day Filter** Display a Time of Day filter to filter groups with 'Weekly' schedules. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">16</span> | **Display Campus Filter** Display the campus filter. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">17</span> | **Enable Campus Context** If the page has a campus context its value will be used as a filter. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">18</span> | **Enable Postal Code Search** Set to yes to enable simple Postal code search instead of full address. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">19</span> | **Display Keyword Filter** Display the Keyword filter. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">20</span> | **Display Attribute Filters** The group attributes that should be available for user to filter results by. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">21</span> | **Collapse Filters on Initial Load** Hide these filter controls under a collapsible panel for user on first load. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">22</span> | **Custom Sort from Attribute** Select an attribute to sort by if a group contains multiple of the selected attribute filter options. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">23</span> | **Hide Attribute Filter Values** The group attribute values that you would like to hide from the filter options. This could be used to hide internal attributes used for reporting. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **Show Full Groups Label** The text above the Show Full Groups filter. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">13</span> | **Campus Types** The campus types to filter the list of campuses on. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">14</span> | **Campus Statuses** The campus statuses to filter the list of campuses on. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">15</span> | **Display Day of Week Filter** Flag indicating if and how the Day of the Week filter should be displayed to filter groups with 'Weekly' schedules. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">16</span> | **Display Time of Day Filter** Display a Time of Day filter to filter groups with 'Weekly' schedules. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">17</span> | **Display Campus Filter** Display the campus filter. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">18</span> | **Enable Campus Context** If the page has a campus context its value will be used as a filter. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">19</span> | **Enable Postal Code Search** Set to yes to enable simple Postal code search instead of full address. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">20</span> | **Require Postal Code** If Postal Code search is enabled, do you want to require a value to search (can be autofilled by default with a default location or logged in person's location). |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">21</span> | **Display Keyword Filter** Display the Keyword filter. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">22</span> | **Display Attribute Filters** The group attributes that should be available for user to filter results by. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">23</span> | **Collapse Filters on Initial Load** Hide these filter controls under a collapsible panel for user on first load. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">24</span> | **Custom Sort from Attribute** Select an attribute to sort by if a group contains multiple of the selected attribute filter options. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">25</span> | **Hide Attribute Filter Values** The group attribute values that you would like to hide from the filter options. This could be used to hide internal attribute values used for reporting. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">26</span> | **Attributes in Keyword Search** The text-based group attributes that should be included in keyword search. |
 
 (See the [Rock Your Groups Manual](https://community.rockrms.com/documentation/bookcontent/7/217#groupfinder) for the rest of the setting descriptions.)
+<div style="page-break-after: always;"></div>
 
 ## Block Properties
 
-![Block Properties](../.screenshots/GroupFinder/Block_Properties.png)
+![Block Properties](../.screenshots/GroupFinder/Block_Properties.jpg)
 <div style="page-break-after: always;"></div>
 
 | | |
 | --- | ---- |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Allow Search in PersonGuid Mode** When set to yes, PersonGuid mode will allow you to change filters and search in that mode for that person.  Generally used on an internal group finder page. The PersonGuid must be passed as a URL parameter. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Auto Load** When set to yes, all results will be loaded to begin. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Campus Statuses** Allows selecting which campus statuses to filter campuses by. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Campus Types** Allows selecting which campus types to filter campuses by. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Collapse Filters on Search** When set to yes, all filters will be collapsed into a single 'Filters' dropdown. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">6</span> | **Default Location** The campus address that should be used as fallback for the search criteria. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">7</span> | **Overcapacity Groups include Pending** When set to yes, the Hide Overcapacity Groups setting also takes into account pending members. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">8</span> | **Show All Groups** When set to yes, all groups will show including those where Is Public is set to false.  This is most often used on a staff internal page. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">9</span> | **Single Select Campus Filter** When set to yes, the campus filter will be a drop down instead of checkbox. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Name** The name of the block. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Allow Search in PersonGuid Mode** When set to yes, PersonGuid mode will allow you to change filters and search in that mode for that person.  Generally used on an internal group finder page. The PersonGuid must be passed as a URL parameter. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Auto Filter Enabled** When set to yes, the various filters will automatically filter the results, whether it is on checkbox checked, selection made, text changed, etc. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Auto Load** When set to yes, all results will be loaded to begin. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Campus Statuses** Allows selecting which campus statuses to filter campuses by. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">6</span> | **Campus Types** Allows selecting which campus types to filter campuses by. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">7</span> | **Collapse Filters on Search** When set to yes, all filters will be collapsed into a single 'Filters' dropdown. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">8</span> | **Default Location** The campus address that should be used as fallback for the search criteria. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">9</span> | **Formatted Output Enabled Lava Commands** Choose what commands to enable in formatted output lava. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">10</span> | **Overcapacity Groups include Pending** When set to yes, the Hide Overcapacity Groups setting also takes into account pending members. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">11</span> | **Show All Groups** When set to yes, all groups will show including those where Is Public is set to false.  This is most often used on a staff internal page. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **Single Select Campus Filter** When set to yes, the campus filter will be a drop down instead of checkbox. |
 
 
 ## Advanced

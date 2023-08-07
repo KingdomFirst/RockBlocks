@@ -110,10 +110,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Description = "When set to true, the Hide Overcapacity Groups setting also takes into account pending members.",
         DefaultBooleanValue = false,
         Key = AttributeKey.OvercapacityGroupsincludePending )]
-    [BooleanField( "Auto filter enabled",
-        Description = "When set to true, the various filters will automatically filter the results, whether it is on checkbox checked, selection made, text changed, etc.",
+    [BooleanField( "Auto Filter Enabled",
+        Description = "When set to yes, the various filters will automatically filter the results, whether it is on checkbox checked, selection made, text changed, etc.",
         DefaultBooleanValue = false,
         Key = AttributeKey.AutoFilterEnabled )]
+    [LavaCommandsField( "Formatted Output Enabled Lava Commands",
+        Description = "Choose what commands to enable in formatted output lava.",
+        IsRequired = false,
+        Key = AttributeKey.FormattedOutputEnabledLavaCommands )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page",
@@ -205,7 +209,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Key = AttributeKey.EnableCampusContext )]
     [CustomDropdownListField( "Hide Overcapacity Groups",
         Description = "When set to true, groups that are at capacity or whose default GroupTypeRole are at capacity are hidden.",
-        DefaultValue = "true",
+        DefaultValue = "True",
         ListSource = "False^Don't Hide,True^Hide,Filter^Display as Filter",
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.HideOvercapacityGroups )]
@@ -449,6 +453,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string RequirePostalCode = "RequirePostalCode";
             public const string ShowFullGroupsLabel = "ShowFullGroupsLabel";
             public const string AttributesInKeywords = "AttributesInKeywords";
+            public const string FormattedOutputEnabledLavaCommands = "FormattedOutputEnabledLavaCommands";
         }
 
         private static class AttributeDefaultLava
@@ -1585,6 +1590,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         {
                             AddAutoPostback( control );
                         }
+                        foreach ( var ctrl in control.ControlsOfTypeRecursive<DefinedValuesPickerEnhanced>() )
+                        {
+                            ctrl.Attributes.Add( "data-placeholder", $"Select a {attribute.Name}" );
+                        }
 
                         AddFilterControl( control, attribute.Name, attribute.Description, hideFilters.Contains( attribute.Guid.ToString() ) );
                     }
@@ -1744,6 +1753,16 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             foreach ( var ctrl in control.ControlsOfTypeRecursive<RockCheckBoxList>() )
             {
                 ctrl.AutoPostBack = true;
+            }
+            foreach ( var ctrl in control.ControlsOfTypeRecursive<DefinedValuesPicker>() )
+            {
+                ctrl.AutoPostBack = true;
+            }
+            foreach ( var ctrl in control.ControlsOfTypeRecursive<DefinedValuesPickerEnhanced>() )
+            {
+                ctrl.AutoPostBack = true;
+                ctrl.SelectedIndexChanged -= btnSearch_Click;
+                ctrl.SelectedIndexChanged += btnSearch_Click;
             }
         }
 
@@ -2509,6 +2528,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( GetAttributeValue( AttributeKey.ShowLavaOutput ).AsBoolean() )
             {
                 string template = GetAttributeValue( AttributeKey.LavaOutput );
+                var enabledCommands = GetAttributeValue( AttributeKey.FormattedOutputEnabledLavaCommands );
 
                 var mergeFields = new Dictionary<string, object>();
                 if ( fences != null )
@@ -2544,7 +2564,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     mergeFields.Add( filter.Key, filter.Value );
                 }
 
-                lLavaOverview.Text = template.ResolveMergeFields( mergeFields );
+                lLavaOverview.Text = template.ResolveMergeFields( mergeFields, enabledCommands );
 
                 pnlLavaOutput.Visible = true;
             }
