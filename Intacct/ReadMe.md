@@ -157,10 +157,8 @@ You will need to configure the Batch to Journal block settings.
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">12</span> | **User Id** The Intacct API user Id. This is the same information you use when you log into the Sage Intacct UI. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">13</span> | **User Password** he Intacct API password. This is the same information you use when you log into the Sage UI. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">14</span> | **Location Id** The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">15</span> | **Export Mode** Determines the type of object to create in Intacct. Selecting Journal Entry will result in creating journal entries of the type set in the Journal Id setting. Selecting Other Receipts will result in creating Other Receipts in the Cash Management area of Intacct. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">16</span> | **GL Account Grouping** Determines if debit and/or credit lines should be grouped and summed as follows in the resulting Intacct Journal Entry or Other Receipt:<ul><li>**Debit Accounts**: Company, Region, Super Fund, Cost Center Debit Number, Debit Account, Debit Account Sub, Fund Number, Project, Transaction Fee Account, and Location</li><li>**Credit Accounts**: Company, Region, Department, Super Fund, Cost Center Credit Number, Revenue Account, Revenue Account Sub, Fund Number, Project, and Location</li><li>**Financial Account Grouping**: Both credit and debit lines are grouped by Rock Financial Account, Project, and Transaction Fee Account.</li></ul> |
-
-<div style="page-break-after: always;"></div>
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">15</span> | **Export Mode** Determines the type of object to create in Intacct. Selecting Journal Entry will result in creating journal entries of the type set in the Journal Id setting. Selecting Other Receipts will result in creating Other Receipts in the Cash Management area of Intacct.<br /> **NOTE:** Other Receipt mode does not support Custom Dimensions. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">16</span> | **GL Account Grouping** Determines if debit and/or credit lines should be grouped and summed as follows in the resulting Intacct Journal Entry or Other Receipt:<ul><li>**Debit Accounts**: Company, Region, Super Fund, Cost Center Debit Number, Debit Account, Debit Account Sub, Fund Number, Project, Transaction Fee Account, Location, and any Custom Dimensions</li><li>**Credit Accounts**: Company, Region, Department, Super Fund, Cost Center Credit Number, Revenue Account, Revenue Account Sub, Fund Number, Project, Location, and any Custom Dimensions</li><li>**Financial Account Grouping**: Both credit and debit lines are grouped by Rock Financial Account, Project, and Transaction Fee Account.</li></ul> **NOTE:** Other Receipt mode does not support debit account grouping. |
 
 **Batches to Journal Block**
 
@@ -174,9 +172,9 @@ When the block is in Other Receipts mode, you will have options for Deposit To, 
 <div style="page-break-after: always;"></div>
 
 You will need to configure the Batches to Journal block settings.
+<br /><br />
 
 ![](../.screenshots/BatchToIntacct/BatchesToJournalBlockSettings.png)
-<div style="page-break-after: always;"></div>
 
 | | |
 | --- | ---- |
@@ -196,8 +194,8 @@ You will need to configure the Batches to Journal block settings.
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">14</span> | **User Id** The Intacct API user Id. This is the same information you use when you log into the Sage Intacct UI. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">15</span> | **User Password** he Intacct API password. This is the same information you use when you log into the Sage UI. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">16</span> | **Location Id** The optional Intacct Location Id. Add a location ID to log into a multi-entity shared company. Entities are typically different locations of a single company. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">17</span> | **Export Mode** Determines the type of object to create in Intacct. Selecting Journal Entry will result in creating journal entries of the type set in the Journal Id setting. Selecting Other Receipts will result in creating Other Receipts in the Cash Management area of Intacct. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">18</span> | **GL Account Grouping** Determines if debit and/or credit lines should be grouped and summed as follows in the resulting Intacct Journal Entry or Other Receipt:<ul><li>**Debit Accounts**: Company, Region, Super Fund, Cost Center Debit Number, Debit Account, Debit Account Sub, Fund Number, Project, Transaction Fee Account, and Location</li><li>**Credit Accounts**: Company, Region, Department, Super Fund, Cost Center Credit Number, Revenue Account, Revenue Account Sub, Fund Number, Project, and Location</li><li>**Financial Account Grouping**: Both credit and debit lines are grouped by Rock Financial Account, Project, and Transaction Fee Account.</li></ul> |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">17</span> | **Export Mode** Determines the type of object to create in Intacct. Selecting Journal Entry will result in creating journal entries of the type set in the Journal Id setting. Selecting Other Receipts will result in creating Other Receipts in the Cash Management area of Intacct.<br />**NOTE:** Other Receipt mode does not support Custom Dimensions. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">18</span> | **GL Account Grouping** Determines if debit and/or credit lines should be grouped and summed as follows in the resulting Intacct Journal Entry or Other Receipt:<ul><li>**Debit Accounts**: Company, Region, Super Fund, Cost Center Debit Number, Debit Account, Debit Account Sub, Fund Number, Project, Transaction Fee Account, Location, and any Custom Dimensions</li><li>**Credit Accounts**: Company, Region, Department, Super Fund, Cost Center Credit Number, Revenue Account, Revenue Account Sub, Fund Number, Project, Location, and any Custom Dimensions</li><li>**Financial Account Grouping**: Both credit and debit lines are grouped by Rock Financial Account, Project, and Transaction Fee Account.</li></ul>**NOTE:** Other Receipt mode does not support debit account grouping. |
 <div style="page-break-after: always;"></div>
 
 **Financial Projects Defined Type**
@@ -233,13 +231,17 @@ Most organizations will mark the GL Project designation by setting a default Pro
 
 | | |
 | --- | ---- |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Default Project** Designates the project at the financial account level. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Credit Account** Account number to be used for the credit column. Required by Intacct. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Debit Account** Account number to be used for the debit column. Required by Intacct. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Transaction Fee Account** Expense account number for gateway transaction fees. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Class** The Intacct dimension for Class Id. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">6</span> | **Department** The Intacct dimension for Department Id. |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">7</span> | **Location** The Intacct dimension for Location Id. Required if multi-entity enabled. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Credit Account** Account number to be used for the credit column. Required by Intacct. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Default Credit Project** Designates the project for the assigned Credit Account at the financial account level. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Credit Class** The Intacct dimension for Class Id to be used for assigned Credit Account. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Credit Department** The Intacct dimension for Department Id to be used for assigned Credit Account. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">5</span> | **Credit Location** The Intacct dimension for Location Id to be used for assigned Credit Account. Required if multi-entity enabled. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">6</span> | **Debit Account** Account number to be used for the debit column. Required by Intacct. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">7</span> | **Default Debit Project** Designates the project for the assigned Debit Account at the financial account level. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">8</span> | **Debit Class** The Intacct dimension for Class Id to be used for assigned Debit Account. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">9</span> | **Debit Department** The Intacct dimension for Department Id to be used for assigned Debit Account. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">10</span> | **Debit Location** The Intacct dimension for Location Id to be used for assigned Debit Account. Required if multi-entity enabled. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">11</span> | **Transaction Fee Account** Expense account number for gateway transaction fees. |
 
 <div style="page-break-after: always;"></div>
 
@@ -257,26 +259,26 @@ Most organizations will mark the GL Project designation by setting a default Pro
 | --- | ---- |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">1</span> | **Name** Restriction |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">2</span> | **Categories** Intacct Export |
-| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Key** GLDIMRESTRICTION |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">3</span> | **Key** RESTRICTION |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">4</span> | **Field Type** Text |
 
-<div style="page-break-after: always;"></div>
-
-**Important Information about Your Custom Dimension**
+### **Important Information about Your Custom Dimension**
+- Custom Dimensions are currently not supported for Other Receipts.
 - The Name is for internal (Rock) purposes only
 - The Category has to be set to the Intacct Export category in order to be included in the API post
-- The Key is the actual Intacct specific name of the Custom Dimension in all caps, beginning with "GLDIM". Also, you'll notice that the core KFS Dimensions use the format `rocks.kfs.Intacct.CLASSID`. The custom key can be anything you'd like, so long as there is a period before the Dimension name. For example, `org.mychurch.Intacct.GLDIMMYCUSTOMDIM` is a valid Attribute Key.
+- The Key is the actual Intacct specific name of the Custom Dimension in all caps. Also, you'll notice that the core KFS Dimensions use the format `rocks.kfs.Intacct.CLASSID`. The custom key can be anything you'd like, so long as there is a period before the Dimension name. For example, `org.mychurch.Intacct.MYCUSTOMDIM` is a valid Attribute Key. The plugin will automatically prepend `GLDIM` to the front of your Dimension name to ensure compatibility with the Sage Intacct api.
 - Text attributes are recommended for the Custom Dimensions. However, the value you enter in the attribute on the Financial Account must be the System Info > ID, not the text value. (i.e. Value: MT-Event-P1234, ID: 10005. You must enter 10005 in Rock.)
+- Debit and/or Credit specific dimensions are also supported. Simply add `_DEBIT` or `_CREDIT` to the end of the Rock key for the referenced dimension to be only applied to credit or debit grouping respectively. If no suffix is added, the dimension will be used for both debit and credit grouping. The plugin will automatically remove the suffix from your Dimension name to ensure compatibility with the Sage Intacct api.
 
 **Examples:**
 - *Custom Dimension 1:*
   - Record Name: Restriction
   - Integration Name: restriction
-  - Rock Key: GLDIMRESTRICTION
+  - Rock Key: RESTRICTION
 - *Custom Dimension 2:*
   - Record Name: Custom Project
   - Integration Name: custom_project
-  - Rock Key: GLDIMCUSTOM_PROJECT
+  - Rock Key: CUSTOM_PROJECT
 - *Custom Dimension 2 Value:*
   - Custom Project: MT - Event - P1234
   - ID: 10005
