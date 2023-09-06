@@ -28,9 +28,32 @@
         text-align: center;
     }
 
-    .popover-content header img {
-        width: 64px;
+    .js-person-popover-stepstocare + .popover {
+        max-width: 100%;
     }
+
+        .js-person-popover-stepstocare + .popover .popover-content .person-image {
+            float: left;
+            width: 70px;
+            height: 70px;
+            margin-right: 8px;
+            background-position: 50%;
+            background-size: cover;
+            border: 1px solid #dfe0e1;
+        }
+
+        .js-person-popover-stepstocare + .popover .popover-content .contents {
+            float: left;
+            width: calc(100% - 78px);
+        }
+
+        .js-person-popover-stepstocare + .popover .popover-content .email {
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 100%;
+            display: inline-block;
+        }
 
     .hasParentNeed {
         background-color: #ececec !important;
@@ -199,7 +222,7 @@
                     });
 
                     // person-link-popover
-                    $('.js-person-popover').popover({
+                    $('.js-person-popover-stepstocare').popover({
                         placement: 'right',
                         trigger: 'manual',
                         sanitize: false,
@@ -207,19 +230,16 @@
                         html: true,
                         content: function ()
                         {
-                            var dataUrl = Rock.settings.get( 'baseUrl' ) + 'api/People/PopupHtml/' + $( this ).attr( 'personid' ) + '/true';
+                            var dataUrl = Rock.settings.get( 'baseUrl' ) + 'api/People/GetSearchDetails?id=' + $( this ).attr( 'personid' ) + '';
 
                             var result = $.ajax( {
                                 type: 'GET',
                                 url: dataUrl,
-                                dataType: 'json',
-                                contentType: 'application/json; charset=utf-8',
+                                dataType: 'text/html',
                                 async: false
                             } ).responseText;
 
-                            var resultObject = JSON.parse( result );
-
-                            return resultObject.PickerItemDetailsHtml;
+                            return result.replace( /^"/i, '' ).replace( /"$/i, '' ).replace( /\\"/ig, '"' ).replace( /<span class=['"]email['"]>(.*)<\/span>/ig, '<a href="/Communication?person=' + $( this ).attr( 'personid' ) + '" class="email">$1</a>' );
 
                         }
                     }).on('mouseenter', function () {

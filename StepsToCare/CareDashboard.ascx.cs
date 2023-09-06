@@ -1087,7 +1087,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                         if ( careNeed.PersonAlias != null )
                         {
-                            lName.Text = string.Format( "{3} {4} <a href=\"{0}\" class=\"js-person-popover\" personid=\"{5}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr, childNeedStr, parentNeedStr, careNeed.PersonAlias.PersonId );
+                            lName.Text = string.Format( "{3} {4} <a href=\"{0}\" class=\"js-person-popover-stepstocare\" personid=\"{5}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr, childNeedStr, parentNeedStr, careNeed.PersonAlias.PersonId );
                         }
                     }
 
