@@ -362,7 +362,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// </summary>
         private bool _canViewCareWorker = false;
 
-        private readonly string _photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
+        private readonly string _photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover-simple\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
 
         private List<NoteTypeCache> _careNeedNoteTypes = new List<NoteTypeCache>();
 
