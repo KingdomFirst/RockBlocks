@@ -49,10 +49,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultBooleanValue = false,
         Key = AttributeKey.AllowNewPerson )]
 
-    [GroupRoleField( null, "Group Type and Role",
-        Description = "Select the group Type and Role of the leader you would like auto assigned to care need. If none are selected it will not auto assign the small group member to the need. ",
+    [CustomEnhancedListField( "Group Type Roles",
+        Description = "Select the Group Type Roles of the leaders you would like auto assigned to care need when the Person is a member of this type of group. If none are selected it will not auto assign the small group member with the appropriate role to the need. ",
         IsRequired = false,
-        Key = AttributeKey.GroupTypeAndRole )]
+        ListSource = "SELECT gtr.[Guid] as [Value], CONCAT(gt.[Name],' > ',gtr.[Name]) as [Text] FROM GroupTypeRole gtr JOIN GroupType gt ON gtr.GroupTypeId = gt.Id ORDER BY gt.[Name], gtr.[Order]",
+        Key = AttributeKey.GroupTypeAndRole )]   
 
     [BooleanField( "Auto Assign Worker with Geofence",
         Description = "Care Need Workers can have Geofence locations assigned to them, if there are workers with geofences and this block setting is enabled it will auto assign workers to this need on new entries based on the requester home being in the geofence.",
