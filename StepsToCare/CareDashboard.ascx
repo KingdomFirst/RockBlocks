@@ -24,9 +24,36 @@
         overflow-y: auto;
     }
 
-    .popover-content {
+    .js-person-popover-simple + .popover .popover-content {
         text-align: center;
     }
+
+    .js-person-popover-stepstocare + .popover {
+        max-width: 100%;
+    }
+
+        .js-person-popover-stepstocare + .popover .popover-content .person-image {
+            float: left;
+            width: 70px;
+            height: 70px;
+            margin-right: 8px;
+            background-position: 50%;
+            background-size: cover;
+            border: 1px solid #dfe0e1;
+        }
+
+        .js-person-popover-stepstocare + .popover .popover-content .contents {
+            float: left;
+            width: calc(100% - 78px);
+        }
+
+        .js-person-popover-stepstocare + .popover .popover-content .email {
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 100%;
+            display: inline-block;
+        }
 
     .hasParentNeed {
         background-color: #ececec !important;
@@ -195,9 +222,44 @@
                     });
 
                     // person-link-popover
-                    $('.js-person-popover').popover({
+                    $('.js-person-popover-stepstocare').popover({
                         placement: 'right',
                         trigger: 'manual',
+                        sanitize: false,
+                        delay: 500,
+                        html: true,
+                        content: function ()
+                        {
+                            var dataUrl = Rock.settings.get( 'baseUrl' ) + 'api/People/GetSearchDetails?id=' + $( this ).attr( 'personid' ) + '';
+
+                            var result = $.ajax( {
+                                type: 'GET',
+                                url: dataUrl,
+                                dataType: 'text/html',
+                                async: false
+                            } ).responseText;
+
+                            return result.replace( /^"/i, '' ).replace( /"$/i, '' ).replace( /\\"/ig, '"' ).replace( /<span class=['"]email['"]>(.*)<\/span>/ig, '<a href="/Communication?person=' + $( this ).attr( 'personid' ) + '" class="email">$1</a>' );
+
+                        }
+                    }).on('mouseenter', function () {
+                        var _this = this;
+                        $(this).popover('show');
+                        $(this).siblings('.popover').on('mouseleave', function () {
+                            $(_this).popover('hide');
+                        });
+                    }).on('mouseleave', function () {
+                        var _this = this;
+                        setTimeout(function () {
+                            if (!$('.popover:hover').length) {
+                                $(_this).popover('hide')
+                            }
+                        }, 100);
+                    } );
+                    $( '.js-person-popover-simple' ).popover( {
+                        placement: 'right',
+                        trigger: 'manual',
+                        sanitize: false,
                         delay: 500,
                         html: true,
                         content: function () {

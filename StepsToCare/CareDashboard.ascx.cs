@@ -362,7 +362,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// </summary>
         private bool _canViewCareWorker = false;
 
-        private readonly string _photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
+        private readonly string _photoFormat = "<div class=\"photo-icon photo-round photo-round-xs pull-left margin-r-sm js-person-popover-simple\" personid=\"{0}\" data-original=\"{1}&w=50\" style=\"background-image: url( '{2}' ); background-size: cover; background-repeat: no-repeat;\"></div>";
 
         private List<NoteTypeCache> _careNeedNoteTypes = new List<NoteTypeCache>();
 
@@ -1087,7 +1087,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                         if ( careNeed.PersonAlias != null )
                         {
-                            lName.Text = string.Format( "{3} {4} <a href=\"{0}\" class=\"js-person-popover\" personid=\"{5}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr, childNeedStr, parentNeedStr, careNeed.PersonAlias.PersonId );
+                            lName.Text = string.Format( "{3} {4} <a href=\"{0}\" class=\"js-person-popover-stepstocare\" personid=\"{5}\">{1}</a> {2}", ResolveUrl( string.Format( "~/Person/{0}", careNeed.PersonAlias.PersonId ) ), careNeed.PersonAlias.Person.FullName ?? string.Empty, careNeedFlagStr, childNeedStr, parentNeedStr, careNeed.PersonAlias.PersonId );
                         }
                     }
 
