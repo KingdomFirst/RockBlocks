@@ -107,12 +107,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 7,
         Key = AttributeKey.TargetModeIncludeFamilyMembers )]
 
+    [IntegerField( "Threshold of Days for Scheduled Needs",
+        Description = "The number of days from today to display scheduled needs on the dashboard.",
+        IsRequired = true,
+        DefaultIntegerValue = 3,
+        Order = 8,
+        Key = AttributeKey.FutureThresholdDays )]
+
     [BooleanField(
         "Enable Launch Workflow",
         Description = "Enable Launch Workflow Action",
         IsRequired = false,
         DefaultBooleanValue = true,
-        Order = 7,
+        Order = 9,
         Category = "Actions",
         Key = AttributeKey.WorkflowEnable )]
 
@@ -120,7 +127,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         "Prayer Detail Page",
         Description = "Page used to convert needs to prayer requests. (if not set the action will not show)",
         IsRequired = false,
-        Order = 8,
+        Order = 10,
         Category = "Actions",
         Key = AttributeKey.PrayerDetailPage )]
 
@@ -128,16 +135,24 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         "Benevolence Detail Page",
         Description = "Page used to convert needs to benevolence requests. (if not set the action will not show)",
         IsRequired = false,
-        Order = 9,
+        Order = 11,
         Category = "Actions",
         Key = AttributeKey.BenevolenceDetailPage )]
+
+    [BenevolenceTypeField( "Benevolence Type",
+        Description = "The Benevolence type used when creating benevolence requests from Steps to Care 'Actions'",
+        IsRequired = true,
+        DefaultValue = Rock.SystemGuid.BenevolenceType.BENEVOLENCE,
+        Key = AttributeKey.BenevolenceType,
+        Category = "Actions",
+        Order = 12 )]
 
     [BooleanField(
         "Enable Add Connection Request",
         Description = "Enable Add Connection Request Action",
         IsRequired = false,
         DefaultBooleanValue = false,
-        Order = 10,
+        Order = 13,
         Category = "Actions",
         Key = AttributeKey.ConnectionRequestEnable )]
 
@@ -145,13 +160,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Description = "Filter down the connection types to include only these selected types.",
         Category = "Actions",
         IsRequired = false,
-        Order = 11,
+        Order = 14,
         Key = AttributeKey.IncludeConnectionTypes )]
 
     [BooleanField( "Complete Child Needs on Parent Completion",
         DefaultBooleanValue = true,
         Category = "Actions",
-        Order = 12,
+        Order = 15,
         Key = AttributeKey.CompleteChildNeeds )]
 
     [CustomDropdownListField( "Display Type",
@@ -160,43 +175,43 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = true,
         DefaultValue = "Full",
         Category = "Notes Dialog",
-        Order = 12,
+        Order = 16,
         Key = AttributeKey.DisplayType )]
 
     [BooleanField( "Use Person Icon",
         DefaultBooleanValue = false,
-        Order = 13,
+        Order = 17,
         Category = "Notes Dialog",
         Key = AttributeKey.UsePersonIcon )]
 
     [BooleanField( "Show Alert Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 14,
+        Order = 18,
         Key = AttributeKey.ShowAlertCheckbox )]
 
     [BooleanField( "Show Private Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 15,
+        Order = 19,
         Key = AttributeKey.ShowPrivateCheckbox )]
 
     [BooleanField( "Show Security Button",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 16,
+        Order = 20,
         Key = AttributeKey.ShowSecurityButton )]
 
     [BooleanField( "Allow Backdated Notes",
         DefaultBooleanValue = false,
         Category = "Notes Dialog",
-        Order = 17,
+        Order = 21,
         Key = AttributeKey.AllowBackdatedNotes )]
 
     [BooleanField( "Close Dialog on Save",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 18,
+        Order = 22,
         Key = AttributeKey.CloseDialogOnSave )]
 
     [CodeEditorField( "Note View Lava Template",
@@ -207,14 +222,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = false,
         DefaultValue = @"{% include '~~/Assets/Lava/NoteViewList.lava' %}",
         Category = "Notes Dialog",
-        Order = 19,
+        Order = 23,
         Key = AttributeKey.NoteViewLavaTemplate )]
-
-    [IntegerField( "Threshold of Days for Scheduled Needs",
-        Description = "The number of days from today to display scheduled needs on the dashboard.",
-        IsRequired = true,
-        DefaultIntegerValue = 3,
-        Key = AttributeKey.FutureThresholdDays )]
 
     [SecurityAction(
         SecurityActionKey.CareWorkers,
@@ -261,6 +270,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string CompleteChildNeeds = "CompleteChildNeeds";
             public const string TargetModeIncludeFamilyMembers = "TargetModeIncludeFamilyMembers";
             public const string FutureThresholdDays = "FutureThresholdDays";
+            public const string BenevolenceType = "BenevolenceType";
         }
 
         /// <summary>
@@ -1255,7 +1265,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var careNeed = careNeedService.Get( id );
                         BenevolenceRequestService benevolenceRequestService = new BenevolenceRequestService( rockContext );
                         BenevolenceResultService benevolenceResultService = new BenevolenceResultService( rockContext );
-
+                        var requestType = new BenevolenceTypeService( rockContext ).Get( GetAttributeValue( AttributeKey.BenevolenceType ) );
+                        if ( requestType == null )
+                        {
+                            mdGridWarning.Show( "Invalid benevolence type provided.", ModalAlertType.Alert );
+                            break;
+                        }
                         BenevolenceRequest benevolenceRequest = null;
                         benevolenceRequest = new BenevolenceRequest { Id = 0 };
 
@@ -1264,6 +1279,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         benevolenceRequest.Email = careNeed.PersonAlias.Person.Email;
                         benevolenceRequest.RequestText = careNeed.Details;
                         benevolenceRequest.CampusId = careNeed.CampusId;
+                        benevolenceRequest.BenevolenceTypeId = requestType.Id;
 
                         if ( careNeed.PersonAlias.Person.GetHomeLocation() != null )
                         {
