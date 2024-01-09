@@ -1621,6 +1621,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         {
                             ctrl.Attributes.Add( "data-placeholder", $"Select a {attribute.Name}" );
                         }
+                        foreach ( var ctrl in control.ControlsOfTypeRecursive<RockListBox>() )
+                        {
+                            ctrl.Attributes.Add( "data-placeholder", $"Select a {attribute.Name}" );
+                        }
 
                         AddFilterControl( control, attribute.Name, attribute.Description, hideFilters.Contains( attribute.Guid.ToString() ) );
                     }
