@@ -33,11 +33,6 @@
 
                         <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
 
-                        <Rock:AddressControl ID="filter_acAddress" runat="server" Required="true" RequiredErrorMessage="Your Address is Required" />
-                        <Rock:RockTextBox ID="filter_tbPostalCode" runat="server" Required="true" RequiredErrorMessage="Your Postal Code is Required" Label="Postal Code" CssClass="form-control js-postal-code js-postcode js-address-field" />
-                        <asp:RegularExpressionValidator ID="revPostalCode" runat="server" ControlToValidate="filter_tbPostalCode" ValidationExpression="[0-9]*\-*[0-9]*" Text="-" CssClass="hidden hide"></asp:RegularExpressionValidator>
-                        <Rock:RockCheckBoxList ID="filter_cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Visible="false" />
-                        <Rock:RockDropDownList ID="filter_ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
                         <asp:PlaceHolder ID="phFilterControls" runat="server" />
                         <asp:Panel runat="server" ID="pnlBtnFilterControls" class="form-group" Visible="false">
                             <button id="btnFilterControls" runat="server" class="btn btn-default btn-xs btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">[More Filters] <i class='fa fa-caret-down'></i><i class='fa fa-caret-up'></i></button>

@@ -235,7 +235,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.RequirePostalCode )]
     [CustomCheckboxListField( "Hide Selected Filters on Initial Load",
-        ListSource = "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_PostalCode,filter_ShowFullGroups') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
+        ListSource = "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_Address,filter_PostalCode,filter_ShowFullGroups') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
         IsRequired = false,
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.HideFiltersInitialLoad )]
@@ -516,6 +516,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private const string INCLUDE_INACTIVE_KEY = "includeInactive";
         private const string VALUES_KEY = "values";
         private const string REPEAT_COLUMNS = "repeatColumns";
+
+        private AddressControl filter_acAddress = null;
+        private RockTextBox filter_tbPostalCode = null;
+        private RegularExpressionValidator revPostalCode = null;
+        private RockCheckBoxList filter_cblCampus = null;
+        private RockDropDownList filter_ddlCampus = null;
 
         #endregion Private Variables
 
@@ -1196,6 +1202,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             cblInitialLoadFilters.Items.Add( new ListItem( "TimeofDay", "filter_time" ) );
                         }
                         cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
+                        cblInitialLoadFilters.Items.Add( new ListItem( "Address", "filter_address" ) );
                         cblInitialLoadFilters.Items.Add( new ListItem( "PostalCode", "filter_postalcode" ) );
                         cblInitialLoadFilters.Items.Add( new ListItem( "Keyword", "filter_keyword" ) );
                         cblInitialLoadFilters.Items.Add( new ListItem( "Show Full Groups", "filter_showfullgroups" ) );
@@ -1437,6 +1444,15 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 phFilterControlsCollapsed.Controls.Clear();
             }
 
+            if ( filter_acAddress == null )
+            {
+                filter_acAddress = new AddressControl();
+                filter_acAddress.ID = "filter_acAddress";
+                filter_acAddress.Required = true;
+                filter_acAddress.RequiredErrorMessage = "Your Address is Required";
+            }
+            AddFilterControl( filter_acAddress, "", "", hideFilters.Contains( "filter_address" ) );
+
             if ( _autoPostback )
             {
                 if ( filter_acAddress.Visible )
@@ -1446,20 +1462,28 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         ctrl.AutoPostBack = true;
                     }
                 }
-
-                filter_tbPostalCode.AutoPostBack = true;
-                filter_cblCampus.AutoPostBack = true;
-                filter_ddlCampus.AutoPostBack = true;
             }
 
-            filter_tbPostalCode.Label = GetAttributeValue( AttributeKey.PostalCodeLabel );
-            filter_tbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( AttributeKey.PostalCodeLabel ) );
-            revPostalCode.ErrorMessage = string.Format( "Your {0} is an invalid format, 12345 or 12345-6789 only.", GetAttributeValue( AttributeKey.PostalCodeLabel ) );
-            if ( hideFilters.Contains( "filter_postalcode" ) )
+            if ( filter_tbPostalCode == null )
             {
-                pnlSearch.Controls.Remove( filter_tbPostalCode );
-                phFilterControlsCollapsed.Controls.Add( filter_tbPostalCode );
+                filter_tbPostalCode = new RockTextBox();
+                filter_tbPostalCode.ID = "filter_tbPostalCode";
+                filter_tbPostalCode.Required = true;
+                filter_tbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( AttributeKey.PostalCodeLabel ) );
+                filter_tbPostalCode.CssClass = "form-control js-postal-code js-postcode js-address-field";
+                filter_tbPostalCode.Label = GetAttributeValue( AttributeKey.PostalCodeLabel );
+                filter_tbPostalCode.AutoPostBack = _autoPostback;
+
+                revPostalCode = new RegularExpressionValidator();
+                revPostalCode.ID = "revPostalCode";
+                revPostalCode.ControlToValidate = "filter_tbPostalCode";
+                revPostalCode.ValidationExpression = "[0-9]*\\-*[0-9]*";
+                revPostalCode.Text = "-";
+                revPostalCode.CssClass = "hidden hide";
+                revPostalCode.ErrorMessage = string.Format( "Your {0} is an invalid format, 12345 or 12345-6789 only.", GetAttributeValue( AttributeKey.PostalCodeLabel ) );
             }
+            AddFilterControl( filter_tbPostalCode, GetAttributeValue( AttributeKey.PostalCodeLabel ), "", hideFilters.Contains( "filter_postalcode" ) );
+            AddFilterControl( revPostalCode, "", "", hideFilters.Contains( "filter_postalcode" ) );
 
             var scheduleFilters = GetAttributeValue( AttributeKey.ScheduleFilters ).SplitDelimitedValues().ToList();
             if ( scheduleFilters.Contains( "Days" ) )
@@ -1524,6 +1548,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 if ( _ssFilters )
                 {
+                    filter_ddlCampus = new RockDropDownList();
+                    filter_ddlCampus.ID = "filter_ddlCampus";
+                    filter_ddlCampus.DataTextField = "Name";
+                    filter_ddlCampus.DataValueField = "Id";
+                    filter_ddlCampus.AutoPostBack = _autoPostback;
                     filter_ddlCampus.Visible = true;
                     filter_ddlCampus.Items.Add( new ListItem( string.Empty, string.Empty ) );
                     foreach ( var campus in campuses.OrderBy( c => c.Order ) )
@@ -1531,24 +1560,22 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         ListItem li = new ListItem( campus.Name, campus.Id.ToString() );
                         filter_ddlCampus.Items.Add( li );
                     }
-                    if ( hideFilters.Contains( "filter_campus" ) )
-                    {
-                        pnlSearch.Controls.Remove( filter_ddlCampus );
-                        phFilterControlsCollapsed.Controls.Add( filter_ddlCampus );
-                    }
+
+                    AddFilterControl( filter_ddlCampus, GetAttributeValue( AttributeKey.CampusLabel ), "", hideFilters.Contains( "filter_campus" ) );
                 }
                 else
                 {
+                    filter_cblCampus = new RockCheckBoxList();
+                    filter_cblCampus.ID = "filter_cblCampus";
+                    filter_cblCampus.DataTextField = "Name";
+                    filter_cblCampus.DataValueField = "Id";
+                    filter_cblCampus.RepeatDirection = RepeatDirection.Horizontal;
+                    filter_cblCampus.AutoPostBack = _autoPostback;
                     filter_cblCampus.Visible = true;
                     filter_cblCampus.DataSource = campuses.OrderBy( c => c.Order );
                     filter_cblCampus.DataBind();
-                    if ( hideFilters.Contains( "filter_campus" ) )
-                    {
-                        pnlSearch.Controls.Remove( filter_cblCampus );
-                        phFilterControlsCollapsed.Controls.Add( filter_cblCampus );
-                    }
+                    AddFilterControl( filter_cblCampus, GetAttributeValue( AttributeKey.CampusLabel ), "", hideFilters.Contains( "filter_campus" ) );
                 }
-                filter_cblCampus.Label = GetAttributeValue( AttributeKey.CampusLabel );
             }
             else
             {
@@ -1794,7 +1821,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     var cssStyle = new StringBuilder();
                     foreach ( var hideFilter in hiddenValues )
                     {
-                        var valSplit = hideFilter.Value.SplitDelimitedValues(false);
+                        var valSplit = hideFilter.Value.SplitDelimitedValues( false );
                         foreach ( var hideVal in valSplit )
                         {
                             cssStyle.AppendFormat( "[id*=\"{0}\"][value=\"{1}\"], [id*=\"{0}\"][value=\"{1}\"] + span, ", hideFilter.Key, hideVal.EscapeQuotes() );
