@@ -1794,7 +1794,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     var cssStyle = new StringBuilder();
                     foreach ( var hideFilter in hiddenValues )
                     {
-                        var valSplit = hideFilter.Value.SplitDelimitedValues();
+                        var valSplit = hideFilter.Value.SplitDelimitedValues(false);
                         foreach ( var hideVal in valSplit )
                         {
                             cssStyle.AppendFormat( "[id*=\"{0}\"][value=\"{1}\"], [id*=\"{0}\"][value=\"{1}\"] + span, ", hideFilter.Key, hideVal.EscapeQuotes() );
