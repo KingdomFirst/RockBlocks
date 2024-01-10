@@ -1795,6 +1795,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 ctrl.SelectedIndexChanged -= btnSearch_Click;
                 ctrl.SelectedIndexChanged += btnSearch_Click;
             }
+            foreach ( var ctrl in control.ControlsOfTypeRecursive<RockListBox>() )
+            {
+                ctrl.AutoPostBack = true;
+                ctrl.SelectedIndexChanged -= btnSearch_Click;
+                ctrl.SelectedIndexChanged += btnSearch_Click;
+            }
         }
 
         private void hideAttributeValues()
