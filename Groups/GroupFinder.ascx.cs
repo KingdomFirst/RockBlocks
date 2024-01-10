@@ -1619,11 +1619,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         }
                         foreach ( var ctrl in control.ControlsOfTypeRecursive<DefinedValuesPickerEnhanced>() )
                         {
-                            ctrl.Attributes.Add( "data-placeholder", $"Select a {attribute.Name}" );
+                            ctrl.Attributes.Add( "data-placeholder", $"Select {attribute.Name}" );
                         }
                         foreach ( var ctrl in control.ControlsOfTypeRecursive<RockListBox>() )
                         {
-                            ctrl.Attributes.Add( "data-placeholder", $"Select a {attribute.Name}" );
+                            ctrl.Attributes.Add( "data-placeholder", $"Select {attribute.Name}" );
                         }
 
                         AddFilterControl( control, attribute.Name, attribute.Description, hideFilters.Contains( attribute.Guid.ToString() ) );
