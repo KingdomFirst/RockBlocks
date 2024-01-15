@@ -240,7 +240,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.HideFiltersInitialLoad )]
     [CustomCheckboxListField( "Exclude Attribute Values from Filter",
-        Description = "Use this setting to hide attribute values from the available options in the search filter",
+        Description = "Use this setting to hide attribute values from the available options in the search filter. Some field types are not supported (such as Enhanced For Long List attributes).",
         ListSource = "SELECT a.Name as Text, CONCAT(a.[Key],'_',a.FieldTypeId) as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
         IsRequired = false, Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.HideAttributeValues )]
@@ -861,7 +861,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( AttributeKey.AttributeFilters, cblAttributes.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.HideFiltersInitialLoad, cblInitialLoadFilters.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.AttributeCustomSort, ddlAttributeSort.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
-            SetAttributeValue( AttributeKey.HideAttributeValues, cblAttributeHiddenOptions.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
+            SetAttributeValue( AttributeKey.HideAttributeValues, rblAttributeHiddenOptions.SelectedValues.AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.AttributesInKeywords, cblAttributesInKeywords.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
 
             SetAttributeValue( AttributeKey.ShowMap, cbShowMap.Checked.ToString() );
@@ -1081,7 +1081,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             }
             foreach ( string attr in GetAttributeValue( AttributeKey.HideAttributeValues ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ) )
             {
-                var li = cblAttributeHiddenOptions.Items.FindByValue( attr );
+                var li = rblAttributeHiddenOptions.Items.FindByValue( attr.Replace( "||", "^" ) );
                 if ( li != null )
                 {
                     li.Selected = true;
@@ -1182,7 +1182,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cblGridAttributes.Items.Clear();
             cblInitialLoadFilters.Items.Clear();
             ddlAttributeSort.Items.Clear();
-            cblAttributeHiddenOptions.Items.Clear();
+            rblAttributeHiddenOptions.Items.Clear();
             cblAttributesInKeywords.Items.Clear();
 
             if ( gtpGroupType.SelectedValuesAsInt != null )
@@ -1236,14 +1236,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                     var definedType = DefinedTypeCache.Get( definedTypeId.Value );
                                     foreach ( var val in definedType.DefinedValues )
                                     {
-                                        cblAttributeHiddenOptions.Items.Add( new ListItem( ( useDescription ) ? val.Description : val.Value, string.Format( "filter_{0}_{1}||{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, val.Id.ToString() ) ) );
+                                        rblAttributeHiddenOptions.Items.Add( new ListItem( string.Format( "{0} [{1} ({2})]", ( useDescription ) ? val.Description : val.Value, attribute.Value.Name, groupType.Name ), string.Format( "filter_{0}_{1}^{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, val.Id.ToString() ) ) );
                                     }
                                 }
                                 else
                                 {
                                     foreach ( var keyVal in Rock.Field.Helper.GetConfiguredValues( configurationValues ) )
                                     {
-                                        cblAttributeHiddenOptions.Items.Add( new ListItem( keyVal.Value, string.Format( "filter_{0}_{1}||{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, keyVal.Key ) ) );
+                                        rblAttributeHiddenOptions.Items.Add( new ListItem( string.Format( "{0} [{1} ({2})]", keyVal.Value, attribute.Value.Name, groupType.Name ), string.Format( "filter_{0}_{1}^{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, keyVal.Key ) ) );
                                     }
                                 }
                             }
@@ -1274,8 +1274,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             cblAttributes.Visible = cblAttributes.Items.Count > 0;
             cblGridAttributes.Visible = cblAttributes.Items.Count > 0;
+            rblAttributeHiddenOptions.Visible = rblAttributeHiddenOptions.Items.Count > 0;
             ddlAttributeSort.Visible = ddlAttributeSort.Items.Count > 0;
-            cblAttributeHiddenOptions.Visible = cblAttributeHiddenOptions.Items.Count > 0;
             cblAttributesInKeywords.Visible = cblAttributesInKeywords.Items.Count > 0;
 
             BindGroupTypeLocationGrid();
@@ -1813,7 +1813,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var splitValues = hiddenAttributeValues.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
                 foreach ( var val in splitValues )
                 {
-                    var dictSplit = val.Split( new string[] { "||" }, StringSplitOptions.RemoveEmptyEntries );
+                    var dictSplit = val.Split( new string[] { "^","||" }, StringSplitOptions.RemoveEmptyEntries );
                     if ( dictSplit.Count() > 1 )
                     {
                         if ( hiddenValues.ContainsKey( dictSplit[0] ) )

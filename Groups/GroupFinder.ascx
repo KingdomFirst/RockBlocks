@@ -188,11 +188,11 @@
                                             Help="Collapse/Hide these filter controls under a collapsible panel for user on first load." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockDropDownList ID="ddlAttributeSort" runat="server" Label="Custom Sort from Attribute"
                                             Help="Select an attribute to sort by if a group contains multiple of the selected attribute filter options." ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBoxList ID="cblAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values" RepeatDirection="Horizontal"
-                                            Help="The group attribute values that you would like to hide from the filter options." ValidationGroup="GroupFinderSettings" />
-                                         <Rock:RockCheckBoxList ID="cblAttributesInKeywords" runat="server" Label="Attributes in Keyword Search" RepeatDirection="Horizontal"
+                                        <Rock:RockListBox ID="rblAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values"
+                                            Help="The group attribute values that you would like to hide from the filter options. Some field types are not supported (such as Enhanced For Long List attributes)." ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockCheckBoxList ID="cblAttributesInKeywords" runat="server" Label="Attributes in Keyword Search" RepeatDirection="Horizontal"
                                             Help="The text-based group attributes that should be included in keyword search." ValidationGroup="GroupFinderSettings" />
-                                   </div>
+                                    </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
