@@ -30,8 +30,11 @@
 // * Added Custom Schedule Support to DOW Filters
 // * Added Keyword search to search name or description of groups
 // * Added an additional setting to include Pending members in Over Capacity checking
-// * Added a setting to override groups Is Public setting to show on the finder.
-// Package Version 1.5
+// * Added a setting to override groups Is Public setting to show on the finder
+// * Added ability to display Over Capacity groups with a filter
+// * Added Auto Load Filter capability on value selection
+// * Added ability to sort how filters are displayed
+// Package Version 1.7
 // </notice>
 //
 using System;
@@ -234,7 +237,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         DefaultBooleanValue = true,
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.RequirePostalCode )]
-    [CustomCheckboxListField( "Hide Selected Filters on Initial Load",
+    [CustomCheckboxListField( "Collapse Filters on Initial Load",
+        Description = "Collapse/Hide these filter controls under a collapsible panel for user on first load. Note: when sorting filters below any filters that are collapsed will only be sorted with each other."
         ListSource = "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_Address,filter_PostalCode,filter_ShowFullGroups') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
         IsRequired = false,
         Category = AttributeCategory.CustomSetting,
@@ -1236,18 +1240,25 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 AddToFilterOrder( 5, "filter_postalcode" );
                 AddToFilterOrder( 6, "filter_keyword" );
                 AddToFilterOrder( 7, "filter_showfullgroups" );
-                var filterOrderIndex = 8;
+                _groupTypeAttributes.AddOrIgnore( "filter_dow", "Day of Week" );
+                _groupTypeAttributes.AddOrIgnore( "filter_time", "Time of Day" );
+                _groupTypeAttributes.AddOrIgnore( "filter_campus", "Campus" );
+                _groupTypeAttributes.AddOrIgnore( "filter_address", "Address" );
+                _groupTypeAttributes.AddOrIgnore( "filter_postalcode", "Postal Code" );
+                _groupTypeAttributes.AddOrIgnore( "filter_keyword", "Keyword" );
+                _groupTypeAttributes.AddOrIgnore( "filter_showfullgroups", "Show Full Groups" );
 
-                cblInitialLoadFilters.Items.Add( new ListItem( "DayofWeek", "filter_dow" ) );
-                cblInitialLoadFilters.Items.Add( new ListItem( "TimeofDay", "filter_time" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "Day of Week", "filter_dow" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "Time of Day", "filter_time" ) );
                 cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
                 cblInitialLoadFilters.Items.Add( new ListItem( "Address", "filter_address" ) );
-                cblInitialLoadFilters.Items.Add( new ListItem( "PostalCode", "filter_postalcode" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "Postal Code", "filter_postalcode" ) );
                 cblInitialLoadFilters.Items.Add( new ListItem( "Keyword", "filter_keyword" ) );
                 cblInitialLoadFilters.Items.Add( new ListItem( "Show Full Groups", "filter_showfullgroups" ) );
                 cblInitialLoadFilters.Items.Add( new ListItem( "Search Button", "btnSearch" ) );
                 cblInitialLoadFilters.Items.Add( new ListItem( "Clear Button", "btnClear" ) );
 
+                var filterOrderIndex = 8;
                 foreach ( var groupType in groupTypes )
                 {
                     if ( groupType != null )
