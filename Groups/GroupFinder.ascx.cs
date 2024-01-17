@@ -250,6 +250,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         AllowMultiple = true,
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.AttributesInKeywords )]
+    [KeyValueListField( "Filter Order",
+        Description = "Key Value list of filters to display filters in the set order. If using 'Hide Selected Filters on Initial Load' the sort order is within each individual area.",
+        KeyPrompt = "Order",
+        ValuePrompt = "Filter Id",
+        Category = AttributeCategory.CustomSetting,
+        Key = AttributeKey.FilterOrder )]
 
     // Map Settings
     [BooleanField( "Show Map",
@@ -454,6 +460,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string ShowFullGroupsLabel = "ShowFullGroupsLabel";
             public const string AttributesInKeywords = "AttributesInKeywords";
             public const string FormattedOutputEnabledLavaCommands = "FormattedOutputEnabledLavaCommands";
+            public const string FilterOrder = "FilterOrder";
         }
 
         private static class AttributeDefaultLava
@@ -497,6 +504,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string AttributeFilters = "AttributeFilters";
             public const string AttributeColumns = "AttributeColumns";
             public const string GroupTypeLocations = "GroupTypeLocations";
+            public const string GroupTypeAttributes = "GroupTypeAttributes";
+            public const string KFSGroupFinderFilterOrder = "KFSGroupFinderFilterOrder";
         }
 
         #region Private Variables
@@ -508,7 +517,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private bool _allowSearch = false;
         private bool _autoPostback = false;
         private string _collapseFilters = "false";
+        private List<string> _hideFilters = new List<string>();
         private Dictionary<string, string> _filterValues = new Dictionary<string, string>();
+        private Dictionary<string, string> _groupTypeAttributes = new Dictionary<string, string>();
+        private Dictionary<int, string> _filterOrder = new Dictionary<int, string>();
+
+        private Dictionary<decimal, Control> _collapsedControls = new Dictionary<decimal, Control>();
+        private Dictionary<decimal, Control> _filterControls = new Dictionary<decimal, Control>();
 
         private const string DEFINED_TYPE_KEY = "definedtype";
         private const string ALLOW_MULTIPLE_KEY = "allowmultiple";
@@ -557,6 +572,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// </value>
         public List<AttributeCache> AttributeColumns { get; set; }
 
+        /// <summary>
+        /// Gets or sets the Filter Order to the Dictionary.
+        /// </summary>
+        /// <value>
+        /// The Filter Order Dictionary.
+        /// </value>
+        private Dictionary<int, string> FilterOrder { get; set; }
+
         #endregion Properties
 
         #region Base Control Methods
@@ -575,6 +598,16 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( GroupTypeLocations == null )
             {
                 GroupTypeLocations = new Dictionary<int, int>();
+            }
+            _groupTypeAttributes = ViewState[ViewStateKey.GroupTypeAttributes] as Dictionary<string, string>;
+            if ( _groupTypeAttributes == null )
+            {
+                _groupTypeAttributes = new Dictionary<string, string>();
+            }
+            FilterOrder = ViewState[ViewStateKey.KFSGroupFinderFilterOrder] as Dictionary<int, string>;
+            if ( FilterOrder == null )
+            {
+                FilterOrder = new Dictionary<int, string>();
             }
 
             BuildDynamicControls( true );
@@ -780,6 +813,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             ViewState[ViewStateKey.AttributeFilters] = AttributeFilters;
             ViewState[ViewStateKey.AttributeColumns] = AttributeColumns;
             ViewState[ViewStateKey.GroupTypeLocations] = GroupTypeLocations;
+            ViewState[ViewStateKey.GroupTypeAttributes] = _groupTypeAttributes;
+            ViewState[ViewStateKey.KFSGroupFinderFilterOrder] = FilterOrder;
 
             return base.SaveViewState();
         }
@@ -863,6 +898,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( AttributeKey.AttributeCustomSort, ddlAttributeSort.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.HideAttributeValues, rblAttributeHiddenOptions.SelectedValues.AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.AttributesInKeywords, cblAttributesInKeywords.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
+            SetAttributeValue( AttributeKey.FilterOrder, ToKVPString( FilterOrder ) );
 
             SetAttributeValue( AttributeKey.ShowMap, cbShowMap.Checked.ToString() );
             SetAttributeValue( AttributeKey.MapStyle, dvpMapStyle.SelectedValue );
@@ -1185,9 +1221,32 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             rblAttributeHiddenOptions.Items.Clear();
             cblAttributesInKeywords.Items.Clear();
 
+            FilterOrder = new Dictionary<int, string>();
+
+            FilterOrder = loadFilterOrder();
+
             if ( gtpGroupType.SelectedValuesAsInt != null )
             {
                 var groupTypes = gtpGroupType.SelectedValuesAsInt.Select( id => GroupTypeCache.Get( id ) );
+
+                AddToFilterOrder( 1, "filter_dow" );
+                AddToFilterOrder( 2, "filter_time" );
+                AddToFilterOrder( 3, "filter_campus" );
+                AddToFilterOrder( 4, "filter_address" );
+                AddToFilterOrder( 5, "filter_postalcode" );
+                AddToFilterOrder( 6, "filter_keyword" );
+                AddToFilterOrder( 7, "filter_showfullgroups" );
+                var filterOrderIndex = 8;
+
+                cblInitialLoadFilters.Items.Add( new ListItem( "DayofWeek", "filter_dow" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "TimeofDay", "filter_time" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "Address", "filter_address" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "PostalCode", "filter_postalcode" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "Keyword", "filter_keyword" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "Show Full Groups", "filter_showfullgroups" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "Search Button", "btnSearch" ) );
+                cblInitialLoadFilters.Items.Add( new ListItem( "Clear Button", "btnClear" ) );
 
                 foreach ( var groupType in groupTypes )
                 {
@@ -1196,18 +1255,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         bool hasWeeklyschedule = ( groupType.AllowedScheduleTypes & ScheduleType.Weekly ) == ScheduleType.Weekly || ( groupType.AllowedScheduleTypes & ScheduleType.Custom ) == ScheduleType.Custom;
                         rblFilterDOW.Visible = hasWeeklyschedule;
                         cbFilterTimeOfDay.Visible = hasWeeklyschedule;
-                        if ( hasWeeklyschedule )
-                        {
-                            cblInitialLoadFilters.Items.Add( new ListItem( "DayofWeek", "filter_dow" ) );
-                            cblInitialLoadFilters.Items.Add( new ListItem( "TimeofDay", "filter_time" ) );
-                        }
-                        cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
-                        cblInitialLoadFilters.Items.Add( new ListItem( "Address", "filter_address" ) );
-                        cblInitialLoadFilters.Items.Add( new ListItem( "PostalCode", "filter_postalcode" ) );
-                        cblInitialLoadFilters.Items.Add( new ListItem( "Keyword", "filter_keyword" ) );
-                        cblInitialLoadFilters.Items.Add( new ListItem( "Show Full Groups", "filter_showfullgroups" ) );
-                        cblInitialLoadFilters.Items.Add( new ListItem( "Search Button", "btnSearch" ) );
-                        cblInitialLoadFilters.Items.Add( new ListItem( "Clear Button", "btnClear" ) );
 
                         var group = new Group();
                         group.GroupTypeId = groupType.Id;
@@ -1226,6 +1273,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                 cblAttributes.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
                                 cblInitialLoadFilters.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
                                 ddlAttributeSort.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
+
+                                AddToFilterOrder( filterOrderIndex, attribute.Value.Guid.ToString() );
+                                _groupTypeAttributes.AddOrIgnore( attribute.Value.Guid.ToString(), attribute.Value.Name + string.Format( " ({0})", groupType.Name ) );
+                                filterOrderIndex++;
 
                                 var configurationValues = attribute.Value.QualifierValues;
                                 bool useDescription = configurationValues != null && configurationValues.ContainsKey( DISPLAY_DESCRIPTION ) && configurationValues[DISPLAY_DESCRIPTION].Value.AsBoolean();
@@ -1279,6 +1330,16 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cblAttributesInKeywords.Visible = cblAttributesInKeywords.Items.Count > 0;
 
             BindGroupTypeLocationGrid();
+            BindFilterOrder();
+        }
+
+        private void AddToFilterOrder( int defaultkey, string filterId )
+        {
+            var filterAddKey = FilterOrder.FirstOrDefault( f => f.Value == filterId ).Key;
+            if ( !FilterOrder.ContainsKey( ( filterAddKey != 0 ) ? filterAddKey : defaultkey ) )
+            {
+                FilterOrder.Add( ( filterAddKey != 0 ) ? filterAddKey : defaultkey, filterId );
+            }
         }
 
         private void ShowViewForPerson( Guid targetPersonGuid )
@@ -1432,13 +1493,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// </summary>
         private void BuildDynamicControls( bool clearHideFilters = false, bool clearControls = true )
         {
-            var hideFilters = GetAttributeValues( AttributeKey.HideFiltersInitialLoad );
-            if ( clearHideFilters && _collapseFilters != "InitialLoad" )
-            {
-                hideFilters.Clear();
-            }
+            _hideFilters = GetAttributeValues( AttributeKey.HideFiltersInitialLoad );
+            _filterOrder = loadFilterOrder();
+
             if ( clearControls )
             {
+                _filterControls = new Dictionary<decimal, Control>();
+                _collapsedControls = new Dictionary<decimal, Control>();
                 // Clear attribute filter controls and recreate
                 phFilterControls.Controls.Clear();
                 phFilterControlsCollapsed.Controls.Clear();
@@ -1451,7 +1512,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 filter_acAddress.Required = true;
                 filter_acAddress.RequiredErrorMessage = "Your Address is Required";
             }
-            AddFilterControl( filter_acAddress, "", "", hideFilters.Contains( "filter_address" ) );
+            AddFilterControl( filter_acAddress, "", "", "filter_address" );
 
             if ( _autoPostback )
             {
@@ -1482,8 +1543,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 revPostalCode.CssClass = "hidden hide";
                 revPostalCode.ErrorMessage = string.Format( "Your {0} is an invalid format, 12345 or 12345-6789 only.", GetAttributeValue( AttributeKey.PostalCodeLabel ) );
             }
-            AddFilterControl( filter_tbPostalCode, GetAttributeValue( AttributeKey.PostalCodeLabel ), "", hideFilters.Contains( "filter_postalcode" ) );
-            AddFilterControl( revPostalCode, "", "", hideFilters.Contains( "filter_postalcode" ) );
+            AddFilterControl( filter_tbPostalCode, GetAttributeValue( AttributeKey.PostalCodeLabel ), "", "filter_postalcode" );
+            AddFilterControl( revPostalCode, "", "", "filter_postalcode" );
 
             var scheduleFilters = GetAttributeValue( AttributeKey.ScheduleFilters ).SplitDelimitedValues().ToList();
             if ( scheduleFilters.Contains( "Days" ) )
@@ -1499,21 +1560,21 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     dowsFilterControl.SelectedIndexChanged += btnSearch_Click;
                 }
 
-                AddFilterControl( dowsFilterControl, "Days of Week", "", hideFilters.Contains( "filter_dow" ) );
+                AddFilterControl( dowsFilterControl, "Days of Week", "", "filter_dow" );
             }
 
             if ( scheduleFilters.Contains( "Day" ) )
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field.FilterControl( null, "filter_dow", false, Rock.Reporting.FilterMode.SimpleFilter );
                 string dayOfWeekLabel = GetAttributeValue( AttributeKey.DayOfWeekLabel );
-                AddFilterControl( control, dayOfWeekLabel, "", hideFilters.Contains( "filter_dow" ) );
+                AddFilterControl( control, dayOfWeekLabel, "", "filter_dow" );
             }
 
             if ( scheduleFilters.Contains( "Time" ) )
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.TIME ).Field.FilterControl( null, "filter_time", false, Rock.Reporting.FilterMode.SimpleFilter );
                 string timeOfDayLabel = GetAttributeValue( AttributeKey.TimeOfDayLabel );
-                AddFilterControl( control, timeOfDayLabel, "", hideFilters.Contains( "filter_time" ) );
+                AddFilterControl( control, timeOfDayLabel, "", "filter_time" );
             }
 
             if ( GetAttributeValue( AttributeKey.DisplayCampusFilter ).AsBoolean() )
@@ -1561,7 +1622,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         filter_ddlCampus.Items.Add( li );
                     }
 
-                    AddFilterControl( filter_ddlCampus, GetAttributeValue( AttributeKey.CampusLabel ), "", hideFilters.Contains( "filter_campus" ) );
+                    AddFilterControl( filter_ddlCampus, GetAttributeValue( AttributeKey.CampusLabel ), "", "filter_campus" );
                 }
                 else
                 {
@@ -1574,7 +1635,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     filter_cblCampus.Visible = true;
                     filter_cblCampus.DataSource = campuses.OrderBy( c => c.Order );
                     filter_cblCampus.DataBind();
-                    AddFilterControl( filter_cblCampus, GetAttributeValue( AttributeKey.CampusLabel ), "", hideFilters.Contains( "filter_campus" ) );
+                    AddFilterControl( filter_cblCampus, GetAttributeValue( AttributeKey.CampusLabel ), "", "filter_campus" );
                 }
             }
             else
@@ -1592,7 +1653,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     filter_tglShowFullGroups.CheckedChanged -= btnSearch_Click;
                     filter_tglShowFullGroups.CheckedChanged += btnSearch_Click;
                 }
-                AddFilterControl( filter_tglShowFullGroups, GetAttributeValue( AttributeKey.ShowFullGroupsLabel ), "", hideFilters.Contains( "filter_showfullgroups" ) );
+                AddFilterControl( filter_tglShowFullGroups, GetAttributeValue( AttributeKey.ShowFullGroupsLabel ), "", "filter_showfullgroups" );
             }
 
             btnFilter.InnerHtml = btnFilter.InnerHtml.Replace( "[Filter] ", GetAttributeValue( AttributeKey.FilterLabel ) + " " );
@@ -1626,7 +1687,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             ctrl.Attributes.Add( "data-placeholder", $"Select {attribute.Name}" );
                         }
 
-                        AddFilterControl( control, attribute.Name, attribute.Description, hideFilters.Contains( attribute.Guid.ToString() ) );
+                        AddFilterControl( control, attribute.Name, attribute.Description, attribute.Guid.ToString() );
                     }
                 }
             }
@@ -1637,13 +1698,23 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 tbKeyword.Label = GetAttributeValue( AttributeKey.KeywordLabel );
                 tbKeyword.ID = "filter_keyword";
                 tbKeyword.AutoPostBack = _autoPostback;
-                if ( hideFilters.Contains( "filter_keyword" ) )
+                AddFilterControl( tbKeyword, GetAttributeValue( AttributeKey.KeywordLabel ), "", tbKeyword.ID );
+            }
+
+            foreach ( var ctrl in _filterControls.OrderBy( c => c.Key ) )
+            {
+                phFilterControls.Controls.Add( ctrl.Value );
+            }
+
+            foreach ( var ctrl in _collapsedControls.OrderBy( c => c.Key ) )
+            {
+                if ( clearHideFilters && _collapseFilters != "InitialLoad" )
                 {
-                    phFilterControlsCollapsed.Controls.Add( tbKeyword );
+                    phFilterControls.Controls.Add( ctrl.Value );
                 }
                 else
                 {
-                    phFilterControls.Controls.Add( tbKeyword );
+                    phFilterControlsCollapsed.Controls.Add( ctrl.Value );
                 }
             }
 
@@ -1651,12 +1722,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             btnFilterControls.Attributes["aria-controls"] = pnlHiddenFilterControls.ClientID;
             pnlBtnFilterControls.Visible = phFilterControlsCollapsed.Controls.Count > 0;
 
-            if ( hideFilters.Contains( "btnSearch" ) )
+            if ( _hideFilters.Contains( "btnSearch" ) )
             {
                 pnlSearch.Controls.Remove( btnSearch );
                 phFilterControlsCollapsed.Controls.Add( btnSearch );
             }
-            if ( hideFilters.Contains( "btnClear" ) )
+            if ( _hideFilters.Contains( "btnClear" ) )
             {
                 pnlSearch.Controls.Remove( btnClear );
                 phFilterControlsCollapsed.Controls.Add( btnClear );
@@ -1742,6 +1813,19 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             }
         }
 
+        private Dictionary<int, string> loadFilterOrder()
+        {
+            var filterOrder = new Dictionary<int, string>();
+            var filterOrderKVP = GetAttributeValue( AttributeKey.FilterOrder ).ToKeyValuePairList();
+            var defaultOrder = 0;
+            foreach ( var kvp in filterOrderKVP )
+            {
+                filterOrder.AddOrIgnore( kvp.Key.ToIntSafe( defaultOrder ), kvp.Value.ToString() );
+                defaultOrder++;
+            }
+            return filterOrder;
+        }
+
         private void AddAutoPostback( Control control )
         {
             if ( control is ListControl )
@@ -1813,7 +1897,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var splitValues = hiddenAttributeValues.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
                 foreach ( var val in splitValues )
                 {
-                    var dictSplit = val.Split( new string[] { "^","||" }, StringSplitOptions.RemoveEmptyEntries );
+                    var dictSplit = val.Split( new string[] { "^", "||" }, StringSplitOptions.RemoveEmptyEntries );
                     if ( dictSplit.Count() > 1 )
                     {
                         if ( hiddenValues.ContainsKey( dictSplit[0] ) )
@@ -1847,8 +1931,15 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             }
         }
 
-        private void AddFilterControl( Control control, string name, string description, bool collapsible = false )
+        private void AddFilterControl( Control control, string name, string description, string filterShortCode )
         {
+            var collapsible = _hideFilters.Contains( filterShortCode );
+            var controlPosition = _filterOrder.FirstOrDefault( f => f.Value.Equals( filterShortCode ) );
+            decimal controlKey = controlPosition.Key;
+            if ( _filterControls.ContainsKey( controlKey ) || _collapsedControls.ContainsKey( controlKey ) )
+            {
+                controlKey = $"{controlKey}.{controlKey}".AsDecimal();
+            }
             if ( control is IRockControl )
             {
                 var rockControl = ( IRockControl ) control;
@@ -1856,11 +1947,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 rockControl.Help = description;
                 if ( collapsible )
                 {
-                    phFilterControlsCollapsed.Controls.Add( control );
+                    //phFilterControlsCollapsed.Controls.Add( control );
+                    _collapsedControls.AddOrIgnore( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _collapsedControls.Count : controlKey, control );
                 }
                 else
                 {
-                    phFilterControls.Controls.Add( control );
+                    //phFilterControls.Controls.Add( control );
+                    _filterControls.AddOrIgnore( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _filterControls.Count : controlKey, control );
                 }
             }
             else
@@ -1871,11 +1964,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 wrapper.Controls.Add( control );
                 if ( collapsible )
                 {
-                    phFilterControlsCollapsed.Controls.Add( wrapper );
+                    //phFilterControlsCollapsed.Controls.Add( wrapper );
+                    _collapsedControls.AddOrIgnore( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _collapsedControls.Count : controlKey, wrapper );
                 }
                 else
                 {
-                    phFilterControls.Controls.Add( wrapper );
+                    //phFilterControls.Controls.Add( wrapper );
+                    _filterControls.AddOrIgnore( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _filterControls.Count : controlKey, wrapper );
                 }
             }
         }
@@ -2742,6 +2837,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             return null;
         }
 
+        private void BindFilterOrder()
+        {
+            gSortFilters.DataSource = FilterOrder.OrderBy( f => f.Key ).ToList();
+            gSortFilters.DataBind();
+        }
+
+
         /// <summary>
         /// Maps the specified location.
         /// </summary>
@@ -3305,5 +3407,94 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         {
             dMapAdditionalSettings.Visible = !dMapAdditionalSettings.Visible;
         }
+
+        protected void gSortFilters_RowDataBound( object sender, GridViewRowEventArgs e )
+        {
+            if ( e.Row.RowType != DataControlRowType.Header )
+            {
+                var lName = ( Literal ) e.Row.FindControl( "lName" );
+
+                if ( e.Row.DataItem == null || lName == null )
+                {
+                    return;
+                }
+
+                var currentRow = ( KeyValuePair<int, string> ) e.Row.DataItem;
+
+                if ( _groupTypeAttributes.ContainsKey( currentRow.Value ) )
+                {
+                    lName.Text = _groupTypeAttributes[currentRow.Value];
+                }
+                else
+                {
+                    lName.Text = currentRow.Value;
+                }
+            }
+        }
+
+        protected void gSortFilters_GridReorder( object sender, GridReorderEventArgs e )
+        {
+            var newFilterOrderList = new Dictionary<int, string>();
+
+            // ElementAt is 0 index based, use OldIndex to retrieve value
+            var oldEle = FilterOrder.ElementAt( e.OldIndex );
+            // NewIndex is 0 based, but our keys are 1 based, so increment by 1 for the loop.
+            var newIndexStart = e.NewIndex + 1;
+            var i = 1;
+            foreach ( var filter in FilterOrder )
+            {
+                if ( filter.Key == newIndexStart )
+                {
+                    newFilterOrderList.Add( i, ( e.NewIndex > e.OldIndex ) ? filter.Value : oldEle.Value );
+                    i++;
+                    newFilterOrderList.Add( i, ( e.NewIndex > e.OldIndex ) ? oldEle.Value : filter.Value );
+                    i++;
+                }
+                else if ( filter.Value != oldEle.Value )
+                {
+                    newFilterOrderList.Add( i, filter.Value );
+                    i++;
+                }
+            }
+
+            FilterOrder = newFilterOrderList;
+
+            BindFilterOrder();
+
+            ScriptManager.RegisterStartupScript( gSortFilters, gSortFilters.GetType(), "focus-on-sort-filters", "setTimeout(function() {$('.modal-scrollable').animate({ scrollTop: $('[id$=wpOrderFilters]').offset().top-$('.modal-scrollable').offset().top + 'px' }, 0);console.log('scrolltoFilters');},100);", true );
+        }
+
+        private const string keyValuePairEntrySeparator = "|";
+        private const string keyValuePairInternalSeparator = "^";
+
+        /// <summary>
+        /// Creates a formatted string representation of the provided dictionary where the keys and values are Uri-encoded.
+        /// </summary>
+        /// <returns></returns>
+        public string ToKVPString( IDictionary<int, string> dictionary )
+        {
+            var sb = new StringBuilder();
+
+            var isFirstItem = true;
+
+            foreach ( var kvp in dictionary )
+            {
+                if ( isFirstItem )
+                {
+                    isFirstItem = false;
+                }
+                else
+                {
+                    sb.Append( keyValuePairEntrySeparator );
+                }
+
+                sb.Append( kvp.Key );
+                sb.Append( keyValuePairInternalSeparator );
+                sb.Append( kvp.Value.ToStringSafe() );
+            }
+
+            return sb.ToString();
+        }
     }
+
 }

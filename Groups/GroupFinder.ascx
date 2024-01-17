@@ -185,7 +185,7 @@
                                         <Rock:RockCheckBoxList ID="cblAttributes" runat="server" Label="Display Attribute Filters" RepeatDirection="Horizontal"
                                             Help="The group attributes that should be available for user to filter results by." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblInitialLoadFilters" runat="server" Label="Collapse Filters on Initial Load" RepeatDirection="Horizontal"
-                                            Help="Collapse/Hide these filter controls under a collapsible panel for user on first load." ValidationGroup="GroupFinderSettings" />
+                                            Help="Collapse/Hide these filter controls under a collapsible panel for user on first load. Note: when sorting filters below any filters that are collapsed will only be sorted with each other." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockDropDownList ID="ddlAttributeSort" runat="server" Label="Custom Sort from Attribute"
                                             Help="Select an attribute to sort by if a group contains multiple of the selected attribute filter options." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockListBox ID="rblAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values"
@@ -198,6 +198,27 @@
                                     <div class="col-md-6">
                                     </div>
                                     <div class="col-md-6">
+                                    </div>
+                                </div>
+                            </Rock:PanelWidget>
+                            <Rock:PanelWidget ID="wpOrderFilters" runat="server" Title="Sort Filters">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <Rock:Grid
+                                            runat="server"
+                                            ID="gSortFilters"
+                                            DisplayType="Light"
+                                            OnRowDataBound="gSortFilters_RowDataBound"
+                                            OnGridReorder="gSortFilters_GridReorder" DataKeyNames="Key" HeaderStyle-CssClass="hide">
+                                            <Columns>
+                                                <Rock:ReorderField />
+                                                <asp:TemplateField>
+                                                    <ItemTemplate>
+                                                        <asp:Literal ID="lName" runat="server"></asp:Literal>
+                                                    </ItemTemplate>
+                                                </asp:TemplateField>
+                                            </Columns>
+                                        </Rock:Grid>
                                     </div>
                                 </div>
                             </Rock:PanelWidget>
