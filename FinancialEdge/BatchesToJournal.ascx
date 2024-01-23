@@ -16,6 +16,11 @@
                         <Rock:GridFilter ID="gfBatchesToExportFilter" runat="server">
                             <Rock:RockDropDownList ID="ddlStatus" runat="server" Label="Status" />
                             <Rock:DateRangePicker ID="drpBatchDate" runat="server" Label="Date Range" />
+                            <Rock:CampusPicker ID="campCampus" runat="server" />
+                            <Rock:DefinedValuePicker ID="dvpTransactionType" runat="server" Label="Contains Transaction Type" />
+                            <Rock:DefinedValuePicker ID="dvpSourceType" runat="server" Label="Contains Source Type" />
+                            <Rock:RockTextBox ID="tbTitle" runat="server" Label="Title"></Rock:RockTextBox>
+                            <Rock:RockTextBox ID="tbBatchId" runat="server" Label="Batch Id"></Rock:RockTextBox>
                         </Rock:GridFilter>
 
                         <Rock:Grid ID="gBatchesToExport" DataKeyNames="Id" runat="server" RowItemText="Batch" OnRowSelected="gBatchesToExport_Click" CssClass="js-grid-batch-list" AllowSorting="true">
