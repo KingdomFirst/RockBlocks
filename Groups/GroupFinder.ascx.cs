@@ -238,7 +238,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.RequirePostalCode )]
     [CustomCheckboxListField( "Collapse Filters on Initial Load",
-        Description = "Collapse/Hide these filter controls under a collapsible panel for user on first load. Note: when sorting filters below any filters that are collapsed will only be sorted with each other."
+        Description = "Collapse/Hide these filter controls under a collapsible panel for user on first load. Note: when sorting filters below any filters that are collapsed will only be sorted with each other.",
         ListSource = "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_Address,filter_PostalCode,filter_ShowFullGroups') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
         IsRequired = false,
         Category = AttributeCategory.CustomSetting,
@@ -772,19 +772,19 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                  filterControl.Controls[1].Controls.Count != 0 )
                             {
                                 var definedValuePicker = filterControl.Controls[1].Controls[0] as DefinedValuesPicker;
-                                var filterParamValue = new List<string>();
-                                foreach ( var param in filterParamList )
+                                var definedValuePickerEnhanced = filterControl.Controls[1].Controls[0] as DefinedValuesPickerEnhanced;
+                                if ( definedValuePicker != null )
                                 {
-                                    if ( definedValuePicker.Items.FindByValue( param ) != null )
-                                    {
-                                        filterParamValue.Add( param );
-                                    }
+                                    definedValuePicker.SetValues( filterParamList );
                                 }
-                                definedValuePicker.SelectedValue = filterParamValue.JoinStrings( "," );
+                                if ( definedValuePickerEnhanced != null )
+                                {
+                                    definedValuePickerEnhanced.SetValues( filterParamList );
+                                }
                             }
                             else
                             {
-                                attribute.FieldType.Field.SetFilterValues( filterControl, attribute.QualifierValues, filterParamList );
+                                attribute.FieldType.Field.SetFilterValues( filterControl, attribute.QualifierValues, new List<string> { filterPageParam } );
                             }
                         }
                     }
