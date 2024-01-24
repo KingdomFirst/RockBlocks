@@ -481,7 +481,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
                     var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
                     var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
-                    var leaderRoleGuid = GetAttributeValue( AttributeKey.GroupTypeAndRole ).AsGuidOrNull() ?? Guid.Empty;
+                    var leaderRoleGuids = GetAttributeValues( AttributeKey.GroupTypeAndRole ).AsGuidList();
                     var futureThresholdDays = GetAttributeValue( AttributeKey.FutureThresholdDays ).AsDouble();
 
                     double dateDifference = 0;
@@ -491,7 +491,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
                     if ( isNew && dateDifference <= futureThresholdDays )
                     {
-                        CareUtilities.AutoAssignWorkers( careNeed, careNeed.WorkersOnly, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuid: leaderRoleGuid );
+                        CareUtilities.AutoAssignWorkers( careNeed, careNeed.WorkersOnly, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids );
                     }
 
                     if ( childNeedsCreated && careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any() && dateDifference <= futureThresholdDays )
@@ -502,12 +502,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         {
                             if ( need.PersonAlias != null && need.PersonAlias.Person.GetFamilyRole().Id != adultRoleId )
                             {
-                                CareUtilities.AutoAssignWorkers( need, true, true, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuid: leaderRoleGuid );
+                                CareUtilities.AutoAssignWorkers( need, true, true, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids );
                             }
                             else
                             {
                                 var adultFamilyWorkers = GetAttributeValue( AttributeKey.AdultFamilyWorkers );
-                                CareUtilities.AutoAssignWorkers( need, adultFamilyWorkers == "Workers Only" || careNeed.WorkersOnly, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuid: leaderRoleGuid );
+                                CareUtilities.AutoAssignWorkers( need, adultFamilyWorkers == "Workers Only" || careNeed.WorkersOnly, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids );
                             }
                         }
                     }
