@@ -185,10 +185,10 @@
                                         <Rock:RockCheckBoxList ID="cblAttributes" runat="server" Label="Display Attribute Filters" RepeatDirection="Horizontal"
                                             Help="The group attributes that should be available for user to filter results by." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblInitialLoadFilters" runat="server" Label="Collapse Filters on Initial Load" RepeatDirection="Horizontal"
-                                            Help="Collapse/Hide these filter controls under a collapsible panel for user on first load. Note: when sorting filters below any filters that are collapsed will only be sorted with each other." ValidationGroup="GroupFinderSettings" />
+                                            Help="Collapse/Hide these filter controls under a collapsible panel for user on first load. Note: Selected filters may impact Filter Display Order." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockDropDownList ID="ddlAttributeSort" runat="server" Label="Custom Sort from Attribute"
                                             Help="Select an attribute to sort by if a group contains multiple of the selected attribute filter options." ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockListBox ID="rblAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values"
+                                        <Rock:RockListBox ID="rlbAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values"
                                             Help="The group attribute values that you would like to hide from the filter options. Some field types are not supported (such as Enhanced For Long List attributes)." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblAttributesInKeywords" runat="server" Label="Attributes in Keyword Search" RepeatDirection="Horizontal"
                                             Help="The text-based group attributes that should be included in keyword search." ValidationGroup="GroupFinderSettings" />
@@ -201,7 +201,7 @@
                                     </div>
                                 </div>
                             </Rock:PanelWidget>
-                            <Rock:PanelWidget ID="wpOrderFilters" runat="server" Title="Sort Filters">
+                            <Rock:PanelWidget ID="wpOrderFilters" runat="server" Title="Filter Display Order">
                                 <div class="row">
                                     <div class="col-md-12">
                                         <Rock:Grid

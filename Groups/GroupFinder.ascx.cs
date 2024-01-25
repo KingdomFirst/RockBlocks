@@ -238,7 +238,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.RequirePostalCode )]
     [CustomCheckboxListField( "Collapse Filters on Initial Load",
-        Description = "Collapse/Hide these filter controls under a collapsible panel for user on first load. Note: when sorting filters below any filters that are collapsed will only be sorted with each other.",
+        Description = "Collapse/Hide these filter controls under a collapsible panel for user on first load. Note: Selected filters may impact Filter Display Order.",
         ListSource = "SELECT REPLACE(item,'filter_','') as Text, LOWER(item) as Value FROM string_split('filter_DayofWeek,filter_Time,filter_Campus,filter_Address,filter_PostalCode,filter_ShowFullGroups') UNION ALL SELECT a.Name as Text, a.Id as Value FROM [Attribute] a JOIN [EntityType] et ON et.Id = a.EntityTypeId WHERE et.[Guid] = '9BBFDA11-0D22-40D5-902F-60ADFBC88987'",
         IsRequired = false,
         Category = AttributeCategory.CustomSetting,
@@ -254,7 +254,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         AllowMultiple = true,
         Category = AttributeCategory.CustomSetting,
         Key = AttributeKey.AttributesInKeywords )]
-    [KeyValueListField( "Filter Order",
+    [KeyValueListField( "Filter Display Order",
         Description = "Key Value list of filters to display filters in the set order. If using 'Hide Selected Filters on Initial Load' the sort order is within each individual area.",
         KeyPrompt = "Order",
         ValuePrompt = "Filter Id",
@@ -900,7 +900,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             SetAttributeValue( AttributeKey.AttributeFilters, cblAttributes.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.HideFiltersInitialLoad, cblInitialLoadFilters.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.AttributeCustomSort, ddlAttributeSort.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
-            SetAttributeValue( AttributeKey.HideAttributeValues, rblAttributeHiddenOptions.SelectedValues.AsDelimited( "," ) );
+            SetAttributeValue( AttributeKey.HideAttributeValues, rlbAttributeHiddenOptions.SelectedValues.AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.AttributesInKeywords, cblAttributesInKeywords.Items.Cast<ListItem>().Where( i => i.Selected ).Select( i => i.Value ).ToList().AsDelimited( "," ) );
             SetAttributeValue( AttributeKey.FilterOrder, ToKVPString( FilterOrder ) );
 
@@ -1121,7 +1121,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             }
             foreach ( string attr in GetAttributeValue( AttributeKey.HideAttributeValues ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ) )
             {
-                var li = rblAttributeHiddenOptions.Items.FindByValue( attr.Replace( "||", "^" ) );
+                var li = rlbAttributeHiddenOptions.Items.FindByValue( attr.Replace( "||", "^" ) );
                 if ( li != null )
                 {
                     li.Selected = true;
@@ -1222,7 +1222,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cblGridAttributes.Items.Clear();
             cblInitialLoadFilters.Items.Clear();
             ddlAttributeSort.Items.Clear();
-            rblAttributeHiddenOptions.Items.Clear();
+            rlbAttributeHiddenOptions.Items.Clear();
             cblAttributesInKeywords.Items.Clear();
 
             FilterOrder = new Dictionary<int, string>();
@@ -1298,14 +1298,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                     var definedType = DefinedTypeCache.Get( definedTypeId.Value );
                                     foreach ( var val in definedType.DefinedValues )
                                     {
-                                        rblAttributeHiddenOptions.Items.Add( new ListItem( string.Format( "{0} [{1} ({2})]", ( useDescription ) ? val.Description : val.Value, attribute.Value.Name, groupType.Name ), string.Format( "filter_{0}_{1}^{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, val.Id.ToString() ) ) );
+                                        rlbAttributeHiddenOptions.Items.Add( new ListItem( string.Format( "{0} [{1} ({2})]", ( useDescription ) ? val.Description : val.Value, attribute.Value.Name, groupType.Name ), string.Format( "filter_{0}_{1}^{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, val.Id.ToString() ) ) );
                                     }
                                 }
                                 else
                                 {
                                     foreach ( var keyVal in Rock.Field.Helper.GetConfiguredValues( configurationValues ) )
                                     {
-                                        rblAttributeHiddenOptions.Items.Add( new ListItem( string.Format( "{0} [{1} ({2})]", keyVal.Value, attribute.Value.Name, groupType.Name ), string.Format( "filter_{0}_{1}^{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, keyVal.Key ) ) );
+                                        rlbAttributeHiddenOptions.Items.Add( new ListItem( string.Format( "{0} [{1} ({2})]", keyVal.Value, attribute.Value.Name, groupType.Name ), string.Format( "filter_{0}_{1}^{2}", attribute.Value.Key.ToString(), attribute.Value.FieldTypeId, keyVal.Key ) ) );
                                     }
                                 }
                             }
@@ -1336,7 +1336,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             cblAttributes.Visible = cblAttributes.Items.Count > 0;
             cblGridAttributes.Visible = cblAttributes.Items.Count > 0;
-            rblAttributeHiddenOptions.Visible = rblAttributeHiddenOptions.Items.Count > 0;
+            rlbAttributeHiddenOptions.Visible = rblAttributeHiddenOptions.Items.Count > 0;
             ddlAttributeSort.Visible = ddlAttributeSort.Items.Count > 0;
             cblAttributesInKeywords.Visible = cblAttributesInKeywords.Items.Count > 0;
 
@@ -2854,7 +2854,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             gSortFilters.DataBind();
         }
 
-
         /// <summary>
         /// Maps the specified location.
         /// </summary>
@@ -3472,7 +3471,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             BindFilterOrder();
 
-            ScriptManager.RegisterStartupScript( gSortFilters, gSortFilters.GetType(), "focus-on-sort-filters", "setTimeout(function() {$('.modal-scrollable').animate({ scrollTop: $('[id$=wpOrderFilters]').offset().top-$('.modal-scrollable').offset().top + 'px' }, 0);console.log('scrolltoFilters');},100);", true );
+            ScriptManager.RegisterStartupScript( gSortFilters, gSortFilters.GetType(), "focus-on-sort-filters", "setTimeout(function() {$('.modal-scrollable').animate({ scrollTop: $('[id$=wpOrderFilters]').offset().top-$('.modal-scrollable').offset().top + 'px' }, 0);},100);", true );
         }
 
         private const string keyValuePairEntrySeparator = "|";
