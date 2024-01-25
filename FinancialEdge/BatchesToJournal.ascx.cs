@@ -372,7 +372,6 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
             gfBatchesToExportFilter.SaveUserPreference( "Status", ddlStatus.SelectedValue );
             gfBatchesToExportFilter.SaveUserPreference( "Date Range", drpBatchDate.DelimitedValues );
             gfBatchesToExportFilter.SaveUserPreference( "Title", tbTitle.Text );
-            gfBatchesToExportFilter.SaveUserPreference( "Status", ddlStatus.SelectedValue );
             gfBatchesToExportFilter.SaveUserPreference( "Campus", campCampus.SelectedValue );
             gfBatchesToExportFilter.SaveUserPreference( "Contains Transaction Type", dvpTransactionType.SelectedValue );
             gfBatchesToExportFilter.SaveUserPreference( "Contains Source Type", dvpSourceType.SelectedValue );
