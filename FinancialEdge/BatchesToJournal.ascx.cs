@@ -94,6 +94,12 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
         /// </summary>
         private void BindFilter()
         {
+            string titleFilter = gfBatchesToExportFilter.GetUserPreference( "Title" );
+            tbTitle.Text = !string.IsNullOrWhiteSpace( titleFilter ) ? titleFilter : string.Empty;
+
+            string batchIdFilter = gfBatchesToExportFilter.GetUserPreference( "Batch Id" );
+            tbBatchId.Text = !string.IsNullOrWhiteSpace( batchIdFilter ) ? batchIdFilter : string.Empty;
+
             ddlStatus.BindToEnum<BatchStatus>();
             ddlStatus.Items.Insert( 0, Rock.Constants.All.ListItem );
             string statusFilter = gfBatchesToExportFilter.GetUserPreference( "Status" );
@@ -104,7 +110,20 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
 
             ddlStatus.SetValue( statusFilter );
 
+            var definedTypeTransactionTypes = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.FINANCIAL_TRANSACTION_TYPE.AsGuid() );
+            dvpTransactionType.DefinedTypeId = definedTypeTransactionTypes.Id;
+            dvpTransactionType.SetValue( gfBatchesToExportFilter.GetUserPreference( "Contains Transaction Type" ) );
+
+            var campusi = CampusCache.All();
+            campCampus.Campuses = campusi;
+            campCampus.Visible = campusi.Any();
+            campCampus.SetValue( gfBatchesToExportFilter.GetUserPreference( "Campus" ) );
+
             drpBatchDate.DelimitedValues = gfBatchesToExportFilter.GetUserPreference( "Date Range" );
+
+            var definedTypeSourceTypes = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.FINANCIAL_SOURCE_TYPE.AsGuid() );
+            dvpSourceType.DefinedTypeId = definedTypeSourceTypes.Id;
+            dvpSourceType.SetValue( gfBatchesToExportFilter.GetUserPreference( "Contains Source Type" ) );
         }
 
         /// <summary>
@@ -150,6 +169,41 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
                 if ( status.HasValue )
                 {
                     qry = qry.Where( b => b.Status == status );
+                }
+
+                // filter by batches that contain transactions of the specified transaction type
+                var transactionTypeValueId = gfBatchesToExportFilter.GetUserPreference( "Contains Transaction Type" ).AsIntegerOrNull();
+                if ( transactionTypeValueId.HasValue )
+                {
+                    qry = qry.Where( a => a.Transactions.Any( t => t.TransactionTypeValueId == transactionTypeValueId.Value ) );
+                }
+
+                // filter by title
+                string title = gfBatchesToExportFilter.GetUserPreference( "Title" );
+                if ( !string.IsNullOrWhiteSpace( title ) )
+                {
+                    qry = qry.Where( batch => batch.Name.Contains( title ) );
+                }
+
+                // filter by batch id
+                var batchId = gfBatchesToExportFilter.GetUserPreference( "Batch Id" ).AsIntegerOrNull();
+                if ( batchId.HasValue )
+                {
+                    qry = qry.Where( batch => batch.Id == batchId.Value );
+                }
+
+                // filter by campus
+                var campus = CampusCache.Get( gfBatchesToExportFilter.GetUserPreference( "Campus" ).AsInteger() );
+                if ( campus != null )
+                {
+                    qry = qry.Where( b => b.CampusId == campus.Id );
+                }
+
+                // filter by batches that contain transactions of the specified source type
+                var sourceTypeValueId = gfBatchesToExportFilter.GetUserPreference( "Contains Source Type" ).AsIntegerOrNull();
+                if ( sourceTypeValueId.HasValue )
+                {
+                    qry = qry.Where( a => a.Transactions.Any( t => t.SourceTypeValueId == sourceTypeValueId.Value ) );
                 }
 
                 SortProperty sortProperty = gBatchesToExport.SortProperty;
@@ -260,6 +314,51 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
 
                         break;
                     }
+
+                case "Contains Transaction Type":
+                    {
+                        var transactionTypeValueId = e.Value.AsIntegerOrNull();
+                        if ( transactionTypeValueId.HasValue )
+                        {
+                            var transactionTypeValue = DefinedValueCache.Get( transactionTypeValueId.Value );
+                            e.Value = transactionTypeValue != null ? transactionTypeValue.ToString() : string.Empty;
+                        }
+                        else
+                        {
+                            e.Value = string.Empty;
+                        }
+
+                        break;
+                    }
+
+                case "Campus":
+                    {
+                        var campus = CampusCache.Get( e.Value.AsInteger() );
+                        if ( campus != null )
+                        {
+                            e.Value = campus.Name;
+                        }
+                        else
+                        {
+                            e.Value = string.Empty;
+                        }
+
+                        break;
+                    }
+                case "Contains Source Type":
+                    {
+                        var sourceTypeValueId = e.Value.AsIntegerOrNull();
+                        if ( sourceTypeValueId.HasValue )
+                        {
+                            e.Value = DefinedValueCache.GetValue( sourceTypeValueId.Value );
+                        }
+                        else
+                        {
+                            e.Value = string.Empty;
+                        }
+
+                        break;
+                    }
             }
         }
 
@@ -272,6 +371,11 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
         {
             gfBatchesToExportFilter.SaveUserPreference( "Status", ddlStatus.SelectedValue );
             gfBatchesToExportFilter.SaveUserPreference( "Date Range", drpBatchDate.DelimitedValues );
+            gfBatchesToExportFilter.SaveUserPreference( "Title", tbTitle.Text );
+            gfBatchesToExportFilter.SaveUserPreference( "Campus", campCampus.SelectedValue );
+            gfBatchesToExportFilter.SaveUserPreference( "Contains Transaction Type", dvpTransactionType.SelectedValue );
+            gfBatchesToExportFilter.SaveUserPreference( "Contains Source Type", dvpSourceType.SelectedValue );
+            gfBatchesToExportFilter.SaveUserPreference( "Batch Id", tbBatchId.Text );
 
             BindGrid();
         }

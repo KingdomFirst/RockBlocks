@@ -578,7 +578,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             hfBusinessId.Value = Person.Id.ToString();
 
             imgPhoto.BinaryFileId = Person.PhotoId;
-            imgPhoto.NoPictureUrl = Person.GetPersonPhotoUrl( this.Person.Id, this.Person.PhotoId, null, Gender.Unknown, Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_BUSINESS.AsGuid(), null, 400, 400 );
+            imgPhoto.NoPictureUrl = Person.GetPersonNoPictureUrl( this.Person, 400, 400 );
 
             lTitle.Text = ActionTitle.Edit( business.FullName ).FormatAsHtmlTitle();
             tbBusinessName.Text = business.LastName;
