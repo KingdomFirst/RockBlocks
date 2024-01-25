@@ -2,9 +2,9 @@
 
 # Financial Edge Export
 
-*Tested/Supported in Rock version: 8.0-13.0*  
+*Tested/Supported in Rock version: 8.0-16.0*  
 *Released: 10/1/2018*   
-*Updated: 2/2/2022*   
+*Updated: 1/23/2024*   
 
 ## Summary
 
@@ -87,11 +87,9 @@ You will need to set the Journal Type for the Financial Edge Batches to Journal 
 
     Detail Page: Select the Financial Batch Detail page
 
-    Show Accounting Code: Choose whether the Accounting Code column should be displayed
+    Button Text: The text to use in the Export Button.
 
-    Show Accounts Column: Should the Accounts column be displayed
-
-    Journal Type: The Financial Edge journal to post in
+    Months Back: The number of months back that batches should be loaded. This is helpful to prevent database timeouts if there are years of historical batches.
 
 ```
 
