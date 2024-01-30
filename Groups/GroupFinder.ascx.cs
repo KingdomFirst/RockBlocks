@@ -3459,7 +3459,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             BindFilterOrder();
 
-            ScriptManager.RegisterStartupScript( gSortFilters, gSortFilters.GetType(), "focus-on-sort-filters", "setTimeout(function() {$('.modal-scrollable').animate({ scrollTop: $('[id$=wpOrderFilters]').offset().top-$('.modal-scrollable').offset().top + 'px' }, 0);},100);", true );
+            upOrderFilters.Update();
         }
 
         private const string keyValuePairEntrySeparator = "|";

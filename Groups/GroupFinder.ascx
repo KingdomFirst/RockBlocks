@@ -204,21 +204,25 @@
                             <Rock:PanelWidget ID="wpOrderFilters" runat="server" Title="Filter Display Order">
                                 <div class="row">
                                     <div class="col-md-12">
-                                        <Rock:Grid
-                                            runat="server"
-                                            ID="gSortFilters"
-                                            DisplayType="Light"
-                                            OnRowDataBound="gSortFilters_RowDataBound"
-                                            OnGridReorder="gSortFilters_GridReorder" DataKeyNames="Key" HeaderStyle-CssClass="hide">
-                                            <Columns>
-                                                <Rock:ReorderField />
-                                                <asp:TemplateField>
-                                                    <ItemTemplate>
-                                                        <asp:Literal ID="lName" runat="server"></asp:Literal>
-                                                    </ItemTemplate>
-                                                </asp:TemplateField>
-                                            </Columns>
-                                        </Rock:Grid>
+                                        <asp:UpdatePanel ID="upOrderFilters" runat="server" UpdateMode="Conditional">
+                                            <ContentTemplate>
+                                                <Rock:Grid
+                                                    runat="server"
+                                                    ID="gSortFilters"
+                                                    DisplayType="Light"
+                                                    OnRowDataBound="gSortFilters_RowDataBound"
+                                                    OnGridReorder="gSortFilters_GridReorder" DataKeyNames="Key" HeaderStyle-CssClass="hide">
+                                                    <Columns>
+                                                        <Rock:ReorderField />
+                                                        <asp:TemplateField>
+                                                            <ItemTemplate>
+                                                                <asp:Literal ID="lName" runat="server"></asp:Literal>
+                                                            </ItemTemplate>
+                                                        </asp:TemplateField>
+                                                    </Columns>
+                                                </Rock:Grid>
+                                            </ContentTemplate>
+                                        </asp:UpdatePanel>
                                     </div>
                                 </div>
                             </Rock:PanelWidget>
