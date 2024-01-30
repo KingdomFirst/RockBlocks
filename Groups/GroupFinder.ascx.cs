@@ -1334,7 +1334,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             cblAttributes.Visible = cblAttributes.Items.Count > 0;
             cblGridAttributes.Visible = cblAttributes.Items.Count > 0;
-            rlbAttributeHiddenOptions.Visible = rblAttributeHiddenOptions.Items.Count > 0;
+            rlbAttributeHiddenOptions.Visible = rlbAttributeHiddenOptions.Items.Count > 0;
             ddlAttributeSort.Visible = ddlAttributeSort.Items.Count > 0;
             cblAttributesInKeywords.Visible = cblAttributesInKeywords.Items.Count > 0;
 
@@ -1404,10 +1404,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             if ( fenceTypeGuid.HasValue || GetAttributeValue( AttributeKey.ShowProximity ).AsBoolean() )
             {
                 var enablePostalCode = GetAttributeValue( AttributeKey.EnablePostalCodeSearch ).AsBoolean();
-                var requirePostalCode = GetAttributeValue( AttributeKey.RequirePostalCode ).AsBoolean();
                 filter_acAddress.Visible = !enablePostalCode;
                 filter_tbPostalCode.Visible = enablePostalCode;
-                filter_tbPostalCode.Required = requirePostalCode;
                 revPostalCode.Enabled = enablePostalCode;
 
                 if ( CurrentPerson != null )
@@ -1537,7 +1535,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 filter_tbPostalCode = new RockTextBox();
                 filter_tbPostalCode.ID = "filter_tbPostalCode";
-                filter_tbPostalCode.Required = true;
+                filter_tbPostalCode.Required = GetAttributeValue( AttributeKey.RequirePostalCode ).AsBoolean();
                 filter_tbPostalCode.RequiredErrorMessage = string.Format( "Your {0} is Required", GetAttributeValue( AttributeKey.PostalCodeLabel ) );
                 filter_tbPostalCode.CssClass = "form-control js-postal-code js-postcode js-address-field";
                 filter_tbPostalCode.Label = GetAttributeValue( AttributeKey.PostalCodeLabel );
