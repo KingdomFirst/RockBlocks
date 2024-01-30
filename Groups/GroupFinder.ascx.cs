@@ -508,7 +508,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string AttributeFilters = "AttributeFilters";
             public const string AttributeColumns = "AttributeColumns";
             public const string GroupTypeLocations = "GroupTypeLocations";
-            public const string GroupTypeAttributes = "GroupTypeAttributes";
+            public const string GroupTypeAttributeNames = "GroupTypeAttributeNames";
             public const string KFSGroupFinderFilterOrder = "KFSGroupFinderFilterOrder";
         }
 
@@ -523,7 +523,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         private string _collapseFilters = "false";
         private List<string> _hideFilters = new List<string>();
         private Dictionary<string, string> _filterValues = new Dictionary<string, string>();
-        private Dictionary<string, string> _groupTypeAttributes = new Dictionary<string, string>();
+        private Dictionary<string, string> _groupTypeAttributeNames = new Dictionary<string, string>();
         private Dictionary<int, string> _filterOrder = new Dictionary<int, string>();
 
         private Dictionary<decimal, Control> _collapsedControls = new Dictionary<decimal, Control>();
@@ -603,10 +603,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 GroupTypeLocations = new Dictionary<int, int>();
             }
-            _groupTypeAttributes = ViewState[ViewStateKey.GroupTypeAttributes] as Dictionary<string, string>;
-            if ( _groupTypeAttributes == null )
+            _groupTypeAttributeNames = ViewState[ViewStateKey.GroupTypeAttributeNames] as Dictionary<string, string>;
+            if ( _groupTypeAttributeNames == null )
             {
-                _groupTypeAttributes = new Dictionary<string, string>();
+                _groupTypeAttributeNames = new Dictionary<string, string>();
             }
             FilterOrder = ViewState[ViewStateKey.KFSGroupFinderFilterOrder] as Dictionary<int, string>;
             if ( FilterOrder == null )
@@ -817,7 +817,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             ViewState[ViewStateKey.AttributeFilters] = AttributeFilters;
             ViewState[ViewStateKey.AttributeColumns] = AttributeColumns;
             ViewState[ViewStateKey.GroupTypeLocations] = GroupTypeLocations;
-            ViewState[ViewStateKey.GroupTypeAttributes] = _groupTypeAttributes;
+            ViewState[ViewStateKey.GroupTypeAttributeNames] = _groupTypeAttributeNames;
             ViewState[ViewStateKey.KFSGroupFinderFilterOrder] = FilterOrder;
 
             return base.SaveViewState();
@@ -1240,13 +1240,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 AddToFilterOrder( 5, "filter_postalcode" );
                 AddToFilterOrder( 6, "filter_keyword" );
                 AddToFilterOrder( 7, "filter_showfullgroups" );
-                _groupTypeAttributes.AddOrIgnore( "filter_dow", "Day of Week" );
-                _groupTypeAttributes.AddOrIgnore( "filter_time", "Time of Day" );
-                _groupTypeAttributes.AddOrIgnore( "filter_campus", "Campus" );
-                _groupTypeAttributes.AddOrIgnore( "filter_address", "Address" );
-                _groupTypeAttributes.AddOrIgnore( "filter_postalcode", "Postal Code" );
-                _groupTypeAttributes.AddOrIgnore( "filter_keyword", "Keyword" );
-                _groupTypeAttributes.AddOrIgnore( "filter_showfullgroups", "Show Full Groups" );
+                _groupTypeAttributeNames.AddOrIgnore( "filter_dow", "Day of Week" );
+                _groupTypeAttributeNames.AddOrIgnore( "filter_time", "Time of Day" );
+                _groupTypeAttributeNames.AddOrIgnore( "filter_campus", "Campus" );
+                _groupTypeAttributeNames.AddOrIgnore( "filter_address", "Address" );
+                _groupTypeAttributeNames.AddOrIgnore( "filter_postalcode", "Postal Code" );
+                _groupTypeAttributeNames.AddOrIgnore( "filter_keyword", "Keyword" );
+                _groupTypeAttributeNames.AddOrIgnore( "filter_showfullgroups", "Show Full Groups" );
 
                 cblInitialLoadFilters.Items.Add( new ListItem( "Day of Week", "filter_dow" ) );
                 cblInitialLoadFilters.Items.Add( new ListItem( "Time of Day", "filter_time" ) );
@@ -1286,7 +1286,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                 ddlAttributeSort.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
 
                                 AddToFilterOrder( filterOrderIndex, attribute.Value.Guid.ToString() );
-                                _groupTypeAttributes.AddOrIgnore( attribute.Value.Guid.ToString(), attribute.Value.Name + string.Format( " ({0})", groupType.Name ) );
+                                _groupTypeAttributeNames.AddOrIgnore( attribute.Value.Guid.ToString(), attribute.Value.Name + string.Format( " ({0})", groupType.Name ) );
                                 filterOrderIndex++;
 
                                 var configurationValues = attribute.Value.QualifierValues;
@@ -3431,9 +3431,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 var currentRow = ( KeyValuePair<int, string> ) e.Row.DataItem;
 
-                if ( _groupTypeAttributes.ContainsKey( currentRow.Value ) )
+                if ( _groupTypeAttributeNames.ContainsKey( currentRow.Value ) )
                 {
-                    lName.Text = _groupTypeAttributes[currentRow.Value];
+                    lName.Text = _groupTypeAttributeNames[currentRow.Value];
                 }
                 else
                 {
