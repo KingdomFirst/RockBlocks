@@ -1225,8 +1225,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             rlbAttributeHiddenOptions.Items.Clear();
             cblAttributesInKeywords.Items.Clear();
 
-            FilterOrder = new Dictionary<int, string>();
-
             FilterOrder = loadFilterOrder();
 
             if ( gtpGroupType.SelectedValuesAsInt != null )
@@ -1346,10 +1344,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
         private void AddToFilterOrder( int defaultkey, string filterId )
         {
-            var filterAddKey = FilterOrder.FirstOrDefault( f => f.Value == filterId ).Key;
-            if ( !FilterOrder.ContainsKey( ( filterAddKey != 0 ) ? filterAddKey : defaultkey ) )
+            if ( !FilterOrder.ContainsValue( filterId ) )
             {
-                FilterOrder.Add( ( filterAddKey != 0 ) ? filterAddKey : defaultkey, filterId );
+                FilterOrder.AddOrIgnore( defaultkey, filterId );
             }
         }
 
@@ -1625,7 +1622,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     filter_ddlCampus.DataTextField = "Name";
                     filter_ddlCampus.DataValueField = "Id";
                     filter_ddlCampus.AutoPostBack = _autoPostback;
-                    filter_ddlCampus.Visible = true;
                     filter_ddlCampus.Items.Add( new ListItem( string.Empty, string.Empty ) );
                     foreach ( var campus in campuses.OrderBy( c => c.Order ) )
                     {
@@ -1643,16 +1639,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     filter_cblCampus.DataValueField = "Id";
                     filter_cblCampus.RepeatDirection = RepeatDirection.Horizontal;
                     filter_cblCampus.AutoPostBack = _autoPostback;
-                    filter_cblCampus.Visible = true;
                     filter_cblCampus.DataSource = campuses.OrderBy( c => c.Order );
                     filter_cblCampus.DataBind();
                     AddFilterControl( filter_cblCampus, GetAttributeValue( AttributeKey.CampusLabel ), "", "filter_campus" );
                 }
-            }
-            else
-            {
-                filter_ddlCampus.Visible = false;
-                filter_cblCampus.Visible = false;
             }
 
             if ( GetAttributeValue( AttributeKey.HideOvercapacityGroups ) == "Filter" )
