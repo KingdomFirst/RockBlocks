@@ -845,6 +845,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         protected void gtpGroupType_SelectedIndexChanged( object sender, EventArgs e )
         {
             SetGroupTypeOptions();
+            SelectGroupTypeOptions();
         }
 
         /// <summary>
@@ -1095,46 +1096,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cbFilterTimeOfDay.Checked = scheduleFilters.Contains( "Time" );
 
             SetGroupTypeOptions();
-            foreach ( string attr in GetAttributeValue( AttributeKey.AttributeFilters ).SplitDelimitedValues() )
-            {
-                var li = cblAttributes.Items.FindByValue( attr );
-                if ( li != null )
-                {
-                    li.Selected = true;
-                }
-            }
-            foreach ( string attr in GetAttributeValue( AttributeKey.HideFiltersInitialLoad ).SplitDelimitedValues() )
-            {
-                var li = cblInitialLoadFilters.Items.FindByValue( attr );
-                if ( li != null )
-                {
-                    li.Selected = true;
-                }
-            }
-            foreach ( string attr in GetAttributeValue( AttributeKey.AttributeCustomSort ).SplitDelimitedValues() )
-            {
-                var li = ddlAttributeSort.Items.FindByValue( attr );
-                if ( li != null )
-                {
-                    li.Selected = true;
-                }
-            }
-            foreach ( string attr in GetAttributeValue( AttributeKey.HideAttributeValues ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ) )
-            {
-                var li = rlbAttributeHiddenOptions.Items.FindByValue( attr.Replace( "||", "^" ) );
-                if ( li != null )
-                {
-                    li.Selected = true;
-                }
-            }
-            foreach ( string attr in GetAttributeValue( AttributeKey.AttributesInKeywords ).SplitDelimitedValues() )
-            {
-                var li = cblAttributesInKeywords.Items.FindByValue( attr );
-                if ( li != null )
-                {
-                    li.Selected = true;
-                }
-            }
+            SelectGroupTypeOptions();
 
             ddlMaxZoomLevel.SelectedValue = GetAttributeValue( AttributeKey.MaximumZoomLevel );
             ddlMinZoomLevel.SelectedValue = GetAttributeValue( AttributeKey.MinimumZoomLevel );
@@ -1168,38 +1130,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             cbShowDescription.Checked = GetAttributeValue( AttributeKey.ShowDescription ).AsBoolean();
             cbShowCampus.Checked = GetAttributeValue( AttributeKey.ShowCampus ).AsBoolean();
 
-            // Convert the defined value guids to ints as required by the control
-            var selectedCampusTypes = GetAttributeValue( AttributeKey.CampusTypes )
-                        .Split( ',' )
-                        .AsGuidList()
-                        .Select( a => DefinedValueCache.Get( a ) )
-                        .Select( a => a.Id )
-                        .ToList();
-
-            dvpCampusTypes.SetValues( selectedCampusTypes );
-
-            var selectedCampusStatueses = GetAttributeValue( AttributeKey.CampusStatuses )
-                        .Split( ',' )
-                        .AsGuidList()
-                        .Select( a => DefinedValueCache.Get( a ) )
-                        .Select( a => a.Id )
-                        .ToList();
-
-            dvpCampusStatuses.SetValues( selectedCampusStatueses );
-
             cbProximity.Checked = GetAttributeValue( AttributeKey.ShowProximity ).AsBoolean();
             cbSortByDistance.Checked = GetAttributeValue( AttributeKey.SortByDistance ).AsBoolean();
             tbPageSizes.Text = GetAttributeValue( AttributeKey.PageSizes );
             cbShowCount.Checked = GetAttributeValue( AttributeKey.ShowCount ).AsBoolean();
             cbShowAge.Checked = GetAttributeValue( AttributeKey.ShowAge ).AsBoolean();
-            foreach ( string attr in GetAttributeValue( AttributeKey.AttributeColumns ).SplitDelimitedValues() )
-            {
-                var li = cblGridAttributes.Items.FindByValue( attr );
-                if ( li != null )
-                {
-                    li.Selected = true;
-                }
-            }
             cbIncludePending.Checked = GetAttributeValue( AttributeKey.IncludePending ).AsBoolean();
 
             var ppFieldType = new PageReferenceFieldType();
@@ -1333,6 +1268,78 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             BindGroupTypeLocationGrid();
             BindFilterOrder();
+        }
+
+        private void SelectGroupTypeOptions()
+        {
+            foreach ( string attr in GetAttributeValue( AttributeKey.AttributeFilters ).SplitDelimitedValues() )
+            {
+                var li = cblAttributes.Items.FindByValue( attr );
+                if ( li != null )
+                {
+                    li.Selected = true;
+                }
+            }
+            foreach ( string attr in GetAttributeValue( AttributeKey.HideFiltersInitialLoad ).SplitDelimitedValues() )
+            {
+                var li = cblInitialLoadFilters.Items.FindByValue( attr );
+                if ( li != null )
+                {
+                    li.Selected = true;
+                }
+            }
+            foreach ( string attr in GetAttributeValue( AttributeKey.AttributeCustomSort ).SplitDelimitedValues() )
+            {
+                var li = ddlAttributeSort.Items.FindByValue( attr );
+                if ( li != null )
+                {
+                    li.Selected = true;
+                }
+            }
+            foreach ( string attr in GetAttributeValue( AttributeKey.HideAttributeValues ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ) )
+            {
+                var li = rlbAttributeHiddenOptions.Items.FindByValue( attr.Replace( "||", "^" ) );
+                if ( li != null )
+                {
+                    li.Selected = true;
+                }
+            }
+            foreach ( string attr in GetAttributeValue( AttributeKey.AttributesInKeywords ).SplitDelimitedValues() )
+            {
+                var li = cblAttributesInKeywords.Items.FindByValue( attr );
+                if ( li != null )
+                {
+                    li.Selected = true;
+                }
+            }
+
+            // Convert the defined value guids to ints as required by the control
+            var selectedCampusTypes = GetAttributeValue( AttributeKey.CampusTypes )
+                        .Split( ',' )
+                        .AsGuidList()
+                        .Select( a => DefinedValueCache.Get( a ) )
+                        .Select( a => a.Id )
+                        .ToList();
+
+            dvpCampusTypes.SetValues( selectedCampusTypes );
+
+            var selectedCampusStatuses = GetAttributeValue( AttributeKey.CampusStatuses )
+                        .Split( ',' )
+                        .AsGuidList()
+                        .Select( a => DefinedValueCache.Get( a ) )
+                        .Select( a => a.Id )
+                        .ToList();
+
+            dvpCampusStatuses.SetValues( selectedCampusStatuses );
+
+            foreach ( string attr in GetAttributeValue( AttributeKey.AttributeColumns ).SplitDelimitedValues() )
+            {
+                var li = cblGridAttributes.Items.FindByValue( attr );
+                if ( li != null )
+                {
+                    li.Selected = true;
+                }
+            }
         }
 
         private void AddToFilterOrder( int defaultkey, string filterId )
