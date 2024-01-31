@@ -1231,13 +1231,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 var groupTypes = gtpGroupType.SelectedValuesAsInt.Select( id => GroupTypeCache.Get( id ) );
 
-                AddToFilterOrder( 1, "filter_dow" );
-                AddToFilterOrder( 2, "filter_time" );
-                AddToFilterOrder( 3, "filter_campus" );
-                AddToFilterOrder( 4, "filter_address" );
-                AddToFilterOrder( 5, "filter_postalcode" );
-                AddToFilterOrder( 6, "filter_keyword" );
-                AddToFilterOrder( 7, "filter_showfullgroups" );
                 _groupTypeAttributeNames.AddOrIgnore( "filter_dow", "Day of Week" );
                 _groupTypeAttributeNames.AddOrIgnore( "filter_time", "Time of Day" );
                 _groupTypeAttributeNames.AddOrIgnore( "filter_campus", "Campus" );
@@ -1246,17 +1239,17 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 _groupTypeAttributeNames.AddOrIgnore( "filter_keyword", "Keyword" );
                 _groupTypeAttributeNames.AddOrIgnore( "filter_showfullgroups", "Show Full Groups" );
 
-                cblInitialLoadFilters.Items.Add( new ListItem( "Day of Week", "filter_dow" ) );
-                cblInitialLoadFilters.Items.Add( new ListItem( "Time of Day", "filter_time" ) );
-                cblInitialLoadFilters.Items.Add( new ListItem( "Campus", "filter_campus" ) );
-                cblInitialLoadFilters.Items.Add( new ListItem( "Address", "filter_address" ) );
-                cblInitialLoadFilters.Items.Add( new ListItem( "Postal Code", "filter_postalcode" ) );
-                cblInitialLoadFilters.Items.Add( new ListItem( "Keyword", "filter_keyword" ) );
-                cblInitialLoadFilters.Items.Add( new ListItem( "Show Full Groups", "filter_showfullgroups" ) );
+                var filterOrderIndex = 1;
+                foreach ( var filter in _groupTypeAttributeNames.Where( f => f.Key.Contains( "filter_" ) ) )
+                {
+                    AddToFilterOrder( filterOrderIndex, filter.Key );
+                    cblInitialLoadFilters.Items.Add( new ListItem( filter.Value, filter.Key ) );
+                    filterOrderIndex++;
+                }
+
                 cblInitialLoadFilters.Items.Add( new ListItem( "Search Button", "btnSearch" ) );
                 cblInitialLoadFilters.Items.Add( new ListItem( "Clear Button", "btnClear" ) );
 
-                var filterOrderIndex = 8;
                 foreach ( var groupType in groupTypes )
                 {
                     if ( groupType != null )
