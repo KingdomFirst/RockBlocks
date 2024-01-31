@@ -1225,7 +1225,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             rlbAttributeHiddenOptions.Items.Clear();
             cblAttributesInKeywords.Items.Clear();
 
-            FilterOrder = loadFilterOrder();
+            FilterOrder = new Dictionary<int, string>();
 
             if ( gtpGroupType.SelectedValuesAsInt != null )
             {
@@ -1344,9 +1344,17 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
         private void AddToFilterOrder( int defaultkey, string filterId )
         {
-            if ( !FilterOrder.ContainsValue( filterId ) )
+            var filterAddKey = _filterOrder.FirstOrDefault( f => f.Value == filterId ).Key;
+            var checkKey = ( filterAddKey != 0 ) ? filterAddKey : defaultkey;
+            var maxKey1 = _filterOrder.OrderByDescending( f => f.Key ).FirstOrDefault().Key;
+            var maxKey2 = FilterOrder.OrderByDescending( f => f.Key ).FirstOrDefault().Key;
+            if ( !FilterOrder.ContainsKey( checkKey ) )
             {
-                FilterOrder.AddOrIgnore( defaultkey, filterId );
+                FilterOrder.Add( checkKey, filterId );
+            }
+            else
+            {
+                FilterOrder.AddOrIgnore( ( ( maxKey2 > maxKey1 ) ? maxKey2 : maxKey1 ) + 1, filterId );
             }
         }
 
@@ -2838,7 +2846,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
         private void BindFilterOrder()
         {
-            gSortFilters.DataSource = FilterOrder.OrderBy( f => f.Key ).ToList();
+            FilterOrder = FilterOrder.OrderBy( f => f.Key ).ToDictionary( k => k.Key, v => v.Value );
+            gSortFilters.DataSource = FilterOrder.ToList();
             gSortFilters.DataBind();
         }
 
