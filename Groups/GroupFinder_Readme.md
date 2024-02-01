@@ -1,9 +1,9 @@
 ![Kingdom First Solutions](../.screenshots/KFSBanner.jpg)
 
 # Advanced Group Finder
-*Tested/Supported in Rock version:  8.0-15.1*   
+*Tested/Supported in Rock version:  8.0-16.1*   
 *Created:  6/8/2021*   
-*Updated: 8/4/2023*   
+*Updated: 1/17/2024*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/161*
 
 ## Quick Links
@@ -30,6 +30,8 @@ Our Group finder is a significantly modified version of the core Rock version. I
 - Added a setting to override groups Is Public setting to show on the finder.
 - Added ability to display Over Capacity groups with a filter.
 - Added Auto Load Filter capability on value selection.
+- Added ability to sort how filters are displayed
+
 <div style="page-break-after: always;"></div>
 
 **Collapsible Filters Screenshots**
@@ -79,6 +81,7 @@ The following new goodness will be added to your Rock install with this plugin:
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">24</span> | **Custom Sort from Attribute** Select an attribute to sort by if a group contains multiple of the selected attribute filter options. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">25</span> | **Hide Attribute Filter Values** The group attribute values that you would like to hide from the filter options. This could be used to hide internal attribute values used for reporting. |
 | <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">26</span> | **Attributes in Keyword Search** The text-based group attributes that should be included in keyword search. |
+| <span style="width: 3em; height: 3em; line-height: 3em; background: #d21919; border-radius: 100%; color: white; text-align: center; display: inline-block;">27</span> | **Sort Filters** List of filters to display filters in the set order. If using 'Collapse Filters on Initial Load' the sort order is within each individual area. |
 
 (See the [Rock Your Groups Manual](https://community.rockrms.com/documentation/bookcontent/7/217#groupfinder) for the rest of the setting descriptions.)
 <div style="page-break-after: always;"></div>
