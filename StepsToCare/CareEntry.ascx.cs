@@ -402,7 +402,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         if ( enableLogging )
                         {
-                            CareUtilities.LogEvent( null, "UpdateAssignedPersons", string.Format( "Care Need Guid: {0}, AssignedPersons Count: {1} careNeed.AssignedPersons Count: {2}", careNeed.Guid, AssignedPersons.Count(), careNeed.AssignedPersons.Count() ), "Assigned Persons Edit Start" );
+                            CareUtilities.LogEvent( null, "UpdateAssignedPersons", string.Format( "Care Need Guid: {0}, AssignedPersons Count: {1} careNeed.AssignedPersons Count: {2}", careNeed.Guid, AssignedPersons.Count(), careNeed.AssignedPersons?.Count() ), "Assigned Persons Edit Start" );
                         }
 
                         var assignedPersonsLookup = AssignedPersons;
@@ -427,6 +427,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     FollowUpWorker = existingAssigned.FollowUpWorker,
                                     WorkerId = existingAssigned.WorkerId,
                                     Type = existingAssigned.Type,
+                                    TypeQualifier = existingAssigned.TypeQualifier,
                                     CareNeed = careNeed
                                 };
                                 careNeed.AssignedPersons.Add( assignedPerson );
@@ -446,11 +447,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         assignedPersonService.DeleteRange( careNeed.AssignedPersons );
                         careNeed.AssignedPersons.Clear();
-                         if ( enableLogging )
+                        if ( enableLogging )
                         {
                             CareUtilities.LogEvent( null, "UpdateAssignedPersons", string.Format( "Care Need Guid: {0}, AssignedPersons Count: {1} careNeed.AssignedPersons Count: {2}", careNeed.Guid, AssignedPersons.Count(), careNeed.AssignedPersons.Count() ), "Assigned Persons Edit Else If" );
                         }
-                   }
+                    }
                 }
 
                 if ( careNeed.IsValid )
@@ -769,6 +770,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         protected void dvpCategory_SelectedIndexChanged( object sender, EventArgs e )
         {
             PreviewAssignedPeople( null );
+            dtbDetailsText.Focus();
         }
 
         #endregion Events
@@ -967,7 +969,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     NeedId = ap.NeedId,
                     FollowUpWorker = ap.FollowUpWorker,
                     WorkerId = ap.WorkerId,
-                    Type = ap.Type
+                    Type = ap.Type,
+                    TypeQualifier = ap.TypeQualifier
                 } )
                 .OrderBy( ap => ap.PersonAlias.Person.LastName )
                 .ThenBy( ap => ap.PersonAlias.Person.NickName );
@@ -1014,5 +1017,33 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         }
 
         #endregion Methods
+
+        protected void gAssignedPersons_RowDataBound( object sender, GridViewRowEventArgs e )
+        {
+            var phCountOrRole = e.Row.ControlsOfTypeRecursive<PlaceHolder>().FirstOrDefault();
+            var assignedPerson = e.Row.DataItem as AssignedPerson;
+
+            if ( phCountOrRole == null || assignedPerson == null )
+            {
+                return;
+            }
+            var returnStr = assignedPerson.Type.ToString();
+            if ( assignedPerson.TypeQualifier.IsNotNullOrWhiteSpace() )
+            {
+                var typeQualifierArray = assignedPerson.TypeQualifier.Split( '^' );
+                if ( assignedPerson.Type == AssignedType.Worker )
+                {
+                    //Format is [0]Count^[1]HasAgeRange^[2]HasCampus^[3]HasCategory^[4]HasGender
+                    returnStr = $"Worker ({typeQualifierArray[0]})";
+                }
+                else if ( assignedPerson.Type == AssignedType.GroupRole && typeQualifierArray.Length > 2 )
+                {
+                    //Format is [0]GroupRoleId^[1]GroupTypeId^[2]Group Type > Group Role
+                    returnStr = typeQualifierArray[2];
+                }
+            }
+            phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
+
+        }
     }
 }

@@ -1,5 +1,9 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CareEntry.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.StepsToCare.CareEntry" %>
-<style type="text/css">fieldset[id*='pwDetails'] .col-md-6:nth-child(odd) { clear: left; }</style>
+<style type="text/css">
+    fieldset[id*='pwDetails'] .col-md-6:nth-child(odd) {
+        clear: left;
+    }
+</style>
 <asp:UpdatePanel runat="server" ID="upnlCareEntry">
     <ContentTemplate>
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
@@ -102,13 +106,17 @@
                         runat="server"
                         DisplayType="Light"
                         HideDeleteButtonForIsSystem="false"
-                        ShowConfirmDeleteDialog="false">
+                        ShowConfirmDeleteDialog="false"
+                        OnRowDataBound="gAssignedPersons_RowDataBound">
                         <Columns>
                             <Rock:SelectField></Rock:SelectField>
                             <asp:BoundField DataField="PersonAlias.Person.FullName" HeaderText="Name" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" />
                             <Rock:BoolField HeaderText="Follow Up Worker" DataField="FollowUpWorker"></Rock:BoolField>
-                            <Rock:RockBoundField HeaderText="Worker Id" DataField="WorkerId"></Rock:RockBoundField>
-                            <Rock:RockBoundField HeaderText="Type" DataField="Type"></Rock:RockBoundField>
+                            <Rock:RockTemplateField HeaderText="Type">
+                                <ItemTemplate>
+                                    <asp:Placeholder runat="server" ID="phCountOrRole"></asp:Placeholder>
+                                </ItemTemplate>
+                            </Rock:RockTemplateField>
                             <Rock:DeleteField OnClick="gAssignedPersons_DeleteClick" />
                         </Columns>
                     </Rock:Grid>
