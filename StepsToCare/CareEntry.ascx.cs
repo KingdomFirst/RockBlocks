@@ -394,11 +394,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 careNeed.WorkersOnly = cbWorkersOnly.Checked;
 
+                var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
                 var newlyAssignedPersons = new List<AssignedPerson>();
                 if ( careNeed.AssignedPersons != null || previewAssignedPeople )
                 {
                     if ( AssignedPersons.Any() )
                     {
+                        if ( enableLogging )
+                        {
+                            CareUtilities.LogEvent( null, "UpdateAssignedPersons", string.Format( "Care Need Guid: {0}, AssignedPersons Count: {1} careNeed.AssignedPersons Count: {2}", careNeed.Guid, AssignedPersons.Count(), careNeed.AssignedPersons.Count() ), "Assigned Persons Edit Start" );
+                        }
+
                         var assignedPersonsLookup = AssignedPersons;
 
                         foreach ( var existingAssigned in assignedPersonsLookup )
@@ -430,12 +436,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.Id ).ToList().Contains( ap.Id ) ).ToList();
                         assignedPersonService.DeleteRange( removePersons );
                         careNeed.AssignedPersons.RemoveAll( removePersons );
+
+                        if ( enableLogging )
+                        {
+                            CareUtilities.LogEvent( null, "UpdateAssignedPersons", string.Format( "Care Need Guid: {0}, AssignedPersons Count: {1} careNeed.AssignedPersons Count: {2} removePersons Count {3} Edited By AliasId: {4}", careNeed.Guid, AssignedPersons.Count(), careNeed.AssignedPersons.Count(), removePersons.Count(), CurrentPersonAlias.Id ), "Assigned Persons Edit End" );
+                        }
                     }
                     else if ( careNeed.AssignedPersons != null && careNeed.AssignedPersons.Any() )
                     {
                         assignedPersonService.DeleteRange( careNeed.AssignedPersons );
                         careNeed.AssignedPersons.Clear();
-                    }
+                         if ( enableLogging )
+                        {
+                            CareUtilities.LogEvent( null, "UpdateAssignedPersons", string.Format( "Care Need Guid: {0}, AssignedPersons Count: {1} careNeed.AssignedPersons Count: {2}", careNeed.Guid, AssignedPersons.Count(), careNeed.AssignedPersons.Count() ), "Assigned Persons Edit Else If" );
+                        }
+                   }
                 }
 
                 if ( careNeed.IsValid )
@@ -494,7 +509,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
                     var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
                     var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
-                    var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
                     var leaderRoleGuids = GetAttributeValues( AttributeKey.GroupTypeAndRole ).AsGuidList();
                     var futureThresholdDays = GetAttributeValue( AttributeKey.FutureThresholdDays ).AsDouble();
 
