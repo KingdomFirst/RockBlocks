@@ -419,7 +419,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     PersonAlias = personAlias,
                                     PersonAliasId = personAlias.Id,
                                     FollowUpWorker = existingAssigned.FollowUpWorker,
-                                    WorkerId = existingAssigned.WorkerId
+                                    WorkerId = existingAssigned.WorkerId,
+                                    Type = existingAssigned.Type,
+                                    CareNeed = careNeed
                                 };
                                 careNeed.AssignedPersons.Add( assignedPerson );
                                 newlyAssignedPersons.Add( assignedPerson );
@@ -712,7 +714,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     var addPerson = new AssignedPerson
                     {
                         PersonAliasId = ppAddPerson.PersonAliasId,
-                        NeedId = hfCareNeedId.Value.AsInteger()
+                        NeedId = hfCareNeedId.Value.AsInteger(),
+                        Type = AssignedType.Manual
                     };
                     AssignedPersons.Add( addPerson );
                     BindAssignedPersonsGrid();
@@ -739,7 +742,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     PersonAliasId = selectedVal[0].AsIntegerOrNull() ?? 0,
                     NeedId = hfCareNeedId.Value.AsInteger(),
                     FollowUpWorker = !AssignedPersons.Any( ap => ap.FollowUpWorker.HasValue && ap.FollowUpWorker.Value ),
-                    WorkerId = selectedVal[1].AsIntegerOrNull()
+                    WorkerId = selectedVal[1].AsIntegerOrNull(),
+                    Type = AssignedType.Worker
                 };
                 AssignedPersons.Add( addPerson );
                 BindAssignedPersonsGrid();
@@ -948,7 +952,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     PersonAliasId = ap.PersonAliasId,
                     NeedId = ap.NeedId,
                     FollowUpWorker = ap.FollowUpWorker,
-                    WorkerId = ap.WorkerId
+                    WorkerId = ap.WorkerId,
+                    Type = ap.Type
                 } )
                 .OrderBy( ap => ap.PersonAlias.Person.LastName )
                 .ThenBy( ap => ap.PersonAlias.Person.NickName );

@@ -108,6 +108,7 @@
                             <asp:BoundField DataField="PersonAlias.Person.FullName" HeaderText="Name" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" />
                             <Rock:BoolField HeaderText="Follow Up Worker" DataField="FollowUpWorker"></Rock:BoolField>
                             <Rock:RockBoundField HeaderText="Worker Id" DataField="WorkerId"></Rock:RockBoundField>
+                            <Rock:RockBoundField HeaderText="Type" DataField="Type"></Rock:RockBoundField>
                             <Rock:DeleteField OnClick="gAssignedPersons_DeleteClick" />
                         </Columns>
                     </Rock:Grid>
