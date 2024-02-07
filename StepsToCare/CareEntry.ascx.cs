@@ -53,7 +53,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Description = "Select the Group Type Roles of the leaders you would like auto assigned to care need when the Person is a member of this type of group. If none are selected it will not auto assign the small group member with the appropriate role to the need. ",
         IsRequired = false,
         ListSource = "SELECT gtr.[Guid] as [Value], CONCAT(gt.[Name],' > ',gtr.[Name]) as [Text] FROM GroupTypeRole gtr JOIN GroupType gt ON gtr.GroupTypeId = gt.Id ORDER BY gt.[Name], gtr.[Order]",
-        Key = AttributeKey.GroupTypeAndRole )]   
+        Key = AttributeKey.GroupTypeAndRole )]
 
     [BooleanField( "Auto Assign Worker with Geofence",
         Description = "Care Need Workers can have Geofence locations assigned to them, if there are workers with geofences and this block setting is enabled it will auto assign workers to this need on new entries based on the requester home being in the geofence.",
@@ -100,6 +100,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultIntegerValue = 3,
         Key = AttributeKey.FutureThresholdDays )]
 
+    [BooleanField( "Preview Assigned People",
+        Description = "Should you see a preview of who is going to be assigned before the care entry is saved? This will add a bit of processing up front compared to on save. Workers may be duplicated if multiple people are entering care needs at the same time.",
+        DefaultBooleanValue = false,
+        Key = AttributeKey.PreviewAssignedPeople )]
+
     [SecurityAction(
         SecurityActionKey.UpdateStatus,
         "The roles and/or users that have access to update the status of Care Needs." )]
@@ -121,6 +126,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string AdultFamilyWorkers = "AdultFamilyWorkers";
             public const string LoadBalanceWorkersType = "LoadBalanceWorkersType";
             public const string FutureThresholdDays = "FutureThresholdDays";
+            public const string PreviewAssignedPeople = "PreviewAssignedPeople";
         }
 
         private static class PageParameterKey
@@ -253,6 +259,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 RockContext rockContext = new RockContext();
                 CareNeedService careNeedService = new CareNeedService( rockContext );
                 AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
+
+                var previewAssignedPeople = GetAttributeValue( AttributeKey.PreviewAssignedPeople ).AsBoolean();
 
                 CareNeed careNeed = null;
                 int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
@@ -387,7 +395,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 careNeed.WorkersOnly = cbWorkersOnly.Checked;
 
                 var newlyAssignedPersons = new List<AssignedPerson>();
-                if ( careNeed.AssignedPersons != null )
+                if ( careNeed.AssignedPersons != null || previewAssignedPeople )
                 {
                     if ( AssignedPersons.Any() )
                     {
@@ -395,8 +403,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                         foreach ( var existingAssigned in assignedPersonsLookup )
                         {
-                            if ( !careNeed.AssignedPersons.Any( ap => ap.PersonAliasId == existingAssigned.PersonAliasId ) )
+                            if ( careNeed.AssignedPersons == null || !careNeed.AssignedPersons.Any( ap => ap.PersonAliasId == existingAssigned.PersonAliasId ) )
                             {
+                                if ( careNeed.AssignedPersons == null )
+                                {
+                                    careNeed.AssignedPersons = new List<AssignedPerson>();
+                                }
                                 var personAlias = existingAssigned.PersonAlias;
                                 if ( personAlias == null )
                                 {
@@ -417,7 +429,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         assignedPersonService.DeleteRange( removePersons );
                         careNeed.AssignedPersons.RemoveAll( removePersons );
                     }
-                    else if ( careNeed.AssignedPersons.Any() )
+                    else if ( careNeed.AssignedPersons != null && careNeed.AssignedPersons.Any() )
                     {
                         assignedPersonService.DeleteRange( careNeed.AssignedPersons );
                         careNeed.AssignedPersons.Clear();
@@ -489,7 +501,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         dateDifference = ( careNeed.DateEntered.Value - DateTime.Now ).TotalDays;
                     }
-                    if ( isNew && dateDifference <= futureThresholdDays )
+                    if ( isNew && dateDifference <= futureThresholdDays && !previewAssignedPeople )
                     {
                         CareUtilities.AutoAssignWorkers( careNeed, careNeed.WorkersOnly, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids );
                     }
@@ -610,13 +622,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     lapAddress.SetValue( person.GetHomeLocation() );
                     lapAddress.Enabled = false;
 
-                    int? requestId = PageParameter( "CareNeedId" ).AsIntegerOrNull();
+                    int requestId = hfCareNeedId.ValueAsInt();
 
-                    if ( !cpCampus.SelectedCampusId.HasValue && ( e != null || ( requestId.HasValue && requestId == 0 ) ) )
+                    if ( !cpCampus.SelectedCampusId.HasValue && ( e != null || requestId == 0 ) )
                     {
                         var personCampus = person.GetCampus();
                         cpCampus.SelectedCampusId = personCampus != null ? personCampus.Id : ( int? ) null;
                     }
+
+                    PreviewAssignedPeople( person );
                 }
             }
             else
@@ -732,6 +746,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             bddlAddWorker.ClearSelection();
+        }
+
+        protected void dvpCategory_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            PreviewAssignedPeople( null );
         }
 
         #endregion Events
@@ -881,9 +900,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             careNeed.LoadAttributes();
             Helper.AddEditControls( careNeed, phAttributes, true, BlockValidationGroup, 2 );
 
-            ppPerson_SelectPerson( null, null );
-
             hfCareNeedId.Value = careNeed.Id.ToString();
+
+            ppPerson_SelectPerson( null, null );
         }
 
         /// <summary>
@@ -938,6 +957,41 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gAssignedPersons.DataBind();
 
             btnDeleteSelectedAssignedPersons.Visible = AssignedPersons.Any();
+        }
+
+        private void PreviewAssignedPeople( Person person )
+        {
+            var previewAssignedPeople = GetAttributeValue( AttributeKey.PreviewAssignedPeople ).AsBoolean();
+            var categoryId = dvpCategory.SelectedValue.AsIntegerOrNull();
+            var needId = hfCareNeedId.ValueAsInt();
+            if ( person == null && ppPerson.PersonId != null )
+            {
+                person = new PersonService( new RockContext() ).Get( ppPerson.PersonId.Value );
+            }
+            if ( previewAssignedPeople && categoryId.HasValue && person != null && needId == 0 )
+            {
+                var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
+                var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
+                var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
+                var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
+                var leaderRoleGuids = GetAttributeValues( AttributeKey.GroupTypeAndRole ).AsGuidList();
+
+                var careNeed = new CareNeed { Id = 0 };
+                careNeed.CampusId = cpCampus.SelectedCampusId;
+                careNeed.PersonAlias = person.PrimaryAlias;
+                careNeed.PersonAliasId = person.PrimaryAliasId;
+                careNeed.StatusValueId = dvpStatus.SelectedValue.AsIntegerOrNull();
+                careNeed.CategoryValueId = categoryId;
+
+                careNeed.LoadAttributes();
+
+                phAttributes.Controls.Clear();
+                Helper.AddEditControls( careNeed, phAttributes, false, BlockValidationGroup, 2 );
+
+                AssignedPersons = CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople );
+                BindAssignedPersonsGrid();
+                pwAssigned.Visible = UserCanAdministrate;
+            }
         }
 
         #endregion Methods

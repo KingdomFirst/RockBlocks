@@ -69,7 +69,7 @@
                 </Rock:PanelWidget>
 
                 <Rock:PanelWidget ID="pwDetails" runat="server" Title="Need Details" Expanded="true">
-                    <Rock:DefinedValuePicker ID="dvpCategory" runat="server" Label="Category" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="CategoryValueId" Required="true" />
+                    <Rock:DefinedValuePicker ID="dvpCategory" runat="server" Label="Category" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="CategoryValueId" Required="true" OnSelectedIndexChanged="dvpCategory_SelectedIndexChanged" AutoPostBack="true" />
 
                     <Rock:DataTextBox ID="dtbDetailsText" runat="server" Label="Description of Need" TextMode="MultiLine" Rows="4" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="Details" />
 
