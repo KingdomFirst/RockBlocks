@@ -23,6 +23,10 @@ Assumptions:
 Installation:
 - CREATE PROCEDURE [dbo].[_rocks_kfs_spPersonImport_CSV] AS ;
 
+Updates:
+- Added GroupTypeId to the GroupMember insert process to support
+  new Rock model requirement - GM 2/1/2024
+
 **************************************************************/
 
 SET NOCOUNT ON
@@ -200,6 +204,7 @@ SELECT @cmd = '
 ;WITH NewGroupMembers AS (
 SELECT t.GroupId,
     t.PersonId,
+    g.[GroupTypeId],
     gt.[DefaultGroupRoleId]
 FROM _rocks_kfs_peopleCsvTemp t
 LEFT OUTER JOIN [GroupMember] gm ON t.[PersonId] = gm.[PersonId] and gm.[GroupId] = t.GroupId
@@ -207,8 +212,8 @@ JOIN [Group] g ON t.[GroupId] = g.[Id]
 JOIN [GroupType] gt ON g.[GroupTypeId] = gt.[Id]
 WHERE gm.[Id] IS NULL
 )
-INSERT GroupMember( IsSystem, GroupId, PersonId, GroupRoleId, GroupMemberStatus, [Guid], CreatedDateTime, ModifiedDateTime, DateTimeAdded, IsNotified, IsArchived )
-SELECT DISTINCT 0, GroupId, PersonId, DefaultGroupRoleId, 1, NEWID(), GETDATE(), GETDATE(), GETDATE(), 0, 0
+INSERT GroupMember( IsSystem, GroupId, GroupTypeId, PersonId, GroupRoleId, GroupMemberStatus, [Guid], CreatedDateTime, ModifiedDateTime, DateTimeAdded, IsNotified, IsArchived )
+SELECT DISTINCT 0, GroupId, GroupTypeId, PersonId, DefaultGroupRoleId, 1, NEWID(), GETDATE(), GETDATE(), GETDATE(), 0, 0
 FROM NewGroupMembers
 ';
 

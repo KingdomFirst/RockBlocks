@@ -33,11 +33,6 @@
 
                         <asp:ValidationSummary ID="valSummary" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
 
-                        <Rock:AddressControl ID="filter_acAddress" runat="server" Required="true" RequiredErrorMessage="Your Address is Required" />
-                        <Rock:RockTextBox ID="filter_tbPostalCode" runat="server" Required="true" RequiredErrorMessage="Your Postal Code is Required" Label="Postal Code" CssClass="form-control js-postal-code js-postcode js-address-field" />
-                        <asp:RegularExpressionValidator ID="revPostalCode" runat="server" ControlToValidate="filter_tbPostalCode" ValidationExpression="[0-9]*\-*[0-9]*" Text="-" CssClass="hidden hide"></asp:RegularExpressionValidator>
-                        <Rock:RockCheckBoxList ID="filter_cblCampus" runat="server" Label="Campuses" DataTextField="Name" DataValueField="Id" RepeatDirection="Horizontal" Visible="false" />
-                        <Rock:RockDropDownList ID="filter_ddlCampus" runat="server" Label="Campus" DataTextField="Name" DataValueField="Id" Visible="false" />
                         <asp:PlaceHolder ID="phFilterControls" runat="server" />
                         <asp:Panel runat="server" ID="pnlBtnFilterControls" class="form-group" Visible="false">
                             <button id="btnFilterControls" runat="server" class="btn btn-default btn-xs btn-kfs-filter collapsed" data-toggle="collapse" data-target="" aria-expanded="false" aria-controls="" onclick="return false;">[More Filters] <i class='fa fa-caret-down'></i><i class='fa fa-caret-up'></i></button>
@@ -190,19 +185,44 @@
                                         <Rock:RockCheckBoxList ID="cblAttributes" runat="server" Label="Display Attribute Filters" RepeatDirection="Horizontal"
                                             Help="The group attributes that should be available for user to filter results by." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblInitialLoadFilters" runat="server" Label="Collapse Filters on Initial Load" RepeatDirection="Horizontal"
-                                            Help="Collapse/Hide these filter controls under a collapsible panel for user on first load." ValidationGroup="GroupFinderSettings" />
+                                            Help="Collapse/Hide these filter controls under a collapsible panel for user on first load. Note: Selected filters may impact Filter Display Order." ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockDropDownList ID="ddlAttributeSort" runat="server" Label="Custom Sort from Attribute"
                                             Help="Select an attribute to sort by if a group contains multiple of the selected attribute filter options." ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBoxList ID="cblAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values" RepeatDirection="Horizontal"
-                                            Help="The group attribute values that you would like to hide from the filter options." ValidationGroup="GroupFinderSettings" />
-                                         <Rock:RockCheckBoxList ID="cblAttributesInKeywords" runat="server" Label="Attributes in Keyword Search" RepeatDirection="Horizontal"
+                                        <Rock:RockListBox ID="rlbAttributeHiddenOptions" runat="server" Label="Hide Attribute Filter Values"
+                                            Help="The group attribute values that you would like to hide from the filter options. Some field types are not supported (such as Enhanced For Long List attributes)." ValidationGroup="GroupFinderSettings" />
+                                        <Rock:RockCheckBoxList ID="cblAttributesInKeywords" runat="server" Label="Attributes in Keyword Search" RepeatDirection="Horizontal"
                                             Help="The text-based group attributes that should be included in keyword search." ValidationGroup="GroupFinderSettings" />
-                                   </div>
+                                    </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
                                     </div>
                                     <div class="col-md-6">
+                                    </div>
+                                </div>
+                            </Rock:PanelWidget>
+                            <Rock:PanelWidget ID="wpOrderFilters" runat="server" Title="Filter Display Order">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <asp:UpdatePanel ID="upOrderFilters" runat="server" UpdateMode="Conditional">
+                                            <ContentTemplate>
+                                                <Rock:Grid
+                                                    runat="server"
+                                                    ID="gSortFilters"
+                                                    DisplayType="Light"
+                                                    OnRowDataBound="gSortFilters_RowDataBound"
+                                                    OnGridReorder="gSortFilters_GridReorder" DataKeyNames="Key" HeaderStyle-CssClass="hide">
+                                                    <Columns>
+                                                        <Rock:ReorderField />
+                                                        <asp:TemplateField>
+                                                            <ItemTemplate>
+                                                                <asp:Literal ID="lName" runat="server"></asp:Literal>
+                                                            </ItemTemplate>
+                                                        </asp:TemplateField>
+                                                    </Columns>
+                                                </Rock:Grid>
+                                            </ContentTemplate>
+                                        </asp:UpdatePanel>
                                     </div>
                                 </div>
                             </Rock:PanelWidget>
