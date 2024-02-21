@@ -169,6 +169,24 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 15,
         Key = AttributeKey.CompleteChildNeeds )]
 
+    [TextField( "Snooze Action Text",
+        DefaultValue = "Snooze",
+        Category = "Actions",
+        Order = 15,
+        Key = AttributeKey.SnoozeActionText )]
+
+    [TextField( "Unsnooze Action Text",
+        DefaultValue = "Unsnooze",
+        Category = "Actions",
+        Order = 15,
+        Key = AttributeKey.UnsnoozeActionText )]
+
+    [BooleanField( "Snooze Child Needs on Parent Snooze",
+        DefaultBooleanValue = true,
+        Category = "Actions",
+        Order = 15,
+        Key = AttributeKey.SnoozeChildNeeds )]
+
     [CustomDropdownListField( "Display Type",
         Description = "The format to use for displaying notes.",
         ListSource = "Full,Light",
@@ -271,6 +289,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string TargetModeIncludeFamilyMembers = "TargetModeIncludeFamilyMembers";
             public const string FutureThresholdDays = "FutureThresholdDays";
             public const string BenevolenceType = "BenevolenceType";
+            public const string SnoozeActionText = "SnoozeActionText";
+            public const string UnsnoozeActionText = "UnsnoozeActionText";
+            public const string SnoozeChildNeeds = "SnoozeChildNeeds";
         }
 
         /// <summary>
@@ -988,6 +1009,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItem1.Controls.Add( lbCompleteNeed );
                         }
 
+                        if ( careNeed.EnableRecurrence && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
+                        {
+                            var lbSnoozeNeed = new LinkButton();
+                            lbSnoozeNeed.Command += lbNeedAction_Click;
+                            lbSnoozeNeed.CommandArgument = careNeed.Id.ToString();
+                            lbSnoozeNeed.CommandName = "snooze";
+                            lbSnoozeNeed.Text = GetAttributeValue( AttributeKey.SnoozeActionText );
+                            actionItem1.Controls.Add( lbSnoozeNeed );
+                        }
+
+                        if ( careNeed.EnableRecurrence && careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() )
+                        {
+                            var lbUnsnoozeNeed = new LinkButton();
+                            lbUnsnoozeNeed.Command += lbNeedAction_Click;
+                            lbUnsnoozeNeed.CommandArgument = careNeed.Id.ToString();
+                            lbUnsnoozeNeed.CommandName = "unsnooze";
+                            lbUnsnoozeNeed.Text = GetAttributeValue( AttributeKey.UnsnoozeActionText );
+                            actionItem1.Controls.Add( lbUnsnoozeNeed );
+                        }
+
                         if ( followUpGrid || ( TargetPerson != null && careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
                         {
                             var actionItemReopen = new HtmlGenericControl( "li" );
@@ -1339,6 +1380,53 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     pnlConnectionTypes.Visible = true;
                     mdConnectionRequest.SaveClick += mdConnectionRequest_SaveClick;
                     mdConnectionRequest.Show();
+                    break;
+                case "snooze":
+                    // do something with snooze here.
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var snoozeChildNeeds = GetAttributeValue( AttributeKey.SnoozeChildNeeds ).AsBoolean();
+                        var careNeedService = new CareNeedService( rockContext );
+                        var careNeed = careNeedService.Get( id );
+                        var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED ).Id;
+                        careNeed.StatusValueId = snoozeValueId;
+                        careNeed.SnoozeDate = RockDateTime.Now;
+
+                        if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
+                        {
+                            foreach ( var childneed in careNeed.ChildNeeds )
+                            {
+                                childneed.StatusValueId = snoozeValueId;
+                                childneed.SnoozeDate = RockDateTime.Now;
+                            }
+                        }
+                        rockContext.SaveChanges();
+
+                        createNote( rockContext, id, "Snoozed" );
+
+                        if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
+                        {
+                            foreach ( var childneed in careNeed.ChildNeeds )
+                            {
+                                createNote( rockContext, childneed.Id, "Marked Snoozed from Parent Need" );
+                            }
+                        }
+                    }
+                    BindGrid();
+                    break;
+                case "unsnooze":
+                    // do something with unsnooze here.
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var careNeedService = new CareNeedService( rockContext );
+                        var careNeed = careNeedService.Get( id );
+                        var openValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN ).Id;
+                        careNeed.StatusValueId = openValueId;
+                        rockContext.SaveChanges();
+
+                        createNote( rockContext, id, "Manually Unsnoozed" );
+                    }
+                    BindGrid();
                     break;
                 default:
                     break;
@@ -1862,6 +1950,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 lStatus.HeaderStyle.HorizontalAlign = HorizontalAlign.Center;
                 lStatus.ItemStyle.HorizontalAlign = HorizontalAlign.Center;
                 lStatus.DataBound += lStatus_DataBound;
+                lStatus.SortExpression = "StatusValueId";
                 gList.Columns.Add( lStatus );
 
                 using ( var rockContext = new RockContext() )

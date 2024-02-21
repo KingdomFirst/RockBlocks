@@ -261,6 +261,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
 
                 var previewAssignedPeople = GetAttributeValue( AttributeKey.PreviewAssignedPeople ).AsBoolean();
+                var snoozedValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
 
                 CareNeed careNeed = null;
                 int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
@@ -384,7 +385,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 careNeed.SubmitterAliasId = ppSubmitter.PersonAliasId;
 
-                careNeed.StatusValueId = dvpStatus.SelectedValue.AsIntegerOrNull();
+                if ( careNeed.StatusValueId != dvpStatus.SelectedDefinedValueId && dvpStatus.SelectedDefinedValueId == snoozedValueId )
+                {
+                    careNeed.SnoozeDate = RockDateTime.Now;
+                }
+
+                careNeed.StatusValueId = dvpStatus.SelectedDefinedValueId;
+
                 careNeed.CategoryValueId = dvpCategory.SelectedValue.AsIntegerOrNull();
 
                 if ( dpDate.SelectedDateTime.HasValue )
@@ -393,6 +400,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
 
                 careNeed.WorkersOnly = cbWorkersOnly.Checked;
+
+                careNeed.EnableRecurrence = cbEnableRecurrence.Checked;
+                careNeed.RenewPeriodDays = numbRepeatDays.IntegerValue;
+                careNeed.RenewMaxCount = numbRepeatTimes.IntegerValue;
 
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
                 var newlyAssignedPersons = new List<AssignedPerson>();
@@ -800,6 +811,44 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
 
         }
+
+        protected void cbEnableRecurrence_CheckedChanged( object sender, EventArgs e )
+        {
+            pnlRecurrenceOptions.Visible = cbEnableRecurrence.Checked;
+        }
+
+        protected void btnSnooze_Click( object sender, EventArgs e )
+        {
+            RockContext rockContext = new RockContext();
+            CareNeedService careNeedService = new CareNeedService( rockContext );
+            AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
+
+            CareNeed careNeed = null;
+            int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
+
+            if ( !careNeedId.Equals( 0 ) )
+            {
+                careNeed = careNeedService.Get( careNeedId );
+            }
+
+            if ( careNeed != null )
+            {
+                careNeed.StatusValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
+                careNeed.SnoozeDate = RockDateTime.Now;
+
+                rockContext.WrapTransaction( () =>
+                {
+                    rockContext.SaveChanges();
+                } );
+
+                dvpStatus.SetValue( careNeed.StatusValueId );
+
+                updateStatusLabel( careNeed );
+
+            }
+
+        }
+
         #endregion Events
 
         #region Methods
@@ -846,6 +895,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             cbWorkersOnly.Checked = careNeed.WorkersOnly;
             cbIncludeFamily.Checked = careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any();
+            cbEnableRecurrence.Checked = careNeed.EnableRecurrence;
+            pnlRecurrenceOptions.Visible = cbEnableRecurrence.Checked;
+            numbRepeatDays.IntegerValue = careNeed.RenewPeriodDays;
+            numbRepeatTimes.IntegerValue = careNeed.RenewMaxCount;
 
             var paramCampusId = PageParameter( PageParameterKey.CampusId ).AsIntegerOrNull();
             if ( careNeed.Campus != null )
@@ -877,23 +930,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 dvpStatus.SetValue( careNeed.StatusValueId );
 
-                if ( careNeed.Status.Value == "Open" )
-                {
-                    hlStatus.Text = "Open";
-                    hlStatus.LabelType = LabelType.Success;
-                }
-
-                if ( careNeed.Status.Value == "Follow Up" )
-                {
-                    hlStatus.Text = "Follow Up";
-                    hlStatus.LabelType = LabelType.Danger;
-                }
-
-                if ( careNeed.Status.Value == "Closed" )
-                {
-                    hlStatus.Text = "Closed";
-                    hlStatus.LabelType = LabelType.Primary;
-                }
+                updateStatusLabel( careNeed );
             }
             else if ( paramStatus != null )
             {
@@ -950,6 +987,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             hfCareNeedId.Value = careNeed.Id.ToString();
 
             ppPerson_SelectPerson( null, null );
+        }
+
+        private void updateStatusLabel( CareNeed careNeed )
+        {
+            careNeed.Status.LoadAttributes();
+
+            hlStatus.Text = careNeed.Status.Value;
+            hlStatus.LabelType = LabelType.Custom;
+            hlStatus.CustomClass = careNeed.Status.GetAttributeValue( "CssClass" );
+
+            if ( careNeed.EnableRecurrence && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
+            {
+                btnSnooze.Visible = true;
+                btnSnoozeFtr.Visible = true;
+            }
+            else
+            {
+                btnSnooze.Visible = false;
+                btnSnoozeFtr.Visible = false;
+            }
         }
 
         /// <summary>

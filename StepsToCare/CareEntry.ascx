@@ -13,6 +13,7 @@
 
                 <div class="panel-labels">
                     <Rock:HighlightLabel ID="hlStatus" runat="server" LabelType="Default" Text="Pending" />
+                    <asp:LinkButton ID="btnSnooze" runat="server" CssClass="btn btn-xs btn-primary" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
                 </div>
             </div>
             <Rock:PanelDrawer ID="pdAuditDetails" runat="server"></Rock:PanelDrawer>
@@ -78,6 +79,17 @@
                     <Rock:DataTextBox ID="dtbDetailsText" runat="server" Label="Description of Need" TextMode="MultiLine" Rows="4" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="Details" />
 
                     <Rock:DynamicPlaceholder ID="phAttributes" runat="server" />
+
+                    <Rock:RockCheckBox ID="cbEnableRecurrence" runat="server" Text="Enable Recurrence" OnCheckedChanged="cbEnableRecurrence_CheckedChanged" AutoPostBack="true" />
+
+                    <asp:Panel ID="pnlRecurrenceOptions" runat="server" CssClass="row" Visible="false">
+                        <div class="col-sm-6 col-md-4 col-lg-3">
+                            <Rock:NumberBox ID="numbRepeatDays" runat="server" Label="Repeat Every" Required="true" Help="Will repeat the notification and change to follow up status the provided number of days after the snooze." AppendText="days" />
+                        </div>
+                        <div class="col-sm-6 col-md-4 col-lg-3">
+                            <Rock:NumberBox ID="numbRepeatTimes" runat="server" Label="Number of Times to Repeat" Help="The number of times to repeat.  Leave blank to repeat indefinitely." AppendText="times" />
+                        </div>
+                    </asp:Panel>
                 </Rock:PanelWidget>
 
                 <Rock:PanelWidget ID="pwAssigned" runat="server" Title="Assign Workers" Expanded="true">
@@ -114,7 +126,7 @@
                             <Rock:BoolField HeaderText="Follow Up Worker" DataField="FollowUpWorker"></Rock:BoolField>
                             <Rock:RockTemplateField HeaderText="Type">
                                 <ItemTemplate>
-                                    <asp:Placeholder runat="server" ID="phCountOrRole"></asp:Placeholder>
+                                    <asp:PlaceHolder runat="server" ID="phCountOrRole"></asp:PlaceHolder>
                                 </ItemTemplate>
                             </Rock:RockTemplateField>
                             <Rock:DeleteField OnClick="gAssignedPersons_DeleteClick" />
@@ -131,6 +143,7 @@
                 <asp:LinkButton ID="lbCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="lbCancel_Click" />
                 <Rock:RockCheckBox ID="cbIncludeFamily" runat="server" Text="Include Family" DisplayInline="true" FormGroupCssClass="d-inline-block" />
                 <Rock:RockCheckBox ID="cbWorkersOnly" runat="server" Text="Workers Only" DisplayInline="true" FormGroupCssClass="d-inline-block" />
+                <asp:LinkButton ID="btnSnoozeFtr" runat="server" CssClass="btn btn-warning btn-sm" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
             </div>
         </asp:Panel>
 
