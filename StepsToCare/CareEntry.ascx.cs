@@ -773,6 +773,33 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             dtbDetailsText.Focus();
         }
 
+        protected void gAssignedPersons_RowDataBound( object sender, GridViewRowEventArgs e )
+        {
+            var phCountOrRole = e.Row.ControlsOfTypeRecursive<PlaceHolder>().FirstOrDefault();
+            var assignedPerson = e.Row.DataItem as AssignedPerson;
+
+            if ( phCountOrRole == null || assignedPerson == null )
+            {
+                return;
+            }
+            var returnStr = assignedPerson.Type.ToString();
+            if ( assignedPerson.TypeQualifier.IsNotNullOrWhiteSpace() )
+            {
+                var typeQualifierArray = assignedPerson.TypeQualifier.Split( '^' );
+                if ( assignedPerson.Type == AssignedType.Worker )
+                {
+                    //Format is [0]Count^[1]HasAgeRange^[2]HasCampus^[3]HasCategory^[4]HasGender
+                    returnStr = $"Worker ({typeQualifierArray[0]})";
+                }
+                else if ( assignedPerson.Type == AssignedType.GroupRole && typeQualifierArray.Length > 2 )
+                {
+                    //Format is [0]GroupRoleId^[1]GroupTypeId^[2]Group Type > Group Role
+                    returnStr = typeQualifierArray[2];
+                }
+            }
+            phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
+
+        }
         #endregion Events
 
         #region Methods
@@ -1017,33 +1044,5 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         }
 
         #endregion Methods
-
-        protected void gAssignedPersons_RowDataBound( object sender, GridViewRowEventArgs e )
-        {
-            var phCountOrRole = e.Row.ControlsOfTypeRecursive<PlaceHolder>().FirstOrDefault();
-            var assignedPerson = e.Row.DataItem as AssignedPerson;
-
-            if ( phCountOrRole == null || assignedPerson == null )
-            {
-                return;
-            }
-            var returnStr = assignedPerson.Type.ToString();
-            if ( assignedPerson.TypeQualifier.IsNotNullOrWhiteSpace() )
-            {
-                var typeQualifierArray = assignedPerson.TypeQualifier.Split( '^' );
-                if ( assignedPerson.Type == AssignedType.Worker )
-                {
-                    //Format is [0]Count^[1]HasAgeRange^[2]HasCampus^[3]HasCategory^[4]HasGender
-                    returnStr = $"Worker ({typeQualifierArray[0]})";
-                }
-                else if ( assignedPerson.Type == AssignedType.GroupRole && typeQualifierArray.Length > 2 )
-                {
-                    //Format is [0]GroupRoleId^[1]GroupTypeId^[2]Group Type > Group Role
-                    returnStr = typeQualifierArray[2];
-                }
-            }
-            phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
-
-        }
     }
 }
