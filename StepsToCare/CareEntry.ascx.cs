@@ -1082,6 +1082,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
                 var leaderRoleGuids = GetAttributeValues( AttributeKey.GroupTypeAndRole ).AsGuidList();
 
+                var category = DefinedValueCache.Get( categoryId.Value );
+
                 var careNeed = new CareNeed { Id = 0 };
                 careNeed.CampusId = cpCampus.SelectedCampusId;
                 careNeed.PersonAlias = person.PrimaryAlias;
@@ -1090,6 +1092,23 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 careNeed.CategoryValueId = categoryId;
 
                 careNeed.LoadAttributes();
+
+                var categoryRepeatEvery = category.GetAttributeValue( "RepeatEvery" ).AsIntegerOrNull();
+                var categoryTimesToRepeat = category.GetAttributeValue( "TimesToRepeat" ).AsIntegerOrNull();
+                if ( categoryRepeatEvery.HasValue && categoryRepeatEvery > 0 )
+                {
+                    cbEnableRecurrence.Checked = careNeed.EnableRecurrence = true;
+                    numbRepeatDays.IntegerValue = careNeed.RenewPeriodDays = categoryRepeatEvery;
+                    numbRepeatTimes.IntegerValue = careNeed.RenewMaxCount = categoryTimesToRepeat;
+                    pnlRecurrenceOptions.Visible = true;
+                }
+                else
+                {
+                    pnlRecurrenceOptions.Visible = false;
+                    cbEnableRecurrence.Checked = false;
+                    numbRepeatDays.IntegerValue = null;
+                    numbRepeatTimes.IntegerValue = null;
+                }
 
                 phAttributes.Controls.Clear();
                 Helper.AddEditControls( careNeed, phAttributes, false, BlockValidationGroup, 2 );
