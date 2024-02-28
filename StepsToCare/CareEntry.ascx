@@ -13,7 +13,8 @@
 
                 <div class="panel-labels">
                     <Rock:HighlightLabel ID="hlStatus" runat="server" LabelType="Default" Text="Pending" />
-                    <asp:LinkButton ID="btnSnooze" runat="server" CssClass="btn btn-xs btn-primary" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
+                    <asp:LinkButton ID="btnSnooze" runat="server" CssClass="btn btn-primary btn-xs" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
+                    <asp:LinkButton ID="btnComplete" runat="server" CssClass="btn btn-success btn-xs" OnClick="btnComplete_Click" Visible="false">Complete</asp:LinkButton>
                 </div>
             </div>
             <Rock:PanelDrawer ID="pdAuditDetails" runat="server"></Rock:PanelDrawer>
@@ -80,11 +81,11 @@
 
                     <Rock:DynamicPlaceholder ID="phAttributes" runat="server" />
 
-                    <Rock:RockCheckBox ID="cbEnableRecurrence" runat="server" Text="Enable Recurrence" OnCheckedChanged="cbEnableRecurrence_CheckedChanged" AutoPostBack="true" />
+                    <Rock:RockCheckBox ID="cbEnableRecurrence" runat="server" Text="Custom Follow Up" OnCheckedChanged="cbEnableRecurrence_CheckedChanged" AutoPostBack="true" />
 
                     <asp:Panel ID="pnlRecurrenceOptions" runat="server" CssClass="row" Visible="false">
                         <div class="col-sm-6 col-md-4 col-lg-3">
-                            <Rock:NumberBox ID="numbRepeatDays" runat="server" Label="Repeat Every" Required="true" Help="Will repeat the notification and change to follow up status the provided number of days after the snooze." AppendText="days" />
+                            <Rock:NumberBox ID="numbRepeatDays" runat="server" Label="Follow Up After" Required="true" Help="Will change to follow up status and notify worker the provided number of days after the need is entered or snoozed." AppendText="days" />
                         </div>
                         <div class="col-sm-6 col-md-4 col-lg-3">
                             <Rock:NumberBox ID="numbRepeatTimes" runat="server" Label="Number of Times to Repeat" Help="The number of times to repeat.  Leave blank to repeat indefinitely." AppendText="times" />
@@ -143,7 +144,10 @@
                 <asp:LinkButton ID="lbCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="lbCancel_Click" />
                 <Rock:RockCheckBox ID="cbIncludeFamily" runat="server" Text="Include Family" DisplayInline="true" FormGroupCssClass="d-inline-block" />
                 <Rock:RockCheckBox ID="cbWorkersOnly" runat="server" Text="Workers Only" DisplayInline="true" FormGroupCssClass="d-inline-block" />
-                <asp:LinkButton ID="btnSnoozeFtr" runat="server" CssClass="btn btn-warning btn-sm" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
+                <div class="pull-right">
+                    <asp:LinkButton ID="btnSnoozeFtr" runat="server" CssClass="btn btn-warning btn-sm" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
+                    <asp:LinkButton ID="btnCompleteFtr" runat="server" CssClass="btn btn-success btn-sm" OnClick="btnComplete_Click" Visible="false">Complete</asp:LinkButton>
+                </div>
             </div>
         </asp:Panel>
 

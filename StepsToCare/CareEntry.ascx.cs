@@ -105,9 +105,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultBooleanValue = false,
         Key = AttributeKey.PreviewAssignedPeople )]
 
+    [BooleanField( "Complete Child Needs on Parent Completion",
+        DefaultBooleanValue = true,
+        Key = AttributeKey.CompleteChildNeeds )]
+
+    [BooleanField( "Snooze Child Needs on Parent Snooze",
+        DefaultBooleanValue = true,
+        Key = AttributeKey.SnoozeChildNeeds )]
+
     [SecurityAction(
         SecurityActionKey.UpdateStatus,
         "The roles and/or users that have access to update the status of Care Needs." )]
+
+    [SecurityAction(
+        SecurityActionKey.CompleteNeeds,
+        "The roles and/or users that have access to Complete Needs." )]
     #endregion Block Settings
     public partial class CareEntry : Rock.Web.UI.RockBlock
     {
@@ -127,6 +139,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string LoadBalanceWorkersType = "LoadBalanceWorkersType";
             public const string FutureThresholdDays = "FutureThresholdDays";
             public const string PreviewAssignedPeople = "PreviewAssignedPeople";
+            public const string CompleteChildNeeds = "CompleteChildNeeds";
+            public const string SnoozeChildNeeds = "SnoozeChildNeeds";
         }
 
         private static class PageParameterKey
@@ -148,6 +162,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         private static class SecurityActionKey
         {
             public const string UpdateStatus = "UpdateStatus";
+            public const string CompleteNeeds = "CompleteNeeds";
         }
 
         private bool _allowNewPerson = false;
@@ -833,13 +848,35 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( careNeed != null )
             {
-                careNeed.StatusValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
+                var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
+                careNeed.StatusValueId = snoozeValueId;
                 careNeed.SnoozeDate = RockDateTime.Now;
+
+                var snoozeChildNeeds = GetAttributeValue( AttributeKey.SnoozeChildNeeds ).AsBoolean();
+
+                if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
+                {
+                    foreach ( var childneed in careNeed.ChildNeeds )
+                    {
+                        childneed.StatusValueId = snoozeValueId;
+                        childneed.SnoozeDate = RockDateTime.Now;
+                    }
+                }
 
                 rockContext.WrapTransaction( () =>
                 {
                     rockContext.SaveChanges();
                 } );
+
+                createNote( rockContext, careNeedId, "Snoozed" );
+
+                if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
+                {
+                    foreach ( var childneed in careNeed.ChildNeeds )
+                    {
+                        createNote( rockContext, childneed.Id, "Marked Snoozed from Parent Need" );
+                    }
+                }
 
                 dvpStatus.SetValue( careNeed.StatusValueId );
 
@@ -847,6 +884,56 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             }
 
+        }
+        protected void btnComplete_Click( object sender, EventArgs e )
+        {
+            RockContext rockContext = new RockContext();
+            CareNeedService careNeedService = new CareNeedService( rockContext );
+            AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
+
+            CareNeed careNeed = null;
+            int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
+
+            if ( !careNeedId.Equals( 0 ) )
+            {
+                careNeed = careNeedService.Get( careNeedId );
+            }
+
+            if ( careNeed != null )
+            {
+                var canCompleteNeeds = IsUserAuthorized( SecurityActionKey.CompleteNeeds );
+                var completeChildNeeds = GetAttributeValue( AttributeKey.CompleteChildNeeds ).AsBoolean();
+                var completeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
+                careNeed.StatusValueId = completeValueId;
+
+                if ( completeChildNeeds && careNeed.ChildNeeds.Any() )
+                {
+                    foreach ( var childneed in careNeed.ChildNeeds )
+                    {
+                        childneed.StatusValueId = completeValueId;
+                    }
+                }
+
+                rockContext.WrapTransaction( () =>
+                {
+                    rockContext.SaveChanges();
+                } );
+
+                createNote( rockContext, careNeedId, "Marked Complete" );
+
+                if ( completeChildNeeds && careNeed.ChildNeeds.Any() )
+                {
+                    foreach ( var childneed in careNeed.ChildNeeds )
+                    {
+                        createNote( rockContext, childneed.Id, "Marked Complete from Parent Need" );
+                    }
+                }
+
+                dvpStatus.SetValue( careNeed.StatusValueId );
+
+                updateStatusLabel( careNeed );
+
+            }
         }
 
         #endregion Events
@@ -999,13 +1086,20 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( careNeed.EnableRecurrence && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
             {
-                btnSnooze.Visible = true;
-                btnSnoozeFtr.Visible = true;
+                btnSnooze.Visible = btnSnoozeFtr.Visible = true;
             }
             else
             {
-                btnSnooze.Visible = false;
-                btnSnoozeFtr.Visible = false;
+                btnSnooze.Visible = btnSnoozeFtr.Visible = false;
+            }
+
+            if ( careNeed.Status.Guid != rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED.AsGuid() && ( IsUserAuthorized( SecurityActionKey.UpdateStatus ) || IsUserAuthorized( SecurityActionKey.CompleteNeeds ) ) )
+            {
+                btnComplete.Visible = btnCompleteFtr.Visible = true;
+            }
+            else
+            {
+                btnComplete.Visible = btnCompleteFtr.Visible = false;
             }
         }
 
@@ -1117,6 +1211,63 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 BindAssignedPersonsGrid();
                 pwAssigned.Visible = UserCanAdministrate;
             }
+        }
+
+        private bool createNote( RockContext rockContext, int entityId, string noteText, bool countsForTouch = false )
+        {
+            var careNeedNoteTypes = NoteTypeCache.GetByEntity( EntityTypeCache.Get( typeof( CareNeed ) ).Id, "", "", true );
+
+            var noteService = new NoteService( rockContext );
+            var noteType = careNeedNoteTypes.FirstOrDefault();
+            var retVal = false;
+
+            if ( noteType != null )
+            {
+                var note = new Note
+                {
+                    Id = 0,
+                    IsSystem = false,
+                    IsAlert = false,
+                    NoteTypeId = noteType.Id,
+                    EntityId = entityId,
+                    Text = noteText,
+                    EditedByPersonAliasId = CurrentPersonAliasId,
+                    EditedDateTime = RockDateTime.Now,
+                    NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl(),
+                    Caption = !countsForTouch ? "Action" : string.Empty
+                };
+                if ( noteType.RequiresApprovals )
+                {
+                    if ( note.IsAuthorized( Authorization.APPROVE, CurrentPerson ) )
+                    {
+                        note.ApprovalStatus = NoteApprovalStatus.Approved;
+                        note.ApprovedByPersonAliasId = CurrentPersonAliasId;
+                        note.ApprovedDateTime = RockDateTime.Now;
+                    }
+                    else
+                    {
+                        note.ApprovalStatus = NoteApprovalStatus.PendingApproval;
+                    }
+                }
+                else
+                {
+                    note.ApprovalStatus = NoteApprovalStatus.Approved;
+                }
+
+                if ( note.IsValid )
+                {
+                    noteService.Add( note );
+
+                    rockContext.WrapTransaction( () =>
+                    {
+                        rockContext.SaveChanges();
+                        note.SaveAttributeValues( rockContext );
+                    } );
+
+                    retVal = true;
+                }
+            }
+            return retVal;
         }
 
         #endregion Methods
