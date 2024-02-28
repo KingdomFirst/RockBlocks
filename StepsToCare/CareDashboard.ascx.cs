@@ -936,7 +936,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             {
                                 var careNeedNotes = new NoteService( rockContext )
                                     .GetByNoteTypeId( noteType.Id ).AsNoTracking()
-                                    .Where( n => n.EntityId == careNeed.Id );
+                                    .Where( n => n.EntityId == careNeed.Id && n.Caption != "Action" );
+                                var careNeedNotesList = careNeedNotes.ToList();
 
                                 lCareTouches.Text = careNeedNotes.Count().ToString();
                                 careTouchCount = careNeedNotes.Count();
@@ -1584,7 +1585,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var fieldId = field.ID.Replace( "btn_", "" );
                 var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
 
-                var noteCreated = createNote( rockContext, e.RowKeyId, noteTemplate.Note, true, noteTemplate );
+                var noteCreated = createNote( rockContext, e.RowKeyId, noteTemplate.Note, true, noteTemplate, true );
                 if ( noteCreated )
                 {
                     BindGrid();
@@ -2041,7 +2042,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var currentDateTime = RockDateTime.Now;
                 var last7Days = currentDateTime.AddDays( -7 );
-                var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime );
+                var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime && n.Caption != "Action" );
 
                 lTouchesCount.Text = careTouches.ToString();
                 lCareNeedsCount.Text = outstandingCareNeeds.ToString();
@@ -2437,7 +2438,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             noteEditor.Focus();
         }
 
-        private bool createNote( RockContext rockContext, int entityId, string noteText, bool displayDialog = false, NoteTemplate noteTemplate = null )
+        private bool createNote( RockContext rockContext, int entityId, string noteText, bool displayDialog = false, NoteTemplate noteTemplate = null, bool countsForTouch = false )
         {
             var noteService = new NoteService( rockContext );
             var noteType = _careNeedNoteTypes.FirstOrDefault();
@@ -2456,7 +2457,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     EditedByPersonAliasId = CurrentPersonAliasId,
                     EditedDateTime = RockDateTime.Now,
                     NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl(),
-                    Caption = string.Empty
+                    Caption = !countsForTouch ? "Action" : string.Empty
                 };
                 if ( noteType.RequiresApprovals )
                 {
