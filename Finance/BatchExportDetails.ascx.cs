@@ -6,6 +6,7 @@ using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
+using Rock.Utility;
 using Rock.Web.UI;
 
 namespace RockWeb.Plugins.rocks_kfs.Finance
@@ -37,6 +38,11 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
             this.AddConfigurationUpdateTrigger( upnlBatchExportDetails );
 
             batchId = PageParameter( "batchId" ).AsInteger();
+
+            if ( batchId == 0 )
+            {
+                batchId = IdHasher.Instance.GetId( PageParameter( "batchId" ) ).ToIntSafe( 0 );
+            }
 
             if ( batchId > 0 )
             {

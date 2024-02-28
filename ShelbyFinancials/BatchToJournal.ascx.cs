@@ -22,6 +22,7 @@ using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
+using Rock.Utility;
 using Rock.Web.UI;
 
 using rocks.kfs.ShelbyFinancials;
@@ -109,7 +110,14 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         /// <param name="e">An <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnInit( EventArgs e )
         {
+            base.OnInit( e );
+
             _batchId = PageParameter( "batchId" ).AsInteger();
+
+            if ( _batchId == 0 )
+            {
+                _batchId = IdHasher.Instance.GetId( PageParameter( "batchId" ) ).ToIntSafe( 0 );
+            }
 
             object journalType = Session["JournalType"];
             if ( journalType != null )
