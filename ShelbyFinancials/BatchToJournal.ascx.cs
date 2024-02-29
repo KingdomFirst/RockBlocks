@@ -17,12 +17,10 @@
 using System;
 using System.ComponentModel;
 using System.Linq;
-
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
-using Rock.Utility;
 using Rock.Web.UI;
 
 using rocks.kfs.ShelbyFinancials;
@@ -38,7 +36,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
     #endregion
 
     #region Block Settings
-
+    [ContextAware]
     [TextField(
         "Button Text",
         Description = "The text to use in the Export Button.",
@@ -81,7 +79,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
     #endregion
 
-    public partial class BatchToJournal : RockBlock
+    public partial class BatchToJournal : Rock.Web.UI.RockBlock, ISecondaryBlock
     {
         #region Keys
 
@@ -114,11 +112,6 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
             _batchId = PageParameter( "batchId" ).AsInteger();
 
-            if ( _batchId == 0 )
-            {
-                _batchId = IdHasher.Instance.GetId( PageParameter( "batchId" ) ).ToIntSafe( 0 );
-            }
-
             object journalType = Session["JournalType"];
             if ( journalType != null )
             {
@@ -147,6 +140,17 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnLoad( EventArgs e )
         {
+            base.OnLoad( e );
+
+            try
+            {
+                var contextEntity = this.ContextEntity();
+                if ( contextEntity != null && contextEntity is FinancialBatch )
+                {
+                    _financialBatch = contextEntity as FinancialBatch;
+                }
+            }
+            catch { }
             ShowDetail();
         }
 
@@ -160,7 +164,10 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             var isExported = false;
             var debugEnabled = GetAttributeValue( AttributeKey.EnableDebug ).AsBoolean();
 
-            _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
+            if ( _financialBatch == null )
+            {
+                _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
+            }
             DateTime? dateExported = null;
 
             decimal variance = 0;
@@ -250,7 +257,6 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     //
                     // vars we need to know
                     //
-                    var financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
                     var changes = new History.HistoryChangeList();
 
                     //
@@ -258,15 +264,15 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     //
                     if ( GetAttributeValue( AttributeKey.CloseBatch ).AsBoolean() )
                     {
-                        History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Closed );
-                        financialBatch.Status = BatchStatus.Closed;
+                        History.EvaluateChange( changes, "Status", _financialBatch.Status, BatchStatus.Closed );
+                        _financialBatch.Status = BatchStatus.Closed;
                     }
 
                     //
                     // Set Date Exported
                     //
-                    financialBatch.LoadAttributes();
-                    var oldDate = financialBatch.GetAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported" );
+                    _financialBatch.LoadAttributes();
+                    var oldDate = _financialBatch.GetAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported" );
                     var newDate = RockDateTime.Now;
                     History.EvaluateChange( changes, "Date Exported", oldDate, newDate.ToString() );
 
@@ -281,13 +287,13 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                                 rockContext,
                                 typeof( FinancialBatch ),
                                 Rock.SystemGuid.Category.HISTORY_FINANCIAL_BATCH.AsGuid(),
-                                financialBatch.Id,
+                                _financialBatch.Id,
                                 changes );
                         }
                     } );
 
-                    financialBatch.SetAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported", newDate );
-                    financialBatch.SaveAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported", rockContext );
+                    _financialBatch.SetAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported", newDate );
+                    _financialBatch.SaveAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported", rockContext );
                 }
             }
 
@@ -299,7 +305,6 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             if ( _financialBatch != null )
             {
                 var rockContext = new RockContext();
-                var financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
                 var changes = new History.HistoryChangeList();
 
                 //
@@ -307,15 +312,15 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                 //
                 if ( GetAttributeValue( AttributeKey.CloseBatch ).AsBoolean() )
                 {
-                    History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Open );
-                    financialBatch.Status = BatchStatus.Open;
+                    History.EvaluateChange( changes, "Status", _financialBatch.Status, BatchStatus.Open );
+                    _financialBatch.Status = BatchStatus.Open;
                 }
 
                 //
                 // Remove Date Exported
                 //
-                financialBatch.LoadAttributes();
-                var oldDate = financialBatch.GetAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported" ).AsDateTime().ToString();
+                _financialBatch.LoadAttributes();
+                var oldDate = _financialBatch.GetAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported" ).AsDateTime().ToString();
                 var newDate = string.Empty;
                 History.EvaluateChange( changes, "Date Exported", oldDate, newDate );
 
@@ -330,18 +335,26 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                             rockContext,
                             typeof( FinancialBatch ),
                             Rock.SystemGuid.Category.HISTORY_FINANCIAL_BATCH.AsGuid(),
-                            financialBatch.Id,
+                            _financialBatch.Id,
                             changes );
                     }
                 } );
 
-                financialBatch.SetAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported", newDate );
-                financialBatch.SaveAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported", rockContext );
+                _financialBatch.SetAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported", newDate );
+                _financialBatch.SaveAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported", rockContext );
             }
 
             Response.Redirect( Request.RawUrl );
         }
 
+        /// <summary>
+        /// Hook so that other blocks can set the visibility of all ISecondaryBlocks on it's page
+        /// </summary>
+        /// <param name="visible">if set to <c>true</c> [visible].</param>
+        public void SetVisible( bool visible )
+        {
+            upnlSync.Visible = visible;
+        }
         #endregion Methods
     }
 }

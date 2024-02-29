@@ -15,6 +15,8 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
     [Category( "KFS > Finance" )]
     [Description( "Shows date exported and allows for quick access to Export Page" )]
 
+    [ContextAware]
+
     [LinkedPage( "Export Page", "Page where export block is located. If not set, export shortcut will not be displayed.", false, "", "", 0 )]
     [BooleanField( "Show Remove Date Exported Button", "Option to display the 'Remove Date Exported' button. This will allow the Batch to be exported again.", false, "", 1 )]
     [BooleanField( "Confirm Remove Date Exported", "Option to display confirmation when 'Remove Date Exported' button is clicked.", true, "", 2 )]
@@ -38,11 +40,6 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
             this.AddConfigurationUpdateTrigger( upnlBatchExportDetails );
 
             batchId = PageParameter( "batchId" ).AsInteger();
-
-            if ( batchId == 0 )
-            {
-                batchId = IdHasher.Instance.GetId( PageParameter( "batchId" ) ).ToIntSafe( 0 );
-            }
 
             if ( batchId > 0 )
             {
@@ -70,6 +67,25 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
+
+            try
+            {
+                var contextEntity = this.ContextEntity();
+                if ( contextEntity != null && contextEntity is FinancialBatch )
+                {
+                    batch = contextEntity as FinancialBatch;
+
+                    batch.LoadAttributes();
+
+                    var attValue = batch.GetAttributeValues( "GLExport_BatchExported" ).FirstOrDefault();
+
+                    if ( attValue != null )
+                    {
+                        exportDate = ( DateTime ) attValue.AsDateTime();
+                    }
+                }
+            }
+            catch { }
 
             ShowPanels();
         }

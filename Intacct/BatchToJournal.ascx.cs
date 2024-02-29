@@ -25,7 +25,6 @@ using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Security;
-using Rock.Utility;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
@@ -39,6 +38,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     [DisplayName( "Intacct Batch to Journal" )]
     [Category( "KFS > Intacct" )]
     [Description( "Block used to create Journal Entries in Intacct from a Rock Financial Batch." )]
+
+    [ContextAware]
 
     #endregion
 
@@ -233,11 +234,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             base.OnInit( e );
 
             _batchId = PageParameter( "batchId" ).AsInteger();
-
-            if ( _batchId == 0 )
-            {
-                _batchId = IdHasher.Instance.GetId( PageParameter( "batchId" ) ).ToIntSafe( 0 );
-            }
         }
 
         /// <summary>
@@ -257,6 +253,17 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
+
+            try
+            {
+                var contextEntity = this.ContextEntity();
+                if ( contextEntity != null && contextEntity is FinancialBatch )
+                {
+                    _financialBatch = contextEntity as FinancialBatch;
+                }
+            }
+            catch { }
+
             if ( !Page.IsPostBack )
             {
                 _selectedReceiptAccountType = GetBlockUserPreference( "ReceiptAccountType" );
@@ -291,7 +298,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             var debugEnabled = GetAttributeValue( AttributeKey.EnableDebug ).AsBoolean();
             var exportMode = GetAttributeValue( AttributeKey.ExportMode );
 
-            _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
+            if ( _financialBatch == null )
+            {
+                _financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
+            }
             DateTime? dateExported = null;
 
             _variance = 0;
@@ -494,7 +504,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 if ( success )
                 {
                     var rockContext = new RockContext();
-                    var financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
                     var changes = new History.HistoryChangeList();
 
                     Session["IntacctDebugLava"] = debugLava;
@@ -504,15 +513,15 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     //
                     if ( GetAttributeValue( AttributeKey.CloseBatch ).AsBoolean() )
                     {
-                        History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Closed );
-                        financialBatch.Status = BatchStatus.Closed;
+                        History.EvaluateChange( changes, "Status", _financialBatch.Status, BatchStatus.Closed );
+                        _financialBatch.Status = BatchStatus.Closed;
                     }
 
                     //
                     // Set Date Exported
                     //
-                    financialBatch.LoadAttributes();
-                    var oldDate = financialBatch.GetAttributeValue( "rocks.kfs.Intacct.DateExported" );
+                    _financialBatch.LoadAttributes();
+                    var oldDate = _financialBatch.GetAttributeValue( "rocks.kfs.Intacct.DateExported" );
                     var newDate = RockDateTime.Now;
                     History.EvaluateChange( changes, "Date Exported", oldDate, newDate.ToString() );
 
@@ -527,13 +536,13 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                                 rockContext,
                                 typeof( FinancialBatch ),
                                 Rock.SystemGuid.Category.HISTORY_FINANCIAL_BATCH.AsGuid(),
-                                financialBatch.Id,
+                                _financialBatch.Id,
                                 changes );
                         }
                     } );
 
-                    financialBatch.SetAttributeValue( "rocks.kfs.Intacct.DateExported", newDate );
-                    financialBatch.SaveAttributeValue( "rocks.kfs.Intacct.DateExported", rockContext );
+                    _financialBatch.SetAttributeValue( "rocks.kfs.Intacct.DateExported", newDate );
+                    _financialBatch.SaveAttributeValue( "rocks.kfs.Intacct.DateExported", rockContext );
                 }
                 else
                 {
@@ -565,7 +574,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             if ( _financialBatch != null )
             {
                 var rockContext = new RockContext();
-                var financialBatch = new FinancialBatchService( rockContext ).Get( _batchId );
                 var changes = new History.HistoryChangeList();
 
                 //
@@ -573,15 +581,15 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 //
                 if ( GetAttributeValue( AttributeKey.CloseBatch ).AsBoolean() )
                 {
-                    History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Open );
-                    financialBatch.Status = BatchStatus.Open;
+                    History.EvaluateChange( changes, "Status", _financialBatch.Status, BatchStatus.Open );
+                    _financialBatch.Status = BatchStatus.Open;
                 }
 
                 //
                 // Remove Date Exported
                 //
-                financialBatch.LoadAttributes();
-                var oldDate = financialBatch.GetAttributeValue( "rocks.kfs.Intacct.DateExported" ).AsDateTime().ToString();
+                _financialBatch.LoadAttributes();
+                var oldDate = _financialBatch.GetAttributeValue( "rocks.kfs.Intacct.DateExported" ).AsDateTime().ToString();
                 var newDate = string.Empty;
                 History.EvaluateChange( changes, "Date Exported", oldDate, newDate );
 
@@ -596,13 +604,13 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                             rockContext,
                             typeof( FinancialBatch ),
                             Rock.SystemGuid.Category.HISTORY_FINANCIAL_BATCH.AsGuid(),
-                            financialBatch.Id,
+                            _financialBatch.Id,
                             changes );
                     }
                 } );
 
-                financialBatch.SetAttributeValue( "rocks.kfs.Intacct.DateExported", newDate );
-                financialBatch.SaveAttributeValue( "rocks.kfs.Intacct.DateExported", rockContext );
+                _financialBatch.SetAttributeValue( "rocks.kfs.Intacct.DateExported", newDate );
+                _financialBatch.SaveAttributeValue( "rocks.kfs.Intacct.DateExported", rockContext );
             }
 
             Response.Redirect( Request.RawUrl );
@@ -613,7 +621,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             var settings = false;
 
             if (
-                _batchId > 0 &&
+                _financialBatch != null &&
                 (
                 !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderId ) ) ) &&
                 !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderPassword ) ) ) &&
