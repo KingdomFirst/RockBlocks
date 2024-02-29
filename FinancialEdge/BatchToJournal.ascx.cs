@@ -264,7 +264,7 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
         {
             var settings = false;
 
-            if ( _batchId > 0 && !string.IsNullOrWhiteSpace( GetAttributeValue( "JournalType" ) ) )
+            if ( _financialBatch != null && !string.IsNullOrWhiteSpace( GetAttributeValue( "JournalType" ) ) )
             {
                 settings = true;
             }
