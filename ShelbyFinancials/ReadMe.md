@@ -2,7 +2,7 @@
 
 
 # Shelby Financials Export
-*Tested/Supported in Rock version:  13.4-16.3*   
+*Tested/Supported in Rock version:  14.0-16.3*   
 *Created:  10/29/2018*  
 *Updated:  2/28/2024*   
 *Rock Shop Plugin: https://www.rockrms.com/Plugin/97*

@@ -2,7 +2,7 @@
 
 # Financial Edge Export
 
-*Tested/Supported in Rock version: 13.4-16.3*  
+*Tested/Supported in Rock version: 14.0-16.3*  
 *Released: 10/1/2018*   
 *Updated: 2/28/2024*   
 
