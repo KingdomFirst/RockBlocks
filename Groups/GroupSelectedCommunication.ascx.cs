@@ -45,6 +45,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
     [CodeEditorField( "Alternate Communication Button Text", "The text to use on the button for Alternate Communication button for Selected Members", CodeEditorMode.Text, CodeEditorTheme.Rock, 20, true, "<i class='fa fa-comment-o'></i> Text Selected Members", "Text", 4 )]
     [TextField( "Communication Button CSS Class", "The css classes used on the 'Email Selected Members' button.", true, "btn btn-default btn-xs", "CSS Classes", 5 )]
     [TextField( "Alternate Communication Button CSS Class", "The css classes used on the 'Text Selected Members' button.", true, "btn btn-default btn-xs", "CSS Classes", 6 )]
+    [TextField( "Form Input Name", "The form input name, so you can use multiple copies of the block on the same page.", true, "selectedmembers", "", 7 )]
 
     #endregion
 
@@ -157,7 +158,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
         private Dictionary<string, string> CreateCommunication()
         {
-            var selectedMembers = Request.Form["selectedmembers"];
+            var selectedMembers = Request.Form[GetAttributeValue( "FormInputName" )];
             var selectedIds = new List<string>();
             if ( selectedMembers != null && !string.IsNullOrWhiteSpace( selectedMembers ) )
             {
