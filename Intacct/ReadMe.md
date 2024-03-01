@@ -1,9 +1,9 @@
 ![Kingdom First Solutions](../.screenshots/KFSBanner.jpg)
 
 # Intacct Export to Journal 
-_Tested/Supported in Rock Version:  13.0-14.0_    
+_Tested/Supported in Rock Version:  14.0-16.3    
 _Released:  10/9/2018_   
-_Updated:  8/23/2023_   
+_Updated:  2/28/2024   
 
 ## Summary 
 
