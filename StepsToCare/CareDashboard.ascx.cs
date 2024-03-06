@@ -397,6 +397,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         private List<NoteTypeCache> _careNeedNoteTypes = new List<NoteTypeCache>();
 
+        public Dictionary<int, List<TouchTemplate>> _touchTemplates = new Dictionary<int, List<TouchTemplate>>();
 
         #endregion Private Members
 
@@ -923,9 +924,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                     }
 
+                    var hasTouchTemplates = false;
+                    if ( _touchTemplates.Count > 0 && careNeed.CategoryValueId.HasValue && _touchTemplates.ContainsKey( careNeed.CategoryValueId.Value ) )
+                    {
+                        hasTouchTemplates = true;
+                    }
+
                     var minimumCareTouches = GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger();
                     var minimumCareTouchHours = GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger();
                     var careTouchCount = 0;
+                    var careNeedNotesList = new List<Note>();
                     Literal lCareTouches = e.Row.FindControl( "lCareTouches" ) as Literal;
                     if ( lCareTouches != null )
                     {
@@ -937,7 +945,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 var careNeedNotes = new NoteService( rockContext )
                                     .GetByNoteTypeId( noteType.Id ).AsNoTracking()
                                     .Where( n => n.EntityId == careNeed.Id && n.Caption != "Action" );
-                                var careNeedNotesList = careNeedNotes.ToList();
+                                careNeedNotesList = careNeedNotes.ToList();
 
                                 lCareTouches.Text = careNeedNotes.Count().ToString();
                                 careTouchCount = careNeedNotes.Count();
@@ -1114,9 +1122,25 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         {
                             careNeedFlagStr = "<i class=\"fas fa-flag text-danger mx-2\"  data-toggle=\"tooltip\" title=\"Not enough Care Touches\"></i>";
                         }
+                        else if ( hasTouchTemplates )
+                        {
+                            var catTouchTemplates = _touchTemplates.GetValueOrDefault( careNeed.CategoryValueId.Value, new List<TouchTemplate>() );
+                            foreach ( var template in catTouchTemplates )
+                            {
+                                var templateNotes = careNeedNotesList.Where( n => n.Text.Equals( template.NoteTemplate.Note ) );
+                                var templateNotesToCheck = templateNotes.Where( n => ( RockDateTime.Now - n.CreatedDateTime ).Value.TotalHours <= template.MinimumCareTouchHours );
+                                var templateFlag = ( templateNotesToCheck.Count() <= template.MinimumCareTouches ) && dateDifference.TotalHours >= template.MinimumCareTouchHours;
+
+                                if ( templateFlag )
+                                {
+                                    careNeedFlagStr = $"<i class=\"fas fa-flag text-warning mx-2\"  data-toggle=\"tooltip\" title=\"Not enough '{template.NoteTemplate.Note}' Care Touches!\"></i>";
+                                    continue;
+                                }
+                            }
+                        }
                         else if ( careNeedFollowUpWorkerTouch )
                         {
-                            careNeedFlagStr = "<i class=\"fas fa-flag text-danger mx-2\"  data-toggle=\"tooltip\" title=\"Follow up worker Care Touch Needed!\"></i>";
+                            careNeedFlagStr = "<i class=\"fas fa-flag text-primary mx-2\"  data-toggle=\"tooltip\" title=\"Follow up worker Care Touch Needed!\"></i>";
                         }
                         if ( hasChildNeeds )
                         {
@@ -1852,6 +1876,39 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 if ( TargetPerson != null )
                 {
                     lCategoriesHeader.Text = template.ResolveMergeFields( mergeFields );
+                }
+
+                if ( _touchTemplates.Count < 1 )
+                {
+                    foreach ( var needCategory in categoryDefinedType.DefinedValues )
+                    {
+                        var matrixGuid = needCategory.GetAttributeValue( "CareTouchTemplates" ).AsGuid();
+                        var touchTemplates = new List<TouchTemplate>();
+                        if ( matrixGuid != Guid.Empty )
+                        {
+                            var matrix = new AttributeMatrixService( rockContext ).Get( matrixGuid );
+                            if ( matrix != null )
+                            {
+                                foreach ( var matrixItem in matrix.AttributeMatrixItems )
+                                {
+                                    matrixItem.LoadAttributes();
+
+                                    var noteTemplateGuid = matrixItem.GetAttributeValue( "NoteTemplate" ).AsGuid();
+                                    var noteTemplate = new NoteTemplateService( rockContext ).Get( noteTemplateGuid );
+
+                                    var touchTemplate = new TouchTemplate();
+                                    touchTemplate.NoteTemplate = noteTemplate;
+                                    touchTemplate.MinimumCareTouches = matrixItem.GetAttributeValue( "MinimumCareTouches" ).AsInteger();
+                                    touchTemplate.MinimumCareTouchHours = matrixItem.GetAttributeValue( "MinimumCareTouchHours" ).AsInteger();
+                                    touchTemplate.NotifyAll = matrixItem.GetAttributeValue( "NotifyAllAssigned" ).AsBoolean();
+                                    touchTemplate.Recurring = matrixItem.GetAttributeValue( "Recurring" ).AsBoolean();
+
+                                    touchTemplates.Add( touchTemplate );
+                                }
+                                _touchTemplates.AddOrIgnore( needCategory.Id, touchTemplates );
+                            }
+                        }
+                    }
                 }
             }
 
