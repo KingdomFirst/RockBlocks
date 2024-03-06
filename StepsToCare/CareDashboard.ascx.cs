@@ -2200,6 +2200,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 qry = qry.Where( b => b.StatusValueId == requestStatusValueId );
             }
+            else if ( TargetPerson == null )
+            {
+                var followUpStatusId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP ).Id;
+                qry = qry.Where( b => b.StatusValueId != followUpStatusId );
+            }
 
             // Filter by Category
             List<int> categories = dvpCategory.SelectedValuesAsInt;
