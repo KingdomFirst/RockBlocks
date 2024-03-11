@@ -338,6 +338,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string AvailableAttributes = "AvailableAttributes";
         }
 
+        /// <summary>
+        /// Page Parameter Keys
+        /// </summary>
+        private static class PageParameterKey
+        {
+            public const string QuickNote = "QuickNote";
+            public const string CareNeed = "CareNeed";
+            public const string NoConfirm = "NoConfirm";
+        }
+
         #endregion Keys
 
         #region Attribute Default values
@@ -525,6 +535,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 SetFilter();
                 AddNotificationAttributeControl( true );
+
+                CheckAndAddQuickNote();
             }
             BindGrid();
             if ( !string.IsNullOrWhiteSpace( hfCareNeedId.Value ) )
@@ -537,7 +549,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
             }
         }
-
         #endregion Base Control Methods
 
         #region Events
@@ -1771,6 +1782,22 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             mdNotificationType.Hide();
         }
 
+        protected void mdConfirmNote_SaveClick( object sender, EventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                var noteTemplate = new NoteTemplateService( rockContext ).Get( hfQuickNote_NoteId.ValueAsInt() );
+
+                var noteCreated = createNote( rockContext, hfQuickNote_CareNeedId.ValueAsInt(), noteTemplate.Note, true, noteTemplate, true );
+                if ( noteCreated )
+                {
+                    BindGrid();
+                    mdConfirmNote.Hide();
+                }
+            }
+
+        }
+
         #endregion Events
 
         #region Methods
@@ -2642,6 +2669,40 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     nbNotificationWarning.Text += notificationTxt;
                 }
                 nbNotificationWarning.Visible = true;
+            }
+        }
+        private void CheckAndAddQuickNote()
+        {
+            var quickNoteId = PageParameter( PageParameterKey.QuickNote ).AsIntegerOrNull();
+            var careNeedId = PageParameter( PageParameterKey.CareNeed ).AsIntegerOrNull();
+            var NoConfirm = PageParameter( PageParameterKey.NoConfirm ).AsBooleanOrNull();
+
+            if ( quickNoteId.HasValue && careNeedId.HasValue )
+            {
+                using ( var rockContext = new RockContext() )
+                {
+                    var noteTemplate = new NoteTemplateService( rockContext ).Get( quickNoteId.Value );
+                    if ( noteTemplate != null )
+                    {
+                        if ( NoConfirm.HasValue && NoConfirm.Value )
+                        {
+                            var noteCreated = createNote( rockContext, careNeedId.Value, noteTemplate.Note, true, noteTemplate, true );
+                            if ( noteCreated )
+                            {
+                                BindGrid();
+                            }
+                        }
+                        else
+                        {
+                            hfQuickNote_CareNeedId.SetValue( careNeedId.Value );
+                            hfQuickNote_NoteId.SetValue( noteTemplate.Id );
+                            lQuickNote.Text = noteTemplate.Note;
+                            lCareNeedId.Text = careNeedId.ToString();
+                            mdConfirmNote.Show();
+                        }
+                    }
+                }
+
             }
         }
 
