@@ -107,11 +107,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
     [BooleanField( "Complete Child Needs on Parent Completion",
         DefaultBooleanValue = true,
-        Key = AttributeKey.CompleteChildNeeds )]
+        Key = AttributeKey.CompleteChildNeeds,
+        Category = AttributeCategory.FamilyNeeds )]
 
     [BooleanField( "Snooze Child Needs on Parent Snooze",
         DefaultBooleanValue = true,
-        Key = AttributeKey.SnoozeChildNeeds )]
+        Key = AttributeKey.SnoozeChildNeeds,
+        Category = AttributeCategory.FamilyNeeds )]
 
     [SecurityAction(
         SecurityActionKey.UpdateStatus,
