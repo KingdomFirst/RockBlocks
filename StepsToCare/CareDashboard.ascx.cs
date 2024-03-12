@@ -1029,7 +1029,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItem1.Controls.Add( lbCompleteNeed );
                         }
 
-                        if ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() )
+                        if ( careNeed.EnableRecurrence && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
                         {
                             var lbSnoozeNeed = new LinkButton();
                             lbSnoozeNeed.Command += lbNeedAction_Click;
