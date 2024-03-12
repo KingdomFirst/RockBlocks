@@ -418,7 +418,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 careNeed.WorkersOnly = cbWorkersOnly.Checked;
 
-                careNeed.EnableRecurrence = cbEnableRecurrence.Checked;
+                careNeed.CustomFollowUp = cbCustomFollowUp.Checked;
                 careNeed.RenewPeriodDays = numbRepeatDays.IntegerValue;
                 careNeed.RenewMaxCount = numbRepeatTimes.IntegerValue;
 
@@ -829,9 +829,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         }
 
-        protected void cbEnableRecurrence_CheckedChanged( object sender, EventArgs e )
+        protected void cbCustomFollowUp_CheckedChanged( object sender, EventArgs e )
         {
-            pnlRecurrenceOptions.Visible = cbEnableRecurrence.Checked;
+            pnlRecurrenceOptions.Visible = cbCustomFollowUp.Checked;
         }
 
         protected void btnSnooze_Click( object sender, EventArgs e )
@@ -984,8 +984,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             cbWorkersOnly.Checked = careNeed.WorkersOnly;
             cbIncludeFamily.Checked = careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any();
-            cbEnableRecurrence.Checked = careNeed.EnableRecurrence;
-            pnlRecurrenceOptions.Visible = cbEnableRecurrence.Checked;
+            cbCustomFollowUp.Checked = careNeed.CustomFollowUp;
+            pnlRecurrenceOptions.Visible = cbCustomFollowUp.Checked;
             numbRepeatDays.IntegerValue = careNeed.RenewPeriodDays;
             numbRepeatTimes.IntegerValue = careNeed.RenewMaxCount;
 
@@ -1086,7 +1086,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             hlStatus.LabelType = LabelType.Custom;
             hlStatus.CustomClass = careNeed.Status.GetAttributeValue( "CssClass" );
 
-            if ( careNeed.EnableRecurrence && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
+            if ( careNeed.CustomFollowUp && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
             {
                 btnSnooze.Visible = btnSnoozeFtr.Visible = true;
             }
@@ -1193,7 +1193,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var categoryTimesToRepeat = category.GetAttributeValue( "TimesToRepeat" ).AsIntegerOrNull();
                 if ( categoryRepeatEvery.HasValue && categoryRepeatEvery > 0 )
                 {
-                    cbEnableRecurrence.Checked = careNeed.EnableRecurrence = true;
+                    cbCustomFollowUp.Checked = careNeed.CustomFollowUp = true;
                     numbRepeatDays.IntegerValue = careNeed.RenewPeriodDays = categoryRepeatEvery;
                     numbRepeatTimes.IntegerValue = careNeed.RenewMaxCount = categoryTimesToRepeat;
                     pnlRecurrenceOptions.Visible = true;
@@ -1201,7 +1201,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 else
                 {
                     pnlRecurrenceOptions.Visible = false;
-                    cbEnableRecurrence.Checked = false;
+                    cbCustomFollowUp.Checked = false;
                     numbRepeatDays.IntegerValue = null;
                     numbRepeatTimes.IntegerValue = null;
                 }

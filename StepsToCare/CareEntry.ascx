@@ -81,7 +81,7 @@
 
                     <Rock:DynamicPlaceholder ID="phAttributes" runat="server" />
 
-                    <Rock:RockCheckBox ID="cbEnableRecurrence" runat="server" Text="Custom Follow Up" OnCheckedChanged="cbEnableRecurrence_CheckedChanged" AutoPostBack="true" />
+                    <Rock:RockCheckBox ID="cbCustomFollowUp" runat="server" Text="Custom Follow Up" OnCheckedChanged="cbCustomFollowUp_CheckedChanged" AutoPostBack="true" />
 
                     <asp:Panel ID="pnlRecurrenceOptions" runat="server" CssClass="row" Visible="false">
                         <div class="col-sm-6 col-md-4 col-lg-3">
