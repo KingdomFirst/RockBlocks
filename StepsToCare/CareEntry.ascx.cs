@@ -1170,6 +1170,35 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 person = new PersonService( new RockContext() ).Get( ppPerson.PersonId.Value );
             }
+            else if ( _allowNewPerson )
+            {
+                var personService = new PersonService( new RockContext() );
+                person = personService.FindPerson( new PersonService.PersonMatchQuery( dtbFirstName.Text, dtbLastName.Text, ebEmail.Text, pnbCellPhone.Number ), false, true, false );
+
+                if ( person == null && dtbFirstName.Text.IsNotNullOrWhiteSpace() && dtbLastName.Text.IsNotNullOrWhiteSpace() && ( !string.IsNullOrWhiteSpace( ebEmail.Text ) || !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbHomePhone.Number ) ) || !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbCellPhone.Number ) ) ) )
+                {
+                    var personRecordTypeId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_RECORD_TYPE_PERSON.AsGuid() ).Id;
+                    var personStatusPending = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_RECORD_STATUS_PENDING.AsGuid() ).Id;
+
+                    var randomId = new Random().Next();
+                    randomId *= -1;
+
+                    person = new Person();
+                    person.Id = randomId;
+                    person.IsSystem = false;
+                    person.RecordTypeValueId = personRecordTypeId;
+                    person.RecordStatusValueId = personStatusPending;
+                    person.FirstName = dtbFirstName.Text;
+                    person.LastName = dtbLastName.Text;
+                    person.Gender = Gender.Unknown;
+
+                    var personAlias = new PersonAlias();
+                    personAlias.Person = person;
+                    personAlias.PersonId = randomId;
+                    personAlias.AliasPersonId = randomId;
+                    person.Aliases.Add( personAlias );
+                }
+            }
             if ( previewAssignedPeople && categoryId.HasValue && person != null && needId == 0 )
             {
                 var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
