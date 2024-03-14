@@ -714,15 +714,19 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                     if ( contextCampus != null )
                     {
-                        filter_cblCampus.SetValue( contextCampus.Id.ToString() );
-                        filter_ddlCampus.SetValue( contextCampus.Id.ToString() );
+                        if ( filter_cblCampus != null )
+                            filter_cblCampus.SetValue( contextCampus.Id.ToString() );
+                        if ( filter_ddlCampus != null )
+                            filter_ddlCampus.SetValue( contextCampus.Id.ToString() );
                     }
                 }
                 else if ( !string.IsNullOrWhiteSpace( campusPageParam ) )
                 {
                     var pageParamList = campusPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
-                    filter_cblCampus.SetValues( pageParamList );
-                    filter_ddlCampus.SetValue( campusPageParam );
+                    if ( filter_cblCampus != null )
+                        filter_cblCampus.SetValues( pageParamList );
+                    if ( filter_ddlCampus != null )
+                        filter_ddlCampus.SetValue( campusPageParam );
                 }
                 if ( !string.IsNullOrWhiteSpace( dowPageParam ) )
                 {
