@@ -31,10 +31,10 @@
                             <Rock:PersonPicker ID="ppSubmitter" runat="server" Label="Submitter" Visible="false" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="SubmitterPersonAlias" />
                         </div>
                         <div class="col-md-3">
-                            <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
+                            <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" OnSelectedIndexChanged="cpCampus_SelectedIndexChanged" AutoPostBack="true" />
                         </div>
                         <div class="col-md-3">
-                            <Rock:DefinedValuePicker ID="dvpStatus" runat="server" Label="Status" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="StatusValueId" Required="true" />
+                            <Rock:DefinedValuePicker ID="dvpStatus" runat="server" Label="Status" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="StatusValueId" Required="true" OnSelectedIndexChanged="dvpStatus_SelectedIndexChanged" AutoPostBack="true" />
                         </div>
                     </div>
                 </div>

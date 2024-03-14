@@ -212,7 +212,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlCareEntry );
 
-            gAssignedPersons.DataKeyNames = new string[] { "Id" };
+            gAssignedPersons.DataKeyNames = new string[] { "PersonAliasId" };
             gAssignedPersons.GridRebind += gAssignedPersons_GridRebind;
             gAssignedPersons.Actions.ShowAdd = false;
             gAssignedPersons.ShowActionRow = false;
@@ -715,7 +715,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             else
             {
                 var selectedIds = gAssignedPersons.SelectedKeys.OfType<int>().ToList();
-                AssignedPersons.RemoveAll( a => selectedIds.Contains( a.Id ) );
+                AssignedPersons.RemoveAll( a => selectedIds.Contains( a.PersonAliasId.Value ) );
             }
 
             BindAssignedPersonsGrid();
@@ -738,7 +738,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         protected void gAssignedPersons_DeleteClick( object sender, RowEventArgs e )
         {
-            var remove = this.AssignedPersons.FirstOrDefault( ap => ap.Id == e.RowKeyId );
+            var remove = this.AssignedPersons.FirstOrDefault( ap => ap.PersonAliasId == e.RowKeyId );
             this.AssignedPersons.Remove( remove );
             BindAssignedPersonsGrid();
         }
@@ -832,8 +832,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         protected void cbCustomFollowUp_CheckedChanged( object sender, EventArgs e )
         {
             pnlRecurrenceOptions.Visible = cbCustomFollowUp.Checked;
+            BindAssignedPersonsGrid();
         }
 
+        protected void dvpStatus_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            BindAssignedPersonsGrid();
+        }
+
+        protected void cpCampus_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            BindAssignedPersonsGrid();
+        }
         protected void btnSnooze_Click( object sender, EventArgs e )
         {
             RockContext rockContext = new RockContext();
@@ -1062,7 +1072,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( careNeed.AssignedPersons != null )
             {
                 AssignedPersons = careNeed.AssignedPersons.ToList();
-                BindAssignedPersonsGrid();
+                BindAssignedPersonsGrid( true );
                 pwAssigned.Visible = UserCanAdministrate;
             }
             else
@@ -1138,8 +1148,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <summary>
         /// Binds the Assigned Persons grid.
         /// </summary>
-        private void BindAssignedPersonsGrid()
+        private void BindAssignedPersonsGrid( bool initialLoad = false )
         {
+            if ( !initialLoad )
+            {
+                GenerateTempNeed( null );
+            }
+
             var reloadList = AssignedPersons
                 .Select( ap => new AssignedPerson
                 {
@@ -1209,14 +1224,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var category = DefinedValueCache.Get( categoryId.Value );
 
-                var careNeed = new CareNeed { Id = 0 };
-                careNeed.CampusId = cpCampus.SelectedCampusId;
-                careNeed.PersonAlias = person.PrimaryAlias;
-                careNeed.PersonAliasId = person.PrimaryAliasId;
-                careNeed.StatusValueId = dvpStatus.SelectedValue.AsIntegerOrNull();
-                careNeed.CategoryValueId = categoryId;
-
-                careNeed.LoadAttributes();
+                CareNeed careNeed = GenerateTempNeed( person, categoryId );
 
                 var categoryRepeatEvery = category.GetAttributeValue( "RepeatEvery" ).AsIntegerOrNull();
                 var categoryTimesToRepeat = category.GetAttributeValue( "TimesToRepeat" ).AsIntegerOrNull();
@@ -1235,13 +1243,31 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     numbRepeatTimes.IntegerValue = null;
                 }
 
-                phAttributes.Controls.Clear();
-                Helper.AddEditControls( careNeed, phAttributes, false, BlockValidationGroup, 2 );
-
                 AssignedPersons = CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople );
-                BindAssignedPersonsGrid();
                 pwAssigned.Visible = UserCanAdministrate;
             }
+            BindAssignedPersonsGrid();
+        }
+
+        private CareNeed GenerateTempNeed( Person person, int? categoryId = null )
+        {
+            if ( categoryId == null )
+            {
+                categoryId = dvpCategory.SelectedValue.AsIntegerOrNull();
+            }
+            var careNeed = new CareNeed { Id = 0 };
+            careNeed.CampusId = cpCampus.SelectedCampusId;
+            careNeed.PersonAlias = person?.PrimaryAlias;
+            careNeed.PersonAliasId = person?.PrimaryAliasId;
+            careNeed.StatusValueId = dvpStatus.SelectedValue.AsIntegerOrNull();
+            careNeed.CategoryValueId = categoryId;
+
+            careNeed.LoadAttributes();
+
+            phAttributes.Controls.Clear();
+            Helper.AddEditControls( careNeed, phAttributes, false, BlockValidationGroup, 2 );
+
+            return careNeed;
         }
 
         private bool createNote( RockContext rockContext, int entityId, string noteText, bool countsForTouch = false )
