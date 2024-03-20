@@ -298,25 +298,29 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
                 {
                     lblLoginStatus.Text = "Authenticated";
                     lblLoginStatus.CssClass = "pull-right label label-success";
+
+                    pnlGridWrapper.Visible = true;
+                    pnlCreateGroupFromEventbrite.Visible = true;
+                    _groups = new EventbriteEvents().Events( GetAttributeValue( "DisplayEventbriteEventName" ).AsBoolean() );
+                    gEBLinkedGroups.DataSource = _groups;
+                    gEBLinkedGroups.DataBind();
                 }
                 else
                 {
                     lblLoginStatus.Text = "Not authenticated";
                     lblLoginStatus.CssClass = "pull-right label label-danger";
                     tbOAuthToken.Text = "";
+                    pnlGridWrapper.Visible = false;
+                    pnlCreateGroupFromEventbrite.Visible = false;
                 }
                 lView.Text = new DescriptionList()
                     .Add( "Private Token", _accessToken )
                     .Add( "Organization", Settings.GetOrganizationId() )
                     .Html;
-                pnlToken.Visible = false;
-                nbNotification.Visible = showNotificationbox;
-                pnlGridWrapper.Visible = true;
                 lView.Visible = true;
                 btnEdit.Visible = true;
-                _groups = new EventbriteEvents().Events( GetAttributeValue( "DisplayEventbriteEventName" ).AsBoolean() );
-                gEBLinkedGroups.DataSource = _groups;
-                gEBLinkedGroups.DataBind();
+                pnlToken.Visible = false;
+                nbNotification.Visible = showNotificationbox;
             }
         }
 
