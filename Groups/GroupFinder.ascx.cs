@@ -34,7 +34,7 @@
 // * Added ability to display Over Capacity groups with a filter
 // * Added Auto Load Filter capability on value selection
 // * Added ability to sort how filters are displayed
-// Package Version 1.7
+// Package Version 1.7.1
 // </notice>
 //
 using System;
@@ -714,15 +714,27 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                     if ( contextCampus != null )
                     {
-                        filter_cblCampus.SetValue( contextCampus.Id.ToString() );
-                        filter_ddlCampus.SetValue( contextCampus.Id.ToString() );
+                        if ( filter_cblCampus != null )
+                        {
+                            filter_cblCampus.SetValue( contextCampus.Id.ToString() );
+                        }
+                        if ( filter_ddlCampus != null )
+                        {
+                            filter_ddlCampus.SetValue( contextCampus.Id.ToString() );
+                        }
                     }
                 }
                 else if ( !string.IsNullOrWhiteSpace( campusPageParam ) )
                 {
                     var pageParamList = campusPageParam.Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries ).ToList();
-                    filter_cblCampus.SetValues( pageParamList );
-                    filter_ddlCampus.SetValue( campusPageParam );
+                    if ( filter_cblCampus != null )
+                    {
+                        filter_cblCampus.SetValues( pageParamList );
+                    }
+                    if ( filter_ddlCampus != null )
+                    {
+                        filter_ddlCampus.SetValue( campusPageParam );
+                    }
                 }
                 if ( !string.IsNullOrWhiteSpace( dowPageParam ) )
                 {
