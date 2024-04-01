@@ -189,6 +189,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 18,
         Key = AttributeKey.SnoozeChildNeeds )]
 
+    [BooleanField( "Custom Follow Up Move Need to Waiting Status",
+        Description = "Should a Care Need be moved to \"Waiting\" status when any quick note/care touch is performed and Custom Follow Up is enabled?",
+        DefaultBooleanValue = false,
+        Category = "Actions",
+        Order = 19,
+        Key = AttributeKey.MoveNeedToWaiting )]
+
     [CustomDropdownListField( "Display Type",
         Description = "The format to use for displaying notes.",
         ListSource = "Full,Light",
@@ -294,6 +301,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string SnoozeActionText = "SnoozeActionText";
             public const string SnoozeChildNeeds = "SnoozeChildNeeds";
             public const string CompleteActionText = "CompleteActionText";
+            public const string MoveNeedToWaiting = "MoveNeedToWaiting";
         }
 
         /// <summary>
@@ -1569,10 +1577,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 LinkButtonField field = sender as LinkButtonField;
                 var fieldId = field.ID.Replace( "btn_", "" );
                 var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
+                var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToWaiting ).AsBoolean();
 
                 var noteCreated = createNote( rockContext, e.RowKeyId, noteTemplate.Note, true, noteTemplate, true );
                 if ( noteCreated )
                 {
+                    if ( shouldSnoozeNeed )
+                    {
+                        SnoozeNeed( e.RowKeyId );
+                    }
                     BindGrid();
                 }
             }
@@ -1741,6 +1754,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var noteCreated = createNote( rockContext, hfQuickNote_CareNeedId.ValueAsInt(), noteTemplate.Note, true, noteTemplate, true );
                 if ( noteCreated )
                 {
+                    if ( GetAttributeValue( AttributeKey.MoveNeedToWaiting ).AsBoolean() )
+                    {
+                        SnoozeNeed( hfQuickNote_CareNeedId.ValueAsInt() );
+                    }
+
                     BindGrid();
                     mdConfirmNote.Hide();
                 }
@@ -2626,6 +2644,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var quickNoteId = PageParameter( PageParameterKey.QuickNote ).AsIntegerOrNull();
             var careNeedId = PageParameter( PageParameterKey.CareNeed ).AsIntegerOrNull();
             var NoConfirm = PageParameter( PageParameterKey.NoConfirm ).AsBooleanOrNull();
+            var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToWaiting ).AsBoolean();
 
             if ( quickNoteId.HasValue && careNeedId.HasValue )
             {
@@ -2639,6 +2658,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             var noteCreated = createNote( rockContext, careNeedId.Value, noteTemplate.Note, true, noteTemplate, true );
                             if ( noteCreated )
                             {
+                                if ( shouldSnoozeNeed )
+                                {
+                                    SnoozeNeed( careNeedId.Value );
+                                }
                                 BindGrid();
                             }
                         }
