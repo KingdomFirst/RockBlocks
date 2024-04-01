@@ -169,22 +169,24 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 15,
         Key = AttributeKey.CompleteChildNeeds )]
 
-    [TextField( "Snooze Action Text",
-        DefaultValue = "Snooze",
+    [TextField( "Complete Action Text",
+        DefaultValue = "Complete Need",
         Category = "Actions",
-        Order = 15,
+        Order = 16,
+        Key = AttributeKey.CompleteActionText )]
+
+    [TextField( "Waiting Action Text",
+        Description = "This action will only display when 'Custom Follow Up' is enabled on a need.",
+        DefaultValue = "Follow Up Complete",
+        Category = "Actions",
+        Order = 17,
         Key = AttributeKey.SnoozeActionText )]
 
-    [TextField( "Unsnooze Action Text",
-        DefaultValue = "Unsnooze",
-        Category = "Actions",
-        Order = 15,
-        Key = AttributeKey.UnsnoozeActionText )]
-
-    [BooleanField( "Snooze Child Needs on Parent Snooze",
+    [BooleanField( "Wait Child Needs on Parent Follow Up",
+        Description = "Should Child Needs also be moved to \"Waiting\" status when a parent need is moved to it?",
         DefaultBooleanValue = true,
         Category = "Actions",
-        Order = 15,
+        Order = 18,
         Key = AttributeKey.SnoozeChildNeeds )]
 
     [CustomDropdownListField( "Display Type",
@@ -193,43 +195,43 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = true,
         DefaultValue = "Full",
         Category = "Notes Dialog",
-        Order = 16,
+        Order = 20,
         Key = AttributeKey.DisplayType )]
 
     [BooleanField( "Use Person Icon",
         DefaultBooleanValue = false,
-        Order = 17,
+        Order = 21,
         Category = "Notes Dialog",
         Key = AttributeKey.UsePersonIcon )]
 
     [BooleanField( "Show Alert Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 18,
+        Order = 22,
         Key = AttributeKey.ShowAlertCheckbox )]
 
     [BooleanField( "Show Private Checkbox",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 19,
+        Order = 23,
         Key = AttributeKey.ShowPrivateCheckbox )]
 
     [BooleanField( "Show Security Button",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 20,
+        Order = 24,
         Key = AttributeKey.ShowSecurityButton )]
 
     [BooleanField( "Allow Backdated Notes",
         DefaultBooleanValue = false,
         Category = "Notes Dialog",
-        Order = 21,
+        Order = 25,
         Key = AttributeKey.AllowBackdatedNotes )]
 
     [BooleanField( "Close Dialog on Save",
         DefaultBooleanValue = true,
         Category = "Notes Dialog",
-        Order = 22,
+        Order = 26,
         Key = AttributeKey.CloseDialogOnSave )]
 
     [CodeEditorField( "Note View Lava Template",
@@ -240,7 +242,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         IsRequired = false,
         DefaultValue = @"{% include '~~/Assets/Lava/NoteViewList.lava' %}",
         Category = "Notes Dialog",
-        Order = 23,
+        Order = 27,
         Key = AttributeKey.NoteViewLavaTemplate )]
 
     [SecurityAction(
@@ -290,8 +292,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string FutureThresholdDays = "FutureThresholdDays";
             public const string BenevolenceType = "BenevolenceType";
             public const string SnoozeActionText = "SnoozeActionText";
-            public const string UnsnoozeActionText = "UnsnoozeActionText";
             public const string SnoozeChildNeeds = "SnoozeChildNeeds";
+            public const string CompleteActionText = "CompleteActionText";
         }
 
         /// <summary>
@@ -1025,7 +1027,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             lbCompleteNeed.Command += lbNeedAction_Click;
                             lbCompleteNeed.CommandArgument = careNeed.Id.ToString();
                             lbCompleteNeed.CommandName = "complete";
-                            lbCompleteNeed.Text = "Complete";
+                            lbCompleteNeed.Text = GetAttributeValue( AttributeKey.CompleteActionText );
                             actionItem1.Controls.Add( lbCompleteNeed );
                         }
 
@@ -1039,17 +1041,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItem1.Controls.Add( lbSnoozeNeed );
                         }
 
-                        if ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() )
-                        {
-                            var lbUnsnoozeNeed = new LinkButton();
-                            lbUnsnoozeNeed.Command += lbNeedAction_Click;
-                            lbUnsnoozeNeed.CommandArgument = careNeed.Id.ToString();
-                            lbUnsnoozeNeed.CommandName = "unsnooze";
-                            lbUnsnoozeNeed.Text = GetAttributeValue( AttributeKey.UnsnoozeActionText );
-                            actionItem1.Controls.Add( lbUnsnoozeNeed );
-                        }
-
-                        if ( followUpGrid || ( TargetPerson != null && careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
+                        if ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() )
                         {
                             var actionItemReopen = new HtmlGenericControl( "li" );
                             ddlMenu.Controls.Add( actionItemReopen );
@@ -1419,49 +1411,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     break;
                 case "snooze":
                     // do something with snooze here.
-                    using ( var rockContext = new RockContext() )
-                    {
-                        var snoozeChildNeeds = GetAttributeValue( AttributeKey.SnoozeChildNeeds ).AsBoolean();
-                        var careNeedService = new CareNeedService( rockContext );
-                        var careNeed = careNeedService.Get( id );
-                        var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED ).Id;
-                        careNeed.StatusValueId = snoozeValueId;
-                        careNeed.SnoozeDate = RockDateTime.Now;
-
-                        if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
-                        {
-                            foreach ( var childneed in careNeed.ChildNeeds )
-                            {
-                                childneed.StatusValueId = snoozeValueId;
-                                childneed.SnoozeDate = RockDateTime.Now;
-                            }
-                        }
-                        rockContext.SaveChanges();
-
-                        createNote( rockContext, id, "Snoozed" );
-
-                        if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
-                        {
-                            foreach ( var childneed in careNeed.ChildNeeds )
-                            {
-                                createNote( rockContext, childneed.Id, "Marked Snoozed from Parent Need" );
-                            }
-                        }
-                    }
-                    BindGrid();
-                    break;
-                case "unsnooze":
-                    // do something with unsnooze here.
-                    using ( var rockContext = new RockContext() )
-                    {
-                        var careNeedService = new CareNeedService( rockContext );
-                        var careNeed = careNeedService.Get( id );
-                        var openValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN ).Id;
-                        careNeed.StatusValueId = openValueId;
-                        rockContext.SaveChanges();
-
-                        createNote( rockContext, id, "Manually Unsnoozed" );
-                    }
+                    SnoozeNeed( id );
                     BindGrid();
                     break;
                 default:
@@ -2703,6 +2653,42 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
                 }
 
+            }
+        }
+
+        private void SnoozeNeed( int id )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                var snoozeChildNeeds = GetAttributeValue( AttributeKey.SnoozeChildNeeds ).AsBoolean();
+                var careNeedService = new CareNeedService( rockContext );
+                var careNeed = careNeedService.Get( id );
+                var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED ).Id;
+                if ( careNeed.StatusValueId != snoozeValueId )
+                {
+                    careNeed.StatusValueId = snoozeValueId;
+                    careNeed.SnoozeDate = RockDateTime.Now;
+
+                    if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
+                    {
+                        foreach ( var childneed in careNeed.ChildNeeds )
+                        {
+                            childneed.StatusValueId = snoozeValueId;
+                            childneed.SnoozeDate = RockDateTime.Now;
+                        }
+                    }
+                    rockContext.SaveChanges();
+
+                    createNote( rockContext, id, GetAttributeValue( AttributeKey.SnoozeActionText ) );
+
+                    if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
+                    {
+                        foreach ( var childneed in careNeed.ChildNeeds )
+                        {
+                            createNote( rockContext, childneed.Id, "Marked Waiting from Parent Need" );
+                        }
+                    }
+                }
             }
         }
 
