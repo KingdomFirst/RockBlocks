@@ -629,7 +629,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             rFilter.SaveUserPreference( UserPreferenceKey.LastName, "Last Name", tbLastName.Text );
             rFilter.SaveUserPreference( UserPreferenceKey.SubmittedBy, "Submitted By", ddlSubmitter.SelectedItem.Value );
             rFilter.SaveUserPreference( UserPreferenceKey.Category, "Category", dvpCategory.SelectedValues.AsDelimited( ";" ) );
-            rFilter.SaveUserPreference( UserPreferenceKey.Status, "Status", dvpStatus.SelectedItem.Value );
+            rFilter.SaveUserPreference( UserPreferenceKey.Status, "Status", dvpStatus.SelectedValues.AsDelimited( ";" ) );
             rFilter.SaveUserPreference( UserPreferenceKey.Campus, "Campus", cpCampus.SelectedCampusId.ToString() );
             rFilter.SaveUserPreference( UserPreferenceKey.AssignedToMe, "Assigned to Me", cbAssignedToMe.Checked.ToString() );
             rFilter.SaveUserPreference( UserPreferenceKey.IncludeScheduledNeeds, "Include Scheduled Needs", cbIncludeFutureNeeds.Checked.ToString() );
@@ -765,16 +765,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     return;
 
                 case UserPreferenceKey.Status:
-                    var definedValueId = e.Value.AsIntegerOrNull();
-                    if ( definedValueId.HasValue )
-                    {
-                        var definedValue = DefinedValueCache.Get( definedValueId.Value );
-                        if ( definedValue != null )
-                        {
-                            e.Value = definedValue.Value;
-                        }
-                    }
-
+                    e.Value = ResolveValues( e.Value, dvpStatus );
                     return;
 
                 case UserPreferenceKey.AssignedToMe:
@@ -1124,7 +1115,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     if ( lName != null )
                     {
                         var dateDifference = RockDateTime.Now - careNeed.DateEntered.Value;
-                        var careNeedFlag = ( dateDifference.TotalHours >= minimumCareTouchHours && careTouchCount <= minimumCareTouches );
+                        var careNeedFlag = ( dateDifference.TotalHours >= minimumCareTouchHours && careTouchCount < minimumCareTouches );
                         var careNeedFollowUpWorkerTouch = ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
                         var careNeedFlagStr = "";
                         var childNeedStr = "";
@@ -1189,7 +1180,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         protected void lStatus_DataBound( object sender, RowEventArgs e )
         {
-            if ( TargetPerson != null || string.IsNullOrWhiteSpace( dvpStatus.SelectedValue ) )
+            if ( TargetPerson != null || dvpStatus.SelectedValuesAsInt.Count > 1 )
             {
                 Literal lStatus = sender as Literal;
                 CareNeed careNeed = e.Row.DataItem as CareNeed;
@@ -1846,7 +1837,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     statusValue = new DefinedValueService( rockContext ).Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() ).Id.ToString();
                 }
-                dvpStatus.SetValue( statusValue );
+                dvpStatus.SetValues( statusValue.Split( ';' ).ToList() );
 
                 cbAssignedToMe.Checked = rFilter.GetUserPreference( UserPreferenceKey.AssignedToMe ).AsBoolean();
                 cbIncludeFutureNeeds.Checked = rFilter.GetUserPreference( UserPreferenceKey.IncludeScheduledNeeds ).AsBoolean();
@@ -2190,10 +2181,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             // Filter by Status
-            int? requestStatusValueId = dvpStatus.SelectedItem?.Value.AsIntegerOrNull();
-            if ( requestStatusValueId != null )
+            List<int> statuses = dvpStatus.SelectedValuesAsInt;
+            if ( statuses.Any() )
             {
-                qry = qry.Where( b => b.StatusValueId == requestStatusValueId );
+                qry = qry.Where( cn => cn.StatusValueId != null && statuses.Contains( cn.StatusValueId.Value ) );
             }
             else if ( TargetPerson == null )
             {
@@ -2267,7 +2258,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gList.ColumnsOfType<RockBoundField>().First( c => c.DataField == "Campus.Name" ).Visible = cpCampus.Visible;
 
             var statusColumn = gList.ColumnsOfType<RockLiteralField>().First( c => c.ID.StartsWith( "NeedStatus" ) );
-            if ( TargetPerson != null || !requestStatusValueId.HasValue )
+            if ( TargetPerson != null || statuses.Count > 1 )
             {
                 statusColumn.HeaderText = "Status";
                 statusColumn.SortExpression = "Status";

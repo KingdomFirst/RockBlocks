@@ -138,7 +138,7 @@
                             <Rock:RockTextBox ID="tbFirstName" runat="server" Label="First Name" />
                             <Rock:RockTextBox ID="tbLastName" runat="server" Label="Last Name" />
                             <Rock:DefinedValuesPicker ID="dvpCategory" runat="server" Label="Category" DataTextField="Value" DataValueField="Id" />
-                            <Rock:DefinedValuePicker ID="dvpStatus" runat="server" Label="Status" DataTextField="Value" DataValueField="Id" />
+                            <Rock:DefinedValuesPicker ID="dvpStatus" runat="server" Label="Status" DataTextField="Value" DataValueField="Id" />
                             <Rock:RockDropDownList ID="ddlSubmitter" runat="server" Label="Submitted By" EnhanceForLongLists="true" />
                             <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
                             <Rock:RockCheckBox ID="cbAssignedToMe" runat="server" Label="Assigned to Me" />
