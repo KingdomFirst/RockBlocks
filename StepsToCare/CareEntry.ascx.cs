@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright 2022 by Kingdom First Solutions
+// Copyright 2024 by Kingdom First Solutions
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -125,6 +125,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultValue = "Complete Need",
         Key = AttributeKey.CompleteButtonText )]
 
+    [BooleanField( "Enable Custom Follow Up",
+        Description = "Enable custom follow up on needs to be able to have recurring follow up or a custom amount of time to follow up in place of the values set in the system job.",
+        DefaultBooleanValue = false,
+        Key = AttributeKey.EnableCustomFollowUp )]
+
     [SecurityAction(
         SecurityActionKey.UpdateStatus,
         "The roles and/or users that have access to update the status of Care Needs." )]
@@ -155,6 +160,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string SnoozeChildNeeds = "SnoozeChildNeeds";
             public const string WaitingButtonText = "WaitingButtonText";
             public const string CompleteButtonText = "CompleteButtonText";
+            public const string EnableCustomFollowUp = "EnableCustomFollowUp";
         }
 
         private static class PageParameterKey
@@ -232,6 +238,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             _allowNewPerson = GetAttributeValue( AttributeKey.AllowNewPerson ).AsBoolean();
             btnComplete.Text = btnCompleteFtr.Text = GetAttributeValue( AttributeKey.CompleteButtonText );
             btnSnooze.Text = btnSnoozeFtr.Text = GetAttributeValue( AttributeKey.WaitingButtonText );
+            cbCustomFollowUp.Visible = GetAttributeValue( AttributeKey.EnableCustomFollowUp ).AsBoolean();
         }
 
         /// <summary>
@@ -1228,6 +1235,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     person.Aliases.Add( personAlias );
                 }
             }
+            if ( categoryId.HasValue )
+            {
+                var category = DefinedValueCache.Get( categoryId.Value );
+                var categoryFollowUpAfter = category.GetAttributeValue( "FollowUpAfter" ).AsIntegerOrNull();
+                var categoryTimesToRepeat = category.GetAttributeValue( "TimesToRepeat" ).AsIntegerOrNull();
+                if ( categoryFollowUpAfter.HasValue && categoryFollowUpAfter > 0 )
+                {
+                    cbCustomFollowUp.Checked = true;
+                    numbRepeatDays.IntegerValue = categoryFollowUpAfter;
+                    numbRepeatTimes.IntegerValue = categoryTimesToRepeat;
+                    pnlRecurrenceOptions.Visible = true;
+                }
+            }
             if ( previewAssignedPeople && categoryId.HasValue && person != null && needId == 0 )
             {
                 var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
@@ -1236,26 +1256,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
                 var leaderRoleGuids = GetAttributeValues( AttributeKey.GroupTypeAndRole ).AsGuidList();
 
-                var category = DefinedValueCache.Get( categoryId.Value );
-
                 CareNeed careNeed = GenerateTempNeed( person, categoryId );
-
-                var categoryRepeatEvery = category.GetAttributeValue( "RepeatEvery" ).AsIntegerOrNull();
-                var categoryTimesToRepeat = category.GetAttributeValue( "TimesToRepeat" ).AsIntegerOrNull();
-                if ( categoryRepeatEvery.HasValue && categoryRepeatEvery > 0 )
-                {
-                    cbCustomFollowUp.Checked = careNeed.CustomFollowUp = true;
-                    numbRepeatDays.IntegerValue = careNeed.RenewPeriodDays = categoryRepeatEvery;
-                    numbRepeatTimes.IntegerValue = careNeed.RenewMaxCount = categoryTimesToRepeat;
-                    pnlRecurrenceOptions.Visible = true;
-                }
-                else
-                {
-                    pnlRecurrenceOptions.Visible = false;
-                    cbCustomFollowUp.Checked = false;
-                    numbRepeatDays.IntegerValue = null;
-                    numbRepeatTimes.IntegerValue = null;
-                }
 
                 AssignedPersons = CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople );
                 pwAssigned.Visible = UserCanAdministrate;
