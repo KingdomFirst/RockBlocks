@@ -1130,8 +1130,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             foreach ( var template in catTouchTemplates )
                             {
                                 var templateNotes = careNeedNotesList.Where( n => n.Text.Equals( template.NoteTemplate.Note ) );
-                                var templateNotesToCheck = templateNotes.Where( n => ( RockDateTime.Now - n.CreatedDateTime ).Value.TotalHours <= template.MinimumCareTouchHours );
-                                var templateFlag = ( templateNotesToCheck.Count() <= template.MinimumCareTouches ) && dateDifference.TotalHours >= template.MinimumCareTouchHours;
+                                var templateNotesToCheckInHours = templateNotes.Where( n => ( RockDateTime.Now - n.CreatedDateTime ).Value.TotalHours <= template.MinimumCareTouchHours );
+                                var templateFlag = ( ( template.Recurring && templateNotesToCheckInHours.Count() < template.MinimumCareTouches ) || ( !template.Recurring && templateNotes.Count() < template.MinimumCareTouches ) ) && dateDifference.TotalHours >= template.MinimumCareTouchHours;
 
                                 if ( templateFlag )
                                 {
@@ -1871,39 +1871,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     lCategoriesHeader.Text = template.ResolveMergeFields( mergeFields );
                 }
-
-                if ( _touchTemplates.Count < 1 )
-                {
-                    foreach ( var needCategory in categoryDefinedType.DefinedValues )
-                    {
-                        var matrixGuid = needCategory.GetAttributeValue( "CareTouchTemplates" ).AsGuid();
-                        var touchTemplates = new List<TouchTemplate>();
-                        if ( matrixGuid != Guid.Empty )
-                        {
-                            var matrix = new AttributeMatrixService( rockContext ).Get( matrixGuid );
-                            if ( matrix != null )
-                            {
-                                foreach ( var matrixItem in matrix.AttributeMatrixItems )
-                                {
-                                    matrixItem.LoadAttributes();
-
-                                    var noteTemplateGuid = matrixItem.GetAttributeValue( "NoteTemplate" ).AsGuid();
-                                    var noteTemplate = new NoteTemplateService( rockContext ).Get( noteTemplateGuid );
-
-                                    var touchTemplate = new TouchTemplate();
-                                    touchTemplate.NoteTemplate = noteTemplate;
-                                    touchTemplate.MinimumCareTouches = matrixItem.GetAttributeValue( "MinimumCareTouches" ).AsInteger();
-                                    touchTemplate.MinimumCareTouchHours = matrixItem.GetAttributeValue( "MinimumCareTouchHours" ).AsInteger();
-                                    touchTemplate.NotifyAll = matrixItem.GetAttributeValue( "NotifyAllAssigned" ).AsBoolean();
-                                    touchTemplate.Recurring = matrixItem.GetAttributeValue( "Recurring" ).AsBoolean();
-
-                                    touchTemplates.Add( touchTemplate );
-                                }
-                                _touchTemplates.AddOrIgnore( needCategory.Id, touchTemplates );
-                            }
-                        }
-                    }
-                }
             }
 
             // set attribute filters
@@ -2080,6 +2047,41 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             RockContext rockContext = new RockContext();
             CareNeedService careNeedService = new CareNeedService( rockContext );
             NoteService noteService = new NoteService( rockContext );
+
+            if ( _touchTemplates.Count < 1 )
+            {
+                var categoryDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) );
+                foreach ( var needCategory in categoryDefinedType.DefinedValues )
+                {
+                    var matrixGuid = needCategory.GetAttributeValue( "CareTouchTemplates" ).AsGuid();
+                    var touchTemplates = new List<TouchTemplate>();
+                    if ( matrixGuid != Guid.Empty )
+                    {
+                        var matrix = new AttributeMatrixService( rockContext ).Get( matrixGuid );
+                        if ( matrix != null )
+                        {
+                            foreach ( var matrixItem in matrix.AttributeMatrixItems )
+                            {
+                                matrixItem.LoadAttributes();
+
+                                var noteTemplateGuid = matrixItem.GetAttributeValue( "NoteTemplate" ).AsGuid();
+                                var noteTemplate = new NoteTemplateService( rockContext ).Get( noteTemplateGuid );
+
+                                var touchTemplate = new TouchTemplate();
+                                touchTemplate.NoteTemplate = noteTemplate;
+                                touchTemplate.MinimumCareTouches = matrixItem.GetAttributeValue( "MinimumCareTouches" ).AsInteger();
+                                touchTemplate.MinimumCareTouchHours = matrixItem.GetAttributeValue( "MinimumCareTouchHours" ).AsInteger();
+                                touchTemplate.NotifyAll = matrixItem.GetAttributeValue( "NotifyAllAssigned" ).AsBoolean();
+                                touchTemplate.Recurring = matrixItem.GetAttributeValue( "Recurring" ).AsBoolean();
+
+                                touchTemplates.Add( touchTemplate );
+                            }
+                            _touchTemplates.AddOrIgnore( needCategory.Id, touchTemplates );
+                        }
+                    }
+                }
+            }
+
             var qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
 
             // Status is hidden at the top in TargetPerson mode, no need to run queries.
