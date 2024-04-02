@@ -1575,7 +1575,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     if ( shouldSnoozeNeed )
                     {
-                        SnoozeNeed( e.RowKeyId );
+                        var careNeed = new CareNeedService( rockContext ).Get( e.RowKeyId );
+                        if ( careNeed != null && careNeed.CustomFollowUp )
+                        {
+                            SnoozeNeed( e.RowKeyId );
+                        }
                     }
                     BindGrid();
                 }
@@ -1747,7 +1751,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     if ( GetAttributeValue( AttributeKey.MoveNeedToWaiting ).AsBoolean() )
                     {
-                        SnoozeNeed( hfQuickNote_CareNeedId.ValueAsInt() );
+                        var careNeed = new CareNeedService( rockContext ).Get( hfQuickNote_CareNeedId.ValueAsInt() );
+                        if ( careNeed != null && careNeed.CustomFollowUp )
+                        {
+                            SnoozeNeed( hfQuickNote_CareNeedId.ValueAsInt() );
+                        }
                     }
 
                     BindGrid();
@@ -2651,7 +2659,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             {
                                 if ( shouldSnoozeNeed )
                                 {
-                                    SnoozeNeed( careNeedId.Value );
+                                    var careNeed = new CareNeedService( rockContext ).Get( careNeedId.Value );
+                                    if ( careNeed != null && careNeed.CustomFollowUp )
+                                    {
+                                        SnoozeNeed( careNeedId.Value );
+                                    }
                                 }
                                 BindGrid();
                             }
