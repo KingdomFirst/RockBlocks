@@ -110,15 +110,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.CompleteChildNeeds,
         Category = AttributeCategory.FamilyNeeds )]
 
-    [BooleanField( "Wait Child Needs on Parent Follow Up",
+    [BooleanField( "Snooze Child Needs on Parent Follow Up",
         DefaultBooleanValue = true,
         Key = AttributeKey.SnoozeChildNeeds,
         Category = AttributeCategory.FamilyNeeds )]
 
-    [TextField( "Waiting Button Text",
-        Description = "Customize the button text to use for moving a need from 'Follow Up' to 'Waiting' status.",
+    [TextField( "Snoozed Button Text",
+        Description = "Customize the button text to use for moving a need from 'Follow Up' to 'Snoozed' status.",
         DefaultValue = "Follow Up Complete",
-        Key = AttributeKey.WaitingButtonText )]
+        Key = AttributeKey.SnoozedButtonText )]
 
     [TextField( "Complete Button Text",
         Description = "Text to use on button to move from any status to 'Closed' status quickly.",
@@ -158,7 +158,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string PreviewAssignedPeople = "PreviewAssignedPeople";
             public const string CompleteChildNeeds = "CompleteChildNeeds";
             public const string SnoozeChildNeeds = "SnoozeChildNeeds";
-            public const string WaitingButtonText = "WaitingButtonText";
+            public const string SnoozedButtonText = "SnoozedButtonText";
             public const string CompleteButtonText = "CompleteButtonText";
             public const string EnableCustomFollowUp = "EnableCustomFollowUp";
         }
@@ -237,7 +237,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             _allowNewPerson = GetAttributeValue( AttributeKey.AllowNewPerson ).AsBoolean();
             btnComplete.Text = btnCompleteFtr.Text = GetAttributeValue( AttributeKey.CompleteButtonText );
-            btnSnooze.Text = btnSnoozeFtr.Text = GetAttributeValue( AttributeKey.WaitingButtonText );
+            btnSnooze.Text = btnSnoozeFtr.Text = GetAttributeValue( AttributeKey.SnoozedButtonText );
             cbCustomFollowUp.Visible = GetAttributeValue( AttributeKey.EnableCustomFollowUp ).AsBoolean();
         }
 
@@ -901,13 +901,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     rockContext.SaveChanges();
                 } );
 
-                createNote( rockContext, careNeedId, GetAttributeValue( AttributeKey.WaitingButtonText ) );
+                createNote( rockContext, careNeedId, GetAttributeValue( AttributeKey.SnoozedButtonText ) );
 
                 if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
                 {
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
-                        createNote( rockContext, childneed.Id, "Marked Waiting from Parent Need" );
+                        createNote( rockContext, childneed.Id, "Marked Snoozed from Parent Need" );
                     }
                 }
 

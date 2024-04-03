@@ -175,26 +175,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 16,
         Key = AttributeKey.CompleteActionText )]
 
-    [TextField( "Waiting Action Text",
+    [TextField( "Snoozed Action Text",
         Description = "This action will only display when 'Custom Follow Up' is enabled on a need.",
         DefaultValue = "Follow Up Complete",
         Category = "Actions",
         Order = 17,
         Key = AttributeKey.SnoozeActionText )]
 
-    [BooleanField( "Wait Child Needs on Parent Follow Up",
-        Description = "Should Child Needs also be moved to \"Waiting\" status when a parent need is moved to it?",
+    [BooleanField( "Snooze Child Needs on Parent Follow Up",
+        Description = "Should Child Needs also be moved to \"Snoozed\" status when a parent need is moved to it?",
         DefaultBooleanValue = true,
         Category = "Actions",
         Order = 18,
         Key = AttributeKey.SnoozeChildNeeds )]
 
-    [BooleanField( "Custom Follow Up Move Need to Waiting Status",
-        Description = "Should a Care Need be moved to \"Waiting\" status when any quick note/care touch is performed and Custom Follow Up is enabled?",
+    [BooleanField( "Custom Follow Up Move Need to Snoozed Status",
+        Description = "Should a Care Need be moved to \"Snoozed\" status when any quick note/care touch is performed and Custom Follow Up is enabled?",
         DefaultBooleanValue = false,
         Category = "Actions",
         Order = 19,
-        Key = AttributeKey.MoveNeedToWaiting )]
+        Key = AttributeKey.MoveNeedToSnoozed )]
 
     [CustomDropdownListField( "Display Type",
         Description = "The format to use for displaying notes.",
@@ -301,7 +301,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string SnoozeActionText = "SnoozeActionText";
             public const string SnoozeChildNeeds = "SnoozeChildNeeds";
             public const string CompleteActionText = "CompleteActionText";
-            public const string MoveNeedToWaiting = "MoveNeedToWaiting";
+            public const string MoveNeedToSnoozed = "MoveNeedToSnoozed";
         }
 
         /// <summary>
@@ -1568,7 +1568,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 LinkButtonField field = sender as LinkButtonField;
                 var fieldId = field.ID.Replace( "btn_", "" );
                 var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
-                var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToWaiting ).AsBoolean();
+                var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean();
 
                 var noteCreated = createNote( rockContext, e.RowKeyId, noteTemplate.Note, true, noteTemplate, true );
                 if ( noteCreated )
@@ -1749,7 +1749,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var noteCreated = createNote( rockContext, hfQuickNote_CareNeedId.ValueAsInt(), noteTemplate.Note, true, noteTemplate, true );
                 if ( noteCreated )
                 {
-                    if ( GetAttributeValue( AttributeKey.MoveNeedToWaiting ).AsBoolean() )
+                    if ( GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean() )
                     {
                         var careNeed = new CareNeedService( rockContext ).Get( hfQuickNote_CareNeedId.ValueAsInt() );
                         if ( careNeed != null && careNeed.CustomFollowUp )
@@ -2645,7 +2645,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var quickNoteId = PageParameter( PageParameterKey.QuickNote ).AsIntegerOrNull();
             var careNeedId = PageParameter( PageParameterKey.CareNeed ).AsIntegerOrNull();
             var NoConfirm = PageParameter( PageParameterKey.NoConfirm ).AsBooleanOrNull();
-            var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToWaiting ).AsBoolean();
+            var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean();
 
             if ( quickNoteId.HasValue && careNeedId.HasValue )
             {
@@ -2713,7 +2713,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         foreach ( var childneed in careNeed.ChildNeeds )
                         {
-                            createNote( rockContext, childneed.Id, "Marked Waiting from Parent Need" );
+                            createNote( rockContext, childneed.Id, "Marked Snoozed from Parent Need" );
                         }
                     }
                 }
