@@ -300,6 +300,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var previewAssignedPeople = GetAttributeValue( AttributeKey.PreviewAssignedPeople ).AsBoolean();
                 var snoozedValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
+                var futureThresholdDays = GetAttributeValue( AttributeKey.FutureThresholdDays ).AsDouble();
+
+                double dateDifference = 0;
 
                 CareNeed careNeed = null;
                 int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
@@ -437,6 +440,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     careNeed.DateEntered = dpDate.SelectedDateTime.Value;
                 }
 
+                if ( careNeed.DateEntered.HasValue )
+                {
+                    dateDifference = ( careNeed.DateEntered.Value - DateTime.Now ).TotalDays;
+                }
+
                 careNeed.WorkersOnly = cbWorkersOnly.Checked;
 
                 careNeed.CustomFollowUp = cbCustomFollowUp.Checked;
@@ -445,7 +453,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
                 var newlyAssignedPersons = new List<AssignedPerson>();
-                if ( careNeed.AssignedPersons != null || previewAssignedPeople )
+                if ( careNeed.AssignedPersons != null || ( previewAssignedPeople && dateDifference <= futureThresholdDays ) )
                 {
                     if ( AssignedPersons.Any() )
                     {
@@ -560,13 +568,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
                     var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
                     var leaderRoleGuids = GetAttributeValues( AttributeKey.GroupTypeAndRole ).AsGuidList();
-                    var futureThresholdDays = GetAttributeValue( AttributeKey.FutureThresholdDays ).AsDouble();
 
-                    double dateDifference = 0;
-                    if ( careNeed.DateEntered.HasValue )
-                    {
-                        dateDifference = ( careNeed.DateEntered.Value - DateTime.Now ).TotalDays;
-                    }
                     if ( isNew && dateDifference <= futureThresholdDays && !previewAssignedPeople )
                     {
                         CareUtilities.AutoAssignWorkers( careNeed, careNeed.WorkersOnly, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids );
@@ -1117,7 +1119,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             hlStatus.LabelType = LabelType.Custom;
             hlStatus.CustomClass = careNeed.Status.GetAttributeValue( "CssClass" );
 
-            if ( careNeed.CustomFollowUp && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
+            if ( careNeed.CustomFollowUp && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
             {
                 btnSnooze.Visible = btnSnoozeFtr.Visible = true;
             }
@@ -1202,6 +1204,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var previewAssignedPeople = GetAttributeValue( AttributeKey.PreviewAssignedPeople ).AsBoolean();
             var categoryId = dvpCategory.SelectedValue.AsIntegerOrNull();
             var needId = hfCareNeedId.ValueAsInt();
+            var futureThresholdDays = GetAttributeValue( AttributeKey.FutureThresholdDays ).AsDouble();
+            double dateDifference = 0;
+            if ( dpDate.SelectedDateTime.HasValue )
+            {
+                dateDifference = ( dpDate.SelectedDateTime.Value - RockDateTime.Now ).TotalDays;
+            }
+
             if ( person == null && ppPerson.PersonId != null )
             {
                 person = new PersonService( new RockContext() ).Get( ppPerson.PersonId.Value );
@@ -1248,7 +1257,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     pnlRecurrenceOptions.Visible = true;
                 }
             }
-            if ( previewAssignedPeople && categoryId.HasValue && person != null && needId == 0 )
+            if ( previewAssignedPeople && categoryId.HasValue && person != null && needId == 0 && dateDifference <= futureThresholdDays )
             {
                 var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
                 var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
@@ -1260,8 +1269,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 AssignedPersons = CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople );
                 pwAssigned.Visible = UserCanAdministrate;
+                BindAssignedPersonsGrid();
+            } else
+            {
+                pwAssigned.Visible = false;
+                AssignedPersons = null;
             }
-            BindAssignedPersonsGrid();
         }
 
         private CareNeed GenerateTempNeed( Person person, int? categoryId = null )

@@ -1030,7 +1030,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItem1.Controls.Add( lbCompleteNeed );
                         }
 
-                        if ( careNeed.CustomFollowUp && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
+                        if ( careNeed.CustomFollowUp && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
                         {
                             var lbSnoozeNeed = new LinkButton();
                             lbSnoozeNeed.Command += lbNeedAction_Click;
@@ -2692,7 +2692,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var careNeedService = new CareNeedService( rockContext );
                 var careNeed = careNeedService.Get( id );
                 var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED ).Id;
-                if ( careNeed.StatusValueId != snoozeValueId )
+                if ( careNeed.StatusValueId != snoozeValueId && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) )
                 {
                     careNeed.StatusValueId = snoozeValueId;
                     careNeed.SnoozeDate = RockDateTime.Now;
