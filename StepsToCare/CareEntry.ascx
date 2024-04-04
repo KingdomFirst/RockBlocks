@@ -13,7 +13,7 @@
 
                 <div class="panel-labels">
                     <Rock:HighlightLabel ID="hlStatus" runat="server" LabelType="Default" Text="Pending" />
-                    <asp:LinkButton ID="btnSnooze" runat="server" CssClass="btn btn-primary btn-xs" OnClick="btnSnooze_Click" Visible="false">Follow Up Complete</asp:LinkButton>
+                    <asp:LinkButton ID="btnSnooze" runat="server" CssClass="btn btn-primary btn-xs" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
                     <asp:LinkButton ID="btnComplete" runat="server" CssClass="btn btn-success btn-xs" OnClick="btnComplete_Click" Visible="false">Complete Need</asp:LinkButton>
                 </div>
             </div>
@@ -145,7 +145,7 @@
                 <Rock:RockCheckBox ID="cbIncludeFamily" runat="server" Text="Include Family" DisplayInline="true" FormGroupCssClass="d-inline-block" />
                 <Rock:RockCheckBox ID="cbWorkersOnly" runat="server" Text="Workers Only" DisplayInline="true" FormGroupCssClass="d-inline-block" />
                 <div class="pull-right">
-                    <asp:LinkButton ID="btnSnoozeFtr" runat="server" CssClass="btn btn-warning btn-sm" OnClick="btnSnooze_Click" Visible="false">Follow Up Complete</asp:LinkButton>
+                    <asp:LinkButton ID="btnSnoozeFtr" runat="server" CssClass="btn btn-warning btn-sm" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
                     <asp:LinkButton ID="btnCompleteFtr" runat="server" CssClass="btn btn-success btn-sm" OnClick="btnComplete_Click" Visible="false">Complete Need</asp:LinkButton>
                 </div>
             </div>

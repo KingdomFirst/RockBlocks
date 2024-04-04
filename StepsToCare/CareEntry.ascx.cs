@@ -50,7 +50,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.AllowNewPerson )]
 
     [CustomEnhancedListField( "Group Type Roles",
-        Description = "Select the Group Type Roles of the leaders you would like auto assigned to care need when the Person is a member of this type of group. If none are selected it will not auto assign the small group member with the appropriate role to the need. ",
+        Description = "Select the Group Type > Roles for the group members you would like auto assigned to Care Needs created for people who are in groups of these types. If none are selected it will not auto assign the group member with the appropriate role to the need. ",
         IsRequired = false,
         ListSource = "SELECT gtr.[Guid] as [Value], CONCAT(gt.[Name],' > ',gtr.[Name]) as [Text] FROM GroupTypeRole gtr JOIN GroupType gt ON gtr.GroupTypeId = gt.Id ORDER BY gt.[Name], gtr.[Order]",
         Key = AttributeKey.GroupTypeAndRole )]
@@ -110,7 +110,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.CompleteChildNeeds,
         Category = AttributeCategory.FamilyNeeds )]
 
-    [BooleanField( "Snooze Child Needs on Parent Follow Up",
+    [BooleanField( "Snooze Child Needs when Parent Need is Snoozed",
         DefaultBooleanValue = true,
         Key = AttributeKey.SnoozeChildNeeds,
         Category = AttributeCategory.FamilyNeeds )]
@@ -126,7 +126,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.CompleteButtonText )]
 
     [BooleanField( "Enable Custom Follow Up",
-        Description = "Enable custom follow up on needs to be able to have recurring follow up or a custom amount of time to follow up in place of the values set in the system job.",
+        Description = "Enable the ability to set Custom Follow Up settings per need.",
         DefaultBooleanValue = false,
         Key = AttributeKey.EnableCustomFollowUp )]
 
@@ -867,11 +867,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             BindAssignedPersonsGrid();
         }
+
         protected void btnSnooze_Click( object sender, EventArgs e )
         {
             RockContext rockContext = new RockContext();
             CareNeedService careNeedService = new CareNeedService( rockContext );
-            AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
 
             CareNeed careNeed = null;
             int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
@@ -909,7 +909,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
-                        createNote( rockContext, childneed.Id, "Marked Snoozed from Parent Need" );
+                        createNote( rockContext, childneed.Id, $"Marked {GetAttributeValue( AttributeKey.SnoozedButtonText )} from Parent Need" );
                     }
                 }
 
@@ -924,7 +924,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             RockContext rockContext = new RockContext();
             CareNeedService careNeedService = new CareNeedService( rockContext );
-            AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
 
             CareNeed careNeed = null;
             int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
@@ -1270,7 +1269,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 AssignedPersons = CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople );
                 pwAssigned.Visible = UserCanAdministrate;
                 BindAssignedPersonsGrid();
-            } else
+            }
+            else
             {
                 pwAssigned.Visible = false;
                 AssignedPersons = null;

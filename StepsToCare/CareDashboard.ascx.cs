@@ -175,9 +175,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 16,
         Key = AttributeKey.CompleteActionText )]
 
-    [TextField( "Snoozed Action Text",
+    [TextField( "Snooze Action Text",
         Description = "This action will only display when 'Custom Follow Up' is enabled on a need.",
-        DefaultValue = "Follow Up Complete",
+        DefaultValue = "Snooze",
         Category = "Actions",
         Order = 17,
         Key = AttributeKey.SnoozeActionText )]
@@ -189,8 +189,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 18,
         Key = AttributeKey.SnoozeChildNeeds )]
 
-    [BooleanField( "Custom Follow Up Move Need to Snoozed Status",
-        Description = "Should a Care Need be moved to \"Snoozed\" status when any quick note/care touch is performed and Custom Follow Up is enabled?",
+    [BooleanField( "Automatic Snooze Enabled",
+        Description = "Should a Care Need be moved to \"Snoozed\" status when any quick note/care touch is performed on a Care Need with Custom Follow Up enabled?",
         DefaultBooleanValue = false,
         Category = "Actions",
         Order = 19,
@@ -1180,7 +1180,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         protected void lStatus_DataBound( object sender, RowEventArgs e )
         {
-            if ( TargetPerson != null || dvpStatus.SelectedValuesAsInt.Count > 1 )
+            if ( TargetPerson != null || dvpStatus.SelectedValuesAsInt.Count != 1 )
             {
                 Literal lStatus = sender as Literal;
                 CareNeed careNeed = e.Row.DataItem as CareNeed;
@@ -2067,12 +2067,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 var noteTemplateGuid = matrixItem.GetAttributeValue( "NoteTemplate" ).AsGuid();
                                 var noteTemplate = new NoteTemplateService( rockContext ).Get( noteTemplateGuid );
 
-                                var touchTemplate = new TouchTemplate();
-                                touchTemplate.NoteTemplate = noteTemplate;
-                                touchTemplate.MinimumCareTouches = matrixItem.GetAttributeValue( "MinimumCareTouches" ).AsInteger();
-                                touchTemplate.MinimumCareTouchHours = matrixItem.GetAttributeValue( "MinimumCareTouchHours" ).AsInteger();
-                                touchTemplate.NotifyAll = matrixItem.GetAttributeValue( "NotifyAllAssigned" ).AsBoolean();
-                                touchTemplate.Recurring = matrixItem.GetAttributeValue( "Recurring" ).AsBoolean();
+                                if ( noteTemplate != null ) 
+                                {
+                                    var touchTemplate = new TouchTemplate();
+                                    touchTemplate.NoteTemplate = noteTemplate;
+                                    touchTemplate.MinimumCareTouches = matrixItem.GetAttributeValue( "MinimumCareTouches" ).AsInteger();
+                                    touchTemplate.MinimumCareTouchHours = matrixItem.GetAttributeValue( "MinimumCareTouchHours" ).AsInteger();
+                                    touchTemplate.NotifyAll = matrixItem.GetAttributeValue( "NotifyAllAssigned" ).AsBoolean();
+                                    touchTemplate.Recurring = matrixItem.GetAttributeValue( "Recurring" ).AsBoolean();
+                                    touchTemplate.Order = matrixItem.Order;
+                                }
 
                                 touchTemplates.Add( touchTemplate );
                             }
@@ -2268,7 +2272,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gList.ColumnsOfType<RockBoundField>().First( c => c.DataField == "Campus.Name" ).Visible = cpCampus.Visible;
 
             var statusColumn = gList.ColumnsOfType<RockLiteralField>().First( c => c.ID.StartsWith( "NeedStatus" ) );
-            if ( TargetPerson != null || statuses.Count > 1 )
+            if ( TargetPerson != null || statuses.Count != 1 )
             {
                 statusColumn.HeaderText = "Status";
                 statusColumn.SortExpression = "Status";
@@ -2644,7 +2648,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             var quickNoteId = PageParameter( PageParameterKey.QuickNote ).AsIntegerOrNull();
             var careNeedId = PageParameter( PageParameterKey.CareNeed ).AsIntegerOrNull();
-            var NoConfirm = PageParameter( PageParameterKey.NoConfirm ).AsBooleanOrNull();
+            var noConfirm = PageParameter( PageParameterKey.NoConfirm ).AsBooleanOrNull();
             var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean();
 
             if ( quickNoteId.HasValue && careNeedId.HasValue )
@@ -2654,7 +2658,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     var noteTemplate = new NoteTemplateService( rockContext ).Get( quickNoteId.Value );
                     if ( noteTemplate != null )
                     {
-                        if ( NoConfirm.HasValue && NoConfirm.Value )
+                        if ( noConfirm.HasValue && noConfirm.Value )
                         {
                             var noteCreated = createNote( rockContext, careNeedId.Value, noteTemplate.Note, true, noteTemplate, true );
                             if ( noteCreated )
@@ -2713,7 +2717,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         foreach ( var childneed in careNeed.ChildNeeds )
                         {
-                            createNote( rockContext, childneed.Id, "Marked Snoozed from Parent Need" );
+                            createNote( rockContext, childneed.Id, $"Marked {GetAttributeValue( AttributeKey.SnoozeActionText )} from Parent Need" );
                         }
                     }
                 }

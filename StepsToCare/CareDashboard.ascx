@@ -347,7 +347,7 @@
                 <asp:ValidationSummary ID="vsQuickNoteConfirm" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="QuickNoteConfirm" />
                 <asp:HiddenField ID="hfQuickNote_CareNeedId" runat="server" />
                 <asp:HiddenField ID="hfQuickNote_NoteId" runat="server" />
-                <p>Are you sure you wish to add the Note "<asp:Literal ID="lQuickNote" runat="server" />" to Care Need <asp:Literal ID="lCareNeedId" runat="server" />?</p>
+                <p>Are you sure you wish to add the Note "<asp:Literal ID="lQuickNote" runat="server" />" to Care Need (<asp:Literal ID="lCareNeedId" runat="server" />)?</p>
                 <Rock:NotificationBox ID="nbQuickNoteConfirm" runat="server" NotificationBoxType="Warning" Visible="false"></Rock:NotificationBox>
             </Content>
         </Rock:ModalDialog>
