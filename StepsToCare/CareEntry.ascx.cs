@@ -115,9 +115,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.SnoozeChildNeeds,
         Category = AttributeCategory.FamilyNeeds )]
 
-    [TextField( "Snoozed Button Text",
+    [TextField( "Snooze Button Text",
         Description = "Customize the button text to use for moving a need from 'Follow Up' to 'Snoozed' status.",
-        DefaultValue = "Follow Up Complete",
+        DefaultValue = "Snooze",
         Key = AttributeKey.SnoozedButtonText )]
 
     [TextField( "Complete Button Text",
@@ -305,7 +305,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 double dateDifference = 0;
 
                 CareNeed careNeed = null;
-                int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
+                int careNeedId = hfCareNeedId.ValueAsInt();
                 var isNew = false;
 
                 if ( !careNeedId.Equals( 0 ) )
@@ -865,7 +865,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         protected void cpCampus_SelectedIndexChanged( object sender, EventArgs e )
         {
-            BindAssignedPersonsGrid();
+            PreviewAssignedPeople( null );
         }
 
         protected void btnSnooze_Click( object sender, EventArgs e )
@@ -874,7 +874,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             CareNeedService careNeedService = new CareNeedService( rockContext );
 
             CareNeed careNeed = null;
-            int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
+            int careNeedId = hfCareNeedId.ValueAsInt();
 
             if ( !careNeedId.Equals( 0 ) )
             {
@@ -909,14 +909,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
-                        createNote( rockContext, childneed.Id, $"Marked {GetAttributeValue( AttributeKey.SnoozedButtonText )} from Parent Need" );
+                        createNote( rockContext, childneed.Id, $"Marked \"{GetAttributeValue( AttributeKey.SnoozedButtonText )}\" from Parent Need" );
                     }
                 }
 
-                dvpStatus.SetValue( careNeed.StatusValueId );
+                // redirect back to parent
+                var personId = this.PageParameter( "PersonId" ).AsIntegerOrNull();
+                var qryParams = new Dictionary<string, string>();
+                if ( personId.HasValue )
+                {
+                    qryParams.Add( "PersonId", personId.ToString() );
+                }
 
-                updateStatusLabel( careNeed );
-
+                NavigateToParentPage( qryParams );
             }
 
         }
@@ -926,7 +931,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             CareNeedService careNeedService = new CareNeedService( rockContext );
 
             CareNeed careNeed = null;
-            int careNeedId = PageParameter( PageParameterKey.CareNeedId ).AsInteger();
+            int careNeedId = hfCareNeedId.ValueAsInt();
 
             if ( !careNeedId.Equals( 0 ) )
             {
@@ -935,7 +940,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( careNeed != null )
             {
-                var canCompleteNeeds = IsUserAuthorized( SecurityActionKey.CompleteNeeds );
                 var completeChildNeeds = GetAttributeValue( AttributeKey.CompleteChildNeeds ).AsBoolean();
                 var completeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
                 careNeed.StatusValueId = completeValueId;
@@ -953,20 +957,25 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     rockContext.SaveChanges();
                 } );
 
-                createNote( rockContext, careNeedId, "Marked Complete" );
+                createNote( rockContext, careNeedId, GetAttributeValue( AttributeKey.CompleteButtonText ) );
 
                 if ( completeChildNeeds && careNeed.ChildNeeds.Any() )
                 {
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
-                        createNote( rockContext, childneed.Id, "Marked Complete from Parent Need" );
+                        createNote( rockContext, childneed.Id, $"Marked \"{GetAttributeValue( AttributeKey.CompleteButtonText )}\" from Parent Need" );
                     }
                 }
 
-                dvpStatus.SetValue( careNeed.StatusValueId );
+                // redirect back to parent
+                var personId = this.PageParameter( "PersonId" ).AsIntegerOrNull();
+                var qryParams = new Dictionary<string, string>();
+                if ( personId.HasValue )
+                {
+                    qryParams.Add( "PersonId", personId.ToString() );
+                }
 
-                updateStatusLabel( careNeed );
-
+                NavigateToParentPage( qryParams );
             }
         }
 
@@ -1272,6 +1281,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
             else
             {
+                GenerateTempNeed( null, categoryId );
+
                 pwAssigned.Visible = false;
                 AssignedPersons = null;
             }

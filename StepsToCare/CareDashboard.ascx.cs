@@ -2067,7 +2067,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 var noteTemplateGuid = matrixItem.GetAttributeValue( "NoteTemplate" ).AsGuid();
                                 var noteTemplate = new NoteTemplateService( rockContext ).Get( noteTemplateGuid );
 
-                                if ( noteTemplate != null ) 
+                                if ( noteTemplate != null )
                                 {
                                     var touchTemplate = new TouchTemplate();
                                     touchTemplate.NoteTemplate = noteTemplate;
@@ -2076,9 +2076,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     touchTemplate.NotifyAll = matrixItem.GetAttributeValue( "NotifyAllAssigned" ).AsBoolean();
                                     touchTemplate.Recurring = matrixItem.GetAttributeValue( "Recurring" ).AsBoolean();
                                     touchTemplate.Order = matrixItem.Order;
-                                }
 
-                                touchTemplates.Add( touchTemplate );
+                                    touchTemplates.Add( touchTemplate );
+                                }
                             }
                             _touchTemplates.AddOrIgnore( needCategory.Id, touchTemplates );
                         }
@@ -2656,7 +2656,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 using ( var rockContext = new RockContext() )
                 {
                     var noteTemplate = new NoteTemplateService( rockContext ).Get( quickNoteId.Value );
-                    if ( noteTemplate != null )
+                    var careNeed = new CareNeedService( rockContext ).Get( careNeedId.Value );
+                    if ( noteTemplate != null && careNeed != null )
                     {
                         if ( noConfirm.HasValue && noConfirm.Value )
                         {
@@ -2665,8 +2666,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             {
                                 if ( shouldSnoozeNeed )
                                 {
-                                    var careNeed = new CareNeedService( rockContext ).Get( careNeedId.Value );
-                                    if ( careNeed != null && careNeed.CustomFollowUp )
+                                    if ( careNeed.CustomFollowUp )
                                     {
                                         SnoozeNeed( careNeedId.Value );
                                     }
