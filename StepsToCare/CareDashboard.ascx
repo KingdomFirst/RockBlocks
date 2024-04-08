@@ -78,6 +78,10 @@
     .grid-select-cell.photo-icon-cell {
         padding-bottom: 8px;
     }
+    .modal.container.kfs-modal-confirm {
+        width: 584px;
+        margin-left: -242px;
+    }
 </style>
 <asp:UpdatePanel runat="server" ID="upnlCareDashboard" UpdateMode="Always">
     <ContentTemplate>
@@ -134,7 +138,7 @@
                             <Rock:RockTextBox ID="tbFirstName" runat="server" Label="First Name" />
                             <Rock:RockTextBox ID="tbLastName" runat="server" Label="Last Name" />
                             <Rock:DefinedValuesPicker ID="dvpCategory" runat="server" Label="Category" DataTextField="Value" DataValueField="Id" />
-                            <Rock:DefinedValuePicker ID="dvpStatus" runat="server" Label="Status" DataTextField="Value" DataValueField="Id" />
+                            <Rock:DefinedValuesPicker ID="dvpStatus" runat="server" Label="Status" DataTextField="Value" DataValueField="Id" />
                             <Rock:RockDropDownList ID="ddlSubmitter" runat="server" Label="Submitted By" EnhanceForLongLists="true" />
                             <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
                             <Rock:RockCheckBox ID="cbAssignedToMe" runat="server" Label="Assigned to Me" />
@@ -336,6 +340,15 @@
                 <Rock:DynamicPlaceholder ID="phNotificationAttribute" runat="server" />
 
                 <Rock:NotificationBox ID="nbNotificationWarning" runat="server" NotificationBoxType="Warning" Visible="false"></Rock:NotificationBox>
+            </Content>
+        </Rock:ModalDialog>
+        <Rock:ModalDialog ID="mdConfirmNote" runat="server" Title="Confirm Quick Note" ValidationGroup="QuickNoteConfirm" ModalCssClass="kfs-modal-confirm" OnSaveClick="mdConfirmNote_SaveClick" CloseLinkVisible="true" SaveButtonText="Yes" SaveButtonCausesValidation="true" Content-CssClass="modal-kfsnotification">
+            <Content>
+                <asp:ValidationSummary ID="vsQuickNoteConfirm" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="QuickNoteConfirm" />
+                <asp:HiddenField ID="hfQuickNote_CareNeedId" runat="server" />
+                <asp:HiddenField ID="hfQuickNote_NoteId" runat="server" />
+                <p>Are you sure you wish to add the Note "<asp:Literal ID="lQuickNote" runat="server" />" to Care Need (<asp:Literal ID="lCareNeedId" runat="server" />)?</p>
+                <Rock:NotificationBox ID="nbQuickNoteConfirm" runat="server" NotificationBoxType="Warning" Visible="false"></Rock:NotificationBox>
             </Content>
         </Rock:ModalDialog>
     </ContentTemplate>

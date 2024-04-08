@@ -1,5 +1,9 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="CareEntry.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.StepsToCare.CareEntry" %>
-<style type="text/css">fieldset[id*='pwDetails'] .col-md-6:nth-child(odd) { clear: left; }</style>
+<style type="text/css">
+    fieldset[id*='pwDetails'] .col-md-6:nth-child(odd) {
+        clear: left;
+    }
+</style>
 <asp:UpdatePanel runat="server" ID="upnlCareEntry">
     <ContentTemplate>
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
@@ -9,6 +13,8 @@
 
                 <div class="panel-labels">
                     <Rock:HighlightLabel ID="hlStatus" runat="server" LabelType="Default" Text="Pending" />
+                    <asp:LinkButton ID="btnSnooze" runat="server" CssClass="btn btn-primary btn-xs" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
+                    <asp:LinkButton ID="btnComplete" runat="server" CssClass="btn btn-success btn-xs" OnClick="btnComplete_Click" Visible="false">Complete Need</asp:LinkButton>
                 </div>
             </div>
             <Rock:PanelDrawer ID="pdAuditDetails" runat="server"></Rock:PanelDrawer>
@@ -25,10 +31,10 @@
                             <Rock:PersonPicker ID="ppSubmitter" runat="server" Label="Submitter" Visible="false" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="SubmitterPersonAlias" />
                         </div>
                         <div class="col-md-3">
-                            <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" />
+                            <Rock:CampusPicker ID="cpCampus" runat="server" Label="Campus" OnSelectedIndexChanged="cpCampus_SelectedIndexChanged" AutoPostBack="true" />
                         </div>
                         <div class="col-md-3">
-                            <Rock:DefinedValuePicker ID="dvpStatus" runat="server" Label="Status" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="StatusValueId" Required="true" />
+                            <Rock:DefinedValuePicker ID="dvpStatus" runat="server" Label="Status" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="StatusValueId" Required="true" OnSelectedIndexChanged="dvpStatus_SelectedIndexChanged" AutoPostBack="true" />
                         </div>
                     </div>
                 </div>
@@ -69,11 +75,22 @@
                 </Rock:PanelWidget>
 
                 <Rock:PanelWidget ID="pwDetails" runat="server" Title="Need Details" Expanded="true">
-                    <Rock:DefinedValuePicker ID="dvpCategory" runat="server" Label="Category" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="CategoryValueId" Required="true" />
+                    <Rock:DefinedValuePicker ID="dvpCategory" runat="server" Label="Category" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="CategoryValueId" Required="true" OnSelectedIndexChanged="dvpCategory_SelectedIndexChanged" AutoPostBack="true" />
 
                     <Rock:DataTextBox ID="dtbDetailsText" runat="server" Label="Description of Need" TextMode="MultiLine" Rows="4" SourceTypeName="rocks.kfs.StepsToCare.Model.CareNeed, rocks.kfs.StepsToCare" PropertyName="Details" />
 
                     <Rock:DynamicPlaceholder ID="phAttributes" runat="server" />
+
+                    <Rock:RockCheckBox ID="cbCustomFollowUp" runat="server" Text="Custom Follow Up" OnCheckedChanged="cbCustomFollowUp_CheckedChanged" AutoPostBack="true" />
+
+                    <asp:Panel ID="pnlRecurrenceOptions" runat="server" CssClass="row" Visible="false">
+                        <div class="col-sm-6 col-md-4 col-lg-3">
+                            <Rock:NumberBox ID="numbRepeatDays" runat="server" Label="Follow Up After" Required="true" Help="Will change to follow up status and notify worker the provided number of days after the need is entered or snoozed." AppendText="days" />
+                        </div>
+                        <div class="col-sm-6 col-md-4 col-lg-3">
+                            <Rock:NumberBox ID="numbRepeatTimes" runat="server" Label="Number of Times to Repeat" Help="The number of times to repeat.  Leave blank to repeat indefinitely." AppendText="times" />
+                        </div>
+                    </asp:Panel>
                 </Rock:PanelWidget>
 
                 <Rock:PanelWidget ID="pwAssigned" runat="server" Title="Assign Workers" Expanded="true">
@@ -102,12 +119,17 @@
                         runat="server"
                         DisplayType="Light"
                         HideDeleteButtonForIsSystem="false"
-                        ShowConfirmDeleteDialog="false">
+                        ShowConfirmDeleteDialog="false"
+                        OnRowDataBound="gAssignedPersons_RowDataBound">
                         <Columns>
                             <Rock:SelectField></Rock:SelectField>
                             <asp:BoundField DataField="PersonAlias.Person.FullName" HeaderText="Name" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" />
                             <Rock:BoolField HeaderText="Follow Up Worker" DataField="FollowUpWorker"></Rock:BoolField>
-                            <Rock:RockBoundField HeaderText="Worker Id" DataField="WorkerId"></Rock:RockBoundField>
+                            <Rock:RockTemplateField HeaderText="Type (Need Count)">
+                                <ItemTemplate>
+                                    <asp:PlaceHolder runat="server" ID="phCountOrRole"></asp:PlaceHolder>
+                                </ItemTemplate>
+                            </Rock:RockTemplateField>
                             <Rock:DeleteField OnClick="gAssignedPersons_DeleteClick" />
                         </Columns>
                     </Rock:Grid>
@@ -122,6 +144,10 @@
                 <asp:LinkButton ID="lbCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="lbCancel_Click" />
                 <Rock:RockCheckBox ID="cbIncludeFamily" runat="server" Text="Include Family" DisplayInline="true" FormGroupCssClass="d-inline-block" />
                 <Rock:RockCheckBox ID="cbWorkersOnly" runat="server" Text="Workers Only" DisplayInline="true" FormGroupCssClass="d-inline-block" />
+                <div class="pull-right">
+                    <asp:LinkButton ID="btnSnoozeFtr" runat="server" CssClass="btn btn-warning btn-sm" OnClick="btnSnooze_Click" Visible="false">Snooze</asp:LinkButton>
+                    <asp:LinkButton ID="btnCompleteFtr" runat="server" CssClass="btn btn-success btn-sm" OnClick="btnComplete_Click" Visible="false">Complete Need</asp:LinkButton>
+                </div>
             </div>
         </asp:Panel>
 
