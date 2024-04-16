@@ -155,17 +155,19 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
         {
             if ( _financialBatch != null )
             {
+                // Reload the Financial Batch with the ID so we can update properties and Save Changes with this Context.
                 var rockContext = new RockContext();
+                var financialBatch = new FinancialBatchService( rockContext ).Get( _financialBatch.Id );
                 var feJournal = new FEJournal();
 
-                var items = feJournal.GetGlEntries( rockContext, _financialBatch, GetAttributeValue( "JournalType" ) );
+                var items = feJournal.GetGlEntries( rockContext, financialBatch, GetAttributeValue( "JournalType" ) );
 
                 if ( items.Count > 0 )
                 {
                     //
                     // Set session for export file
                     //
-                    feJournal.SetFinancialEdgeSessions( items, _financialBatch.Id.ToString() );
+                    feJournal.SetFinancialEdgeSessions( items, financialBatch.Id.ToString() );
 
                     //
                     // vars we need now
@@ -177,15 +179,15 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
                     //
                     if ( GetAttributeValue( "CloseBatch" ).AsBoolean() )
                     {
-                        History.EvaluateChange( changes, "Status", _financialBatch.Status, BatchStatus.Closed );
-                        _financialBatch.Status = BatchStatus.Closed;
+                        History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Closed );
+                        financialBatch.Status = BatchStatus.Closed;
                     }
 
                     //
                     // Set Date Exported
                     //
-                    _financialBatch.LoadAttributes();
-                    var oldDate = _financialBatch.GetAttributeValue( "rocks.kfs.FinancialEdge.DateExported" );
+                    financialBatch.LoadAttributes();
+                    var oldDate = financialBatch.GetAttributeValue( "rocks.kfs.FinancialEdge.DateExported" );
                     var newDate = RockDateTime.Now;
                     History.EvaluateChange( changes, "Date Exported", oldDate, newDate.ToString() );
 
@@ -200,13 +202,16 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
                                 rockContext,
                                 typeof( FinancialBatch ),
                                 Rock.SystemGuid.Category.HISTORY_FINANCIAL_BATCH.AsGuid(),
-                                _financialBatch.Id,
+                                financialBatch.Id,
                                 changes );
                         }
+
+                        rockContext.SaveChanges(); // Don't just rely on SaveChanges within the SaveAttributeValues method.
+
                     } );
 
-                    _financialBatch.SetAttributeValue( "rocks.kfs.FinancialEdge.DateExported", newDate );
-                    _financialBatch.SaveAttributeValue( "rocks.kfs.FinancialEdge.DateExported", rockContext );
+                    financialBatch.SetAttributeValue( "rocks.kfs.FinancialEdge.DateExported", newDate );
+                    financialBatch.SaveAttributeValue( "rocks.kfs.FinancialEdge.DateExported", rockContext );
                 }
             }
 
@@ -217,7 +222,9 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
         {
             if ( _financialBatch != null )
             {
+                // Reload the Financial Batch with the ID so we can update properties and Save Changes with this Context.
                 var rockContext = new RockContext();
+                var financialBatch = new FinancialBatchService( rockContext ).Get( _financialBatch.Id );
                 var changes = new History.HistoryChangeList();
 
                 //
@@ -225,15 +232,15 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
                 //
                 if ( GetAttributeValue( "CloseBatch" ).AsBoolean() )
                 {
-                    History.EvaluateChange( changes, "Status", _financialBatch.Status, BatchStatus.Open );
-                    _financialBatch.Status = BatchStatus.Open;
+                    History.EvaluateChange( changes, "Status", financialBatch.Status, BatchStatus.Open );
+                    financialBatch.Status = BatchStatus.Open;
                 }
 
                 //
                 // Remove Date Exported
                 //
-                _financialBatch.LoadAttributes();
-                var oldDate = _financialBatch.GetAttributeValue( "rocks.kfs.FinancialEdge.DateExported" ).AsDateTime().ToString();
+                financialBatch.LoadAttributes();
+                var oldDate = financialBatch.GetAttributeValue( "rocks.kfs.FinancialEdge.DateExported" ).AsDateTime().ToString();
                 var newDate = string.Empty;
                 History.EvaluateChange( changes, "Date Exported", oldDate, newDate );
 
@@ -248,13 +255,15 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
                             rockContext,
                             typeof( FinancialBatch ),
                             Rock.SystemGuid.Category.HISTORY_FINANCIAL_BATCH.AsGuid(),
-                            _financialBatch.Id,
+                            financialBatch.Id,
                             changes );
                     }
+
+                    rockContext.SaveChanges(); // Don't just rely on SaveChanges within the SaveAttributeValues method.
                 } );
 
-                _financialBatch.SetAttributeValue( "rocks.kfs.FinancialEdge.DateExported", newDate );
-                _financialBatch.SaveAttributeValue( "rocks.kfs.FinancialEdge.DateExported", rockContext );
+                financialBatch.SetAttributeValue( "rocks.kfs.FinancialEdge.DateExported", newDate );
+                financialBatch.SaveAttributeValue( "rocks.kfs.FinancialEdge.DateExported", rockContext );
             }
 
             Response.Redirect( Request.RawUrl );
