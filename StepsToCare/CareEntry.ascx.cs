@@ -495,6 +495,28 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         assignedPersonService.DeleteRange( removePersons );
                         careNeed.AssignedPersons.RemoveAll( removePersons );
 
+                        // Go through each assigned person on the grid and mark whether they are follow up worker or not based on checkbox.
+                        var gridViewRows = gAssignedPersons.Rows;
+                        foreach ( GridViewRow row in gridViewRows.OfType<GridViewRow>() )
+                        {
+                            int assignedPersonAliasId = gAssignedPersons.DataKeys[row.RowIndex].Value.ToIntSafe( -1 );
+                            var assignedPerson = careNeed.AssignedPersons.FirstOrDefault( ap => ap.PersonAliasId == assignedPersonAliasId );
+                            if ( assignedPerson != null )
+                            {
+                                foreach ( var fieldCell in row.Cells.OfType<DataControlFieldCell>() )
+                                {
+                                    CheckBoxEditableField checkBoxTemplateField = fieldCell.ContainingField as CheckBoxEditableField;
+                                    if ( checkBoxTemplateField != null )
+                                    {
+                                        CheckBox checkBox = fieldCell.Controls[0] as CheckBox;
+                                        string dataField = ( fieldCell.ContainingField as CheckBoxEditableField ).DataField;
+
+                                        assignedPerson.FollowUpWorker = checkBox.Checked;
+                                    }
+                                }
+                            }
+                        }
+
                         if ( enableLogging )
                         {
                             CareUtilities.LogEvent( null, "UpdateAssignedPersons", string.Format( "Care Need Guid: {0}, AssignedPersons Count: {1} careNeed.AssignedPersons Count: {2} removePersons Count {3} Edited By AliasId: {4}", careNeed.Guid, AssignedPersons.Count(), careNeed.AssignedPersons.Count(), removePersons.Count(), CurrentPersonAlias.Id ), "Assigned Persons Edit End" );

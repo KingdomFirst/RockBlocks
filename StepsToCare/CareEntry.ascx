@@ -124,7 +124,7 @@
                         <Columns>
                             <Rock:SelectField></Rock:SelectField>
                             <asp:BoundField DataField="PersonAlias.Person.FullName" HeaderText="Name" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName" />
-                            <Rock:BoolField HeaderText="Follow Up Worker" DataField="FollowUpWorker"></Rock:BoolField>
+                            <Rock:CheckBoxEditableField HeaderText="Follow Up Worker" DataField="FollowUpWorker"></Rock:CheckBoxEditableField>
                             <Rock:RockTemplateField HeaderText="Type (Need Count)">
                                 <ItemTemplate>
                                     <asp:PlaceHolder runat="server" ID="phCountOrRole"></asp:PlaceHolder>
