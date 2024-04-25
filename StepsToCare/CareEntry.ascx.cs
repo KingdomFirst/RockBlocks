@@ -1279,12 +1279,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 pwAssigned.Visible = UserCanAdministrate;
                 BindAssignedPersonsGrid();
             }
-            else
+            else if ( needId == 0 )
             {
                 GenerateTempNeed( null, categoryId );
 
                 pwAssigned.Visible = false;
                 AssignedPersons = null;
+            }
+            else
+            {
+                GenerateTempNeed( null, categoryId );
             }
         }
 
