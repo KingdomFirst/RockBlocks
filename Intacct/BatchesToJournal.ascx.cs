@@ -687,8 +687,9 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
                     }
 
-                    var resultXml = endpoint.PostToIntacct( postXml );
-                    var success = endpoint.ParseEndpointResponse( resultXml, batch.Id, GetAttributeValue( AttributeKey.LogResponse ).AsBoolean() );
+                    var logErrors = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
+                    var resultXml = endpoint.PostToIntacct( postXml, logErrors );
+                    var success = endpoint.ParseEndpointResponse( resultXml, batch.Id, logErrors );
 
                     if ( success )
                     {
