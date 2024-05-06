@@ -886,7 +886,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 {
                                     e.Row.AddCssClass( "assigned" );
                                 }
-                                if ( assignedPerson.WorkerId.HasValue && assignedPerson.FollowUpWorker.HasValue && assignedPerson.FollowUpWorker.Value )
+                                if ( assignedPerson.WorkerId.HasValue && assignedPerson.FollowUpWorker )
                                 {
                                     assignedFollowUpWorker = assignedPerson;
                                 }
