@@ -870,7 +870,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                     }
 
-                    AssignedPerson assignedFollowUpWorker = null;
+                    List<int> assignedFollowUpWorkers = new List<int>();
                     var assignedFollowUpWorkerCareTouch = false;
                     Literal lAssigned = e.Row.FindControl( "lAssigned" ) as Literal;
                     if ( lAssigned != null )
@@ -886,9 +886,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 {
                                     e.Row.AddCssClass( "assigned" );
                                 }
-                                if ( assignedPerson.WorkerId.HasValue && assignedPerson.FollowUpWorker.HasValue && assignedPerson.FollowUpWorker.Value )
+                                if ( assignedPerson.FollowUpWorker && assignedPerson.PersonAliasId.HasValue )
                                 {
-                                    assignedFollowUpWorker = assignedPerson;
+                                    assignedFollowUpWorkers.Add( assignedPerson.PersonAliasId.Value );
                                 }
                             }
                             lAssigned.Text = sbPersonHtml.ToString();
@@ -962,9 +962,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 lCareTouches.Text = careNeedNotes.Count().ToString();
                                 careTouchCount = careNeedNotes.Count();
 
-                                if ( assignedFollowUpWorker != null )
+                                if ( assignedFollowUpWorkers.Any() )
                                 {
-                                    assignedFollowUpWorkerCareTouch = careNeedNotes.Any( n => n.CreatedByPersonAliasId == assignedFollowUpWorker.PersonAliasId );
+                                    assignedFollowUpWorkerCareTouch = careNeedNotes.Any( n => assignedFollowUpWorkers.Contains( n.CreatedByPersonAliasId.Value ) );
                                 }
                             }
                             else

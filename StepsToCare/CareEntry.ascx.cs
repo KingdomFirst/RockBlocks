@@ -130,6 +130,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultBooleanValue = false,
         Key = AttributeKey.EnableCustomFollowUp )]
 
+    [CustomDropdownListField( "Follow Up Worker Assignment",
+        Description = "Enable the follow up worker to be assigned instead of auto assigning the first worker added to need. <br><b>Hide:</b> First worker gets assignment (existing behavior). <br><b>Show:</b> Show a checkbox to assign follow up worker with first worker checked by default. <br><b>Show and Assign All:</b> Show the checkbox and select all as default.",
+        IsRequired = true,
+        ListSource = "Hide,Show,Show and Assign All",
+        DefaultValue = "Hide",
+        Key = AttributeKey.FollowUpWorkerAssignment )]
+
     [SecurityAction(
         SecurityActionKey.UpdateStatus,
         "The roles and/or users that have access to update the status of Care Needs." )]
@@ -161,6 +168,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string SnoozedButtonText = "SnoozedButtonText";
             public const string CompleteButtonText = "CompleteButtonText";
             public const string EnableCustomFollowUp = "EnableCustomFollowUp";
+            public const string FollowUpWorkerAssignment = "FollowUpWorkerAssignment";
         }
 
         private static class PageParameterKey
@@ -495,6 +503,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         assignedPersonService.DeleteRange( removePersons );
                         careNeed.AssignedPersons.RemoveAll( removePersons );
 
+                        // Go through each assigned person on the grid and mark whether they are follow up worker or not based on checkbox.
+                        var gridViewRows = gAssignedPersons.Rows;
+                        foreach ( GridViewRow row in gridViewRows.OfType<GridViewRow>() )
+                        {
+                            int assignedPersonAliasId = gAssignedPersons.DataKeys[row.RowIndex].Value.ToIntSafe( -1 );
+                            var assignedPerson = careNeed.AssignedPersons.FirstOrDefault( ap => ap.PersonAliasId == assignedPersonAliasId );
+                            if ( assignedPerson != null )
+                            {
+                                foreach ( var fieldCell in row.Cells.OfType<DataControlFieldCell>() )
+                                {
+                                    CheckBoxEditableField checkBoxTemplateField = fieldCell.ContainingField as CheckBoxEditableField;
+                                    if ( checkBoxTemplateField != null && checkBoxTemplateField.Visible )
+                                    {
+                                        CheckBox checkBox = fieldCell.Controls[0] as CheckBox;
+                                        assignedPerson.FollowUpWorker = checkBox.Checked;
+                                    }
+                                }
+                            }
+                        }
+
                         if ( enableLogging )
                         {
                             CareUtilities.LogEvent( null, "UpdateAssignedPersons", string.Format( "Care Need Guid: {0}, AssignedPersons Count: {1} careNeed.AssignedPersons Count: {2} removePersons Count {3} Edited By AliasId: {4}", careNeed.Guid, AssignedPersons.Count(), careNeed.AssignedPersons.Count(), removePersons.Count(), CurrentPersonAlias.Id ), "Assigned Persons Edit End" );
@@ -777,11 +805,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 if ( !AssignedPersons.Any( ap => ap.PersonAliasId == ppAddPerson.PersonAliasId ) )
                 {
+                    var followUpWorkerAssignment = GetAttributeValue( AttributeKey.FollowUpWorkerAssignment );
                     var addPerson = new AssignedPerson
                     {
                         PersonAliasId = ppAddPerson.PersonAliasId,
                         NeedId = hfCareNeedId.Value.AsInteger(),
-                        Type = AssignedType.Manual
+                        Type = AssignedType.Manual,
+                        FollowUpWorker = followUpWorkerAssignment == "Show and Assign All"
                     };
                     AssignedPersons.Add( addPerson );
                     BindAssignedPersonsGrid();
@@ -803,11 +833,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var selectedVal = bddlAddWorker.SelectedValue.SplitDelimitedValues( "^" );
             if ( selectedVal.IsNotNull() && selectedVal.Length > 1 && !AssignedPersons.Any( ap => ap.PersonAliasId == selectedVal[0].AsIntegerOrNull() ) )
             {
+                var followUpWorkerAssignment = GetAttributeValue( AttributeKey.FollowUpWorkerAssignment );
                 var addPerson = new AssignedPerson
                 {
                     PersonAliasId = selectedVal[0].AsIntegerOrNull() ?? 0,
                     NeedId = hfCareNeedId.Value.AsInteger(),
-                    FollowUpWorker = !AssignedPersons.Any( ap => ap.FollowUpWorker.HasValue && ap.FollowUpWorker.Value ),
+                    FollowUpWorker = !AssignedPersons.Any( ap => ap.FollowUpWorker ) || followUpWorkerAssignment == "Show and Assign All",
                     WorkerId = selectedVal[1].AsIntegerOrNull(),
                     Type = AssignedType.Worker
                 };
@@ -826,30 +857,40 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         protected void gAssignedPersons_RowDataBound( object sender, GridViewRowEventArgs e )
         {
-            var phCountOrRole = e.Row.ControlsOfTypeRecursive<PlaceHolder>().FirstOrDefault();
-            var assignedPerson = e.Row.DataItem as AssignedPerson;
-
-            if ( phCountOrRole == null || assignedPerson == null )
+            if ( e.Row.RowType == DataControlRowType.DataRow )
             {
-                return;
-            }
-            var returnStr = assignedPerson.Type.ToString();
-            if ( assignedPerson.TypeQualifier.IsNotNullOrWhiteSpace() )
-            {
-                var typeQualifierArray = assignedPerson.TypeQualifier.Split( '^' );
-                if ( assignedPerson.Type == AssignedType.Worker )
-                {
-                    //Format is [0]Count^[1]HasAgeRange^[2]HasCampus^[3]HasCategory^[4]HasGender
-                    returnStr = $"Worker ({typeQualifierArray[0]})";
-                }
-                else if ( assignedPerson.Type == AssignedType.GroupRole && typeQualifierArray.Length > 2 )
-                {
-                    //Format is [0]GroupRoleId^[1]GroupTypeId^[2]Group Type > Group Role
-                    returnStr = typeQualifierArray[2];
-                }
-            }
-            phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
+                var phCountOrRole = e.Row.ControlsOfTypeRecursive<PlaceHolder>().FirstOrDefault();
+                var assignedPerson = e.Row.DataItem as AssignedPerson;
+                CheckBox cbFollowUpWorker = e.Row.ControlsOfTypeRecursive<CheckBox>().FirstOrDefault( c => c.ID == "checkBox_FollowUpWorker" );
+                var followUpWorkerAssignment = GetAttributeValue( AttributeKey.FollowUpWorkerAssignment );
+                int careNeedId = hfCareNeedId.ValueAsInt();
 
+                if ( phCountOrRole == null || assignedPerson == null )
+                {
+                    return;
+                }
+
+                if ( cbFollowUpWorker != null && careNeedId == 0 )
+                {
+                    cbFollowUpWorker.Checked = cbFollowUpWorker.Checked || followUpWorkerAssignment == "Show and Assign All";
+                }
+                var returnStr = assignedPerson.Type.ToString();
+                if ( assignedPerson.TypeQualifier.IsNotNullOrWhiteSpace() )
+                {
+                    var typeQualifierArray = assignedPerson.TypeQualifier.Split( '^' );
+                    if ( assignedPerson.Type == AssignedType.Worker )
+                    {
+                        //Format is [0]Count^[1]HasAgeRange^[2]HasCampus^[3]HasCategory^[4]HasGender
+                        returnStr = $"Worker ({typeQualifierArray[0]})";
+                    }
+                    else if ( assignedPerson.Type == AssignedType.GroupRole && typeQualifierArray.Length > 2 )
+                    {
+                        //Format is [0]GroupRoleId^[1]GroupTypeId^[2]Group Type > Group Role
+                        returnStr = typeQualifierArray[2];
+                    }
+                }
+                phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
+            }
         }
 
         protected void cbCustomFollowUp_CheckedChanged( object sender, EventArgs e )
@@ -1014,6 +1055,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
                 pdAuditDetails.Visible = false;
             }
+            hfCareNeedId.Value = careNeed.Id.ToString();
 
             cbIncludeFamily.Visible = GetAttributeValue( AttributeKey.EnableFamilyNeeds ).AsBoolean();
 
@@ -1100,6 +1142,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 ppSubmitter.SetValue( null );
             }
 
+            var followUpWorkerCB = gAssignedPersons.Columns.OfType<CheckBoxEditableField>().FirstOrDefault();
+            var followUpWorkerBool = gAssignedPersons.Columns.OfType<BoolField>().FirstOrDefault();
+            var followUpWorkerAssignment = GetAttributeValue( AttributeKey.FollowUpWorkerAssignment );
+            followUpWorkerCB.Visible = followUpWorkerAssignment != "Hide";
+            followUpWorkerBool.Visible = followUpWorkerAssignment == "Hide";
+
             if ( careNeed.AssignedPersons != null )
             {
                 AssignedPersons = careNeed.AssignedPersons.ToList();
@@ -1113,8 +1161,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             careNeed.LoadAttributes();
             Helper.AddEditControls( careNeed, phAttributes, true, BlockValidationGroup, 2 );
-
-            hfCareNeedId.Value = careNeed.Id.ToString();
 
             ppPerson_SelectPerson( null, null );
         }
@@ -1223,7 +1269,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 person = new PersonService( new RockContext() ).Get( ppPerson.PersonId.Value );
             }
-            else if ( _allowNewPerson )
+            else if ( _allowNewPerson && person == null )
             {
                 var personService = new PersonService( new RockContext() );
                 person = personService.FindPerson( new PersonService.PersonMatchQuery( dtbFirstName.Text, dtbLastName.Text, ebEmail.Text, pnbCellPhone.Number ), false, true, false );
@@ -1279,12 +1325,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 pwAssigned.Visible = UserCanAdministrate;
                 BindAssignedPersonsGrid();
             }
-            else
+            else if ( needId == 0 )
             {
                 GenerateTempNeed( null, categoryId );
 
                 pwAssigned.Visible = false;
                 AssignedPersons = null;
+            }
+            else
+            {
+                GenerateTempNeed( null, categoryId );
             }
         }
 
