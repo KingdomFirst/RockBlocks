@@ -131,7 +131,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.EnableCustomFollowUp )]
 
     [CustomDropdownListField( "Follow Up Worker Assignment",
-        Description = "Enable the follow up worker to be assigned instead of just auto assigning the first worker added to need. Hide: First worker gets assignment (existing behavior). Show: Show a checkbox to assign follow up worker with first worker checked by default. Show and Assign All: Show the checkbox and select all as default.",
+        Description = "Enable the follow up worker to be assigned instead of auto assigning the first worker added to need. <br><b>Hide:</b> First worker gets assignment (existing behavior). <br><b>Show:</b> Show a checkbox to assign follow up worker with first worker checked by default. <br><b>Show and Assign All:</b> Show the checkbox and select all as default.",
         IsRequired = true,
         ListSource = "Hide,Show,Show and Assign All",
         DefaultValue = "Hide",
