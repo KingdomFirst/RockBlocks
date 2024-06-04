@@ -1,4 +1,4 @@
-// <copyright>
+﻿// <copyright>
 // Copyright by the Spark Development Network
 //
 // Licensed under the Rock Community License (the "License");
@@ -626,7 +626,8 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                     var subject = group.GetAttributeValue( "Subject" );
 
                     var emailMessage = new RockEmailMessage();
-                    emailMessage.AddRecipient( new RecipientData( groupMember.Person.Email, mergeFields ) );
+                    var emailMessageRecipient = new RockEmailMessageRecipient( groupMember.Person, mergeFields );
+                    emailMessage.AddRecipient( emailMessageRecipient );
 
                     emailMessage.FromEmail = fromEmail;
                     emailMessage.FromName = fromName;
