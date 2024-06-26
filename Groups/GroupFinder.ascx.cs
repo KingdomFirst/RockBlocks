@@ -59,6 +59,7 @@ using Rock.Lava;
 using Rock.Model;
 using Rock.Reporting;
 using Rock.Security;
+using Rock.Utility;
 using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI;
@@ -121,6 +122,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Description = "Choose what commands to enable in formatted output lava.",
         IsRequired = false,
         Key = AttributeKey.FormattedOutputEnabledLavaCommands )]
+    [BooleanField( "Add Group Opportunities",
+        Description = "Add the merge field GroupOpportunities to the lava result with a custom object for Sign-up Opportunities. See documentation for fields.",
+        DefaultBooleanValue = false,
+        Key = AttributeKey.AddGroupOpportunities )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page",
@@ -465,6 +470,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string AttributesInKeywords = "AttributesInKeywords";
             public const string FormattedOutputEnabledLavaCommands = "FormattedOutputEnabledLavaCommands";
             public const string FilterOrder = "FilterOrder";
+            public const string AddGroupOpportunities = "AddGroupOpportunities";
         }
 
         private static class AttributeDefaultLava
@@ -2703,6 +2709,72 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 mergeFields.Add( "GroupDistances", distances.Select( d => { return new { Id = d.Key, Distance = d.Value }; } ).ToList() );
 
+                var addGroupOpportunities = GetAttributeValue( AttributeKey.AddGroupOpportunities ).AsBoolean();
+
+                if ( addGroupOpportunities )
+                {
+                    var qryGroupLocationSchedules = groupQry.SelectMany( g => g.GroupLocations ).SelectMany( gl => gl.Schedules, ( gl, s ) => new
+                    {
+                        gl.Group,
+                        gl.Location,
+                        Schedule = s,
+                        Config = gl.GroupLocationScheduleConfigs.FirstOrDefault( glsc => glsc.ScheduleId == s.Id )
+                    } );
+
+                    var participantCounts = new GroupMemberAssignmentService( rockContext )
+                    .Queryable()
+                    .AsNoTracking()
+                    .Where( gma =>
+                        !gma.GroupMember.Person.IsDeceased
+                        && qryGroupLocationSchedules.Any( gls =>
+                            gls.Group.Id == gma.GroupMember.GroupId
+                            && gls.Location.Id == gma.LocationId
+                            && gls.Schedule.Id == gma.ScheduleId
+                        )
+                    )
+                    .GroupBy( gma => new
+                    {
+                        gma.GroupMember.GroupId,
+                        gma.LocationId,
+                        gma.ScheduleId
+                    } )
+                   .Select( g => new
+                   {
+                       g.Key.GroupId,
+                       g.Key.LocationId,
+                       g.Key.ScheduleId,
+                       Count = g.Count()
+                   } )
+                   .ToList();
+
+                    var opportunities = qryGroupLocationSchedules
+                    .ToList() // Execute the query; we have additional filtering that needs to happen once we materialize these objects.
+                    .Select( gls =>
+                    {
+                        var participantCount = participantCounts.FirstOrDefault( c =>
+                            c.GroupId == gls.Group.Id
+                            && c.LocationId == gls.Location.Id
+                            && c.ScheduleId == gls.Schedule.Id
+                        )?.Count ?? 0;
+
+                        return new Opportunity
+                        {
+                            Project = gls.Group,
+                            Location = gls.Location,
+                            Schedule = gls.Schedule,
+                            NextStartDateTime = gls.Schedule.NextStartDateTime,
+                            ScheduleName = gls.Config?.ConfigurationName,
+                            SlotsMin = gls.Config?.MinimumCapacity,
+                            SlotsDesired = gls.Config?.DesiredCapacity,
+                            SlotsMax = gls.Config?.MaximumCapacity,
+                            ParticipantCount = participantCount,
+                            GeoPoint = gls.Location.GeoPoint
+                        };
+                    } );
+
+                    mergeFields.Add( "GroupOpportunities", opportunities );
+                }
+
                 Dictionary<string, object> linkedPages = new Dictionary<string, object>();
                 linkedPages.Add( AttributeKey.GroupDetailPage, LinkedPageRoute( AttributeKey.GroupDetailPage ) );
 
@@ -3522,6 +3594,208 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             return sb.ToString();
         }
-    }
 
+        #region Supporting Classes
+
+        /// <summary>
+        /// This POCO will be used to hold project opportunity instances (GroupLocationSchedules), against which we'll perform filtering.
+        /// <para>
+        /// It will also provide convenience properties for the final, Lava class, <see cref="SignUpFinder.Project"/> to easily pick from.
+        /// </para>
+        /// </summary>
+        private class Opportunity : RockDynamic
+        {
+            public Rock.Model.Group Project { get; set; }
+
+            public Location Location { get; set; }
+
+            public Schedule Schedule { get; set; }
+
+            public DateTime? NextStartDateTime { get; set; }
+
+            public string ScheduleName { get; set; }
+
+            public int? SlotsMin { get; set; }
+
+            public int? SlotsDesired { get; set; }
+
+            public int? SlotsMax { get; set; }
+
+            public int ParticipantCount { get; set; }
+
+            public DbGeography GeoPoint { get; set; }
+
+            public double? DistanceInMiles { get; set; }
+
+            public string ProjectName
+            {
+                get
+                {
+                    return this.Project?.Name;
+                }
+            }
+
+            public string Description
+            {
+                get
+                {
+                    return this.Project?.Description;
+                }
+            }
+
+            public bool ScheduleHasFutureStartDateTime
+            {
+                get
+                {
+                    return this.Schedule != null
+                        && this.Schedule.NextStartDateTime.HasValue
+                        && this.Schedule.NextStartDateTime.Value >= RockDateTime.Now;
+                }
+            }
+
+            public string FriendlySchedule
+            {
+                get
+                {
+                    if ( !this.ScheduleHasFutureStartDateTime )
+                    {
+                        return "No upcoming occurrences.";
+                    }
+
+                    var friendlySchedule = this.NextStartDateTime.Value.ToString( "dddd, MMM d h:mm tt" );
+
+                    if ( this.NextStartDateTime.Value.Year != RockDateTime.Now.Year )
+                    {
+                        friendlySchedule = $"{friendlySchedule} ({this.NextStartDateTime.Value.Year})";
+                    }
+
+                    return friendlySchedule;
+                }
+            }
+
+            public int SlotsAvailable
+            {
+                get
+                {
+                    if ( !this.ScheduleHasFutureStartDateTime )
+                    {
+                        return 0;
+                    }
+
+                    // This more complex approach uses a dynamic/floating minuend:
+                    // 1) If the max value is defined, use that;
+                    // 2) Else, if the desired value is defined, use that;
+                    // 3) Else, if the min value is defined, use that;
+                    // 4) Else, use int.MaxValue (there is no limit to the slots available).
+                    //var minuend = this.SlotsMax.GetValueOrDefault() > 0
+                    //    ? this.SlotsMax.Value
+                    //    : this.SlotsDesired.GetValueOrDefault() > 0
+                    //        ? this.SlotsDesired.Value
+                    //        : this.SlotsMin.GetValueOrDefault() > 0
+                    //            ? this.SlotsMin.Value
+                    //            : int.MaxValue;
+
+                    // Simple approach:
+                    // 1) If the max value is defined, subtract participant count from that;
+                    // 2) Otherwise, use int.MaxValue (there is no limit to the slots available).
+                    var available = int.MaxValue;
+                    if ( this.SlotsMax.GetValueOrDefault() > 0 )
+                    {
+                        available = this.SlotsMax.Value - this.ParticipantCount;
+                    }
+
+                    return available < 0 ? 0 : available;
+                }
+            }
+
+            /// <summary>
+            /// Converts an <see cref="Opportunity"/> to a <see cref="SignUpFinder.Project"/> for display within the lava results template.
+            /// </summary>
+            /// <param name="projectDetailPageUrl">The project detail page URL for this <see cref="SignUpFinder.Project"/>.</param>
+            /// <param name="registrationPageUrl">The registration page URL for this <see cref="SignUpFinder.Project"/>.</param>
+            /// <returns>a <see cref="SignUpFinder.Project"/> instance for display within the lava results template.</returns>
+            public Project ToProject( string projectDetailPageUrl, string registrationPageUrl )
+            {
+                int? availableSpots = null;
+                if ( this.SlotsAvailable != int.MaxValue )
+                {
+                    availableSpots = this.SlotsAvailable;
+                }
+
+                var showRegisterButton = this.ScheduleHasFutureStartDateTime
+                    &&
+                    (
+                        !availableSpots.HasValue
+                        || availableSpots.Value > 0
+                    );
+
+                string mapCenter = null;
+                if ( this.Location.Latitude.HasValue && this.Location.Longitude.HasValue )
+                {
+                    mapCenter = $"{this.Location.Latitude.Value},{this.Location.Longitude.Value}";
+                }
+                else
+                {
+                    var streetAddress = this.Location.GetFullStreetAddress();
+                    if ( !string.IsNullOrWhiteSpace( streetAddress ) )
+                    {
+                        mapCenter = streetAddress;
+                    }
+                }
+
+                return new Project
+                {
+                    Name = this.ProjectName,
+                    Description = this.Description,
+                    ScheduleName = this.ScheduleName,
+                    FriendlySchedule = this.FriendlySchedule,
+                    AvailableSpots = availableSpots,
+                    ShowRegisterButton = showRegisterButton,
+                    DistanceInMiles = this.DistanceInMiles,
+                    MapCenter = mapCenter,
+                    ProjectDetailPageUrl = projectDetailPageUrl,
+                    RegisterPageUrl = registrationPageUrl,
+                    GroupId = this.Project.Id,
+                    LocationId = this.Location.Id,
+                    ScheduleId = this.Schedule.Id
+                };
+            }
+        }
+
+        /// <summary>
+        /// This POCO will be passed to the results Lava template, one instance for each project opportunity (GroupLocationSchedule).
+        /// </summary>
+        /// <seealso cref="Rock.Utility.RockDynamic" />
+        private class Project : RockDynamic
+        {
+            public string Name { get; set; }
+
+            public string Description { get; set; }
+
+            public string ScheduleName { get; set; }
+
+            public string FriendlySchedule { get; set; }
+
+            public int? AvailableSpots { get; set; }
+
+            public bool ShowRegisterButton { get; set; }
+
+            public double? DistanceInMiles { get; set; }
+
+            public string MapCenter { get; set; }
+
+            public string ProjectDetailPageUrl { get; set; }
+
+            public string RegisterPageUrl { get; set; }
+
+            public int GroupId { get; set; }
+
+            public int LocationId { get; set; }
+
+            public int ScheduleId { get; set; }
+        }
+
+        #endregion
+
+    }
 }
