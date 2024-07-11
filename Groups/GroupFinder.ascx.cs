@@ -1215,12 +1215,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         group.GroupTypeId = groupType.Id;
                         group.LoadAttributes();
                         ddlAttributeSort.Items.Add( new ListItem() );
-                        var allowedFieldTypes = new List<Type>();
-                        allowedFieldTypes.Add( typeof( TextFieldType ) );
-                        allowedFieldTypes.Add( typeof( SelectSingleFieldType ) );
-                        allowedFieldTypes.Add( typeof( SelectMultiFieldType ) );
-                        allowedFieldTypes.Add( typeof( MemoFieldType ) );
-                        allowedFieldTypes.Add( typeof( HtmlFieldType ) );
                         foreach ( var attribute in group.Attributes )
                         {
                             if ( attribute.Value.FieldType.Field.HasFilterControl() )
@@ -1254,10 +1248,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                 }
                             }
 
-                            if ( allowedFieldTypes.Contains( attribute.Value.FieldType.Field.GetType() ) )
-                            {
-                                cblAttributesInKeywords.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
-                            }
+                            cblAttributesInKeywords.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
 
                             cblGridAttributes.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
                         }
@@ -2182,7 +2173,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             Guid? attributeGuid = attr.AsGuidOrNull();
                             if ( attributeGuid.HasValue )
                             {
-                                concatQueries.Add( originalQry.WhereAttributeValue( rockContext, a => a.Attribute.Guid == attributeGuid && a.Value.Contains( keywordStr ) ) );
+                                concatQueries.Add( originalQry.WhereAttributeValue( rockContext, a => a.Attribute.Guid == attributeGuid && a.PersistedTextValue.Contains( keywordStr ) ) );
                             }
                         }
                         foreach ( var qry in concatQueries )
@@ -2770,7 +2761,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             ParticipantCount = participantCount,
                             GeoPoint = gls.Location.GeoPoint
                         };
-                    } );
+                    } ).Where( o => o.NextStartDateTime.HasValue );
+
 
                     mergeFields.Add( "GroupOpportunities", opportunities );
                 }
