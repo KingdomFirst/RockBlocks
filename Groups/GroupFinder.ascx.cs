@@ -2065,10 +2065,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     groupQry = groupQry.Where( g =>
                         ( g.Schedule.WeeklyDayOfWeek.HasValue && dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) ) ||
                         dowsStr.Any( s => g.Schedule.iCalendarContent.Substring( g.Schedule.iCalendarContent.IndexOf( "BYDAY=" ), 20 ).Contains( s ) ) ||
-                        ( g.Schedule.EffectiveStartDate.HasValue && dows.Contains( ( DayOfWeek ) System.Data.Entity.SqlServer.SqlFunctions.DatePart( "dw", g.Schedule.EffectiveStartDate.Value ) ) ) ||
+                        ( g.Schedule.EffectiveStartDate.HasValue && dows.Contains( ( DayOfWeek ) System.Data.Entity.SqlServer.SqlFunctions.DatePart( "dw", g.Schedule.EffectiveStartDate.Value ) - 1 ) ) ||
                         g.GroupLocations.Any( gl =>
                             gl.Schedules.Any( gls => gls.WeeklyDayOfWeek.HasValue && dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) ||
-                                ( gls.EffectiveStartDate.HasValue && dows.Contains( ( DayOfWeek ) System.Data.Entity.SqlServer.SqlFunctions.DatePart( "dw", gls.EffectiveStartDate.Value ) ) ) ||
+                                ( gls.EffectiveStartDate.HasValue && dows.Contains( ( DayOfWeek ) System.Data.Entity.SqlServer.SqlFunctions.DatePart( "dw", gls.EffectiveStartDate.Value ) - 1 ) ) ||
                                 dowsStr.Any( s => gls.iCalendarContent.Substring( gls.iCalendarContent.IndexOf( "BYDAY=" ), 20 ).Contains( s ) ) ) ) );
                 }
             }
