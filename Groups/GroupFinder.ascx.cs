@@ -2759,7 +2759,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                         return new Opportunity
                         {
-                            Project = gls.Group,
+                            Group = gls.Group,
                             Location = gls.Location,
                             Schedule = gls.Schedule,
                             NextStartDateTime = gls.Schedule.NextStartDateTime,
@@ -3605,7 +3605,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         /// </summary>
         private class Opportunity : RockDynamic
         {
-            public Rock.Model.Group Project { get; set; }
+            public Rock.Model.Group Group { get; set; }
+
+            public Project Project { get { return this.ToProject( "", "" ); } }
 
             public Location Location { get; set; }
 
@@ -3631,7 +3633,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 get
                 {
-                    return this.Project?.Name;
+                    return this.Group?.Name;
                 }
             }
 
@@ -3639,7 +3641,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 get
                 {
-                    return this.Project?.Description;
+                    return this.Group?.Description;
                 }
             }
 
@@ -3755,7 +3757,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     MapCenter = mapCenter,
                     ProjectDetailPageUrl = projectDetailPageUrl,
                     RegisterPageUrl = registrationPageUrl,
-                    GroupId = this.Project.Id,
+                    GroupId = this.Group.Id,
                     LocationId = this.Location.Id,
                     ScheduleId = this.Schedule.Id
                 };
