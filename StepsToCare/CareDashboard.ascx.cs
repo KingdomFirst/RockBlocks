@@ -24,17 +24,21 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
+using DocumentFormat.OpenXml.Drawing;
 using Newtonsoft.Json;
 
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Drawing.Avatar;
 using Rock.Model;
 using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using rocks.kfs.StepsToCare.Model;
+using ConnectionType = Rock.Model.ConnectionType;
+using TableCell = System.Web.UI.WebControls.TableCell;
 
 namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 {
@@ -113,6 +117,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultIntegerValue = 3,
         Order = 8,
         Key = AttributeKey.FutureThresholdDays )]
+
+    [TextField( "Touch Needed Tooltip Template",
+        Description = "Basic merge template for touch needed tooltip notes. Available Fields: ##TouchTitle##, ##TouchCount##, ##MinimumTouches##, ##TouchHours##",
+        DefaultValue = "##TouchCount## out of ##MinimumTouches## in ##TouchHours## hours.",
+        Key = AttributeKey.TouchNeededTooltipTemplate )]
 
     [BooleanField(
         "Enable Launch Workflow",
@@ -302,6 +311,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string SnoozeChildNeeds = "SnoozeChildNeeds";
             public const string CompleteActionText = "CompleteActionText";
             public const string MoveNeedToSnoozed = "MoveNeedToSnoozed";
+            public const string TouchNeededTooltipTemplate = "TouchNeededTooltipTemplate";
         }
 
         /// <summary>
@@ -418,6 +428,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         private List<NoteTypeCache> _careNeedNoteTypes = new List<NoteTypeCache>();
 
         public Dictionary<int, List<TouchTemplate>> _touchTemplates = new Dictionary<int, List<TouchTemplate>>();
+
+        private Dictionary<int, AvatarColors> _noteTemplateColors = new Dictionary<int, AvatarColors>();
 
         #endregion Private Members
 
@@ -1118,13 +1130,27 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var careNeedFlag = ( dateDifference.TotalHours >= minimumCareTouchHours && careTouchCount < minimumCareTouches );
                         var careNeedFollowUpWorkerTouch = ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
                         var careNeedFlagStr = "";
+                        var careNeedFlagStrTooltip = "";
                         var childNeedStr = "";
                         var parentNeedStr = "";
+                        var touchTooltipTemplate = GetAttributeValue( AttributeKey.TouchNeededTooltipTemplate );
                         if ( careNeedFlag )
                         {
-                            careNeedFlagStr = "<i class=\"fas fa-flag text-danger mx-2\"  data-toggle=\"tooltip\" title=\"Not enough Care Touches\"></i>";
+                            careNeedFlagStrTooltip += $@"
+                            <div class='assessment-tooltip-item'>
+                                <span style='color:#E15759;' class='assessment-caretouch'>
+                                    <span class='fa-stack'>
+                                        <i class='fa fa-circle fa-stack-2x'></i>
+                                        <i class='fa fa-handshake fa-stack-1x text-white'></i>
+                                    </span>
+                                </span>
+                                <span class='assessment-tooltip-value'>
+                                    <span class='assessment-name'>Not Enough Care Touches</span>
+                                    <span class='assessment-summary'>{touchTooltipTemplate.Replace( "##TouchCount##", careTouchCount.ToString() ).Replace( "##MinimumTouches##", minimumCareTouches.ToString() ).Replace( "##TouchHours##", minimumCareTouchHours.ToString() )}</span>
+                                </span>
+                            </div>";
                         }
-                        else if ( hasTouchTemplates )
+                        if ( hasTouchTemplates )
                         {
                             var catTouchTemplates = _touchTemplates.GetValueOrDefault( careNeed.CategoryValueId.Value, new List<TouchTemplate>() );
                             foreach ( var template in catTouchTemplates )
@@ -1135,14 +1161,42 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                                 if ( templateFlag )
                                 {
-                                    careNeedFlagStr = $"<i class=\"fas fa-flag text-warning mx-2\"  data-toggle=\"tooltip\" title=\"Not enough '{template.NoteTemplate.Note}' Care Touches!\"></i>";
+                                    var randomColor = GetNoteTemplateColor( template.NoteTemplate );
+                                    careNeedFlagStrTooltip += $@"
+                                <div class='assessment-tooltip-item'>
+                                    <span style='color:{randomColor.BackgroundColor};' class='assessment-caretouch'>
+                                        <span class='fa-stack'>
+                                            <i class='fa fa-circle fa-stack-2x'></i>
+                                            <i class='{template.NoteTemplate.Icon} fa-stack-1x' style='color:{randomColor.ForegroundColor};'></i>
+                                        </span>
+                                    </span>
+                                    <span class='assessment-tooltip-value'>
+                                        <span class='assessment-name'>{template.NoteTemplate.Note} Touches Needed</span>
+                                        <span class='assessment-summary'>{touchTooltipTemplate.Replace( "##TouchTitle##", template.NoteTemplate.Note ).Replace( "##TouchCount##", templateNotesToCheckInHours.Count().ToString() ).Replace( "##MinimumTouches##", template.MinimumCareTouches.ToString() ).Replace( "##TouchHours##", template.MinimumCareTouchHours.ToString() )}</span>
+                                    </span>
+                                </div>";
                                     continue;
                                 }
                             }
                         }
-                        else if ( careNeedFollowUpWorkerTouch )
+                        if ( careNeedFollowUpWorkerTouch )
                         {
-                            careNeedFlagStr = "<i class=\"fas fa-flag text-primary mx-2\"  data-toggle=\"tooltip\" title=\"Follow up worker Care Touch Needed!\"></i>";
+                            careNeedFlagStrTooltip += $@"<div class='assessment-tooltip-item'>
+                                <span style='color:#F28E2B;' class='assessment-caretouch'>
+                                    <span class='fa-stack'>
+                                        <i class='fa fa-circle fa-stack-2x'></i>
+                                        <i class='fa fa-user fa-stack-1x text-white'></i>
+                                    </span>
+                                </span>
+                                <span class='assessment-tooltip-value'>
+                                    <span class='assessment-name'>Follow Up Worker</span>
+                                    <span class='assessment-summary'>Touch needed.</span>
+                                </span>
+                            </div>";
+                        }
+                        if ( careNeedFlagStrTooltip.IsNotNullOrWhiteSpace() )
+                        {
+                            careNeedFlagStr = $"<i class=\"fas fa-flag text-danger mx-2\"  data-toggle=\"tooltip\" data-html=\"true\" data-original-title=\"{careNeedFlagStrTooltip}\"></i>";
                         }
                         if ( hasChildNeeds )
                         {
@@ -1171,6 +1225,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 }
             }
+        }
+
+        private AvatarColors GetNoteTemplateColor( NoteTemplate noteTemplate )
+        {
+            var randomColor = new AvatarColors();
+            if ( _noteTemplateColors.ContainsKey( noteTemplate.Id ) )
+            {
+                randomColor = _noteTemplateColors[noteTemplate.Id];
+            }
+            else
+            {
+                randomColor.GenerateMissingColors();
+                _noteTemplateColors.AddOrReplace( noteTemplate.Id, randomColor );
+            }
+            return randomColor;
         }
 
         /// <summary>

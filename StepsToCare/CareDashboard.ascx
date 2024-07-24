@@ -294,7 +294,8 @@
                                 $(_this).popover('hide')
                             }
                         }, 100);
-                    });
+                    } );
+                    $( '.fa-flag[data-toggle="tooltip"]' ).tooltip( { html: true, sanitize: false } );
                 }
                 Sys.Application.add_load(initDashboard);
 
