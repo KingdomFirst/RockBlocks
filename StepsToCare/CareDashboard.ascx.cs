@@ -1042,7 +1042,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItem1.Controls.Add( lbCompleteNeed );
                         }
 
-                        if ( careNeed.CustomFollowUp && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
+                        if ( careNeed.Status.Guid != rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() && careNeed.Status.Guid != rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED.AsGuid() )
                         {
                             var lbSnoozeNeed = new LinkButton();
                             lbSnoozeNeed.Command += lbNeedAction_Click;
@@ -1478,9 +1478,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     mdConnectionRequest.Show();
                     break;
                 case "snooze":
-                    // do something with snooze here.
-                    SnoozeNeed( id );
-                    BindGrid();
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var careNeedService = new CareNeedService( rockContext );
+                        var careNeed = careNeedService.Get( id );
+                        if ( careNeed.CustomFollowUp && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) )
+                        {
+                            SnoozeNeed( id );
+                            BindGrid();
+                        }
+                        else
+                        {
+                            hfSnoozeNeed_CareNeedId.Value = id.ToString();
+                            mdSnoozeNeed.Show();
+                        }
+                    }
                     break;
                 default:
                     break;
@@ -1832,6 +1844,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
             }
 
+        }
+
+        protected void mdSnoozeNeed_SaveClick( object sender, EventArgs e )
+        {
+            SnoozeNeed( hfSnoozeNeed_CareNeedId.ValueAsInt(), dpSnoozeUntil.SelectedDate );
+            BindGrid();
+            mdSnoozeNeed.Hide();
         }
 
         #endregion Events
@@ -2757,7 +2776,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
         }
 
-        private void SnoozeNeed( int id )
+        private void SnoozeNeed( int id, DateTime? selectedDateTime = null )
         {
             using ( var rockContext = new RockContext() )
             {
@@ -2765,18 +2784,32 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var careNeedService = new CareNeedService( rockContext );
                 var careNeed = careNeedService.Get( id );
                 var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED ).Id;
-                if ( careNeed.StatusValueId != snoozeValueId && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) )
+                if ( careNeed.StatusValueId != snoozeValueId && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value || selectedDateTime != null ) )
                 {
                     careNeed.StatusValueId = snoozeValueId;
                     careNeed.SnoozeDate = RockDateTime.Now;
+                    if ( selectedDateTime != null )
+                    {
+                        var dayDiff = ( selectedDateTime - RockDateTime.Now ).Value.TotalDays;
+                        careNeed.RenewPeriodDays = Math.Ceiling( dayDiff ).ToIntSafe();
+                        careNeed.RenewMaxCount = 0;
+                        careNeed.RenewCurrentCount = 0;
+                    }
 
                     if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
                     {
                         foreach ( var childneed in careNeed.ChildNeeds )
                         {
                             childneed.StatusValueId = snoozeValueId;
-                            childneed.SnoozeDate = RockDateTime.Now;
+                            childneed.SnoozeDate = careNeed.SnoozeDate;
+                            if ( selectedDateTime != null )
+                            {
+                                childneed.RenewPeriodDays = careNeed.RenewPeriodDays;
+                                childneed.RenewMaxCount = careNeed.RenewMaxCount;
+                                childneed.RenewCurrentCount = careNeed.RenewCurrentCount;
+                            }
                         }
+
                     }
                     rockContext.SaveChanges();
 

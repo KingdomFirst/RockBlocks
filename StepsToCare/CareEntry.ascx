@@ -3,6 +3,11 @@
     fieldset[id*='pwDetails'] .col-md-6:nth-child(odd) {
         clear: left;
     }
+
+    .modal.container.kfs-modal-snooze {
+        width: 300px;
+        margin-left: -150px;
+    }
 </style>
 <asp:UpdatePanel runat="server" ID="upnlCareEntry">
     <ContentTemplate>
@@ -153,5 +158,14 @@
         </asp:Panel>
 
         <Rock:ConfirmPageUnload ID="confirmExit" runat="server" ConfirmationMessage="Changes have been made to this care need that have not yet been saved." Enabled="false" />
+
+        <Rock:ModalDialog ID="mdSnoozeNeed" runat="server" Title="Snooze Need" ValidationGroup="SnoozeNeed" ModalCssClass="kfs-modal-snooze" OnSaveClick="mdSnoozeNeed_SaveClick" CloseLinkVisible="true" SaveButtonText="Snooze" SaveButtonCausesValidation="true" Content-CssClass="modal-kfsnotification">
+            <Content>
+                <asp:ValidationSummary ID="vsSnoozeNeed" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="SnoozeNeed" />
+                <Rock:DatePicker ID="dpSnoozeUntil" runat="server" Label="Snooze Until" ValidationGroup="SnoozeNeed" Required="true" AllowPastDateSelection="false" CssClass="w-100" />
+                <Rock:NotificationBox ID="nbSnoozeNeed" runat="server" NotificationBoxType="Warning" Visible="false"></Rock:NotificationBox>
+            </Content>
+        </Rock:ModalDialog>
+
     </ContentTemplate>
 </asp:UpdatePanel>
