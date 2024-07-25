@@ -2763,7 +2763,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         };
                     } ).Where( o => o.NextStartDateTime.HasValue );
 
-
                     mergeFields.Add( "GroupOpportunities", opportunities );
                 }
 
