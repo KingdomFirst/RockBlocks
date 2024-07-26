@@ -34,7 +34,8 @@
 // * Added ability to display Over Capacity groups with a filter
 // * Added Auto Load Filter capability on value selection
 // * Added ability to sort how filters are displayed
-// Package Version 1.7.1
+// * Added ability to load Group/Sign Up Opportunities into finder
+// Package Version 1.8.0
 // </notice>
 //
 using System;
@@ -123,7 +124,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         IsRequired = false,
         Key = AttributeKey.FormattedOutputEnabledLavaCommands )]
     [BooleanField( "Add Group Opportunities",
-        Description = "Add the merge field GroupOpportunities to the lava result with a custom object for Sign-up Opportunities. See documentation for fields.",
+        Description = "Add the merge field GroupOpportunities to the lava result with a custom object for Sign-up Opportunities. See documentation for field properties.",
         DefaultBooleanValue = false,
         Key = AttributeKey.AddGroupOpportunities )]
 
@@ -3599,7 +3600,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         {
             public Rock.Model.Group Group { get; set; }
 
-            public Project Project { get { return this.ToProject( "", "" ); } }
+            public Project Project { get { return this.ToProject(); } }
 
             public Location Location { get; set; }
 
@@ -3618,8 +3619,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public int ParticipantCount { get; set; }
 
             public DbGeography GeoPoint { get; set; }
-
-            public double? DistanceInMiles { get; set; }
 
             public string ProjectName
             {
@@ -3745,13 +3744,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     FriendlySchedule = this.FriendlySchedule,
                     AvailableSpots = availableSpots,
                     ShowRegisterButton = showRegisterButton,
-                    DistanceInMiles = this.DistanceInMiles,
                     MapCenter = mapCenter,
-                    ProjectDetailPageUrl = projectDetailPageUrl,
-                    RegisterPageUrl = registrationPageUrl,
                     GroupId = this.Group.Id,
                     LocationId = this.Location.Id,
-                    ScheduleId = this.Schedule.Id
+                    ScheduleId = this.Schedule.Id,
+                    GroupIdKey = this.Group.IdKey,
+                    LocationIdKey = this.Location.IdKey,
+                    ScheduleIdKey = this.Schedule.IdKey
                 };
             }
         }
@@ -3774,8 +3773,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             public bool ShowRegisterButton { get; set; }
 
-            public double? DistanceInMiles { get; set; }
-
             public string MapCenter { get; set; }
 
             public string ProjectDetailPageUrl { get; set; }
@@ -3787,6 +3784,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public int LocationId { get; set; }
 
             public int ScheduleId { get; set; }
+
+            public string GroupIdKey { get; set; }
+
+            public string LocationIdKey { get; set; }
+
+            public string ScheduleIdKey { get; set; }
         }
 
         #endregion
