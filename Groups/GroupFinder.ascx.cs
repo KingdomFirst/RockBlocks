@@ -3706,7 +3706,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             /// <param name="projectDetailPageUrl">The project detail page URL for this <see cref="SignUpFinder.Project"/>.</param>
             /// <param name="registrationPageUrl">The registration page URL for this <see cref="SignUpFinder.Project"/>.</param>
             /// <returns>a <see cref="SignUpFinder.Project"/> instance for display within the lava results template.</returns>
-            public Project ToProject( string projectDetailPageUrl, string registrationPageUrl )
+            public Project ToProject()
             {
                 int? availableSpots = null;
                 if ( this.SlotsAvailable != int.MaxValue )
