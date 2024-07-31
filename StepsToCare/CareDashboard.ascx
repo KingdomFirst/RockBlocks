@@ -346,7 +346,7 @@
                     $('#toggleIcon' + needId).toggleClass('fa-plus').toggleClass('fa-minus');
                 }
             </script>
-		</asp:Panel>
+        </asp:Panel>
         <Rock:ModalDialog ID="mdMakeNote" runat="server" Title="Add Note" ValidationGroup="MakeNote" ClickBackdropToClose="true" Content-CssClass="modal-kfsmakenote">
             <Content>
                 <asp:HiddenField ID="hfCareNeedId" runat="server" />
