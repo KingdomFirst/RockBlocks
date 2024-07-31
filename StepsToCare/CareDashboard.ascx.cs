@@ -121,6 +121,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
     [TextField( "Touch Needed Tooltip Template",
         Description = "Basic merge template for touch needed tooltip notes. Available Fields: ##TouchTitle##, ##TouchCount##, ##MinimumTouches##, ##TouchHours##",
         DefaultValue = "##TouchCount## out of ##MinimumTouches## in ##TouchHours## hours.",
+        Order = 9,
         Key = AttributeKey.TouchNeededTooltipTemplate )]
 
     [CodeEditorField(
@@ -129,7 +130,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         EditorMode = CodeEditorMode.Lava,
         EditorTheme = CodeEditorTheme.Rock,
         DefaultValue = QuickNoteStatusTemplateDefaultValue,
-        Order = 9,
+        Order = 10,
         Key = AttributeKey.QuickNoteStatusTemplate )]
 
     [BooleanField(

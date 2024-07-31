@@ -252,24 +252,23 @@
                 </div>
             </div>
             <script type="text/javascript">
-                function initDashboard ()
-                {
-                    $( "div.photo-icon" ).lazyload( {
+                function initDashboard() {
+                    $("div.photo-icon").lazyload({
                         effect: "fadeIn"
-                    } );
+                    });
 
-                    $('#<%=drpDate.ClientID%>' ).datepicker( {
+                    $('#<%=drpDate.ClientID%>').datepicker({
                         format: 'mm/dd/yyyy',
                         todayHighlight: true,
                         assumeNearbyYear: 10,
                         autoclose: true,
                         endDate: '+0d',
-                        inputs: $('#<%=drpDate.ClientID%> .form-control' ),
+                        inputs: $('#<%=drpDate.ClientID%> .form-control'),
                         zIndexOffset: 1050
-                    } );
+                    });
 
                     // person-link-popover
-                    $( '.js-person-popover-stepstocare' ).popover( {
+                    $('.js-person-popover-stepstocare').popover({
                         placement: 'right',
                         trigger: 'manual',
                         sanitize: false,
@@ -289,77 +288,65 @@
                             return result.replace( /^"/i, '' ).replace( /"$/i, '' ).replace( /\\"/ig, '"' ).replace( /<span class=['"]email['"]>(.*)<\/span>/ig, '<a href="/Communication?person=' + $( this ).attr( 'personid' ) + '" class="email">$1</a>' );
 
                         }
-                    } ).on( 'mouseenter', function ()
-                    {
+                    }).on('mouseenter', function () {
                         var _this = this;
-                        $( this ).popover( 'show' );
-                        $( this ).siblings( '.popover' ).on( 'mouseleave', function ()
-                        {
-                            $( _this ).popover( 'hide' );
-                        } );
-                    } ).on( 'mouseleave', function ()
-                    {
+                        $(this).popover('show');
+                        $(this).siblings('.popover').on('mouseleave', function () {
+                            $(_this).popover('hide');
+                        });
+                    }).on('mouseleave', function () {
                         var _this = this;
-                        setTimeout( function ()
-                        {
-                            if ( !$( '.popover:hover' ).length )
-                            {
-                                $( _this ).popover( 'hide' )
+                        setTimeout(function () {
+                            if (!$('.popover:hover').length) {
+                                $(_this).popover('hide')
                             }
-                        }, 100 );
+                        }, 100);
                     } );
-                    $( '.js-person-popover-simple' ).popover( {
+                    $('.js-person-popover-simple').popover( {
                         placement: 'right',
                         trigger: 'manual',
                         sanitize: false,
                         delay: 500,
                         html: true,
-                        content: function ()
-                        {
-                            var dataUrl = Rock.settings.get( 'baseUrl' ) + 'api/People/PopupHtml/' + $( this ).attr( 'personid' ) + '/false';
+                        content: function () {
+                            var dataUrl = Rock.settings.get('baseUrl') + 'api/People/PopupHtml/' + $(this).attr('personid') + '/false';
 
-                            var result = $.ajax( {
+                            var result = $.ajax({
                                 type: 'GET',
                                 url: dataUrl,
                                 dataType: 'json',
                                 contentType: 'application/json; charset=utf-8',
                                 async: false
-                            } ).responseText;
+                            }).responseText;
 
-                            var resultObject = JSON.parse( result );
-                            var resultHtml = resultObject.PickerItemDetailsHtml.replace( /<small>.*<\/small>/ig, "" ).replace( /<div class='body'>.*<\/div>$/ig, "" ).replace( /header/g, "div" ).replace( /maxwidth=65/g, 'maxwidth=120' ).replace( /maxheight=65/g, 'maxheight=120' );
+                            var resultObject = JSON.parse(result);
+                            var resultHtml = resultObject.PickerItemDetailsHtml.replace(/<small>.*<\/small>/ig, "").replace(/<div class='body'>.*<\/div>$/ig, "").replace(/header/g, "div").replace(/maxwidth=65/g, 'maxwidth=120').replace(/maxheight=65/g, 'maxheight=120');
                             return resultHtml;
                         }
-                    } ).on( 'mouseenter', function ()
-                    {
+                    }).on('mouseenter', function () {
                         var _this = this;
-                        $( this ).popover( 'show' );
-                        $( this ).siblings( '.popover' ).on( 'mouseleave', function ()
-                        {
-                            $( _this ).popover( 'hide' );
-                        } );
-                    } ).on( 'mouseleave', function ()
-                    {
+                        $(this).popover('show');
+                        $(this).siblings('.popover').on('mouseleave', function () {
+                            $(_this).popover('hide');
+                        });
+                    }).on('mouseleave', function () {
                         var _this = this;
-                        setTimeout( function ()
-                        {
-                            if ( !$( '.popover:hover' ).length )
-                            {
-                                $( _this ).popover( 'hide' )
+                        setTimeout(function () {
+                            if (!$('.popover:hover').length) {
+                                $(_this).popover('hide')
                             }
-                        }, 100 );
-                    } );
-                    $( '.fa-flag[data-toggle="tooltip"]' ).tooltip( { html: true, sanitize: false } );
+                        }, 100);
+                    });
+					$('.fa-flag[data-toggle="tooltip"]').tooltip({html: true, sanitize: false});
                 }
-                Sys.Application.add_load( initDashboard );
+                Sys.Application.add_load(initDashboard);
 
-                function toggleNeeds ( needId )
-                {
-                    $( '.hasParentNeed' + needId ).toggleClass( 'hide' );
-                    $( '#toggleIcon' + needId ).toggleClass( 'fa-plus' ).toggleClass( 'fa-minus' );
+                function toggleNeeds(needId) {
+                    $('.hasParentNeed' + needId).toggleClass('hide');
+                    $('#toggleIcon' + needId).toggleClass('fa-plus').toggleClass('fa-minus');
                 }
             </script>
-        </asp:Panel>
+		</asp:Panel>
         <Rock:ModalDialog ID="mdMakeNote" runat="server" Title="Add Note" ValidationGroup="MakeNote" ClickBackdropToClose="true" Content-CssClass="modal-kfsmakenote">
             <Content>
                 <asp:HiddenField ID="hfCareNeedId" runat="server" />
