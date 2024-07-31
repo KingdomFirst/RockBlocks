@@ -83,10 +83,47 @@
         width: 584px;
         margin-left: -242px;
     }
+
     .modal.container.kfs-modal-snooze {
         width: 300px;
         margin-left: -150px;
     }
+
+
+    .kfs-radiobuttons-btn .radio-inline {
+        padding: 0;
+        margin-left: 0
+    }
+
+        .kfs-radiobuttons-btn .radio-inline .label-text {
+            display: inline-block;
+            margin-bottom: 0;
+            font-weight: 500;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            touch-action: manipulation;
+            cursor: pointer;
+            background-image: none;
+            border: 1px solid transparent;
+            padding: 6px 16px;
+            font-size: 16px;
+            line-height: 1.5;
+            border-radius: 6px;
+            color: #fff;
+            background-color: #ee7725;
+            border-color: #ee7725;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05)
+        }
+
+        .kfs-radiobuttons-btn .radio-inline input:checked ~ .label-text {
+            background-color: #d05e10
+        }
+
+        .kfs-radiobuttons-btn .radio-inline input[type='radio'], .kfs-radiobuttons-btn .radio-inline .label-text::before, .kfs-radiobuttons-btn .radio-inline .label-text::after {
+            display: none;
+            margin: 0
+        }
 </style>
 <asp:UpdatePanel runat="server" ID="upnlCareDashboard" UpdateMode="Always">
     <ContentTemplate>
@@ -326,9 +363,13 @@
         <Rock:ModalDialog ID="mdMakeNote" runat="server" Title="Add Note" ValidationGroup="MakeNote" ClickBackdropToClose="true" Content-CssClass="modal-kfsmakenote">
             <Content>
                 <asp:HiddenField ID="hfCareNeedId" runat="server" />
+                <asp:Literal ID="lQuickNoteStatus" runat="server" />
 
                 <asp:ValidationSummary ID="vsMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="MakeNote" />
-
+                <asp:Panel ID="pnlQuickNote" runat="server">
+                    <asp:ValidationSummary ID="vsQuickNoteMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="QuickNoteMakeNote" />
+                    <Rock:RockRadioButtonList ID="rrblQuickNotes" runat="server" Label="Quick Notes" CssClass="kfs-radiobuttons-btn" ValidationGroup="QuickNoteMakeNote" RepeatDirection="Horizontal" OnSelectedIndexChanged="rrblQuickNotes_SelectedIndexChanged" AutoPostBack="true"></Rock:RockRadioButtonList>
+                </asp:Panel>
                 <Rock:NoteContainer ID="notesTimeline" runat="server" ShowHeading="false"></Rock:NoteContainer>
             </Content>
         </Rock:ModalDialog>
