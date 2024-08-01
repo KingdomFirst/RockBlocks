@@ -24,7 +24,6 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
-using DocumentFormat.OpenXml.Drawing;
 using Newtonsoft.Json;
 
 using Rock;
@@ -119,8 +118,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.FutureThresholdDays )]
 
     [TextField( "Touch Needed Tooltip Template",
-        Description = "Basic merge template for touch needed tooltip notes. Available Fields: ##TouchTitle##, ##TouchCount##, ##MinimumTouches##, ##TouchHours##",
-        DefaultValue = "##TouchCount## out of ##MinimumTouches## in ##TouchHours## hours.",
+        DefaultValue = "{% if TouchTemplate == 'Follow Up Worker' %}Touch Needed{% else %}{{TouchCount}} out of {{MinimumCareTouches}} in {{MinimumCareTouchHours}} hours.{% endif %}",
+        Description = "Basic merge template for touch needed tooltip notes. <span class='tip tip-lava'></span>",
         Order = 9,
         Key = AttributeKey.TouchNeededTooltipTemplate )]
 
@@ -1182,8 +1181,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var childNeedStr = "";
                         var parentNeedStr = "";
                         var touchTooltipTemplate = GetAttributeValue( AttributeKey.TouchNeededTooltipTemplate );
+                        var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                        mergeFields.Add( "CareNeed", careNeed );
+                        mergeFields.Add( "TouchTemplate", "" );
+                        mergeFields.Add( "TouchCount", careTouchCount );
+                        mergeFields.Add( "TouchCompareDate", careNeed.DateEntered.Value );
+                        mergeFields.Add( "MinimumCareTouches", minimumCareTouches );
+                        mergeFields.Add( "MinimumCareTouchHours", minimumCareTouchHours );
+
                         if ( careNeedFlag )
                         {
+                            mergeFields["TouchTemplate"] = "Not Enough";
                             careNeedFlagStrTooltip += $@"
                             <div class='assessment-tooltip-item'>
                                 <span style='color:#E15759;' class='assessment-caretouch'>
@@ -1194,7 +1202,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 </span>
                                 <span class='assessment-tooltip-value'>
                                     <span class='assessment-name'>Not Enough Care Touches</span>
-                                    <span class='assessment-summary'>{touchTooltipTemplate.Replace( "##TouchCount##", careTouchCount.ToString() ).Replace( "##MinimumTouches##", minimumCareTouches.ToString() ).Replace( "##TouchHours##", minimumCareTouchHours.ToString() )}</span>
+                                    <span class='assessment-summary'>{touchTooltipTemplate.ResolveMergeFields( mergeFields )}</span>
                                 </span>
                             </div>";
                         }
@@ -1209,6 +1217,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                                 if ( templateFlag )
                                 {
+                                    mergeFields["TouchTemplate"] = template;
+                                    mergeFields["TouchCount"] = templateNotesToCheckInHours.Count();
+                                    mergeFields["TouchCompareDate"] = templateNotes.OrderByDescending( n => n.CreatedDateTime ).Select( n => n.CreatedDateTime ).FirstOrDefault();
+                                    mergeFields["MinimumCareTouches"] = template.MinimumCareTouches;
+                                    mergeFields["MinimumCareTouchHours"] = template.MinimumCareTouchHours;
                                     var randomColor = GetNoteTemplateColor( template.NoteTemplate );
                                     careNeedFlagStrTooltip += $@"
                                 <div class='assessment-tooltip-item'>
@@ -1220,7 +1233,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     </span>
                                     <span class='assessment-tooltip-value'>
                                         <span class='assessment-name'>{template.NoteTemplate.Note} Touches Needed</span>
-                                        <span class='assessment-summary'>{touchTooltipTemplate.Replace( "##TouchTitle##", template.NoteTemplate.Note ).Replace( "##TouchCount##", templateNotesToCheckInHours.Count().ToString() ).Replace( "##MinimumTouches##", template.MinimumCareTouches.ToString() ).Replace( "##TouchHours##", template.MinimumCareTouchHours.ToString() )}</span>
+                                        <span class='assessment-summary'>{touchTooltipTemplate.ResolveMergeFields( mergeFields )}</span>
                                     </span>
                                 </div>";
                                     continue;
@@ -1229,6 +1242,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                         if ( careNeedFollowUpWorkerTouch )
                         {
+                            mergeFields["TouchTemplate"] = "Follow Up Worker";
                             careNeedFlagStrTooltip += $@"<div class='assessment-tooltip-item'>
                                 <span style='color:#F28E2B;' class='assessment-caretouch'>
                                     <span class='fa-stack'>
@@ -1238,7 +1252,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 </span>
                                 <span class='assessment-tooltip-value'>
                                     <span class='assessment-name'>Follow Up Worker</span>
-                                    <span class='assessment-summary'>Touch needed.</span>
+                                    <span class='assessment-summary'>{touchTooltipTemplate.ResolveMergeFields( mergeFields )}</span>
                                 </span>
                             </div>";
                         }
