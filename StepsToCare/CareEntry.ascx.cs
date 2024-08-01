@@ -1416,7 +1416,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     careNeed.RenewCurrentCount = 0;
                 }
 
-
                 var snoozeChildNeeds = GetAttributeValue( AttributeKey.SnoozeChildNeeds ).AsBoolean();
 
                 if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )

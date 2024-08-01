@@ -418,7 +418,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {% endfor %}
             {% assign recurringTemplateNotesSize = recurringTemplateNotes | Size %}
             {% if recurringTemplateNotesSize < template.MinimumCareTouches %}
-                <span class=""label label-danger"">{{ template.NoteTemplate.Note }}: {{ recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} in {{ template.MinimumCareTouchHours }} hours since the last {{ template.NoteTemplate.Note }} touch.</span>
+                <span class=""label label-danger"">{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} still needed.</span>
             {% else %}
                 <span class=""label label-success"">{{ template.NoteTemplate.Note }}: {{ recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }}</span>
             {% endif %}
@@ -1735,7 +1735,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 if ( careNeed != null )
                 {
-                    var dateDifference = RockDateTime.Now - careNeed.DateEntered.Value;
                     var careNeedNotesList = new NoteService( rockContext )
                         .GetByNoteTypeId( _careNeedNoteTypes.Any() ? _careNeedNoteTypes.FirstOrDefault().Id : 0 )
                         .AsNoTracking()
@@ -1960,7 +1959,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         rrblQuickNotes.SelectedValue = "-1";
                     }
                 }
-
             }
         }
 
@@ -2199,7 +2197,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             gList.Columns.Add( btnNoteTemplate );
                             gFollowUp.Columns.Add( btnNoteTemplate );
 
-                            rrblQuickNotes.Items.Add( new ListItem( $"{btnNoteTemplate.Text} {template.Note}", template.Id.ToString() ) );
+                            rrblQuickNotes.Items.Add( new ListItem( $"<i class='{template.Icon}'></i> {template.Note}", template.Id.ToString() ) );
                         }
                     }
                     rrblQuickNotes.Items.Add( new ListItem( "<i class='fa fa-question'></i> Other", "-1" ) );
@@ -2314,7 +2312,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                         touchTemplates.Add( touchTemplate );
                                     }
                                 }
-                                _touchTemplates.AddOrIgnore( needCategory.Id, touchTemplates );
+                                _touchTemplates.AddOrReplace( needCategory.Id, touchTemplates );
                             }
                         }
                     }

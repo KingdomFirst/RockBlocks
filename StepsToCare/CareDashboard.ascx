@@ -89,7 +89,6 @@
         margin-left: -150px;
     }
 
-
     .kfs-radiobuttons-btn .radio-inline {
         padding: 0;
         margin-left: 0
@@ -111,13 +110,13 @@
             line-height: 1.5;
             border-radius: 6px;
             color: #fff;
-            background-color: #ee7725;
-            border-color: #ee7725;
+            background-color: var(--brand-primary);
+            border-color: var(--brand-primary);
             box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05)
         }
 
         .kfs-radiobuttons-btn .radio-inline input:checked ~ .label-text {
-            background-color: #d05e10
+            opacity: .7;
         }
 
         .kfs-radiobuttons-btn .radio-inline input[type='radio'], .kfs-radiobuttons-btn .radio-inline .label-text::before, .kfs-radiobuttons-btn .radio-inline .label-text::after {
