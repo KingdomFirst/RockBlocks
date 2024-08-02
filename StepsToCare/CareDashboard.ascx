@@ -116,7 +116,7 @@
         }
 
         .kfs-radiobuttons-btn .radio-inline input:checked ~ .label-text {
-            opacity: .7;
+            opacity: .8;
         }
 
         .kfs-radiobuttons-btn .radio-inline input[type='radio'], .kfs-radiobuttons-btn .radio-inline .label-text::before, .kfs-radiobuttons-btn .radio-inline .label-text::after {
@@ -352,9 +352,15 @@
                 <asp:Literal ID="lQuickNoteStatus" runat="server" />
 
                 <asp:ValidationSummary ID="vsMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="MakeNote" />
-                <asp:Panel ID="pnlQuickNote" runat="server">
+                <asp:Panel ID="pnlQuickNote" runat="server" CssClass="note-editor note-editor-standard ">
                     <asp:ValidationSummary ID="vsQuickNoteMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="QuickNoteMakeNote" />
-                    <Rock:RockRadioButtonList ID="rrblQuickNotes" runat="server" Label="Quick Notes" CssClass="kfs-radiobuttons-btn" ValidationGroup="QuickNoteMakeNote" RepeatDirection="Horizontal" OnSelectedIndexChanged="rrblQuickNotes_SelectedIndexChanged" AutoPostBack="true"></Rock:RockRadioButtonList>
+                    <Rock:RockRadioButtonList ID="rrblQuickNotes" runat="server" Label="Quick Notes" CssClass="kfs-radiobuttons-btn" ValidationGroup="QuickNoteMakeNote" Required="true" RepeatDirection="Horizontal" OnSelectedIndexChanged="rrblQuickNotes_SelectedIndexChanged" AutoPostBack="true"></Rock:RockRadioButtonList>
+                    <asp:Panel ID="pnlQuickNoteText" runat="server" CssClass="noteentry-control meta-body" Visible="false">
+                        <Rock:RockTextBox ID="rtbNote" runat="server" Placeholder="Write an additional note..." Rows="3" TextMode="MultiLine" ValidationGroup="QuickNoteMakeNote"></Rock:RockTextBox>
+                        <div class="settings clearfix">
+                            <Rock:BootstrapButton ID="rbBtnQuickNoteSave" runat="server" DataLoadingText="Saving..." Text="Save Note" CssClass="commands btn btn-primary btn-xs" OnClick="rbBtnQuickNoteSave_Click" ValidationGroup="QuickNoteMakeNote"></Rock:BootstrapButton>
+                        </div>
+                    </asp:Panel>
                 </asp:Panel>
                 <Rock:NoteContainer ID="notesTimeline" runat="server" ShowHeading="false"></Rock:NoteContainer>
             </Content>

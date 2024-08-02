@@ -133,6 +133,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.QuickNoteStatusTemplate )]
 
     [BooleanField(
+        "Quick Note Auto Save",
+        Description = "Automatically Save the Quick notes when selecting them from the grid. If 'no' the 'Make Note' dialog will popup to allow you to add an additional note before saving.",
+        IsRequired = false,
+        DefaultBooleanValue = true,
+        Order = 11,
+        Key = AttributeKey.QuickNoteAutoSave )]
+
+    [BooleanField(
         "Enable Launch Workflow",
         Description = "Enable Launch Workflow Action",
         IsRequired = false,
@@ -322,6 +330,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string MoveNeedToSnoozed = "MoveNeedToSnoozed";
             public const string TouchNeededTooltipTemplate = "TouchNeededTooltipTemplate";
             public const string QuickNoteStatusTemplate = "QuickNoteStatusTemplate";
+            public const string QuickNoteAutoSave = "QuickNoteAutoSave";
         }
 
         /// <summary>
@@ -610,11 +619,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             BindGrid();
             if ( !string.IsNullOrWhiteSpace( hfCareNeedId.Value ) )
             {
-                var careNeed = new CareNeedService( new RockContext() ).Get( hfCareNeedId.Value.AsInteger() );
-
-                if ( careNeed != null )
+                using ( var rockContext = new RockContext() )
                 {
-                    SetupNoteTimeline( careNeed );
+                    var careNeed = new CareNeedService( rockContext ).Get( hfCareNeedId.Value.AsInteger() );
+
+                    if ( careNeed != null )
+                    {
+                        SetupNoteTimeline( careNeed );
+                    }
                 }
             }
         }
@@ -1710,21 +1722,39 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 LinkButtonField field = sender as LinkButtonField;
                 var fieldId = field.ID.Replace( "btn_", "" );
-                var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
-                var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean();
+                var autoSaveQuickNote = GetAttributeValue( AttributeKey.QuickNoteAutoSave ).AsBoolean();
 
-                var noteCreated = createNote( rockContext, e.RowKeyId, noteTemplate.Note, true, noteTemplate, true );
-                if ( noteCreated )
+                if ( autoSaveQuickNote )
                 {
-                    if ( shouldSnoozeNeed )
+
+                    var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
+                    var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean();
+
+                    var noteCreated = createNote( rockContext, e.RowKeyId, noteTemplate.Note, true, noteTemplate, true );
+                    if ( noteCreated )
                     {
-                        var careNeed = new CareNeedService( rockContext ).Get( e.RowKeyId );
-                        if ( careNeed != null && careNeed.CustomFollowUp )
+                        if ( shouldSnoozeNeed )
                         {
-                            SnoozeNeed( e.RowKeyId );
+                            var careNeed = new CareNeedService( rockContext ).Get( e.RowKeyId );
+                            if ( careNeed != null && careNeed.CustomFollowUp )
+                            {
+                                SnoozeNeed( e.RowKeyId );
+                            }
                         }
+                        BindGrid();
                     }
-                    BindGrid();
+                }
+                else
+                {
+                    rrblQuickNotes.SelectedValue = fieldId;
+                    rtbNote.Text = "";
+                    pnlQuickNoteText.Visible = true;
+                    rtbNote.Focus();
+
+                    notesTimeline.AddAllowed = false;
+                    notesTimeline.AddAlwaysVisible = false;
+
+                    gMakeNote_Click( null, e );
                 }
             }
         }
@@ -1738,37 +1768,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             using ( var rockContext = new RockContext() )
             {
-                var careNeed = new CareNeedService( rockContext ).Get( e.RowKeyId );
                 string messages = string.Empty;
-                hfCareNeedId.Value = careNeed.Id.ToString();
+                hfCareNeedId.Value = e.RowKeyId.ToString();
 
-                notesTimeline.AddAllowed = true;
-                notesTimeline.AddAlwaysVisible = true;
+                if ( sender != null )
+                {
+                    rrblQuickNotes.SelectedValue = "-1";
+                    rtbNote.Text = "";
+                    pnlQuickNoteText.Visible = false;
+
+                    notesTimeline.AddAllowed = true;
+                    notesTimeline.AddAlwaysVisible = true;
+                }
+                else
+                {
+                    rtbNote.Focus();
+                }
 
                 mdMakeNote.Show();
 
-                if ( careNeed != null )
-                {
-                    var careNeedNotesList = new NoteService( rockContext )
-                        .GetByNoteTypeId( _careNeedNoteTypes.Any() ? _careNeedNoteTypes.FirstOrDefault().Id : 0 )
-                        .AsNoTracking()
-                        .Where( n => n.EntityId == careNeed.Id )
-                        .ToList();
-                    var catTouchTemplates = _touchTemplates.GetValueOrDefault( careNeed.CategoryValueId.Value, new List<TouchTemplate>() );
-
-                    var lavaTemplate = GetAttributeValue( AttributeKey.QuickNoteStatusTemplate );
-
-                    var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
-                    mergeFields.Add( "CareNeed", careNeed );
-                    mergeFields.Add( "TouchTemplates", catTouchTemplates );
-                    mergeFields.Add( "CareNeedNotes", careNeedNotesList.Where( n => n.Caption == null || ( n.Caption != null && !n.Caption.StartsWith( "Action" ) ) ) );
-                    mergeFields.Add( "CareNeedNotesWithActions", careNeedNotesList );
-                    mergeFields.Add( "MinimumCareTouches", GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger() );
-                    mergeFields.Add( "MinimumCareTouchHours", GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger() );
-                    lQuickNoteStatus.Text = lavaTemplate.ResolveMergeFields( mergeFields );
-
-                    SetupNoteTimeline( careNeed );
-                }
+                SetupNoteDialog( e.RowKeyId, rockContext );
 
             }
 
@@ -1946,32 +1965,50 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 notesTimeline.AddAllowed = true;
                 notesTimeline.AddAlwaysVisible = true;
+                pnlQuickNoteText.Visible = false;
             }
             else
             {
                 notesTimeline.AddAllowed = false;
                 notesTimeline.AddAlwaysVisible = false;
 
-                using ( var rockContext = new RockContext() )
+                pnlQuickNoteText.Visible = true;
+                rtbNote.Focus();
+            }
+        }
+
+        protected void rbBtnQuickNoteSave_Click( object sender, EventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                var noteTemplate = new NoteTemplateService( rockContext ).Get( rrblQuickNotes.SelectedValueAsInt() ?? 0 );
+                var closeDialogOnSave = GetAttributeValue( AttributeKey.CloseDialogOnSave ).AsBoolean();
+                var careNeedId = hfCareNeedId.ValueAsInt();
+
+                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note}: {rtbNote.Text}", closeDialogOnSave, noteTemplate, true );
+                if ( noteCreated )
                 {
-                    var noteTemplate = new NoteTemplateService( rockContext ).Get( rrblQuickNotes.SelectedValueAsInt() ?? 0 );
-
-                    var noteCreated = createNote( rockContext, hfCareNeedId.ValueAsInt(), noteTemplate.Note, true, noteTemplate, true );
-                    if ( noteCreated )
+                    if ( GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean() )
                     {
-                        if ( GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean() )
+                        var careNeed = new CareNeedService( rockContext ).Get( hfCareNeedId.ValueAsInt() );
+                        if ( careNeed != null && careNeed.CustomFollowUp )
                         {
-                            var careNeed = new CareNeedService( rockContext ).Get( hfCareNeedId.ValueAsInt() );
-                            if ( careNeed != null && careNeed.CustomFollowUp )
-                            {
-                                SnoozeNeed( hfCareNeedId.ValueAsInt() );
-                            }
+                            SnoozeNeed( hfCareNeedId.ValueAsInt() );
                         }
-
-                        BindGrid();
-                        mdMakeNote.Hide();
-                        rrblQuickNotes.SelectedValue = "-1";
                     }
+
+                    rtbNote.Text = "";
+                    if ( closeDialogOnSave )
+                    {
+                        hfCareNeedId.Value = "";
+                        rrblQuickNotes.SelectedValue = "-1";
+                        mdMakeNote.Hide();
+                    }
+                    else
+                    {
+                        SetupNoteDialog( careNeedId, rockContext );
+                    }
+                    BindGrid();
                 }
             }
         }
@@ -2966,6 +3003,34 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                     }
                 }
+            }
+        }
+
+        private void SetupNoteDialog( int careNeedId, RockContext rockContext )
+        {
+            var careNeed = new CareNeedService( rockContext ).Get( careNeedId );
+
+            if ( careNeed != null )
+            {
+                var careNeedNotesList = new NoteService( rockContext )
+                    .GetByNoteTypeId( _careNeedNoteTypes.Any() ? _careNeedNoteTypes.FirstOrDefault().Id : 0 )
+                    .AsNoTracking()
+                    .Where( n => n.EntityId == careNeed.Id )
+                    .ToList();
+                var catTouchTemplates = _touchTemplates.GetValueOrDefault( careNeed.CategoryValueId.Value, new List<TouchTemplate>() );
+
+                var lavaTemplate = GetAttributeValue( AttributeKey.QuickNoteStatusTemplate );
+
+                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                mergeFields.Add( "CareNeed", careNeed );
+                mergeFields.Add( "TouchTemplates", catTouchTemplates );
+                mergeFields.Add( "CareNeedNotes", careNeedNotesList.Where( n => n.Caption == null || ( n.Caption != null && !n.Caption.StartsWith( "Action" ) ) ) );
+                mergeFields.Add( "CareNeedNotesWithActions", careNeedNotesList );
+                mergeFields.Add( "MinimumCareTouches", GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger() );
+                mergeFields.Add( "MinimumCareTouchHours", GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger() );
+                lQuickNoteStatus.Text = lavaTemplate.ResolveMergeFields( mergeFields );
+
+                SetupNoteTimeline( careNeed );
             }
         }
 
