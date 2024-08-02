@@ -1187,7 +1187,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         var dateDifference = RockDateTime.Now - careNeed.DateEntered.Value;
                         var careNeedFlag = ( dateDifference.TotalHours >= minimumCareTouchHours && careTouchCount < minimumCareTouches );
-                        var careNeedFollowUpWorkerTouch = ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
+                        var careNeedFollowUpWorkerTouch = assignedFollowUpWorkers.Any() && ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
                         var careNeedFlagStr = "";
                         var careNeedFlagStrTooltip = "";
                         var childNeedStr = "";

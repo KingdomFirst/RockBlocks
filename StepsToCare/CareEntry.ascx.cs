@@ -885,8 +885,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
                     else if ( assignedPerson.Type == AssignedType.GroupRole && typeQualifierArray.Length > 2 )
                     {
-                        //Format is [0]GroupRoleId^[1]GroupTypeId^[2]Group Type > Group Role
-                        returnStr = typeQualifierArray[2];
+                        //Format is [0]GroupRoleId^[1]GroupTypeId^[2]Group Type > Group Role^[3]GroupId^[4]Group Type > Group Name > Group Role
+                        if ( typeQualifierArray.Length > 4 )
+                        {
+                            returnStr = typeQualifierArray[4];
+                        }
+                        else
+                        {
+                            returnStr = typeQualifierArray[2];
+                        }
                     }
                 }
                 phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
