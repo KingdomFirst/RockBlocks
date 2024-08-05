@@ -399,25 +399,28 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 <br><span class=""badge rounded-0 p-2 mb-2 text-color"" style=""background-color: oldlace"">Assigned to You</span>
 </div>";
 
-        private const string QuickNoteStatusTemplateDefaultValue = @"
+        private const string QuickNoteStatusTemplateDefaultValue = @"<h4 class=""mt-0"">{{ CareNeed.DateEntered }} - {{ CareNeed.PersonAlias.Person }} - {{ CareNeed.Category }}</h4>
+<p>{{ CareNeed.Details }}</p>
+
 {% assign currentNow = 'Now' | Date %}
 {% assign hourDifference = CareNeed.CreatedDateTime | DateDiff:currentNow,'h' %}
-{% if CareNeed.TouchCount < MinimumCareTouches and hourDifference >= MinimumCareTouchHours %}<span class=""label label-danger"">Not enough Care Touches ({{ CareNeed.TouchCount }} of {{ MinimumCareTouches }} in {{ MinimumCareTouchHours }} hours)</span>{% endif %}
+{% if CareNeed.TouchCount < MinimumCareTouches and hourDifference >= MinimumCareTouchHours %}<span class=""label label-danger"">Not enough Care Touches ({{ CareNeed.TouchCount }} of {{ MinimumCareTouches }} in {{ MinimumCareTouchHours }} hours)</span>{% elseif CareNeed.TouchCount < MinimumCareTouches %}<span class=""label label-warning"">Minimum Care Touches ({{ CareNeed.TouchCount }} of {{ MinimumCareTouches }}) Needed</span>{% else %}<span class=""label label-success"">Minimum Care Touches ({{ CareNeed.TouchCount }} of {{ MinimumCareTouches }}) Met</span>{% endif %}
 {% assign followUpWorkers = CareNeed.AssignedPersons | Where:'FollowUpWorker',True %}
 {% assign followUpWorkerNotes = 0 %}
 {% for worker in followUpWorkers %}
     {% assign followUpWorkerNotes = CareNeedNotes | Where:'CreatedByPersonAliasId',worker.PersonAliasId | Size %}
     {% if followUpWorkerNotes > 0 %}{% break %}{% endif %}
 {% endfor %}
-{% if followUpWorkers != empty and hourDifference >= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% endif %}
+{% if followUpWorkers != empty and hourDifference >= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% elseif hourDifference <= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-warning"">Follow Up Worker Touch Needed!</span>{% else %}<span class=""label label-success"">Follow Up Worker</span>{% endif %}
 {% for template in TouchTemplates %}
     {% assign notesByText = CareNeedNotes | Where:'Text',template.NoteTemplate.Note %}
     {% assign notesbyGuid = CareNeedNotes | Where:'ForeignGuid',template.NoteTemplate.Guid %}
-    {% assign templateNotes = notesByText | Concat:notesByGuid | Distinct:'Id' %}
+    {% for note in notesByText %}{% assign templateNotes = templateNotes | AddToArray:note %}{% endfor %}
+    {% for note in notesbyGuid %}{% assign templateNotes = templateNotes | AddToArray:note %}{% endfor %}
+    {% if templateNotes and templateNotes != empty %}{% assign templateNotes = templateNotes | Distinct:'Id' %}{% endif %}
+    {% assign labelStatus = ""label label-warning"" %}{% assign labelText = """" %}
     {% assign templateNotesSize = templateNotes | Size %}
-        {% if template.Recurring == false and templateNotesSize < template.MinimumCareTouches and hourDifference >= template.MinimumCareTouchHours %}
-            <span class=""label label-danger"">{{ template.NoteTemplate.Note }}: {{ templateNotes | Size }} of {{ template.MinimumCareTouches }} in {{ template.MinimumCareTouchHours }} hours</span>
-        {% elseif template.Recurring and hourDifference >= template.MinimumCareTouchHours %}
+    {% if template.Recurring %}{% assign templateNotes = templateNotes | OrderBy:'CreatedDateTime desc' %}
             {% for templateNote in templateNotes %}
                 {% assign noteHours = templateNote.CreatedDateTime | DateDiff:currentNow,'h' %}
                 {% if noteHours <= template.MinimumCareTouchHours %}
@@ -425,15 +428,28 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {% endif %}
             {% endfor %}
             {% assign recurringTemplateNotesSize = recurringTemplateNotes | Size %}
-            {% if recurringTemplateNotesSize < template.MinimumCareTouches %}
-                <span class=""label label-danger"">{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} still needed.</span>
-            {% else %}
-                <span class=""label label-success"">{{ template.NoteTemplate.Note }}: {{ recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }}</span>
+            {% assign noteHoursCompare = templateNotes[0].CreatedDateTime | Default:CareNeed.CreatedDateTime | DateDiff:currentNow,'h' %}
+            {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} due by {{ templateNotes[0].CreatedDateTime | Default:CareNeed.CreatedDateTime | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd'  }}{% endcapture %}
+            {% if recurringTemplateNotesSize < template.MinimumCareTouches and noteHoursCompare >= template.MinimumCareTouchHours %}
+                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} overdue since {{ templateNotes[0].CreatedDateTime | Default:CareNeed.CreatedDateTime | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd'  }}{% endcapture %}
+                {% assign labelStatus = ""label label-danger label-recurring"" %}
+            {% elseif recurringTemplateNotesSize >= template.MinimumCareTouches %}
+                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }}{% endcapture %}
+                 {% assign labelStatus = ""label label-success label-recurring"" %}
             {% endif %}
         {% else %}
-        <span class=""label label-success"">{{ template.NoteTemplate.Note }}: {{ templateNotes | Size }} of {{ template.MinimumCareTouches }}</span>
+            {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:templateNotesSize }} of {{ template.MinimumCareTouches }} due by {{ CareNeed.CreatedDateTime | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd' }}{% endcapture %}
+            {% if templateNotesSize < template.MinimumCareTouches and hourDifference >= template.MinimumCareTouchHours %}
+                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:templateNotesSize }} of {{ template.MinimumCareTouches }} overdue since {{ CareNeed.CreatedDateTime | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd' }}{% endcapture %}
+                {% assign labelStatus = ""label label-danger"" %}
+            {% elseif templateNotesSize >= template.MinimumCareTouches %}
+                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ templateNotesSize }} of {{ template.MinimumCareTouches }}{% endcapture %}
+                {% assign labelStatus = ""label label-success"" %}
+            {% endif %}
         {% endif %}
-{% endfor %}";
+        <span class=""{{ labelStatus }}"">{{ labelText }}</span>  
+{% endfor %}
+<p></p>";
 
         #endregion Attribute Default values
 
@@ -1985,7 +2001,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var closeDialogOnSave = GetAttributeValue( AttributeKey.CloseDialogOnSave ).AsBoolean();
                 var careNeedId = hfCareNeedId.ValueAsInt();
 
-                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note}: {rtbNote.Text}", closeDialogOnSave, noteTemplate, true );
+                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note} {( rtbNote.Text.IsNotNullOrWhiteSpace() ? ":" : "" )} {rtbNote.Text}", closeDialogOnSave, noteTemplate, true );
                 if ( noteCreated )
                 {
                     if ( GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean() )
