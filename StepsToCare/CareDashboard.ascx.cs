@@ -399,7 +399,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 <br><span class=""badge rounded-0 p-2 mb-2 text-color"" style=""background-color: oldlace"">Assigned to You</span>
 </div>";
 
-        private const string QuickNoteStatusTemplateDefaultValue = @"<h4 class=""mt-0"">{{ CareNeed.DateEntered }} - {{ CareNeed.PersonAlias.Person }} - {{ CareNeed.Category }}</h4>
+        private const string QuickNoteStatusTemplateDefaultValue = @"<h4 class=""mt-0"">{{ CareNeed.DateEntered }} - {{ CareNeed.PersonAlias.Person.FullName }} <span class=""badge p-2 pull-right"" style=""background-color: {{ CareNeed.Category | Attribute:'Color' }}"">{{ CareNeed.Category.Value }}</span></h4>
 <p>{{ CareNeed.Details }}</p>
 
 {% assign currentNow = 'Now' | Date %}
@@ -427,11 +427,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {% assign recurringTemplateNotes = recurringTemplateNotes | AddToArray:templateNote %}
                 {% endif %}
             {% endfor %}
-            {% assign recurringTemplateNotesSize = recurringTemplateNotes | Size %}
-            {% assign noteHoursCompare = templateNotes[0].CreatedDateTime | Default:CareNeed.CreatedDateTime | DateDiff:currentNow,'h' %}
-            {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} due by {{ templateNotes[0].CreatedDateTime | Default:CareNeed.CreatedDateTime | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd'  }}{% endcapture %}
+            {% assign recurringTemplateNotesSize = recurringTemplateNotes | Size %}{% assign defaultCreatedDate = CareNeed.CreatedDateTime | AsString %}
+            {% assign noteHoursCompare = templateNotes[0].CreatedDateTime | Default:defaultCreatedDate | DateDiff:currentNow,'h' %}
+            {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} due by {{ templateNotes[0].CreatedDateTime | Default:defaultCreatedDate | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd'  }}{% endcapture %}
             {% if recurringTemplateNotesSize < template.MinimumCareTouches and noteHoursCompare >= template.MinimumCareTouchHours %}
-                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} overdue since {{ templateNotes[0].CreatedDateTime | Default:CareNeed.CreatedDateTime | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd'  }}{% endcapture %}
+                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} overdue since {{ templateNotes[0].CreatedDateTime | Default:defaultCreatedDate | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd'  }}{% endcapture %}
                 {% assign labelStatus = ""label label-danger label-recurring"" %}
             {% elseif recurringTemplateNotesSize >= template.MinimumCareTouches %}
                 {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }}{% endcapture %}

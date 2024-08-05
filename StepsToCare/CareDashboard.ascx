@@ -110,8 +110,8 @@
             line-height: 1.5;
             border-radius: 6px;
             color: #fff;
-            background-color: var(--brand-primary);
-            border-color: var(--brand-primary);
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
             box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05)
         }
 
