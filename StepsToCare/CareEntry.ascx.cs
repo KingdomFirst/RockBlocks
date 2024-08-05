@@ -1419,8 +1419,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     var dayDiff = ( selectedDateTime - RockDateTime.Now ).Value.TotalDays;
                     careNeed.RenewPeriodDays = Math.Ceiling( dayDiff ).ToIntSafe();
-                    careNeed.RenewMaxCount = 0;
-                    careNeed.RenewCurrentCount = 0;
+                    careNeed.RenewMaxCount = careNeed.RenewCurrentCount;
                 }
 
                 var snoozeChildNeeds = GetAttributeValue( AttributeKey.SnoozeChildNeeds ).AsBoolean();
@@ -1434,8 +1433,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         if ( selectedDateTime != null )
                         {
                             childneed.RenewPeriodDays = careNeed.RenewPeriodDays;
-                            childneed.RenewMaxCount = careNeed.RenewMaxCount;
-                            childneed.RenewCurrentCount = careNeed.RenewCurrentCount;
+                            childneed.RenewMaxCount = childneed.RenewCurrentCount;
                         }
                     }
                 }
