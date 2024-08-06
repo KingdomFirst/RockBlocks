@@ -1287,7 +1287,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                         if ( careNeedFlagStrTooltip.IsNotNullOrWhiteSpace() )
                         {
-                            careNeedFlagStr = $"<i class=\"fas fa-flag text-danger mx-2\"  data-toggle=\"tooltip\" data-html=\"true\" data-original-title=\"{careNeedFlagStrTooltip}\"></i>";
+                            careNeedFlagStr = $"<i class=\"fas fa-flag text-danger mx-2\" data-toggle=\"tooltip\" data-html=\"true\" data-original-title=\"{careNeedFlagStrTooltip.Replace( "\"", "&quot;" )}\"></i>";
                         }
                         if ( hasChildNeeds )
                         {
@@ -1751,7 +1751,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     rrblQuickNotes.SelectedValue = fieldId;
                     rtbNote.Text = "";
                     pnlQuickNoteText.Visible = true;
-                    rtbNote.Focus();
 
                     notesTimeline.AddAllowed = false;
                     notesTimeline.AddAlwaysVisible = false;
@@ -1782,14 +1781,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     notesTimeline.AddAllowed = true;
                     notesTimeline.AddAlwaysVisible = true;
                 }
-                else
-                {
-                    rtbNote.Focus();
-                }
 
                 mdMakeNote.Show();
 
                 SetupNoteDialog( e.RowKeyId, rockContext );
+
+                if ( pnlQuickNoteText.Visible )
+                {
+                    rtbNote.Focus();
+                }
 
             }
 

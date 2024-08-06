@@ -163,7 +163,6 @@
             <Content>
                 <asp:ValidationSummary ID="vsSnoozeNeed" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="SnoozeNeed" />
                 <Rock:DatePicker ID="dpSnoozeUntil" runat="server" Label="Snooze Until" ValidationGroup="SnoozeNeed" Required="true" AllowPastDateSelection="false" CssClass="w-100" />
-                <Rock:NotificationBox ID="nbSnoozeNeed" runat="server" NotificationBoxType="Warning" Visible="false"></Rock:NotificationBox>
             </Content>
         </Rock:ModalDialog>
 
