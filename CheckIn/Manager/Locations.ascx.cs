@@ -48,6 +48,7 @@ using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 using Group = Rock.Model.Group;
+using CheckInLabel = Rock.CheckIn.CheckInLabel;
 
 namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
 {
