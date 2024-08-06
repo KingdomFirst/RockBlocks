@@ -118,8 +118,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Key = AttributeKey.FutureThresholdDays )]
 
     [TextField( "Touch Needed Tooltip Template",
-        DefaultValue = "{% if TouchTemplate == 'Follow Up Worker' %}Touch Needed{% else %}{{TouchCount}} out of {{MinimumCareTouches}} in {{MinimumCareTouchHours}} hours.{% endif %}",
         Description = "Basic merge template for touch needed tooltip notes. <span class='tip tip-lava'></span>",
+        DefaultValue = "{% if TouchTemplate == 'Follow Up Worker' %}Touch Needed{% else %}{{TouchCount}} out of {{MinimumCareTouches}} in {{MinimumCareTouchHours}} hours.{% endif %}",
         Order = 9,
         Key = AttributeKey.TouchNeededTooltipTemplate )]
 
@@ -134,7 +134,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
     [BooleanField(
         "Quick Note Auto Save",
-        Description = "Automatically Save the Quick notes when selecting them from the grid. If 'no' the 'Make Note' dialog will popup to allow you to add an additional note before saving.",
+        Description = "Automatically save Quick Notes when clicked from the Care Dashboard. If 'no' the 'Make Note' dialog will popup to allow you to add an additional note before saving.",
         IsRequired = false,
         DefaultBooleanValue = true,
         Order = 11,
@@ -405,7 +405,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
 {% assign currentNow = 'Now' | Date %}
 {% assign hourDifference = CareNeed.CreatedDateTime | DateDiff:currentNow,'h' %}
-{% if CareNeed.TouchCount < MinimumCareTouches and hourDifference >= MinimumCareTouchHours %}<span class=""label label-danger"">Not enough Care Touches ({{ CareNeed.TouchCount }} of {{ MinimumCareTouches }} in {{ MinimumCareTouchHours }} hours)</span>{% elseif CareNeed.TouchCount < MinimumCareTouches %}<span class=""label label-warning"">Minimum Care Touches ({{ CareNeed.TouchCount }} of {{ MinimumCareTouches }}) Needed</span>{% else %}<span class=""label label-success"">Minimum Care Touches ({{ CareNeed.TouchCount }} of {{ MinimumCareTouches }}) Met</span>{% endif %}
+{% if CareNeed.TouchCount < MinimumCareTouches and hourDifference >= MinimumCareTouchHours %}<span class=""label label-danger"">Not enough Care Touches ({{ MinimumCareTouches | Minus:CareNeed.TouchCount }} of {{ MinimumCareTouches }} in {{ MinimumCareTouchHours }} hours)</span>{% elseif CareNeed.TouchCount < MinimumCareTouches %}<span class=""label label-warning"">Minimum Care Touches ({{ MinimumCareTouches | Minus:CareNeed.TouchCount }} of {{ MinimumCareTouches }}) Needed</span>{% else %}<span class=""label label-success"">Minimum Care Touches ({{ CareNeed.TouchCount }} of {{ MinimumCareTouches }}) Met</span>{% endif %}
 {% assign followUpWorkers = CareNeed.AssignedPersons | Where:'FollowUpWorker',True %}
 {% assign followUpWorkerNotes = 0 %}
 {% for worker in followUpWorkers %}
@@ -2002,7 +2002,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var closeDialogOnSave = GetAttributeValue( AttributeKey.CloseDialogOnSave ).AsBoolean();
                 var careNeedId = hfCareNeedId.ValueAsInt();
 
-                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note} {( rtbNote.Text.IsNotNullOrWhiteSpace() ? ":" : "" )} {rtbNote.Text}", closeDialogOnSave, noteTemplate, true );
+                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note}{( rtbNote.Text.IsNotNullOrWhiteSpace() ? ":" : "" )} {rtbNote.Text}", closeDialogOnSave, noteTemplate, true );
                 if ( noteCreated )
                 {
                     if ( GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean() )
