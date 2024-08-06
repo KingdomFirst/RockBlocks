@@ -1318,21 +1318,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
         }
 
-        private AvatarColors GetNoteTemplateColor( NoteTemplate noteTemplate )
-        {
-            var randomColor = new AvatarColors();
-            if ( _noteTemplateColors.ContainsKey( noteTemplate.Id ) )
-            {
-                randomColor = _noteTemplateColors[noteTemplate.Id];
-            }
-            else
-            {
-                randomColor.GenerateMissingColors();
-                _noteTemplateColors.AddOrReplace( noteTemplate.Id, randomColor );
-            }
-            return randomColor;
-        }
-
         /// <summary>
         /// Handles the DataBound event of the lStatus control.
         /// </summary>
@@ -3047,6 +3032,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 SetupNoteTimeline( careNeed );
             }
+        }
+
+        private AvatarColors GetNoteTemplateColor( NoteTemplate noteTemplate )
+        {
+            var randomColor = new AvatarColors();
+            if ( _noteTemplateColors.ContainsKey( noteTemplate.Id ) )
+            {
+                randomColor = _noteTemplateColors[noteTemplate.Id];
+            }
+            else
+            {
+                randomColor.GenerateMissingColors();
+                _noteTemplateColors.AddOrReplace( noteTemplate.Id, randomColor );
+            }
+            return randomColor;
         }
 
         #endregion Methods
