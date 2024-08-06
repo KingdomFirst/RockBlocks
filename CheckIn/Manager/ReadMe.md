@@ -2,9 +2,9 @@
 
 
 # Advanced Check-In Monitor
-_Tested/Supported in Rock Version:  8.0-12.0_    
+_Tested/Supported in Rock Version:  8.0-16.6_    
 _Released:  12/31/2018_   
-_Updated:  4/26/2021_   
+_Updated:  8/6/2024_   
 
 ## Summary
 
