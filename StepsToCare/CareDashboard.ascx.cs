@@ -399,7 +399,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 <br><span class=""badge rounded-0 p-2 mb-2 text-color"" style=""background-color: oldlace"">Assigned to You</span>
 </div>";
 
-        private const string QuickNoteStatusTemplateDefaultValue = @"<h4 class=""mt-0"">{{ CareNeed.DateEntered }} - {{ CareNeed.PersonAlias.Person.FullName }} <span class=""badge p-2 pull-right"" style=""background-color: {{ CareNeed.Category | Attribute:'Color' }}"">{{ CareNeed.Category.Value }}</span></h4>
+        private const string QuickNoteStatusTemplateDefaultValue = @"<div class=""pull-right""><span class=""label mr-2"" style=""background-color: {{ CareNeed.Category | Attribute:'Color' }}"">{{ CareNeed.Category.Value }}</span><span class=""{{ CareNeed.Status | Attribute:'CssClass' }}"">{{ CareNeed.Status.Value }}</span></div>
+<h4 class=""mt-0"">{{ CareNeed.DateEntered }} - {{ CareNeed.PersonAlias.Person.FullName }}</h4>
 <p>{{ CareNeed.Details }}</p>
 
 {% assign currentNow = 'Now' | Date %}
