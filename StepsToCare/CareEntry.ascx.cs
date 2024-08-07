@@ -885,8 +885,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
                     else if ( assignedPerson.Type == AssignedType.GroupRole && typeQualifierArray.Length > 2 )
                     {
-                        //Format is [0]GroupRoleId^[1]GroupTypeId^[2]Group Type > Group Role
-                        returnStr = typeQualifierArray[2];
+                        //Format is [0]GroupRoleId^[1]GroupTypeId^[2]Group Type > Group Role^[3]GroupId^[4]Group Type > Group Name > Group Role
+                        if ( typeQualifierArray.Length > 4 )
+                        {
+                            returnStr = typeQualifierArray[4];
+                        }
+                        else
+                        {
+                            returnStr = typeQualifierArray[2];
+                        }
                     }
                 }
                 phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
@@ -924,48 +931,22 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( careNeed != null )
             {
-                var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
-                careNeed.StatusValueId = snoozeValueId;
-                careNeed.SnoozeDate = RockDateTime.Now;
-
-                var snoozeChildNeeds = GetAttributeValue( AttributeKey.SnoozeChildNeeds ).AsBoolean();
-
-                if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
+                if ( careNeed.CustomFollowUp && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) )
                 {
-                    foreach ( var childneed in careNeed.ChildNeeds )
-                    {
-                        childneed.StatusValueId = snoozeValueId;
-                        childneed.SnoozeDate = RockDateTime.Now;
-                    }
+                    SnoozeNeed();
                 }
-
-                rockContext.WrapTransaction( () =>
+                else
                 {
-                    rockContext.SaveChanges();
-                } );
-
-                createNote( rockContext, careNeedId, GetAttributeValue( AttributeKey.SnoozedButtonText ) );
-
-                if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
-                {
-                    foreach ( var childneed in careNeed.ChildNeeds )
-                    {
-                        createNote( rockContext, childneed.Id, $"Marked \"{GetAttributeValue( AttributeKey.SnoozedButtonText )}\" from Parent Need" );
-                    }
+                    mdSnoozeNeed.Show();
                 }
-
-                // redirect back to parent
-                var personId = this.PageParameter( "PersonId" ).AsIntegerOrNull();
-                var qryParams = new Dictionary<string, string>();
-                if ( personId.HasValue )
-                {
-                    qryParams.Add( "PersonId", personId.ToString() );
-                }
-
-                NavigateToParentPage( qryParams );
             }
-
         }
+
+        protected void mdSnoozeNeed_SaveClick( object sender, EventArgs e )
+        {
+            SnoozeNeed( dpSnoozeUntil.SelectedDate );
+        }
+
         protected void btnComplete_Click( object sender, EventArgs e )
         {
             RockContext rockContext = new RockContext();
@@ -1173,7 +1154,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             hlStatus.LabelType = LabelType.Custom;
             hlStatus.CustomClass = careNeed.Status.GetAttributeValue( "CssClass" );
 
-            if ( careNeed.CustomFollowUp && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
+            if ( careNeed.Status.Guid != rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() && careNeed.Status.Guid != rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED.AsGuid() )
             {
                 btnSnooze.Visible = btnSnoozeFtr.Visible = true;
             }
@@ -1414,6 +1395,74 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
             }
             return retVal;
+        }
+
+        private void SnoozeNeed( DateTime? selectedDateTime = null )
+        {
+            RockContext rockContext = new RockContext();
+            CareNeedService careNeedService = new CareNeedService( rockContext );
+
+            CareNeed careNeed = null;
+            int careNeedId = hfCareNeedId.ValueAsInt();
+
+            if ( !careNeedId.Equals( 0 ) )
+            {
+                careNeed = careNeedService.Get( careNeedId );
+            }
+
+            if ( careNeed != null )
+            {
+                var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
+                careNeed.StatusValueId = snoozeValueId;
+                careNeed.SnoozeDate = RockDateTime.Now;
+                if ( selectedDateTime != null )
+                {
+                    var dayDiff = ( selectedDateTime - RockDateTime.Now ).Value.TotalDays;
+                    careNeed.RenewPeriodDays = Math.Ceiling( dayDiff ).ToIntSafe();
+                    careNeed.RenewMaxCount = careNeed.RenewCurrentCount;
+                }
+
+                var snoozeChildNeeds = GetAttributeValue( AttributeKey.SnoozeChildNeeds ).AsBoolean();
+
+                if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
+                {
+                    foreach ( var childneed in careNeed.ChildNeeds )
+                    {
+                        childneed.StatusValueId = snoozeValueId;
+                        childneed.SnoozeDate = RockDateTime.Now;
+                        if ( selectedDateTime != null )
+                        {
+                            childneed.RenewPeriodDays = careNeed.RenewPeriodDays;
+                            childneed.RenewMaxCount = childneed.RenewCurrentCount;
+                        }
+                    }
+                }
+
+                rockContext.WrapTransaction( () =>
+                {
+                    rockContext.SaveChanges();
+                } );
+
+                createNote( rockContext, careNeedId, GetAttributeValue( AttributeKey.SnoozedButtonText ) );
+
+                if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
+                {
+                    foreach ( var childneed in careNeed.ChildNeeds )
+                    {
+                        createNote( rockContext, childneed.Id, $"Marked \"{GetAttributeValue( AttributeKey.SnoozedButtonText )}\" from Parent Need" );
+                    }
+                }
+
+                // redirect back to parent
+                var personId = this.PageParameter( "PersonId" ).AsIntegerOrNull();
+                var qryParams = new Dictionary<string, string>();
+                if ( personId.HasValue )
+                {
+                    qryParams.Add( "PersonId", personId.ToString() );
+                }
+
+                NavigateToParentPage( qryParams );
+            }
         }
 
         #endregion Methods

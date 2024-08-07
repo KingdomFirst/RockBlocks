@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright 2022 by Kingdom First Solutions
+// Copyright 2024 by Kingdom First Solutions
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,12 +29,15 @@ using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Drawing.Avatar;
 using Rock.Model;
 using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 using rocks.kfs.StepsToCare.Model;
+using ConnectionType = Rock.Model.ConnectionType;
+using TableCell = System.Web.UI.WebControls.TableCell;
 
 namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 {
@@ -113,6 +116,29 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultIntegerValue = 3,
         Order = 8,
         Key = AttributeKey.FutureThresholdDays )]
+
+    [TextField( "Touch Needed Tooltip Template",
+        Description = "Basic merge template for touch needed tooltip notes. <span class='tip tip-lava'></span>",
+        DefaultValue = "{% if TouchTemplate == 'Follow Up Worker' %}Touch Needed{% else %}{{TouchCount}} out of {{MinimumCareTouches}} in {{MinimumCareTouchHours}} hours.{% endif %}",
+        Order = 9,
+        Key = AttributeKey.TouchNeededTooltipTemplate )]
+
+    [CodeEditorField(
+        "Quick Note Status Template",
+        Description = "Lava Template that can be used to customize what is displayed in the make note dialog. Includes common merge fields, Care Need and Touch Templates loaded from Categories.",
+        EditorMode = CodeEditorMode.Lava,
+        EditorTheme = CodeEditorTheme.Rock,
+        DefaultValue = QuickNoteStatusTemplateDefaultValue,
+        Order = 10,
+        Key = AttributeKey.QuickNoteStatusTemplate )]
+
+    [BooleanField(
+        "Quick Note Auto Save",
+        Description = "Automatically save Quick Notes when clicked from the Care Dashboard. If 'no' the 'Make Note' dialog will popup to allow you to add an additional note before saving.",
+        IsRequired = false,
+        DefaultBooleanValue = true,
+        Order = 11,
+        Key = AttributeKey.QuickNoteAutoSave )]
 
     [BooleanField(
         "Enable Launch Workflow",
@@ -302,6 +328,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string SnoozeChildNeeds = "SnoozeChildNeeds";
             public const string CompleteActionText = "CompleteActionText";
             public const string MoveNeedToSnoozed = "MoveNeedToSnoozed";
+            public const string TouchNeededTooltipTemplate = "TouchNeededTooltipTemplate";
+            public const string QuickNoteStatusTemplate = "QuickNoteStatusTemplate";
+            public const string QuickNoteAutoSave = "QuickNoteAutoSave";
         }
 
         /// <summary>
@@ -370,6 +399,59 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 <br><span class=""badge rounded-0 p-2 mb-2 text-color"" style=""background-color: oldlace"">Assigned to You</span>
 </div>";
 
+        private const string QuickNoteStatusTemplateDefaultValue = @"<div class=""pull-right""><span class=""label mr-2"" style=""background-color: {{ CareNeed.Category | Attribute:'Color' }}"">{{ CareNeed.Category.Value }}</span><span class=""{{ CareNeed.Status | Attribute:'CssClass' }}"">{{ CareNeed.Status.Value }}</span></div>
+<h4 class=""mt-0"">{{ CareNeed.DateEntered }} - {{ CareNeed.PersonAlias.Person.FullName }}</h4>
+<p>{{ CareNeed.Details }}</p>
+
+{% assign currentNow = 'Now' | Date %}
+{% assign hourDifference = CareNeed.CreatedDateTime | DateDiff:currentNow,'h' %}
+{% if CareNeed.TouchCount < MinimumCareTouches and hourDifference >= MinimumCareTouchHours %}<span class=""label label-danger"">Not enough Care Touches ({{ MinimumCareTouches | Minus:CareNeed.TouchCount }} of {{ MinimumCareTouches }} in {{ MinimumCareTouchHours }} hours)</span>{% elseif CareNeed.TouchCount < MinimumCareTouches %}<span class=""label label-warning"">Minimum Care Touches ({{ MinimumCareTouches | Minus:CareNeed.TouchCount }} of {{ MinimumCareTouches }}) Needed</span>{% else %}<span class=""label label-success"">Minimum Care Touches ({{ CareNeed.TouchCount }} of {{ MinimumCareTouches }}) Met</span>{% endif %}
+{% assign followUpWorkers = CareNeed.AssignedPersons | Where:'FollowUpWorker',True %}
+{% assign followUpWorkerNotes = 0 %}
+{% for worker in followUpWorkers %}
+    {% assign followUpWorkerNotes = CareNeedNotes | Where:'CreatedByPersonAliasId',worker.PersonAliasId | Size %}
+    {% if followUpWorkerNotes > 0 %}{% break %}{% endif %}
+{% endfor %}
+{% if followUpWorkers != empty and hourDifference >= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% elseif hourDifference <= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-warning"">Follow Up Worker Touch Needed!</span>{% else %}<span class=""label label-success"">Follow Up Worker</span>{% endif %}
+{% for template in TouchTemplates %}
+    {% assign notesByText = CareNeedNotes | Where:'Text',template.NoteTemplate.Note %}
+    {% assign notesbyGuid = CareNeedNotes | Where:'ForeignGuid',template.NoteTemplate.Guid %}
+    {% for note in notesByText %}{% assign templateNotes = templateNotes | AddToArray:note %}{% endfor %}
+    {% for note in notesbyGuid %}{% assign templateNotes = templateNotes | AddToArray:note %}{% endfor %}
+    {% if templateNotes and templateNotes != empty %}{% assign templateNotes = templateNotes | Distinct:'Id' %}{% endif %}
+    {% assign labelStatus = ""label label-warning"" %}{% assign labelText = """" %}
+    {% assign templateNotesSize = templateNotes | Size %}
+    {% if template.Recurring %}{% assign templateNotes = templateNotes | OrderBy:'CreatedDateTime desc' %}
+            {% for templateNote in templateNotes %}
+                {% assign noteHours = templateNote.CreatedDateTime | DateDiff:currentNow,'h' %}
+                {% if noteHours <= template.MinimumCareTouchHours %}
+                    {% assign recurringTemplateNotes = recurringTemplateNotes | AddToArray:templateNote %}
+                {% endif %}
+            {% endfor %}
+            {% assign recurringTemplateNotesSize = recurringTemplateNotes | Size %}{% assign defaultCreatedDate = CareNeed.CreatedDateTime | AsString %}
+            {% assign noteHoursCompare = templateNotes[0].CreatedDateTime | Default:defaultCreatedDate | DateDiff:currentNow,'h' %}
+            {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} due by {{ templateNotes[0].CreatedDateTime | Default:defaultCreatedDate | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd'  }}{% endcapture %}
+            {% if recurringTemplateNotesSize < template.MinimumCareTouches and noteHoursCompare >= template.MinimumCareTouchHours %}
+                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }} overdue since {{ templateNotes[0].CreatedDateTime | Default:defaultCreatedDate | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd'  }}{% endcapture %}
+                {% assign labelStatus = ""label label-danger label-recurring"" %}
+            {% elseif recurringTemplateNotesSize >= template.MinimumCareTouches %}
+                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ recurringTemplateNotesSize }} of {{ template.MinimumCareTouches }}{% endcapture %}
+                 {% assign labelStatus = ""label label-success label-recurring"" %}
+            {% endif %}
+        {% else %}
+            {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:templateNotesSize }} of {{ template.MinimumCareTouches }} due by {{ CareNeed.CreatedDateTime | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd' }}{% endcapture %}
+            {% if templateNotesSize < template.MinimumCareTouches and hourDifference >= template.MinimumCareTouchHours %}
+                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ template.MinimumCareTouches | Minus:templateNotesSize }} of {{ template.MinimumCareTouches }} overdue since {{ CareNeed.CreatedDateTime | DateAdd:template.MinimumCareTouchHours,'h' | Date:'sd' }}{% endcapture %}
+                {% assign labelStatus = ""label label-danger"" %}
+            {% elseif templateNotesSize >= template.MinimumCareTouches %}
+                {% capture labelText %}{{ template.NoteTemplate.Note }}: {{ templateNotesSize }} of {{ template.MinimumCareTouches }}{% endcapture %}
+                {% assign labelStatus = ""label label-success"" %}
+            {% endif %}
+        {% endif %}
+        <span class=""{{ labelStatus }}"">{{ labelText }}</span>  
+{% endfor %}
+<p></p>";
+
         #endregion Attribute Default values
 
         #region Properties
@@ -418,6 +500,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         private List<NoteTypeCache> _careNeedNoteTypes = new List<NoteTypeCache>();
 
         public Dictionary<int, List<TouchTemplate>> _touchTemplates = new Dictionary<int, List<TouchTemplate>>();
+
+        private Dictionary<int, AvatarColors> _noteTemplateColors = new Dictionary<int, AvatarColors>();
 
         #endregion Private Members
 
@@ -540,6 +624,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
+            LoadTouchTemplates();
 
             if ( !Page.IsPostBack )
             {
@@ -551,11 +636,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             BindGrid();
             if ( !string.IsNullOrWhiteSpace( hfCareNeedId.Value ) )
             {
-                var careNeed = new CareNeedService( new RockContext() ).Get( hfCareNeedId.Value.AsInteger() );
-
-                if ( careNeed != null )
+                using ( var rockContext = new RockContext() )
                 {
-                    SetupNoteTimeline( careNeed );
+                    var careNeed = new CareNeedService( rockContext ).Get( hfCareNeedId.Value.AsInteger() );
+
+                    if ( careNeed != null )
+                    {
+                        SetupNoteTimeline( careNeed );
+                    }
                 }
             }
         }
@@ -956,7 +1044,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             {
                                 var careNeedNotes = new NoteService( rockContext )
                                     .GetByNoteTypeId( noteType.Id ).AsNoTracking()
-                                    .Where( n => n.EntityId == careNeed.Id && n.Caption != "Action" );
+                                    .Where( n => n.EntityId == careNeed.Id && !n.Caption.StartsWith( "Action" ) );
                                 careNeedNotesList = careNeedNotes.ToList();
 
                                 lCareTouches.Text = careNeedNotes.Count().ToString();
@@ -1030,7 +1118,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItem1.Controls.Add( lbCompleteNeed );
                         }
 
-                        if ( careNeed.CustomFollowUp && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) && ( careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() || careNeed.Status.Guid == rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_FOLLOWUP.AsGuid() ) )
+                        if ( careNeed.Status.Guid != rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() && careNeed.Status.Guid != rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED.AsGuid() )
                         {
                             var lbSnoozeNeed = new LinkButton();
                             lbSnoozeNeed.Command += lbNeedAction_Click;
@@ -1116,33 +1204,90 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     {
                         var dateDifference = RockDateTime.Now - careNeed.DateEntered.Value;
                         var careNeedFlag = ( dateDifference.TotalHours >= minimumCareTouchHours && careTouchCount < minimumCareTouches );
-                        var careNeedFollowUpWorkerTouch = ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
+                        var careNeedFollowUpWorkerTouch = assignedFollowUpWorkers.Any() && ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
                         var careNeedFlagStr = "";
+                        var careNeedFlagStrTooltip = "";
                         var childNeedStr = "";
                         var parentNeedStr = "";
+                        var touchTooltipTemplate = GetAttributeValue( AttributeKey.TouchNeededTooltipTemplate );
+                        var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                        mergeFields.Add( "CareNeed", careNeed );
+                        mergeFields.Add( "TouchTemplate", "" );
+                        mergeFields.Add( "TouchCount", careTouchCount );
+                        mergeFields.Add( "TouchCompareDate", careNeed.DateEntered.Value );
+                        mergeFields.Add( "MinimumCareTouches", minimumCareTouches );
+                        mergeFields.Add( "MinimumCareTouchHours", minimumCareTouchHours );
+
                         if ( careNeedFlag )
                         {
-                            careNeedFlagStr = "<i class=\"fas fa-flag text-danger mx-2\"  data-toggle=\"tooltip\" title=\"Not enough Care Touches\"></i>";
+                            mergeFields["TouchTemplate"] = "Not Enough";
+                            careNeedFlagStrTooltip += $@"
+                            <div class='assessment-tooltip-item'>
+                                <span style='color:#E15759;' class='assessment-caretouch'>
+                                    <span class='fa-stack'>
+                                        <i class='fa fa-circle fa-stack-2x'></i>
+                                        <i class='fa fa-handshake fa-stack-1x text-white'></i>
+                                    </span>
+                                </span>
+                                <span class='assessment-tooltip-value'>
+                                    <span class='assessment-name'>Not Enough Care Touches</span>
+                                    <span class='assessment-summary'>{touchTooltipTemplate.ResolveMergeFields( mergeFields )}</span>
+                                </span>
+                            </div>";
                         }
-                        else if ( hasTouchTemplates )
+                        if ( hasTouchTemplates )
                         {
                             var catTouchTemplates = _touchTemplates.GetValueOrDefault( careNeed.CategoryValueId.Value, new List<TouchTemplate>() );
                             foreach ( var template in catTouchTemplates )
                             {
-                                var templateNotes = careNeedNotesList.Where( n => n.Text.Equals( template.NoteTemplate.Note ) );
+                                var templateNotes = careNeedNotesList.Where( n => n.Text.Equals( template.NoteTemplate.Note ) || n.ForeignGuid.Equals( template.NoteTemplate.Guid ) );
                                 var templateNotesToCheckInHours = templateNotes.Where( n => ( RockDateTime.Now - n.CreatedDateTime ).Value.TotalHours <= template.MinimumCareTouchHours );
                                 var templateFlag = ( ( template.Recurring && templateNotesToCheckInHours.Count() < template.MinimumCareTouches ) || ( !template.Recurring && templateNotes.Count() < template.MinimumCareTouches ) ) && dateDifference.TotalHours >= template.MinimumCareTouchHours;
 
                                 if ( templateFlag )
                                 {
-                                    careNeedFlagStr = $"<i class=\"fas fa-flag text-warning mx-2\"  data-toggle=\"tooltip\" title=\"Not enough '{template.NoteTemplate.Note}' Care Touches!\"></i>";
+                                    mergeFields["TouchTemplate"] = template;
+                                    mergeFields["TouchCount"] = templateNotesToCheckInHours.Count();
+                                    mergeFields["TouchCompareDate"] = templateNotes.OrderByDescending( n => n.CreatedDateTime ).Select( n => n.CreatedDateTime ).FirstOrDefault();
+                                    mergeFields["MinimumCareTouches"] = template.MinimumCareTouches;
+                                    mergeFields["MinimumCareTouchHours"] = template.MinimumCareTouchHours;
+                                    var randomColor = GetNoteTemplateColor( template.NoteTemplate );
+                                    careNeedFlagStrTooltip += $@"
+                                <div class='assessment-tooltip-item'>
+                                    <span style='color:{randomColor.BackgroundColor};' class='assessment-caretouch'>
+                                        <span class='fa-stack'>
+                                            <i class='fa fa-circle fa-stack-2x'></i>
+                                            <i class='{template.NoteTemplate.Icon} fa-stack-1x' style='color:{randomColor.ForegroundColor};'></i>
+                                        </span>
+                                    </span>
+                                    <span class='assessment-tooltip-value'>
+                                        <span class='assessment-name'>{template.NoteTemplate.Note} Touches Needed</span>
+                                        <span class='assessment-summary'>{touchTooltipTemplate.ResolveMergeFields( mergeFields )}</span>
+                                    </span>
+                                </div>";
                                     continue;
                                 }
                             }
                         }
-                        else if ( careNeedFollowUpWorkerTouch )
+                        if ( careNeedFollowUpWorkerTouch )
                         {
-                            careNeedFlagStr = "<i class=\"fas fa-flag text-primary mx-2\"  data-toggle=\"tooltip\" title=\"Follow up worker Care Touch Needed!\"></i>";
+                            mergeFields["TouchTemplate"] = "Follow Up Worker";
+                            careNeedFlagStrTooltip += $@"<div class='assessment-tooltip-item'>
+                                <span style='color:#F28E2B;' class='assessment-caretouch'>
+                                    <span class='fa-stack'>
+                                        <i class='fa fa-circle fa-stack-2x'></i>
+                                        <i class='fa fa-user fa-stack-1x text-white'></i>
+                                    </span>
+                                </span>
+                                <span class='assessment-tooltip-value'>
+                                    <span class='assessment-name'>Follow Up Worker</span>
+                                    <span class='assessment-summary'>{touchTooltipTemplate.ResolveMergeFields( mergeFields )}</span>
+                                </span>
+                            </div>";
+                        }
+                        if ( careNeedFlagStrTooltip.IsNotNullOrWhiteSpace() )
+                        {
+                            careNeedFlagStr = $"<i class=\"fas fa-flag text-danger mx-2\" data-toggle=\"tooltip\" data-html=\"true\" data-original-title=\"{careNeedFlagStrTooltip.Replace( "\"", "&quot;" )}\"></i>";
                         }
                         if ( hasChildNeeds )
                         {
@@ -1409,9 +1554,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     mdConnectionRequest.Show();
                     break;
                 case "snooze":
-                    // do something with snooze here.
-                    SnoozeNeed( id );
-                    BindGrid();
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var careNeedService = new CareNeedService( rockContext );
+                        var careNeed = careNeedService.Get( id );
+                        if ( careNeed.CustomFollowUp && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) )
+                        {
+                            SnoozeNeed( id );
+                            BindGrid();
+                        }
+                        else
+                        {
+                            hfSnoozeNeed_CareNeedId.Value = id.ToString();
+                            mdSnoozeNeed.Show();
+                        }
+                    }
                     break;
                 default:
                     break;
@@ -1567,21 +1724,38 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 LinkButtonField field = sender as LinkButtonField;
                 var fieldId = field.ID.Replace( "btn_", "" );
-                var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
-                var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean();
+                var autoSaveQuickNote = GetAttributeValue( AttributeKey.QuickNoteAutoSave ).AsBoolean();
 
-                var noteCreated = createNote( rockContext, e.RowKeyId, noteTemplate.Note, true, noteTemplate, true );
-                if ( noteCreated )
+                if ( autoSaveQuickNote )
                 {
-                    if ( shouldSnoozeNeed )
+
+                    var noteTemplate = new NoteTemplateService( rockContext ).Get( fieldId.AsInteger() );
+                    var shouldSnoozeNeed = GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean();
+
+                    var noteCreated = createNote( rockContext, e.RowKeyId, noteTemplate.Note, true, noteTemplate, true );
+                    if ( noteCreated )
                     {
-                        var careNeed = new CareNeedService( rockContext ).Get( e.RowKeyId );
-                        if ( careNeed != null && careNeed.CustomFollowUp )
+                        if ( shouldSnoozeNeed )
                         {
-                            SnoozeNeed( e.RowKeyId );
+                            var careNeed = new CareNeedService( rockContext ).Get( e.RowKeyId );
+                            if ( careNeed != null && careNeed.CustomFollowUp )
+                            {
+                                SnoozeNeed( e.RowKeyId );
+                            }
                         }
+                        BindGrid();
                     }
-                    BindGrid();
+                }
+                else
+                {
+                    rrblQuickNotes.SelectedValue = fieldId;
+                    rtbNote.Text = "";
+                    pnlQuickNoteText.Visible = true;
+
+                    notesTimeline.AddAllowed = false;
+                    notesTimeline.AddAlwaysVisible = false;
+
+                    gMakeNote_Click( null, e );
                 }
             }
         }
@@ -1593,15 +1767,30 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="RowEventArgs"/> instance containing the event data.</param>
         protected void gMakeNote_Click( object sender, RowEventArgs e )
         {
-            var careNeed = new CareNeedService( new RockContext() ).Get( e.RowKeyId );
-            string messages = string.Empty;
-            hfCareNeedId.Value = careNeed.Id.ToString();
-
-            mdMakeNote.Show();
-
-            if ( careNeed != null )
+            using ( var rockContext = new RockContext() )
             {
-                SetupNoteTimeline( careNeed );
+                string messages = string.Empty;
+                hfCareNeedId.Value = e.RowKeyId.ToString();
+
+                if ( sender != null )
+                {
+                    rrblQuickNotes.SelectedValue = "-1";
+                    rtbNote.Text = "";
+                    pnlQuickNoteText.Visible = false;
+
+                    notesTimeline.AddAllowed = true;
+                    notesTimeline.AddAlwaysVisible = true;
+                }
+
+                mdMakeNote.Show();
+
+                SetupNoteDialog( e.RowKeyId, rockContext );
+
+                if ( pnlQuickNoteText.Visible )
+                {
+                    rtbNote.Focus();
+                }
+
             }
 
         }
@@ -1763,6 +1952,67 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 }
             }
 
+        }
+
+        protected void mdSnoozeNeed_SaveClick( object sender, EventArgs e )
+        {
+            SnoozeNeed( hfSnoozeNeed_CareNeedId.ValueAsInt(), dpSnoozeUntil.SelectedDate );
+            BindGrid();
+            mdSnoozeNeed.Hide();
+        }
+
+        protected void rrblQuickNotes_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            if ( rrblQuickNotes.SelectedValue == "-1" )
+            {
+                notesTimeline.AddAllowed = true;
+                notesTimeline.AddAlwaysVisible = true;
+                pnlQuickNoteText.Visible = false;
+            }
+            else
+            {
+                notesTimeline.AddAllowed = false;
+                notesTimeline.AddAlwaysVisible = false;
+
+                pnlQuickNoteText.Visible = true;
+                rtbNote.Focus();
+            }
+        }
+
+        protected void rbBtnQuickNoteSave_Click( object sender, EventArgs e )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                var noteTemplate = new NoteTemplateService( rockContext ).Get( rrblQuickNotes.SelectedValueAsInt() ?? 0 );
+                var closeDialogOnSave = GetAttributeValue( AttributeKey.CloseDialogOnSave ).AsBoolean();
+                var careNeedId = hfCareNeedId.ValueAsInt();
+
+                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note}{( rtbNote.Text.IsNotNullOrWhiteSpace() ? ":" : "" )} {rtbNote.Text}", closeDialogOnSave, noteTemplate, true );
+                if ( noteCreated )
+                {
+                    if ( GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean() )
+                    {
+                        var careNeed = new CareNeedService( rockContext ).Get( hfCareNeedId.ValueAsInt() );
+                        if ( careNeed != null && careNeed.CustomFollowUp )
+                        {
+                            SnoozeNeed( hfCareNeedId.ValueAsInt() );
+                        }
+                    }
+
+                    rtbNote.Text = "";
+                    if ( closeDialogOnSave )
+                    {
+                        hfCareNeedId.Value = "";
+                        rrblQuickNotes.SelectedValue = "-1";
+                        mdMakeNote.Hide();
+                    }
+                    else
+                    {
+                        SetupNoteDialog( careNeedId, rockContext );
+                    }
+                    BindGrid();
+                }
+            }
         }
 
         #endregion Events
@@ -1977,6 +2227,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     var noteTemplates = new NoteTemplateService( rockContext ).Queryable().AsNoTracking().Where( nt => nt.IsActive ).OrderBy( nt => nt.Order );
                     var firstCol = true;
+                    rrblQuickNotes.Items.Clear();
                     foreach ( var template in noteTemplates )
                     {
                         var btnId = string.Format( "btn_{0}", template.Id );
@@ -1998,8 +2249,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             btnNoteTemplate.CssClass = "btn btn-info btn-sm";
                             gList.Columns.Add( btnNoteTemplate );
                             gFollowUp.Columns.Add( btnNoteTemplate );
+
+                            rrblQuickNotes.Items.Add( new ListItem( $"<i class='{template.Icon}'></i> {template.Note}", template.Id.ToString() ) );
                         }
                     }
+                    rrblQuickNotes.Items.Add( new ListItem( "<i class='fa fa-question'></i> Other", "-1" ) );
+                    rrblQuickNotes.SelectedValue = "-1";
 
                     var makeNoteField = new LinkButtonField();
                     makeNoteField.HeaderText = "Make Note";
@@ -2048,44 +2303,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             CareNeedService careNeedService = new CareNeedService( rockContext );
             NoteService noteService = new NoteService( rockContext );
 
-            if ( _touchTemplates.Count < 1 )
-            {
-                var categoryDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) );
-                foreach ( var needCategory in categoryDefinedType.DefinedValues )
-                {
-                    var matrixGuid = needCategory.GetAttributeValue( "CareTouchTemplates" ).AsGuid();
-                    var touchTemplates = new List<TouchTemplate>();
-                    if ( matrixGuid != Guid.Empty )
-                    {
-                        var matrix = new AttributeMatrixService( rockContext ).Get( matrixGuid );
-                        if ( matrix != null )
-                        {
-                            foreach ( var matrixItem in matrix.AttributeMatrixItems )
-                            {
-                                matrixItem.LoadAttributes();
-
-                                var noteTemplateGuid = matrixItem.GetAttributeValue( "NoteTemplate" ).AsGuid();
-                                var noteTemplate = new NoteTemplateService( rockContext ).Get( noteTemplateGuid );
-
-                                if ( noteTemplate != null )
-                                {
-                                    var touchTemplate = new TouchTemplate();
-                                    touchTemplate.NoteTemplate = noteTemplate;
-                                    touchTemplate.MinimumCareTouches = matrixItem.GetAttributeValue( "MinimumCareTouches" ).AsInteger();
-                                    touchTemplate.MinimumCareTouchHours = matrixItem.GetAttributeValue( "MinimumCareTouchHours" ).AsInteger();
-                                    touchTemplate.NotifyAll = matrixItem.GetAttributeValue( "NotifyAllAssigned" ).AsBoolean();
-                                    touchTemplate.Recurring = matrixItem.GetAttributeValue( "Recurring" ).AsBoolean();
-                                    touchTemplate.Order = matrixItem.Order;
-
-                                    touchTemplates.Add( touchTemplate );
-                                }
-                            }
-                            _touchTemplates.AddOrIgnore( needCategory.Id, touchTemplates );
-                        }
-                    }
-                }
-            }
-
             var qry = careNeedService.Queryable( "PersonAlias,PersonAlias.Person,SubmitterPersonAlias,SubmitterPersonAlias.Person" ).AsNoTracking();
 
             // Status is hidden at the top in TargetPerson mode, no need to run queries.
@@ -2099,7 +2316,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var currentDateTime = RockDateTime.Now;
                 var last7Days = currentDateTime.AddDays( -7 );
-                var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime && n.Caption != "Action" );
+                var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime && !n.Caption.StartsWith( "Action" ) );
 
                 lTouchesCount.Text = careTouches.ToString();
                 lCareNeedsCount.Text = outstandingCareNeeds.ToString();
@@ -2110,6 +2327,50 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             BindMainGrid( rockContext, careNeedService, qry );
             BindFollowUpGrid( rockContext, careNeedService, qry );
+        }
+
+        private void LoadTouchTemplates()
+        {
+            using ( RockContext rockContext = new RockContext() )
+            {
+                if ( _touchTemplates.Count < 1 )
+                {
+                    var categoryDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) );
+                    foreach ( var needCategory in categoryDefinedType.DefinedValues )
+                    {
+                        var matrixGuid = needCategory.GetAttributeValue( "CareTouchTemplates" ).AsGuid();
+                        var touchTemplates = new List<TouchTemplate>();
+                        if ( matrixGuid != Guid.Empty )
+                        {
+                            var matrix = new AttributeMatrixService( rockContext ).Get( matrixGuid );
+                            if ( matrix != null )
+                            {
+                                foreach ( var matrixItem in matrix.AttributeMatrixItems )
+                                {
+                                    matrixItem.LoadAttributes();
+
+                                    var noteTemplateGuid = matrixItem.GetAttributeValue( "NoteTemplate" ).AsGuid();
+                                    var noteTemplate = new NoteTemplateService( rockContext ).Get( noteTemplateGuid );
+
+                                    if ( noteTemplate != null )
+                                    {
+                                        var touchTemplate = new TouchTemplate();
+                                        touchTemplate.NoteTemplate = noteTemplate;
+                                        touchTemplate.MinimumCareTouches = matrixItem.GetAttributeValue( "MinimumCareTouches" ).AsInteger();
+                                        touchTemplate.MinimumCareTouchHours = matrixItem.GetAttributeValue( "MinimumCareTouchHours" ).AsInteger();
+                                        touchTemplate.NotifyAll = matrixItem.GetAttributeValue( "NotifyAllAssigned" ).AsBoolean();
+                                        touchTemplate.Recurring = matrixItem.GetAttributeValue( "Recurring" ).AsBoolean();
+                                        touchTemplate.Order = matrixItem.Order;
+
+                                        touchTemplates.Add( touchTemplate );
+                                    }
+                                }
+                                _touchTemplates.AddOrReplace( needCategory.Id, touchTemplates );
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void BindMainGrid( RockContext rockContext, CareNeedService careNeedService, IQueryable<CareNeed> qry )
@@ -2519,7 +2780,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     EditedByPersonAliasId = CurrentPersonAliasId,
                     EditedDateTime = RockDateTime.Now,
                     NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl(),
-                    Caption = !countsForTouch ? "Action" : string.Empty
+                    Caption = !countsForTouch ? $"Action - {CurrentPerson.FullName}" : string.Empty
                 };
                 if ( noteType.RequiresApprovals )
                 {
@@ -2541,6 +2802,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 if ( noteTemplate != null )
                 {
                     note.CopyAttributesFrom( noteTemplate );
+
+                    if ( countsForTouch )
+                    {
+                        note.ForeignGuid = noteTemplate.Guid;
+                    }
                 }
 
                 if ( note.IsValid )
@@ -2683,12 +2949,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             mdConfirmNote.Show();
                         }
                     }
+                    else if ( quickNoteId.Value == -1 && careNeed != null )
+                    {
+                        gMakeNote_Click( null, new RowEventArgs( 0, careNeed.Id ) );
+                    }
                 }
 
             }
         }
 
-        private void SnoozeNeed( int id )
+        private void SnoozeNeed( int id, DateTime? selectedDateTime = null )
         {
             using ( var rockContext = new RockContext() )
             {
@@ -2696,18 +2966,30 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var careNeedService = new CareNeedService( rockContext );
                 var careNeed = careNeedService.Get( id );
                 var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED ).Id;
-                if ( careNeed.StatusValueId != snoozeValueId && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value ) )
+                if ( careNeed.StatusValueId != snoozeValueId && ( !careNeed.RenewMaxCount.HasValue || careNeed.RenewCurrentCount <= careNeed.RenewMaxCount.Value || selectedDateTime != null ) )
                 {
                     careNeed.StatusValueId = snoozeValueId;
                     careNeed.SnoozeDate = RockDateTime.Now;
+                    if ( selectedDateTime != null )
+                    {
+                        var dayDiff = ( selectedDateTime - RockDateTime.Now ).Value.TotalDays;
+                        careNeed.RenewPeriodDays = Math.Ceiling( dayDiff ).ToIntSafe();
+                        careNeed.RenewMaxCount = careNeed.RenewCurrentCount;
+                    }
 
                     if ( snoozeChildNeeds && careNeed.ChildNeeds.Any() )
                     {
                         foreach ( var childneed in careNeed.ChildNeeds )
                         {
                             childneed.StatusValueId = snoozeValueId;
-                            childneed.SnoozeDate = RockDateTime.Now;
+                            childneed.SnoozeDate = careNeed.SnoozeDate;
+                            if ( selectedDateTime != null )
+                            {
+                                childneed.RenewPeriodDays = careNeed.RenewPeriodDays;
+                                childneed.RenewMaxCount = childneed.RenewCurrentCount;
+                            }
                         }
+
                     }
                     rockContext.SaveChanges();
 
@@ -2722,6 +3004,49 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
                 }
             }
+        }
+
+        private void SetupNoteDialog( int careNeedId, RockContext rockContext )
+        {
+            var careNeed = new CareNeedService( rockContext ).Get( careNeedId );
+
+            if ( careNeed != null )
+            {
+                var careNeedNotesList = new NoteService( rockContext )
+                    .GetByNoteTypeId( _careNeedNoteTypes.Any() ? _careNeedNoteTypes.FirstOrDefault().Id : 0 )
+                    .AsNoTracking()
+                    .Where( n => n.EntityId == careNeed.Id )
+                    .ToList();
+                var catTouchTemplates = _touchTemplates.GetValueOrDefault( careNeed.CategoryValueId.Value, new List<TouchTemplate>() );
+
+                var lavaTemplate = GetAttributeValue( AttributeKey.QuickNoteStatusTemplate );
+
+                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                mergeFields.Add( "CareNeed", careNeed );
+                mergeFields.Add( "TouchTemplates", catTouchTemplates );
+                mergeFields.Add( "CareNeedNotes", careNeedNotesList.Where( n => n.Caption == null || ( n.Caption != null && !n.Caption.StartsWith( "Action" ) ) ) );
+                mergeFields.Add( "CareNeedNotesWithActions", careNeedNotesList );
+                mergeFields.Add( "MinimumCareTouches", GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger() );
+                mergeFields.Add( "MinimumCareTouchHours", GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger() );
+                lQuickNoteStatus.Text = lavaTemplate.ResolveMergeFields( mergeFields );
+
+                SetupNoteTimeline( careNeed );
+            }
+        }
+
+        private AvatarColors GetNoteTemplateColor( NoteTemplate noteTemplate )
+        {
+            var randomColor = new AvatarColors();
+            if ( _noteTemplateColors.ContainsKey( noteTemplate.Id ) )
+            {
+                randomColor = _noteTemplateColors[noteTemplate.Id];
+            }
+            else
+            {
+                randomColor.GenerateMissingColors();
+                _noteTemplateColors.AddOrReplace( noteTemplate.Id, randomColor );
+            }
+            return randomColor;
         }
 
         #endregion Methods

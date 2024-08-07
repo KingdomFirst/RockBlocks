@@ -78,10 +78,51 @@
     .grid-select-cell.photo-icon-cell {
         padding-bottom: 8px;
     }
+
     .modal.container.kfs-modal-confirm {
         width: 584px;
         margin-left: -242px;
     }
+
+    .modal.container.kfs-modal-snooze {
+        width: 300px;
+        margin-left: -150px;
+    }
+
+    .kfs-radiobuttons-btn .radio-inline {
+        padding: 0;
+        margin-left: 0
+    }
+
+        .kfs-radiobuttons-btn .radio-inline .label-text {
+            display: inline-block;
+            margin-bottom: 0;
+            font-weight: 500;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            touch-action: manipulation;
+            cursor: pointer;
+            background-image: none;
+            border: 1px solid transparent;
+            padding: 6px 16px;
+            font-size: 16px;
+            line-height: 1.5;
+            border-radius: 6px;
+            color: #fff;
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05)
+        }
+
+        .kfs-radiobuttons-btn .radio-inline input:checked ~ .label-text {
+            opacity: .8;
+        }
+
+        .kfs-radiobuttons-btn .radio-inline input[type='radio'], .kfs-radiobuttons-btn .radio-inline .label-text::before, .kfs-radiobuttons-btn .radio-inline .label-text::after {
+            display: none;
+            margin: 0
+        }
 </style>
 <asp:UpdatePanel runat="server" ID="upnlCareDashboard" UpdateMode="Always">
     <ContentTemplate>
@@ -260,7 +301,7 @@
                             }
                         }, 100);
                     } );
-                    $( '.js-person-popover-simple' ).popover( {
+                    $('.js-person-popover-simple').popover( {
                         placement: 'right',
                         trigger: 'manual',
                         sanitize: false,
@@ -295,6 +336,7 @@
                             }
                         }, 100);
                     });
+                    $('.fa-flag[data-toggle="tooltip"]').tooltip({html: true, sanitize: false});
                 }
                 Sys.Application.add_load(initDashboard);
 
@@ -307,9 +349,19 @@
         <Rock:ModalDialog ID="mdMakeNote" runat="server" Title="Add Note" ValidationGroup="MakeNote" ClickBackdropToClose="true" Content-CssClass="modal-kfsmakenote">
             <Content>
                 <asp:HiddenField ID="hfCareNeedId" runat="server" />
+                <asp:Literal ID="lQuickNoteStatus" runat="server" />
 
                 <asp:ValidationSummary ID="vsMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="MakeNote" />
-
+                <asp:Panel ID="pnlQuickNote" runat="server" CssClass="note-editor note-editor-standard ">
+                    <asp:ValidationSummary ID="vsQuickNoteMakeNote" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="QuickNoteMakeNote" />
+                    <Rock:RockRadioButtonList ID="rrblQuickNotes" runat="server" Label="Quick Notes" CssClass="kfs-radiobuttons-btn" ValidationGroup="QuickNoteMakeNote" Required="true" RepeatDirection="Horizontal" OnSelectedIndexChanged="rrblQuickNotes_SelectedIndexChanged" AutoPostBack="true"></Rock:RockRadioButtonList>
+                    <asp:Panel ID="pnlQuickNoteText" runat="server" CssClass="noteentry-control meta-body" Visible="false">
+                        <Rock:RockTextBox ID="rtbNote" runat="server" Placeholder="Write an additional note..." Rows="3" TextMode="MultiLine" ValidationGroup="QuickNoteMakeNote"></Rock:RockTextBox>
+                        <div class="settings clearfix">
+                            <Rock:BootstrapButton ID="rbBtnQuickNoteSave" runat="server" DataLoadingText="Saving..." Text="Save Note" CssClass="commands btn btn-primary btn-xs" OnClick="rbBtnQuickNoteSave_Click" ValidationGroup="QuickNoteMakeNote"></Rock:BootstrapButton>
+                        </div>
+                    </asp:Panel>
+                </asp:Panel>
                 <Rock:NoteContainer ID="notesTimeline" runat="server" ShowHeading="false"></Rock:NoteContainer>
             </Content>
         </Rock:ModalDialog>
@@ -349,6 +401,13 @@
                 <asp:HiddenField ID="hfQuickNote_NoteId" runat="server" />
                 <p>Are you sure you wish to add the Note "<asp:Literal ID="lQuickNote" runat="server" />" to Care Need (<asp:Literal ID="lCareNeedId" runat="server" />)?</p>
                 <Rock:NotificationBox ID="nbQuickNoteConfirm" runat="server" NotificationBoxType="Warning" Visible="false"></Rock:NotificationBox>
+            </Content>
+        </Rock:ModalDialog>
+        <Rock:ModalDialog ID="mdSnoozeNeed" runat="server" Title="Snooze Need" ValidationGroup="SnoozeNeed" ModalCssClass="kfs-modal-snooze" OnSaveClick="mdSnoozeNeed_SaveClick" CloseLinkVisible="true" SaveButtonText="Snooze" SaveButtonCausesValidation="true" Content-CssClass="modal-kfsnotification">
+            <Content>
+                <asp:ValidationSummary ID="vsSnoozeNeed" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" ValidationGroup="SnoozeNeed" />
+                <asp:HiddenField ID="hfSnoozeNeed_CareNeedId" runat="server" />
+                <Rock:DatePicker ID="dpSnoozeUntil" runat="server" Label="Snooze Until" ValidationGroup="SnoozeNeed" Required="true" AllowPastDateSelection="false" CssClass="w-100" />
             </Content>
         </Rock:ModalDialog>
     </ContentTemplate>
