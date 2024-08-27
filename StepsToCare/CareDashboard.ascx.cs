@@ -413,13 +413,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
     {% if followUpWorkerNotes > 0 %}{% break %}{% endif %}
 {% endfor %}
 {% if followUpWorkers != empty and hourDifference >= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% elseif hourDifference <= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-warning"">Follow Up Worker Touch Needed!</span>{% else %}<span class=""label label-success"">Follow Up Worker</span>{% endif %}
-{% for template in TouchTemplates %}
+{% for template in TouchTemplates %}{% assign templateNotes = '' %}
     {% assign notesByText = CareNeedNotes | Where:'Text',template.NoteTemplate.Note %}
     {% assign notesbyGuid = CareNeedNotes | Where:'ForeignGuid',template.NoteTemplate.Guid %}
     {% for note in notesByText %}{% assign templateNotes = templateNotes | AddToArray:note %}{% endfor %}
     {% for note in notesbyGuid %}{% assign templateNotes = templateNotes | AddToArray:note %}{% endfor %}
     {% if templateNotes and templateNotes != empty %}{% assign templateNotes = templateNotes | Distinct:'Id' %}{% endif %}
-    {% assign labelStatus = ""label label-warning"" %}{% assign labelText = """" %}
+    {% assign labelStatus = ""label label-warning"" %}{% assign labelText = """" %}{% assign recurringTemplateNotes = '' %}
     {% assign templateNotesSize = templateNotes | Size %}
     {% if template.Recurring %}{% assign templateNotes = templateNotes | OrderBy:'CreatedDateTime desc' %}
             {% for templateNote in templateNotes %}
@@ -1247,7 +1247,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 if ( templateFlag )
                                 {
                                     mergeFields["TouchTemplate"] = template;
-                                    mergeFields["TouchCount"] = templateNotesToCheckInHours.Count();
+                                    mergeFields["TouchCount"] = ( template.Recurring ) ? templateNotesToCheckInHours.Count() : templateNotes.Count();
                                     mergeFields["TouchCompareDate"] = templateNotes.OrderByDescending( n => n.CreatedDateTime ).Select( n => n.CreatedDateTime ).FirstOrDefault();
                                     mergeFields["MinimumCareTouches"] = template.MinimumCareTouches;
                                     mergeFields["MinimumCareTouchHours"] = template.MinimumCareTouchHours;
