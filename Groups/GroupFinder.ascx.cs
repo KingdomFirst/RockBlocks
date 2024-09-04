@@ -35,7 +35,7 @@
 // * Added Auto Load Filter capability on value selection
 // * Added ability to sort how filters are displayed
 // * Added ability to load Group/Sign Up Opportunities into finder
-// Package Version 1.8.0
+// Package Version 1.8.1
 // </notice>
 //
 using System;
@@ -2458,7 +2458,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         }
                         else
                         {
-                            distances.AddOrIgnore( group.Id, -1 );
+                            distances.AddOrIgnore( group.Id, 9999 );
                         }
                     }
                 }
