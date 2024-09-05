@@ -2431,8 +2431,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var groupLocations = new List<GroupLocation>();
                 foreach ( var group in groups )
                 {
-                    foreach ( var groupLocation in group.GroupLocations //.Where( gl => gl.Location.GeoPoint != null )
-                                                                       )
+                    foreach ( var groupLocation in group.GroupLocations )
                     {
                         groupLocations.Add( groupLocation );
 
@@ -2874,11 +2873,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 if ( attributeValList != null && attributeValList.Any() && ( ( attributeValList.Count >= 2 && !string.IsNullOrWhiteSpace( attributeValList[1] ) ) || !string.IsNullOrWhiteSpace( attributeValList[0] ) ) )
                 {
                     var attributeVal = ( attributeValList.Count >= 2 ) ? attributeValList[1] : attributeValList[0];
-                    foreach ( var group in opportunities )
+                    foreach ( var opportunity in opportunities )
                     {
-                        if ( group.Group.Attributes == null )
+                        if ( opportunity.Group.Attributes == null )
                         {
-                            group.Group.LoadAttributes( rockContext );
+                            opportunity.Group.LoadAttributes( rockContext );
                         }
                     }
 
