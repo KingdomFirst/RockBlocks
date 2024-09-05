@@ -274,7 +274,7 @@
                                         </Rock:RockDropDownList>
                                     </div>
                                     <div class="col-md-6">
-                                        <Rock:RockDropDownList ID="ddlMaxZoomLevel" Label="Maxium Zoom Level" runat="server" ValidationGroup="GroupFinderSettings" Help="Determines the maximum zoom level that the map will allow.">
+                                        <Rock:RockDropDownList ID="ddlMaxZoomLevel" Label="Maximum Zoom Level" runat="server" ValidationGroup="GroupFinderSettings" Help="Determines the maximum zoom level that the map will allow.">
                                             <asp:ListItem Text="" Value="" />
                                             <asp:ListItem Text="0" Value="0" />
                                             <asp:ListItem Text="1 - World" Value="1" />

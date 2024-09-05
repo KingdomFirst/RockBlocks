@@ -35,7 +35,7 @@
 // * Added Auto Load Filter capability on value selection
 // * Added ability to sort how filters are displayed
 // * Added ability to load Group/Sign Up Opportunities into finder
-// Package Version 1.8.0
+// Package Version 1.8.1
 // </notice>
 //
 using System;
@@ -2431,12 +2431,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var groupLocations = new List<GroupLocation>();
                 foreach ( var group in groups )
                 {
-                    foreach ( var groupLocation in group.GroupLocations
-                        .Where( gl => gl.Location.GeoPoint != null ) )
+                    foreach ( var groupLocation in group.GroupLocations )
                     {
                         groupLocations.Add( groupLocation );
 
-                        if ( showProximity && ( ( personLocation != null && personLocation.GeoPoint != null ) || ( mapCoordinate != null ) ) )
+                        if ( groupLocation.Location.GeoPoint != null && showProximity && ( ( personLocation != null && personLocation.GeoPoint != null ) || ( mapCoordinate != null ) ) )
                         {
                             string geoText = string.Format( "POINT({0} {1})", mapCoordinate.Longitude, mapCoordinate.Latitude );
                             DbGeography geoPoint = DbGeography.FromText( geoText );
@@ -2455,6 +2454,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             {
                                 distances.Add( group.Id, miles );
                             }
+                        }
+                        else
+                        {
+                            distances.AddOrIgnore( group.Id, 9999 );
                         }
                     }
                 }
@@ -2762,7 +2765,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             ParticipantCount = participantCount,
                             GeoPoint = gls.Location.GeoPoint
                         };
-                    } ).Where( o => o.NextStartDateTime.HasValue );
+                    } ).Where( o => o.NextStartDateTime.HasValue ).ToList();
+
+                    opportunities = sortGroupOpportunities( rockContext, opportunities, distances, attributeValList, attributeValKey, showProximity );
 
                     mergeFields.Add( "GroupOpportunities", opportunities );
                 }
@@ -2853,6 +2858,96 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             // Show the results
             pnlResults.Visible = true;
+        }
+
+        private List<Opportunity> sortGroupOpportunities( RockContext rockContext, List<Opportunity> opportunities, Dictionary<int, double> distances, List<string> attributeValList, string attributeValKey, bool showProximity )
+        {
+            if ( showProximity && GetAttributeValue( AttributeKey.SortByDistance ).AsBoolean() )
+            {
+                if ( distances.Count > 0 )
+                {
+                    // only show groups with a known location, and sort those by distance
+                    opportunities = opportunities.Where( a => distances.Select( b => b.Key ).Contains( a.Group.Id ) ).ToList();
+                }
+
+                if ( attributeValList != null && attributeValList.Any() && ( ( attributeValList.Count >= 2 && !string.IsNullOrWhiteSpace( attributeValList[1] ) ) || !string.IsNullOrWhiteSpace( attributeValList[0] ) ) )
+                {
+                    var attributeVal = ( attributeValList.Count >= 2 ) ? attributeValList[1] : attributeValList[0];
+                    foreach ( var opportunity in opportunities )
+                    {
+                        if ( opportunity.Group.Attributes == null )
+                        {
+                            opportunity.Group.LoadAttributes( rockContext );
+                        }
+                    }
+
+                    opportunities.Sort( ( item1, item2 ) =>
+                    {
+                        var parseAttributeVal = attributeVal.Split( ',' );
+                        var item1AttributeValues = item1.Group.AttributeValues.Where( a => a.Key == attributeValKey ).FirstOrDefault().Value.Value.Split( ',' );
+                        var compareIntersect1 = parseAttributeVal.Intersect( item1AttributeValues ).ToList();
+                        var item2AttributeValues = item2.Group.AttributeValues.Where( a => a.Key == attributeValKey ).FirstOrDefault().Value.Value.Split( ',' );
+                        var compareIntersect2 = parseAttributeVal.Intersect( item2AttributeValues ).ToList();
+
+                        if ( compareIntersect1.Count == compareIntersect2.Count )
+                        {
+                            if ( distances[item1.Group.Id] == distances[item2.Group.Id] )
+                            {
+                                return ( item1.Group.Name as IComparable ).CompareTo( item2.Group.Name as IComparable );
+                            }
+                            else
+                            {
+                                return ( distances[item1.Group.Id] as IComparable ).CompareTo( distances[item2.Group.Id] as IComparable );
+                            }
+                        }
+                        else
+                        {
+                            return ( compareIntersect2.Count as IComparable ).CompareTo( compareIntersect1.Count as IComparable );
+                        }
+                    } );
+                }
+                else if ( distances.Count > 0 )
+                {
+                    opportunities = opportunities.OrderBy( o => distances[o.Group.Id] ).ThenBy( o => o.NextStartDateTime ).ToList();
+                }
+            }
+            else
+            {
+                if ( attributeValList != null && attributeValList.Any() && ( ( attributeValList.Count >= 2 && !string.IsNullOrWhiteSpace( attributeValList[1] ) ) || !string.IsNullOrWhiteSpace( attributeValList[0] ) ) )
+                {
+                    var attributeVal = ( attributeValList.Count >= 2 ) ? attributeValList[1] : attributeValList[0];
+                    foreach ( var opportunity in opportunities )
+                    {
+                        if ( opportunity.Group.Attributes == null )
+                        {
+                            opportunity.Group.LoadAttributes( rockContext );
+                        }
+                    }
+
+                    opportunities.Sort( ( item1, item2 ) =>
+                    {
+                        var parseAttributeVal = attributeVal.Split( ',' );
+                        var item1AttributeValues = item1.Group.AttributeValues.Where( a => a.Key == attributeValKey ).FirstOrDefault().Value.Value.Split( ',' );
+                        var compareIntersect1 = parseAttributeVal.Intersect( item1AttributeValues ).ToList();
+                        var item2AttributeValues = item2.Group.AttributeValues.Where( a => a.Key == attributeValKey ).FirstOrDefault().Value.Value.Split( ',' );
+                        var compareIntersect2 = parseAttributeVal.Intersect( item2AttributeValues ).ToList();
+
+                        if ( compareIntersect1.Count == compareIntersect2.Count )
+                        {
+                            return ( item1.Group.Name as IComparable ).CompareTo( item2.Group.Name as IComparable );
+                        }
+                        else
+                        {
+                            return ( compareIntersect2.Count as IComparable ).CompareTo( compareIntersect1.Count as IComparable );
+                        }
+                    } );
+                }
+                else
+                {
+                    opportunities = opportunities.OrderBy( o => o.NextStartDateTime ).ToList();
+                }
+            }
+            return opportunities;
         }
 
         /// <summary>
