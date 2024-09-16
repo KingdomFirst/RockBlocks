@@ -2646,27 +2646,30 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                 mapItem.Color = markerColor;
                             }
 
-                            var locationPrecisionLevel = GetAttributeValue( AttributeKey.LocationPrecisionLevel );
-                            switch ( locationPrecisionLevel.ToLower() )
+                            if ( mapItem.Point != null )
                             {
-                                case "narrow":
-                                    mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.###5" ) ) : ( double? ) null;
-                                    mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.###5" ) ) : ( double? ) null;
-                                    break;
+                                var locationPrecisionLevel = GetAttributeValue( AttributeKey.LocationPrecisionLevel );
+                                switch ( locationPrecisionLevel.ToLower() )
+                                {
+                                    case "narrow":
+                                        mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.###5" ) ) : ( double? ) null;
+                                        mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.###5" ) ) : ( double? ) null;
+                                        break;
 
-                                case "close":
-                                    mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.###" ) ) : ( double? ) null;
-                                    mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.###" ) ) : ( double? ) null;
-                                    break;
+                                    case "close":
+                                        mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.###" ) ) : ( double? ) null;
+                                        mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.###" ) ) : ( double? ) null;
+                                        break;
 
-                                case "wide":
-                                    mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.##" ) ) : ( double? ) null;
-                                    mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.##" ) ) : ( double? ) null;
-                                    break;
+                                    case "wide":
+                                        mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.##" ) ) : ( double? ) null;
+                                        mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.##" ) ) : ( double? ) null;
+                                        break;
+                                }
+
+                                mapItem.InfoWindow = HttpUtility.HtmlEncode( infoWindow.Replace( Environment.NewLine, string.Empty ).Replace( "\n", string.Empty ).Replace( "\t", string.Empty ) );
+                                groupMapItems.Add( mapItem );
                             }
-
-                            mapItem.InfoWindow = HttpUtility.HtmlEncode( infoWindow.Replace( Environment.NewLine, string.Empty ).Replace( "\n", string.Empty ).Replace( "\t", string.Empty ) );
-                            groupMapItems.Add( mapItem );
                         }
                     }
 
