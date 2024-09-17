@@ -296,7 +296,7 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Contro
               }
             }
           }
-          function initCyberSourceMicroFormFields() {
+          function initCybersourceMicroFormFields() {
             var _FlexJS5, _FlexJS6, _FlexJS9, _FlexJS9$number, _FlexJS10, _FlexJS10$securityCod, _FlexJS11, _FlexJS11$number, _FlexJS12, _FlexJS12$number, _FlexJS13, _FlexJS13$number;
             if (((_FlexJS5 = FlexJS) === null || _FlexJS5 === void 0 ? void 0 : _FlexJS5.number) == undefined && ((_FlexJS6 = FlexJS) === null || _FlexJS6 === void 0 ? void 0 : _FlexJS6.securityCode) == undefined) {
               var _FlexJS7, _FlexJS7$microform, _FlexJS8, _FlexJS8$microform;
@@ -328,7 +328,7 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Contro
             });
             checkCybersourceFieldsLoaded(false);
           }
-          function submitCyberSourceMicroFormInfo() {
+          function submitCybersourceMicroFormInfo() {
             var _FlexJS15, _FlexJS15$microform;
             var options = {
               expirationMonth: ('00' + ccexpvalue.month).slice(-2),
@@ -367,7 +367,7 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Contro
             }
             tokenResponseSent.value = false;
             setTimeout(() => {
-              submitCyberSourceMicroFormInfo();
+              submitCybersourceMicroFormInfo();
             }, 0);
           });
           onMounted(_asyncToGenerator(function* () {
@@ -397,7 +397,7 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Contro
                 number: undefined,
                 securityCode: undefined
               };
-              initCyberSourceMicroFormFields();
+              initCybersourceMicroFormFields();
             } catch (_unused) {
               failedToLoad.value = true;
               emit(GatewayEmitStrings.Error, "Error configuring hosted gateway. This could be due to an invalid or missing API Key. Please verify that API Key is configured correctly in gateway settings.");
