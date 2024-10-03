@@ -2770,6 +2770,33 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         };
                     } ).Where( o => o.NextStartDateTime.HasValue ).ToList();
 
+                    if ( dowsFilterControl != null )
+                    {
+                        var dows = new List<DayOfWeek>();
+                        dowsFilterControl.SelectedValuesAsInt.ForEach( i => dows.Add( ( DayOfWeek ) i ) );
+                        if ( dows.Any() )
+                        {
+                            opportunities = opportunities.Where( o => dows.Contains( o.NextStartDateTime.Value.DayOfWeek ) ).ToList();
+                        }
+                    }
+
+                    if ( dowFilterControl != null )
+                    {
+                        var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field;
+                        var filterValues = field.GetFilterValues( dowFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
+                        _filterValues.Add( "FilterDow", filterValues.AsDelimited( "^" ) );
+
+                        if ( filterValues.Count > 1 )
+                        {
+                            int? intValue = filterValues[1].AsIntegerOrNull();
+                            if ( intValue.HasValue )
+                            {
+                                System.DayOfWeek dayOfWeek = ( System.DayOfWeek ) intValue.Value;
+                                opportunities = opportunities.Where( o => dayOfWeek == o.NextStartDateTime.Value.DayOfWeek ).ToList();
+                            }
+                        }
+                    }
+
                     opportunities = sortGroupOpportunities( rockContext, opportunities, distances, attributeValList, attributeValKey, showProximity );
 
                     mergeFields.Add( "GroupOpportunities", opportunities );
