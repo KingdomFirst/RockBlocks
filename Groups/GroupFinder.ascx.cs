@@ -35,7 +35,7 @@
 // * Added Auto Load Filter capability on value selection
 // * Added ability to sort how filters are displayed
 // * Added ability to load Group/Sign Up Opportunities into finder
-// Package Version 1.8.1
+// Package Version 1.8.2
 // </notice>
 //
 using System;
@@ -2026,6 +2026,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             var rockContext = new RockContext();
             var groupService = new GroupService( rockContext );
             var showAllGroups = GetAttributeValue( AttributeKey.ShowAllGroups ).AsBoolean();
+            var addGroupOpportunities = GetAttributeValue( AttributeKey.AddGroupOpportunities ).AsBoolean();
             var groupQry = groupService
                 .Queryable( "GroupLocations.Location" )
                 .Where( g => g.IsActive
@@ -2337,6 +2338,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             bool showFences = showMap && GetAttributeValue( AttributeKey.ShowFence ).AsBoolean();
 
             var distances = new Dictionary<int, double>();
+            FinderMapItem personMapItem = null;
+            var fenceMapItems = new List<MapItem>();
 
             // If we care where these groups are located...
             if ( fenceGroupTypeId.HasValue || showMap || showProximity )
@@ -2388,7 +2391,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 }
 
                 // If showing a map, and person's location was found, save a map item for this location
-                FinderMapItem personMapItem = null;
                 if ( showMap && personLocation != null && personLocation.GeoPoint != null )
                 {
                     var infoWindow = string.Format(
@@ -2463,7 +2465,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 }
 
                 // If groups should be limited by a geofence
-                var fenceMapItems = new List<MapItem>();
                 if ( fenceGroupTypeId.HasValue )
                 {
                     fences = new List<GroupLocation>();
@@ -2563,116 +2564,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 }
 
                 // If a map is to be shown
-                if ( showMap && groups.Any() )
+                if ( showMap && groups.Any() && !addGroupOpportunities )
                 {
-                    Template template = null;
-                    ILavaTemplate lavaTemplate = null;
-
-                    if ( LavaService.RockLiquidIsEnabled )
-                    {
-                        template = Template.Parse( GetAttributeValue( AttributeKey.MapInfo ) );
-
-                        LavaHelper.VerifyParseTemplateForCurrentEngine( GetAttributeValue( AttributeKey.MapInfo ) );
-                    }
-                    else
-                    {
-                        var parseResult = LavaService.ParseTemplate( GetAttributeValue( AttributeKey.MapInfo ) );
-
-                        lavaTemplate = parseResult.Template;
-                    }
-
-
-                    // Add map items for all the remaining valid group locations
-                    var groupMapItems = new List<MapItem>();
-                    foreach ( var gl in groupLocations )
-                    {
-                        var group = groups.Where( g => g.Id == gl.GroupId ).FirstOrDefault();
-                        if ( group != null )
-                        {
-                            // Resolve info window lava template
-                            var linkedPageParams = new Dictionary<string, string> { { "GroupId", group.Id.ToString() } };
-                            var mergeFields = new Dictionary<string, object>();
-                            mergeFields.Add( "Group", gl.Group );
-                            mergeFields.Add( "Location", gl.Location );
-
-                            Dictionary<string, object> linkedPages = new Dictionary<string, object>();
-                            linkedPages.Add( AttributeKey.GroupDetailPage, LinkedPageRoute( AttributeKey.GroupDetailPage ) );
-
-                            if ( _targetPersonGuid != Guid.Empty )
-                            {
-                                linkedPages.Add( AttributeKey.RegisterPage, LinkedPageUrl( AttributeKey.RegisterPage, _urlParms ) );
-                            }
-                            else
-                            {
-                                linkedPages.Add( AttributeKey.RegisterPage, LinkedPageRoute( AttributeKey.RegisterPage ) );
-                            }
-
-                            mergeFields.Add( "LinkedPages", linkedPages );
-                            mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Get( "Rock.Model.Campus" ) ) as Campus );
-
-                            // add collection of allowed security actions
-                            Dictionary<string, object> securityActions = new Dictionary<string, object>();
-                            securityActions.Add( "View", group.IsAuthorized( Authorization.VIEW, CurrentPerson ) );
-                            securityActions.Add( "Edit", group.IsAuthorized( Authorization.EDIT, CurrentPerson ) );
-                            securityActions.Add( "Administrate", group.IsAuthorized( Authorization.ADMINISTRATE, CurrentPerson ) );
-                            mergeFields.Add( "AllowedActions", securityActions );
-
-                            string infoWindow;
-
-                            if ( LavaService.RockLiquidIsEnabled )
-                            {
-                                infoWindow = template.Render( Hash.FromDictionary( mergeFields ) );
-                            }
-                            else
-                            {
-                                var result = LavaService.RenderTemplate( lavaTemplate, mergeFields );
-
-                                infoWindow = result.Text;
-                            }
-
-                            // Add a map item for group
-                            var mapItem = new FinderMapItem( gl.Location );
-                            mapItem.EntityTypeId = EntityTypeCache.Get( "Rock.Model.Group" ).Id;
-                            mapItem.EntityId = group.Id;
-                            mapItem.Name = group.Name;
-
-                            var markerColor = GetAttributeValue( AttributeKey.MarkerColor );
-                            if ( markerColor.IsNullOrWhiteSpace() )
-                            {
-                                mapItem.Color = group.GroupType.GroupTypeColor;
-                            }
-                            else
-                            {
-                                mapItem.Color = markerColor;
-                            }
-
-                            var locationPrecisionLevel = GetAttributeValue( AttributeKey.LocationPrecisionLevel );
-                            switch ( locationPrecisionLevel.ToLower() )
-                            {
-                                case "narrow":
-                                    mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.###5" ) ) : ( double? ) null;
-                                    mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.###5" ) ) : ( double? ) null;
-                                    break;
-
-                                case "close":
-                                    mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.###" ) ) : ( double? ) null;
-                                    mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.###" ) ) : ( double? ) null;
-                                    break;
-
-                                case "wide":
-                                    mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.##" ) ) : ( double? ) null;
-                                    mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.##" ) ) : ( double? ) null;
-                                    break;
-                            }
-
-                            mapItem.InfoWindow = HttpUtility.HtmlEncode( infoWindow.Replace( Environment.NewLine, string.Empty ).Replace( "\n", string.Empty ).Replace( "\t", string.Empty ) );
-                            groupMapItems.Add( mapItem );
-                        }
-                    }
-
-                    // Show the map
-                    Map( personMapItem, fenceMapItems, groupMapItems );
-                    pnlMap.Visible = true;
+                    GenerateGroupMap( groups, personMapItem, groupLocations, fenceMapItems );
                 }
                 else
                 {
@@ -2704,7 +2598,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                 mergeFields.Add( "GroupDistances", distances.Select( d => { return new { Id = d.Key, Distance = d.Value }; } ).ToList() );
 
-                var addGroupOpportunities = GetAttributeValue( AttributeKey.AddGroupOpportunities ).AsBoolean();
 
                 if ( addGroupOpportunities )
                 {
@@ -2767,7 +2660,43 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         };
                     } ).Where( o => o.NextStartDateTime.HasValue ).ToList();
 
+                    if ( dowsFilterControl != null )
+                    {
+                        var dows = new List<DayOfWeek>();
+                        dowsFilterControl.SelectedValuesAsInt.ForEach( i => dows.Add( ( DayOfWeek ) i ) );
+                        if ( dows.Any() )
+                        {
+                            opportunities = opportunities.Where( o => dows.Contains( o.NextStartDateTime.Value.DayOfWeek ) ).ToList();
+                        }
+                    }
+
+                    if ( dowFilterControl != null )
+                    {
+                        var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field;
+                        var filterValues = field.GetFilterValues( dowFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
+                        _filterValues.Add( "FilterDow", filterValues.AsDelimited( "^" ) );
+
+                        if ( filterValues.Count > 1 )
+                        {
+                            int? intValue = filterValues[1].AsIntegerOrNull();
+                            if ( intValue.HasValue )
+                            {
+                                System.DayOfWeek dayOfWeek = ( System.DayOfWeek ) intValue.Value;
+                                opportunities = opportunities.Where( o => dayOfWeek == o.NextStartDateTime.Value.DayOfWeek ).ToList();
+                            }
+                        }
+                    }
+
                     opportunities = sortGroupOpportunities( rockContext, opportunities, distances, attributeValList, attributeValKey, showProximity );
+
+                    if ( showMap && opportunities.Any() )
+                    {
+                        GenerateGroupMap( opportunities.Select( o => o.Group ).ToList(), personMapItem, opportunities.Select( o => o.Group.GroupLocations.FirstOrDefault( gl => gl.Location == o.Location ) ).ToList(), fenceMapItems, opportunities );
+                    }
+                    else
+                    {
+                        pnlMap.Visible = false;
+                    }
 
                     mergeFields.Add( "GroupOpportunities", opportunities );
                 }
@@ -2858,6 +2787,130 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             // Show the results
             pnlResults.Visible = true;
+        }
+
+        private void GenerateGroupMap( List<Group> groups, FinderMapItem personMapItem, List<GroupLocation> groupLocations, List<MapItem> fenceMapItems, List<Opportunity> opportunities = null )
+        {
+            Template template = null;
+            ILavaTemplate lavaTemplate = null;
+
+            if ( LavaService.RockLiquidIsEnabled )
+            {
+                template = Template.Parse( GetAttributeValue( AttributeKey.MapInfo ) );
+
+                LavaHelper.VerifyParseTemplateForCurrentEngine( GetAttributeValue( AttributeKey.MapInfo ) );
+            }
+            else
+            {
+                var parseResult = LavaService.ParseTemplate( GetAttributeValue( AttributeKey.MapInfo ) );
+
+                lavaTemplate = parseResult.Template;
+            }
+
+
+            // Add map items for all the remaining valid group locations
+            var groupMapItems = new List<MapItem>();
+            foreach ( var gl in groupLocations )
+            {
+                var group = groups.Where( g => g.Id == gl.GroupId ).FirstOrDefault();
+                List<Opportunity> opportunitiesForGroup = null;
+                if ( opportunities != null )
+                {
+                    opportunitiesForGroup = opportunities.Where( o => o.Group.Id == gl.GroupId && o.Location.Id == gl.LocationId ).ToList();
+                }
+                if ( group != null )
+                {
+                    // Resolve info window lava template
+                    var linkedPageParams = new Dictionary<string, string> { { "GroupId", group.Id.ToString() } };
+                    var mergeFields = new Dictionary<string, object>();
+                    mergeFields.Add( "Group", gl.Group );
+                    mergeFields.Add( "Location", gl.Location );
+                    if ( opportunities != null )
+                    {
+                        mergeFields.Add( "Opportunities", opportunitiesForGroup );
+                    }
+
+                    Dictionary<string, object> linkedPages = new Dictionary<string, object>();
+                    linkedPages.Add( AttributeKey.GroupDetailPage, LinkedPageRoute( AttributeKey.GroupDetailPage ) );
+
+                    if ( _targetPersonGuid != Guid.Empty )
+                    {
+                        linkedPages.Add( AttributeKey.RegisterPage, LinkedPageUrl( AttributeKey.RegisterPage, _urlParms ) );
+                    }
+                    else
+                    {
+                        linkedPages.Add( AttributeKey.RegisterPage, LinkedPageRoute( AttributeKey.RegisterPage ) );
+                    }
+
+                    mergeFields.Add( "LinkedPages", linkedPages );
+                    mergeFields.Add( "CampusContext", RockPage.GetCurrentContext( EntityTypeCache.Get( "Rock.Model.Campus" ) ) as Campus );
+
+                    // add collection of allowed security actions
+                    Dictionary<string, object> securityActions = new Dictionary<string, object>();
+                    securityActions.Add( "View", group.IsAuthorized( Authorization.VIEW, CurrentPerson ) );
+                    securityActions.Add( "Edit", group.IsAuthorized( Authorization.EDIT, CurrentPerson ) );
+                    securityActions.Add( "Administrate", group.IsAuthorized( Authorization.ADMINISTRATE, CurrentPerson ) );
+                    mergeFields.Add( "AllowedActions", securityActions );
+
+                    string infoWindow;
+
+                    if ( LavaService.RockLiquidIsEnabled )
+                    {
+                        infoWindow = template.Render( Hash.FromDictionary( mergeFields ) );
+                    }
+                    else
+                    {
+                        var result = LavaService.RenderTemplate( lavaTemplate, mergeFields );
+
+                        infoWindow = result.Text;
+                    }
+
+                    // Add a map item for group
+                    var mapItem = new FinderMapItem( gl.Location );
+                    mapItem.EntityTypeId = EntityTypeCache.Get( "Rock.Model.Group" ).Id;
+                    mapItem.EntityId = group.Id;
+                    mapItem.Name = group.Name;
+
+                    var markerColor = GetAttributeValue( AttributeKey.MarkerColor );
+                    if ( markerColor.IsNullOrWhiteSpace() )
+                    {
+                        mapItem.Color = group.GroupType.GroupTypeColor;
+                    }
+                    else
+                    {
+                        mapItem.Color = markerColor;
+                    }
+
+                    if ( mapItem.Point != null )
+                    {
+                        var locationPrecisionLevel = GetAttributeValue( AttributeKey.LocationPrecisionLevel );
+                        switch ( locationPrecisionLevel.ToLower() )
+                        {
+                            case "narrow":
+                                mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.###5" ) ) : ( double? ) null;
+                                mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.###5" ) ) : ( double? ) null;
+                                break;
+
+                            case "close":
+                                mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.###" ) ) : ( double? ) null;
+                                mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.###" ) ) : ( double? ) null;
+                                break;
+
+                            case "wide":
+                                mapItem.Point.Latitude = mapItem.Point.Latitude != null ? Convert.ToDouble( mapItem.Point.Latitude.Value.ToString( "#.##" ) ) : ( double? ) null;
+                                mapItem.Point.Longitude = mapItem.Point.Longitude != null ? Convert.ToDouble( mapItem.Point.Longitude.Value.ToString( "#.##" ) ) : ( double? ) null;
+                                break;
+                        }
+
+                        mapItem.InfoWindow = HttpUtility.HtmlEncode( infoWindow.Replace( Environment.NewLine, string.Empty ).Replace( "\n", string.Empty ).Replace( "\t", string.Empty ) );
+                        groupMapItems.Add( mapItem );
+                    }
+                }
+            }
+
+            // Show the map
+            Map( personMapItem, fenceMapItems, groupMapItems );
+            pnlMap.Visible = true;
         }
 
         private List<Opportunity> sortGroupOpportunities( RockContext rockContext, List<Opportunity> opportunities, Dictionary<int, double> distances, List<string> attributeValList, string attributeValKey, bool showProximity )
