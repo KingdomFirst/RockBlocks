@@ -35,7 +35,7 @@
 // * Added Auto Load Filter capability on value selection
 // * Added ability to sort how filters are displayed
 // * Added ability to load Group/Sign Up Opportunities into finder
-// Package Version 1.8.1
+// Package Version 1.8.2
 // </notice>
 //
 using System;
