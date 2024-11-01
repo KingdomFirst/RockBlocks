@@ -895,6 +895,25 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             returnStr = typeQualifierArray[2];
                         }
                     }
+                    else if ( assignedPerson.Type == AssignedType.TouchTemplateGroup && typeQualifierArray.Length > 1 )
+                    {
+                        // format is [0]TouchTemplate.NoteTemplate.Note^[1]TouchTemplate.MinimumCareTouches^[2]GroupId^[3]Group Name^[4]GroupMember.Id
+
+                        if ( typeQualifierArray.Length > 4 )
+                        {
+                            returnStr = $"{typeQualifierArray[0]} Touch Template Group: {typeQualifierArray[3]}";
+                        }
+                        else
+                        {
+                            returnStr = $"Touch Template Group: {typeQualifierArray[1]}";
+                        }
+                    }
+                    else if ( assignedPerson.Type == AssignedType.CategoryGroup && typeQualifierArray.Length > 4 )
+                    {
+                        // format is [0]Category Value Id^[1]Category Value^[2]GroupId^[3]Group Name^[4]GroupMember.Id
+
+                        returnStr = $"{typeQualifierArray[1]} Category Group: {typeQualifierArray[3]}";
+                    }
                 }
                 phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
             }
