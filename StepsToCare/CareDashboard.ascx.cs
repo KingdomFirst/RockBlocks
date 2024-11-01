@@ -82,6 +82,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 4,
         Key = AttributeKey.MinimumCareTouchHours )]
 
+    [BooleanField( "Enter Care Need Edit Permission",
+        Description = "Should the \"Enter Care Need\" large button be protected by the edit permission?",
+        DefaultBooleanValue = false,
+        Order = 5,
+        Key = AttributeKey.EnterCareNeed )]
+
     [DefinedValueField(
         "Outstanding Care Needs Statuses",
         Description = "Select the status values that count towards the 'Outstanding Care Needs' total.",
@@ -331,6 +337,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string TouchNeededTooltipTemplate = "TouchNeededTooltipTemplate";
             public const string QuickNoteStatusTemplate = "QuickNoteStatusTemplate";
             public const string QuickNoteAutoSave = "QuickNoteAutoSave";
+            public const string EnterCareNeed = "EnterCareNeed";
         }
 
         /// <summary>
@@ -600,6 +607,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gFollowUp.Actions.ShowAdd = false;
             gFollowUp.Actions.ShowMergeTemplate = false;
             gFollowUp.IsDeleteEnabled = _canAdministrate;
+
+            var enterCareNeedEditPermission = GetAttributeValue( AttributeKey.EnterCareNeed ).AsBoolean();
+            liEnterNeed.Visible = _canEdit || !enterCareNeedEditPermission;
 
             mdMakeNote.Footer.Visible = false;
 

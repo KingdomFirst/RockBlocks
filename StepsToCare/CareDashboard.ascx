@@ -163,7 +163,7 @@
                                     Total Care Needs
                                 </a>
                             </li>
-                            <li class="block-status care-enter-need">
+                            <li class="block-status care-enter-need" id="liEnterNeed" runat="server">
                                 <asp:LinkButton ID="btnAdd" runat="server" CssClass="btn btn-default" OnClick="gList_AddClick"><i class='fas fa-plus'></i><strong class="text-uppercase">Enter Care Need</strong></asp:LinkButton>
                             </li>
                             <li class="block-status care-categories">
