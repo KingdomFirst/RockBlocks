@@ -1044,7 +1044,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             {
                                 var careNeedNotes = new NoteService( rockContext )
                                     .GetByNoteTypeId( noteType.Id ).AsNoTracking()
-                                    .Where( n => n.EntityId == careNeed.Id && !n.Caption.StartsWith( "Action" ) );
+                                    .Where( n => n.EntityId == careNeed.Id && ( n.Caption == null || !n.Caption.StartsWith( "Action" ) ) );
                                 careNeedNotesList = careNeedNotes.ToList();
 
                                 lCareTouches.Text = careNeedNotes.Count().ToString();
@@ -2316,7 +2316,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var currentDateTime = RockDateTime.Now;
                 var last7Days = currentDateTime.AddDays( -7 );
-                var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime && !n.Caption.StartsWith( "Action" ) );
+                var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime && ( n.Caption == null || !n.Caption.StartsWith( "Action" ) ) );
 
                 lTouchesCount.Text = careTouches.ToString();
                 lCareNeedsCount.Text = outstandingCareNeeds.ToString();
@@ -3021,7 +3021,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var lavaTemplate = GetAttributeValue( AttributeKey.QuickNoteStatusTemplate );
 
-                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                 mergeFields.Add( "CareNeed", careNeed );
                 mergeFields.Add( "TouchTemplates", catTouchTemplates );
                 mergeFields.Add( "CareNeedNotes", careNeedNotesList.Where( n => n.Caption == null || ( n.Caption != null && !n.Caption.StartsWith( "Action" ) ) ) );
