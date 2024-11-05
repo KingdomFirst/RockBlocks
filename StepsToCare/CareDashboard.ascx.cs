@@ -2008,7 +2008,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var closeDialogOnSave = GetAttributeValue( AttributeKey.CloseDialogOnSave ).AsBoolean();
                 var careNeedId = hfCareNeedId.ValueAsInt();
 
-                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note}{( rtbNote.Text.IsNotNullOrWhiteSpace() ? ":" : "" )} {rtbNote.Text}", closeDialogOnSave, noteTemplate, true );
+                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note}{( rtbNote.Text.IsNotNullOrWhiteSpace() ? ":" : "" )} {rtbNote.Text}", closeDialogOnSave, noteTemplate, true, cbAlert.Checked, cbPrivate.Checked );
                 if ( noteCreated )
                 {
                     if ( GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean() )
@@ -2776,13 +2776,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             notesTimeline.AllowAnonymousEntry = false;
             notesTimeline.SortDirection = ListSortDirection.Descending;
 
+            cbAlert.Visible = noteOptions.ShowAlertCheckBox;
+            cbAlert.Checked = false;
+            cbPrivate.Visible = noteOptions.ShowPrivateCheckBox;
+            cbPrivate.Checked = false;
+
             var noteEditor = ( NoteEditor ) notesTimeline.Controls[0];
             noteEditor.CssClass = "note-new-kfs";
             noteEditor.SaveButtonClick += mdMakeNote_SaveClick;
             noteEditor.Focus();
         }
 
-        private bool createNote( RockContext rockContext, int entityId, string noteText, bool displayDialog = false, NoteTemplate noteTemplate = null, bool countsForTouch = false )
+        private bool createNote( RockContext rockContext, int entityId, string noteText, bool displayDialog = false, NoteTemplate noteTemplate = null, bool countsForTouch = false, bool isAlert = false, bool isPrivate = false )
         {
             var noteService = new NoteService( rockContext );
             var noteType = _careNeedNoteTypes.FirstOrDefault();
@@ -2794,7 +2799,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     Id = 0,
                     IsSystem = false,
-                    IsAlert = false,
+                    IsAlert = isAlert,
+                    IsPrivateNote = isPrivate,
                     NoteTypeId = noteType.Id,
                     EntityId = entityId,
                     Text = noteText,
