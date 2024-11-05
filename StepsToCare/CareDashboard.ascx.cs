@@ -82,6 +82,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 4,
         Key = AttributeKey.MinimumCareTouchHours )]
 
+    [IntegerField(
+        "Minimum Follow Up Care Touch Hours",
+        Description = "Minimum hours for the follow up worker to add a care touch before the need gets 'flagged'.",
+        DefaultIntegerValue = 24,
+        IsRequired = true,
+        Order = 4,
+        Key = AttributeKey.MinimumFollowUpTouchHours )]
+
     [BooleanField( "Enter Care Need Edit Permission",
         Description = "Should the \"Enter Care Need\" large button be protected by the edit permission?",
         DefaultBooleanValue = false,
@@ -321,6 +329,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string NoteViewLavaTemplate = "NoteViewLavaTemplate";
             public const string MinimumCareTouches = "MinimumCareTouches";
             public const string MinimumCareTouchHours = "MinimumCareTouchHours";
+            public const string MinimumFollowUpTouchHours = "MinimumFollowUpTouchHours";
             public const string PrayerDetailPage = "PrayerDetailPage";
             public const string BenevolenceDetailPage = "BenevolenceDetailPage";
             public const string ConnectionRequestEnable = "ConnectionRequestEnable";
@@ -419,7 +428,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
     {% assign followUpWorkerNotes = CareNeedNotes | Where:'CreatedByPersonAliasId',worker.PersonAliasId | Size %}
     {% if followUpWorkerNotes > 0 %}{% break %}{% endif %}
 {% endfor %}
-{% if followUpWorkers != empty and hourDifference >= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% elseif hourDifference <= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-warning"">Follow Up Worker Touch Needed!</span>{% else %}<span class=""label label-success"">Follow Up Worker</span>{% endif %}
+{% if followUpWorkers != empty and MinimumFollowUpCareTouchHours != 0 and hourDifference >= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% elseif hourDifference <= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-warning"">Follow Up Worker Touch Needed!</span>{% else %}<span class=""label label-success"">Follow Up Worker</span>{% endif %}
 {% for template in TouchTemplates %}{% assign templateNotes = '' %}
     {% assign notesByText = CareNeedNotes | Where:'Text',template.NoteTemplate.Note %}
     {% assign notesbyGuid = CareNeedNotes | Where:'ForeignGuid',template.NoteTemplate.Guid %}
@@ -1041,7 +1050,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
 
                     var minimumCareTouches = GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger();
-                    var minimumCareTouchHours = GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger();
                     var careTouchCount = 0;
                     var careNeedNotesList = new List<Note>();
                     Literal lCareTouches = e.Row.FindControl( "lCareTouches" ) as Literal;
@@ -1212,9 +1220,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     Literal lName = e.Row.FindControl( "lName" ) as Literal;
                     if ( lName != null )
                     {
+                        var minimumCareTouchHours = GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger();
+                        var minimumFollowUpTouchHours = GetAttributeValue( AttributeKey.MinimumFollowUpTouchHours ).AsInteger();
                         var dateDifference = RockDateTime.Now - careNeed.DateEntered.Value;
                         var careNeedFlag = ( dateDifference.TotalHours >= minimumCareTouchHours && careTouchCount < minimumCareTouches );
-                        var careNeedFollowUpWorkerTouch = assignedFollowUpWorkers.Any() && ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
+                        var careNeedFollowUpWorkerTouch = assignedFollowUpWorkers.Any() && minimumFollowUpTouchHours != 0 && dateDifference.TotalHours >= minimumFollowUpTouchHours && !assignedFollowUpWorkerCareTouch;
                         var careNeedFlagStr = "";
                         var careNeedFlagStrTooltip = "";
                         var childNeedStr = "";
@@ -1227,6 +1237,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         mergeFields.Add( "TouchCompareDate", careNeed.DateEntered.Value );
                         mergeFields.Add( "MinimumCareTouches", minimumCareTouches );
                         mergeFields.Add( "MinimumCareTouchHours", minimumCareTouchHours );
+                        mergeFields.Add( "MinimumFollowUpCareTouchHours", minimumFollowUpTouchHours );
 
                         if ( careNeedFlag )
                         {
@@ -3038,6 +3049,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 mergeFields.Add( "CareNeedNotesWithActions", careNeedNotesList );
                 mergeFields.Add( "MinimumCareTouches", GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger() );
                 mergeFields.Add( "MinimumCareTouchHours", GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger() );
+                mergeFields.Add( "MinimumFollowUpCareTouchHours", GetAttributeValue( AttributeKey.MinimumFollowUpTouchHours ).AsInteger() );
                 lQuickNoteStatus.Text = lavaTemplate.ResolveMergeFields( mergeFields );
 
                 SetupNoteTimeline( careNeed );
