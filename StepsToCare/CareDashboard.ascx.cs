@@ -2159,6 +2159,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 foreach ( var attribute in AvailableAttributes )
                 {
                     var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
+                    var controlFollowUp = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_followup_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
                     if ( control != null )
                     {
                         if ( control is IRockControl )
@@ -2167,7 +2168,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             rockControl.Label = attribute.Name;
                             rockControl.Help = attribute.Description;
                             phAttributeFilters.Controls.Add( control );
-                            phFollowUpAttributeFilters.Controls.Add( control );
                         }
                         else
                         {
@@ -2175,6 +2175,39 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             wrapper.ID = control.ID + "_wrapper";
                             wrapper.Label = attribute.Name;
                             wrapper.Controls.Add( control );
+                            phAttributeFilters.Controls.Add( wrapper );
+                        }
+
+                        string savedValue = rFilter.GetUserPreference( attribute.Key );
+                        if ( !string.IsNullOrWhiteSpace( savedValue ) )
+                        {
+                            try
+                            {
+                                var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
+                                attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
+                            }
+                            catch
+                            {
+                                // intentionally ignore
+                            }
+                        }
+                    }
+                    if ( controlFollowUp != null )
+                    {
+                        if ( controlFollowUp is IRockControl )
+                        {
+                            var rockControl = ( IRockControl ) controlFollowUp;
+                            rockControl.Label = attribute.Name;
+                            rockControl.Help = attribute.Description;
+                            phAttributeFilters.Controls.Add( controlFollowUp );
+                            phFollowUpAttributeFilters.Controls.Add( controlFollowUp );
+                        }
+                        else
+                        {
+                            var wrapper = new RockControlWrapper();
+                            wrapper.ID = controlFollowUp.ID + "_wrapper";
+                            wrapper.Label = attribute.Name;
+                            wrapper.Controls.Add( controlFollowUp );
                             phAttributeFilters.Controls.Add( wrapper );
                             phFollowUpAttributeFilters.Controls.Add( wrapper );
                         }
@@ -2185,7 +2218,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             try
                             {
                                 var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
-                                attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
+                                attribute.FieldType.Field.SetFilterValues( controlFollowUp, attribute.QualifierValues, values );
                             }
                             catch
                             {
