@@ -440,16 +440,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 qry = qry.Where( b => b.CategoryValues.Contains( categoryValueId.ToString() ) );
             }
 
-            SortProperty sortProperty = gList.SortProperty;
-            if ( sortProperty != null )
-            {
-                qry = qry.Sort( sortProperty );
-            }
-            else
-            {
-                qry = qry.OrderBy( cw => cw.PersonAlias.Person.LastName ).ThenBy( cw => cw.PersonAlias.Person.FirstName ).ThenByDescending( cw => cw.Id );
-            }
-
             // Filter query by any configured attribute filters
             if ( AvailableAttributes != null && AvailableAttributes.Any() )
             {
@@ -458,6 +448,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
                     qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, careWorkerService, Rock.Reporting.FilterMode.SimpleFilter );
                 }
+            }
+
+            SortProperty sortProperty = gList.SortProperty;
+            if ( sortProperty != null )
+            {
+                qry = qry.Sort( sortProperty );
+            }
+            else
+            {
+                qry = qry.OrderBy( cw => cw.PersonAlias.Person.LastName ).ThenBy( cw => cw.PersonAlias.Person.FirstName ).ThenByDescending( cw => cw.Id );
             }
 
             var list = qry.ToList();
