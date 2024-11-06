@@ -153,7 +153,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             // Parse the attribute filters
             AvailableAttributes = new List<AttributeCache>();
 
-            int entityTypeId = new CareNeed().TypeId;
+            int entityTypeId = new NoteTemplate().TypeId;
             foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
                 .Where( a =>
                     a.EntityTypeId == entityTypeId &&
@@ -350,6 +350,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             tbNote.Text = noteTemplate.Note;
 
             noteTemplate.LoadAttributes();
+            phAttributes.Controls.Clear();
             Helper.AddEditControls( noteTemplate, phAttributes, true, BlockValidationGroup, 2 );
 
             hfNoteTemplateId.Value = noteTemplate.Id.ToString();
@@ -372,9 +373,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     noteTemplate = noteTemplateService.Get( noteTemplateId );
                 }
 
+                NoteTemplate lastNoteTemplate = null;
                 if ( noteTemplate == null )
                 {
                     noteTemplate = new NoteTemplate { Id = 0 };
+                    lastNoteTemplate = noteTemplateService.Queryable().OrderByDescending( b => b.Order ).FirstOrDefault();
                 }
 
                 noteTemplate.Icon = tbIcon.Text;
@@ -383,13 +386,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 noteTemplate.IsActive = cbActive.Checked;
 
-                NoteTemplate lastNoteTemplate = noteTemplateService.Queryable().OrderByDescending( b => b.Order ).FirstOrDefault();
 
                 if ( lastNoteTemplate != null )
                 {
                     noteTemplate.Order = lastNoteTemplate.Order + 1;
                 }
-                else
+                else if ( noteTemplate.Id == 0 )
                 {
                     noteTemplate.Order = 0;
                 }
