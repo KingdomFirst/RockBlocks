@@ -77,9 +77,14 @@ namespace Plugins.rocks_kfs.Groups
         Key = AttributeKey.CheckboxColumnClass )]
 
     [BooleanField( "Display Group Names",
-        Description = "Display the group names in the panel title.",
+        Description = "Display the group names in the panel title. Default: Yes",
         DefaultBooleanValue = true,
         Key = AttributeKey.DisplayGroupNames )]
+
+    [BooleanField( "Allow Groups from Page Parameter",
+        Description = "Allow GroupId's to be passed in via Page Parameter 'Groups' as a comma separated list, the current user must have permission to the groups for members to display. Default: No",
+        DefaultBooleanValue = false,
+        Key = AttributeKey.AllowGroupsPageParameter )]
 
     [Rock.SystemGuid.BlockTypeGuid( "B8724DBC-F8FB-426D-9296-87A5944273B9" )]
     public partial class GroupAttendanceMulti : RockBlock
@@ -93,6 +98,7 @@ namespace Plugins.rocks_kfs.Groups
             public const string AttendeeLavaTemplate = "AttendeeLavaTemplate";
             public const string CheckboxColumnClass = "CheckboxColumnClass";
             public const string DisplayGroupNames = "DisplayGroupNames";
+            public const string AllowGroupsPageParameter = "AllowGroupsPageParameter";
         }
 
         private static class DefaultValue
@@ -114,6 +120,7 @@ namespace Plugins.rocks_kfs.Groups
         {
             public const string Date = "Date";
             public const string Occurrence = "Occurrence";
+            public const string Groups = "Groups";
         }
 
         #region Private Variables
@@ -153,7 +160,15 @@ namespace Plugins.rocks_kfs.Groups
 
             _rockContext = new RockContext();
 
+            var allowGroupsPageParameter = GetAttributeValue( AttributeKey.AllowGroupsPageParameter ).AsBoolean();
             var groupIds = GetAttributeValues( AttributeKey.GroupsToDisplay ).AsIntegerList();
+
+            var pageParamGroups = PageParameter( PageParameterKey.Groups );
+            if ( allowGroupsPageParameter && pageParamGroups.IsNotNullOrWhiteSpace() )
+            {
+                groupIds = pageParamGroups.Split( ',' ).AsIntegerList();
+            }
+
             _groups = new GroupService( _rockContext ).GetByIds( groupIds ).ToList();
 
             foreach ( var group in _groups )
