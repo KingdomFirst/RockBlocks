@@ -90,8 +90,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 4,
         Key = AttributeKey.MinimumFollowUpTouchHours )]
 
-    [BooleanField( "Enter Care Need Edit Permission",
-        Description = "Should the \"Enter Care Need\" large button be protected by the edit permission?",
+    [BooleanField( "Override New Care Need Edit Permission",
+        Description = "Should the Add Care Need buttons be protected by the edit permission?",
         DefaultBooleanValue = false,
         Order = 5,
         Key = AttributeKey.EnterCareNeed )]
@@ -2199,7 +2199,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             var rockControl = ( IRockControl ) controlFollowUp;
                             rockControl.Label = attribute.Name;
                             rockControl.Help = attribute.Description;
-                            phAttributeFilters.Controls.Add( controlFollowUp );
                             phFollowUpAttributeFilters.Controls.Add( controlFollowUp );
                         }
                         else
@@ -2208,7 +2207,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             wrapper.ID = controlFollowUp.ID + "_wrapper";
                             wrapper.Label = attribute.Name;
                             wrapper.Controls.Add( controlFollowUp );
-                            phAttributeFilters.Controls.Add( wrapper );
                             phFollowUpAttributeFilters.Controls.Add( wrapper );
                         }
 
