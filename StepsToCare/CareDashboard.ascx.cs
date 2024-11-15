@@ -916,7 +916,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             if ( AvailableAttributes != null )
             {
-                var attribute = AvailableAttributes.FirstOrDefault( a => a.Key == e.Key );
+                var attribute = AvailableAttributes.FirstOrDefault( a => "filter_followup_" + a.Key == e.Key );
                 if ( attribute != null )
                 {
                     try
