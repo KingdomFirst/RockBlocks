@@ -90,7 +90,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 4,
         Key = AttributeKey.MinimumFollowUpTouchHours )]
 
-    [BooleanField( "Override New Care Need Edit Permission",
+    [BooleanField( "New Care Need Uses Edit Permission",
         Description = "Should the Add Care Need buttons be protected by the edit permission?",
         DefaultBooleanValue = false,
         Order = 5,
@@ -428,7 +428,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
     {% assign followUpWorkerNotes = CareNeedNotes | Where:'CreatedByPersonAliasId',worker.PersonAliasId | Size %}
     {% if followUpWorkerNotes > 0 %}{% break %}{% endif %}
 {% endfor %}
-{% if followUpWorkers != empty and MinimumFollowUpCareTouchHours != 0 and hourDifference >= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% elseif hourDifference <= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-warning"">Follow Up Worker Touch Needed!</span>{% else %}<span class=""label label-success"">Follow Up Worker</span>{% endif %}
+{% if followUpWorkers != empty and MinimumFollowUpCareTouchHours != 0 and hourDifference >= MinimumFollowUpCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% elseif MinimumFollowUpCareTouchHours != 0 and hourDifference <= MinimumFollowUpCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-warning"">Follow Up Worker Touch Needed!</span>{% else %}<span class=""label label-success"">Follow Up Worker</span>{% endif %}
 {% for template in TouchTemplates %}{% assign templateNotes = '' %}
     {% assign notesByText = CareNeedNotes | Where:'Text',template.NoteTemplate.Note %}
     {% assign notesbyGuid = CareNeedNotes | Where:'ForeignGuid',template.NoteTemplate.Guid %}
@@ -593,6 +593,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             _canViewAll = IsUserAuthorized( SecurityActionKey.ViewAll );
             _canViewCareWorker = IsUserAuthorized( SecurityActionKey.CareWorkers );
 
+            var enterCareNeedEditPermission = GetAttributeValue( AttributeKey.EnterCareNeed ).AsBoolean();
+
             gList.GridRebind += gList_GridRebind;
             gList.RowDataBound += gList_RowDataBound;
             gList.RowCreated += gList_RowCreated;
@@ -601,7 +603,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 gList.RowSelected += gList_Edit;
             }
             gList.DataKeyNames = new string[] { "Id" };
-            gList.Actions.ShowAdd = _canEdit;
+            gList.Actions.ShowAdd = _canEdit || !enterCareNeedEditPermission;
             gList.Actions.AddClick += gList_AddClick;
             gList.IsDeleteEnabled = _canAdministrate;
 
@@ -617,7 +619,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gFollowUp.Actions.ShowMergeTemplate = false;
             gFollowUp.IsDeleteEnabled = _canAdministrate;
 
-            var enterCareNeedEditPermission = GetAttributeValue( AttributeKey.EnterCareNeed ).AsBoolean();
             liEnterNeed.Visible = _canEdit || !enterCareNeedEditPermission;
 
             mdMakeNote.Footer.Visible = false;
@@ -784,13 +785,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 foreach ( var attribute in AvailableAttributes )
                 {
-                    var filterControl = phFollowUpAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    var filterControl = phFollowUpAttributeFilters.FindControl( "filter_followup_" + attribute.Id.ToString() );
                     if ( filterControl != null )
                     {
                         try
                         {
                             var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                            rFollowUpFilter.SaveUserPreference( attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                            rFollowUpFilter.SaveUserPreference( "filter_followup_" + attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
                         }
                         catch
                         {
@@ -2210,7 +2211,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             phFollowUpAttributeFilters.Controls.Add( wrapper );
                         }
 
-                        string savedValue = rFilter.GetUserPreference( attribute.Key );
+                        string savedValue = rFilter.GetUserPreference( "filter_followup_" + attribute.Key );
                         if ( !string.IsNullOrWhiteSpace( savedValue ) )
                         {
                             try
