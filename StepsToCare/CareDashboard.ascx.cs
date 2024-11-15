@@ -586,6 +586,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             this.AddConfigurationUpdateTrigger( upnlCareDashboard );
             rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
             rFollowUpFilter.ApplyFilterClick += rFollowUpFilter_ApplyFilterClick;
+            rFollowUpFilter.PreferenceKeyPrefix = "FollowUp";
 
             _canEdit = IsUserAuthorized( Authorization.EDIT );
             _canAdministrate = IsUserAuthorized( Authorization.ADMINISTRATE );
@@ -2193,6 +2194,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             if ( AvailableAttributes != null )
             {
+                phAttributeFilters.Controls.Clear();
+                phFollowUpAttributeFilters.Controls.Clear();
                 foreach ( var attribute in AvailableAttributes )
                 {
                     var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
