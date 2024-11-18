@@ -163,7 +163,7 @@
                                     Total Care Needs
                                 </a>
                             </li>
-                            <li class="block-status care-enter-need">
+                            <li class="block-status care-enter-need" id="liEnterNeed" runat="server">
                                 <asp:LinkButton ID="btnAdd" runat="server" CssClass="btn btn-default" OnClick="gList_AddClick"><i class='fas fa-plus'></i><strong class="text-uppercase">Enter Care Need</strong></asp:LinkButton>
                             </li>
                             <li class="block-status care-categories">
@@ -358,6 +358,8 @@
                     <asp:Panel ID="pnlQuickNoteText" runat="server" CssClass="noteentry-control meta-body" Visible="false">
                         <Rock:RockTextBox ID="rtbNote" runat="server" Placeholder="Write an additional note..." Rows="3" TextMode="MultiLine" ValidationGroup="QuickNoteMakeNote"></Rock:RockTextBox>
                         <div class="settings clearfix">
+                            <asp:Checkbox ID="cbAlert" runat="server" Text="Alert" CssClass="js-notealert" />
+                            <asp:Checkbox ID="cbPrivate" runat="server" Text="Private" CssClass="js-noteprivate" />
                             <Rock:BootstrapButton ID="rbBtnQuickNoteSave" runat="server" DataLoadingText="Saving..." Text="Save Note" CssClass="commands btn btn-primary btn-xs" OnClick="rbBtnQuickNoteSave_Click" ValidationGroup="QuickNoteMakeNote"></Rock:BootstrapButton>
                         </div>
                     </asp:Panel>

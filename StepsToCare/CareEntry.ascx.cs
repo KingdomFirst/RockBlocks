@@ -247,15 +247,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             btnComplete.Text = btnCompleteFtr.Text = GetAttributeValue( AttributeKey.CompleteButtonText );
             btnSnooze.Text = btnSnoozeFtr.Text = GetAttributeValue( AttributeKey.SnoozedButtonText );
             cbCustomFollowUp.Visible = GetAttributeValue( AttributeKey.EnableCustomFollowUp ).AsBoolean();
-        }
-
-        /// <summary>
-        /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
-        /// </summary>
-        /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
-        protected override void OnLoad( EventArgs e )
-        {
-            base.OnLoad( e );
 
             if ( !Page.IsPostBack )
             {
@@ -268,13 +259,22 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 CareNeed item = new CareNeedService( rockContext ).Get( hfCareNeedId.ValueAsInt() );
                 if ( item == null )
                 {
-                    item = new CareNeed();
+                    item = GenerateTempNeed( null );
                 }
                 item.LoadAttributes();
 
                 phAttributes.Controls.Clear();
                 Helper.AddEditControls( item, phAttributes, false, BlockValidationGroup, 2 );
             }
+        }
+
+        /// <summary>
+        /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
+        /// </summary>
+        /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
+        protected override void OnLoad( EventArgs e )
+        {
+            base.OnLoad( e );
 
             confirmExit.Enabled = true;
         }
@@ -895,6 +895,29 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             returnStr = typeQualifierArray[2];
                         }
                     }
+                    else if ( assignedPerson.Type == AssignedType.TouchTemplateGroup && typeQualifierArray.Length > 1 )
+                    {
+                        // format is [0]TouchTemplate.NoteTemplate.Note^[1]TouchTemplate.MinimumCareTouches^[2]GroupId^[3]Group Name^[4]GroupMember.Id^[5]Assigned Count
+
+                        if ( typeQualifierArray.Length > 5 )
+                        {
+                            returnStr = $"{typeQualifierArray[0]} Touch Template Group: {typeQualifierArray[3]} ({typeQualifierArray[5]})";
+                        }
+                        else if ( typeQualifierArray.Length > 4 )
+                        {
+                            returnStr = $"{typeQualifierArray[0]} Touch Template Group: {typeQualifierArray[3]} ({typeQualifierArray[5]})";
+                        }
+                        else
+                        {
+                            returnStr = $"Touch Template Group: {typeQualifierArray[1]}";
+                        }
+                    }
+                    else if ( assignedPerson.Type == AssignedType.CategoryGroup && typeQualifierArray.Length > 5 )
+                    {
+                        // format is [0]Category Value Id^[1]Category Value^[2]GroupId^[3]Group Name^[4]GroupMember.Id^[5]Assigned Count
+
+                        returnStr = $"{typeQualifierArray[1]} Category Group: {typeQualifierArray[3]} ({typeQualifierArray[5]})";
+                    }
                 }
                 phCountOrRole.Controls.Add( new LiteralControl( returnStr ) );
             }
@@ -1304,7 +1327,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 AssignedPersons = CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople );
                 pwAssigned.Visible = UserCanAdministrate;
-                BindAssignedPersonsGrid();
+                BindAssignedPersonsGrid( true );
             }
             else if ( needId == 0 )
             {
@@ -1312,10 +1335,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 pwAssigned.Visible = false;
                 AssignedPersons = null;
-            }
-            else
-            {
-                GenerateTempNeed( null, categoryId );
             }
         }
 
@@ -1325,17 +1344,27 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 categoryId = dvpCategory.SelectedValue.AsIntegerOrNull();
             }
+            if ( categoryId == null )
+            {
+                categoryId = Request.Form[dvpCategory.UniqueID].AsIntegerOrNull();
+            }
+            var campusId = cpCampus.SelectedCampusId;
+            if ( campusId == null )
+            {
+                campusId = Request.Form[cpCampus.UniqueID].AsIntegerOrNull();
+            }
+            int? statusId = dvpStatus.SelectedValue.AsIntegerOrNull();
+            if ( statusId == null )
+            {
+                statusId = Request.Form[dvpStatus.UniqueID].AsIntegerOrNull();
+            }
+
             var careNeed = new CareNeed { Id = 0 };
             careNeed.CampusId = cpCampus.SelectedCampusId;
             careNeed.PersonAlias = person?.PrimaryAlias;
             careNeed.PersonAliasId = person?.PrimaryAliasId;
-            careNeed.StatusValueId = dvpStatus.SelectedValue.AsIntegerOrNull();
+            careNeed.StatusValueId = statusId;
             careNeed.CategoryValueId = categoryId;
-
-            careNeed.LoadAttributes();
-
-            phAttributes.Controls.Clear();
-            Helper.AddEditControls( careNeed, phAttributes, false, BlockValidationGroup, 2 );
 
             return careNeed;
         }

@@ -82,6 +82,20 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Order = 4,
         Key = AttributeKey.MinimumCareTouchHours )]
 
+    [IntegerField(
+        "Minimum Follow Up Care Touch Hours",
+        Description = "Minimum hours for the follow up worker to add a care touch before the need gets 'flagged'.",
+        DefaultIntegerValue = 24,
+        IsRequired = true,
+        Order = 4,
+        Key = AttributeKey.MinimumFollowUpTouchHours )]
+
+    [BooleanField( "New Care Need Uses Edit Permission",
+        Description = "Should the Add Care Need buttons be protected by the edit permission?",
+        DefaultBooleanValue = false,
+        Order = 5,
+        Key = AttributeKey.EnterCareNeed )]
+
     [DefinedValueField(
         "Outstanding Care Needs Statuses",
         Description = "Select the status values that count towards the 'Outstanding Care Needs' total.",
@@ -315,6 +329,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string NoteViewLavaTemplate = "NoteViewLavaTemplate";
             public const string MinimumCareTouches = "MinimumCareTouches";
             public const string MinimumCareTouchHours = "MinimumCareTouchHours";
+            public const string MinimumFollowUpTouchHours = "MinimumFollowUpTouchHours";
             public const string PrayerDetailPage = "PrayerDetailPage";
             public const string BenevolenceDetailPage = "BenevolenceDetailPage";
             public const string ConnectionRequestEnable = "ConnectionRequestEnable";
@@ -331,6 +346,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string TouchNeededTooltipTemplate = "TouchNeededTooltipTemplate";
             public const string QuickNoteStatusTemplate = "QuickNoteStatusTemplate";
             public const string QuickNoteAutoSave = "QuickNoteAutoSave";
+            public const string EnterCareNeed = "EnterCareNeed";
         }
 
         /// <summary>
@@ -412,7 +428,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
     {% assign followUpWorkerNotes = CareNeedNotes | Where:'CreatedByPersonAliasId',worker.PersonAliasId | Size %}
     {% if followUpWorkerNotes > 0 %}{% break %}{% endif %}
 {% endfor %}
-{% if followUpWorkers != empty and hourDifference >= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% elseif hourDifference <= MinimumCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-warning"">Follow Up Worker Touch Needed!</span>{% else %}<span class=""label label-success"">Follow Up Worker</span>{% endif %}
+{% if followUpWorkers != empty and MinimumFollowUpCareTouchHours != 0 and hourDifference >= MinimumFollowUpCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-danger"">Follow Up Worker Touch Needed!</span>{% elseif MinimumFollowUpCareTouchHours != 0 and hourDifference <= MinimumFollowUpCareTouchHours and followUpWorkerNotes < 1 %}<span class=""label label-warning"">Follow Up Worker Touch Needed!</span>{% else %}<span class=""label label-success"">Follow Up Worker</span>{% endif %}
 {% for template in TouchTemplates %}{% assign templateNotes = '' %}
     {% assign notesByText = CareNeedNotes | Where:'Text',template.NoteTemplate.Note %}
     {% assign notesbyGuid = CareNeedNotes | Where:'ForeignGuid',template.NoteTemplate.Guid %}
@@ -570,12 +586,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             this.AddConfigurationUpdateTrigger( upnlCareDashboard );
             rFilter.ApplyFilterClick += rFilter_ApplyFilterClick;
             rFollowUpFilter.ApplyFilterClick += rFollowUpFilter_ApplyFilterClick;
+            rFollowUpFilter.PreferenceKeyPrefix = "FollowUp";
 
             _canEdit = IsUserAuthorized( Authorization.EDIT );
             _canAdministrate = IsUserAuthorized( Authorization.ADMINISTRATE );
             _canView = IsUserAuthorized( Authorization.VIEW );
             _canViewAll = IsUserAuthorized( SecurityActionKey.ViewAll );
             _canViewCareWorker = IsUserAuthorized( SecurityActionKey.CareWorkers );
+
+            var enterCareNeedEditPermission = GetAttributeValue( AttributeKey.EnterCareNeed ).AsBoolean();
 
             gList.GridRebind += gList_GridRebind;
             gList.RowDataBound += gList_RowDataBound;
@@ -585,7 +604,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 gList.RowSelected += gList_Edit;
             }
             gList.DataKeyNames = new string[] { "Id" };
-            gList.Actions.ShowAdd = _canEdit;
+            gList.Actions.ShowAdd = _canEdit || !enterCareNeedEditPermission;
             gList.Actions.AddClick += gList_AddClick;
             gList.IsDeleteEnabled = _canAdministrate;
 
@@ -600,6 +619,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             gFollowUp.Actions.ShowAdd = false;
             gFollowUp.Actions.ShowMergeTemplate = false;
             gFollowUp.IsDeleteEnabled = _canAdministrate;
+
+            liEnterNeed.Visible = _canEdit || !enterCareNeedEditPermission;
 
             mdMakeNote.Footer.Visible = false;
 
@@ -765,13 +786,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 foreach ( var attribute in AvailableAttributes )
                 {
-                    var filterControl = phFollowUpAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    var filterControl = phFollowUpAttributeFilters.FindControl( "filter_followup_" + attribute.Id.ToString() );
                     if ( filterControl != null )
                     {
                         try
                         {
                             var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                            rFollowUpFilter.SaveUserPreference( attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                            rFollowUpFilter.SaveUserPreference( "filter_followup_" + attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
                         }
                         catch
                         {
@@ -805,6 +826,24 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The e.</param>
         protected void rFilter_DisplayFilterValue( object sender, GridFilter.DisplayFilterValueArgs e )
         {
+            if ( AvailableAttributes != null )
+            {
+                var attribute = AvailableAttributes.FirstOrDefault( a => a.Key == e.Key );
+                if ( attribute != null )
+                {
+                    try
+                    {
+                        var values = JsonConvert.DeserializeObject<List<string>>( e.Value );
+                        e.Value = attribute.FieldType.Field.FormatFilterValues( attribute.QualifierValues, values );
+                        return;
+                    }
+                    catch
+                    {
+                        // intentionally ignore
+                    }
+                }
+            }
+
             switch ( e.Key )
             {
                 case UserPreferenceKey.StartDate:
@@ -876,6 +915,24 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The e.</param>
         protected void rFollowUpFilter_DisplayFilterValue( object sender, GridFilter.DisplayFilterValueArgs e )
         {
+            if ( AvailableAttributes != null )
+            {
+                var attribute = AvailableAttributes.FirstOrDefault( a => "filter_followup_" + a.Key == e.Key );
+                if ( attribute != null )
+                {
+                    try
+                    {
+                        var values = JsonConvert.DeserializeObject<List<string>>( e.Value );
+                        e.Value = attribute.FieldType.Field.FormatFilterValues( attribute.QualifierValues, values );
+                        return;
+                    }
+                    catch
+                    {
+                        // intentionally ignore
+                    }
+                }
+            }
+
             switch ( e.Key )
             {
                 case UserPreferenceKey.StartDateFollowUp:
@@ -1031,7 +1088,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
 
                     var minimumCareTouches = GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger();
-                    var minimumCareTouchHours = GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger();
                     var careTouchCount = 0;
                     var careNeedNotesList = new List<Note>();
                     Literal lCareTouches = e.Row.FindControl( "lCareTouches" ) as Literal;
@@ -1044,7 +1100,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             {
                                 var careNeedNotes = new NoteService( rockContext )
                                     .GetByNoteTypeId( noteType.Id ).AsNoTracking()
-                                    .Where( n => n.EntityId == careNeed.Id && !n.Caption.StartsWith( "Action" ) );
+                                    .Where( n => n.EntityId == careNeed.Id && ( n.Caption == null || !n.Caption.StartsWith( "Action" ) ) );
                                 careNeedNotesList = careNeedNotes.ToList();
 
                                 lCareTouches.Text = careNeedNotes.Count().ToString();
@@ -1202,9 +1258,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     Literal lName = e.Row.FindControl( "lName" ) as Literal;
                     if ( lName != null )
                     {
+                        var minimumCareTouchHours = GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger();
+                        var minimumFollowUpTouchHours = GetAttributeValue( AttributeKey.MinimumFollowUpTouchHours ).AsInteger();
                         var dateDifference = RockDateTime.Now - careNeed.DateEntered.Value;
                         var careNeedFlag = ( dateDifference.TotalHours >= minimumCareTouchHours && careTouchCount < minimumCareTouches );
-                        var careNeedFollowUpWorkerTouch = assignedFollowUpWorkers.Any() && ( dateDifference.TotalHours >= minimumCareTouchHours && !assignedFollowUpWorkerCareTouch );
+                        var careNeedFollowUpWorkerTouch = assignedFollowUpWorkers.Any() && minimumFollowUpTouchHours != 0 && dateDifference.TotalHours >= minimumFollowUpTouchHours && !assignedFollowUpWorkerCareTouch;
                         var careNeedFlagStr = "";
                         var careNeedFlagStrTooltip = "";
                         var childNeedStr = "";
@@ -1217,6 +1275,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         mergeFields.Add( "TouchCompareDate", careNeed.DateEntered.Value );
                         mergeFields.Add( "MinimumCareTouches", minimumCareTouches );
                         mergeFields.Add( "MinimumCareTouchHours", minimumCareTouchHours );
+                        mergeFields.Add( "MinimumFollowUpCareTouchHours", minimumFollowUpTouchHours );
 
                         if ( careNeedFlag )
                         {
@@ -1987,7 +2046,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var closeDialogOnSave = GetAttributeValue( AttributeKey.CloseDialogOnSave ).AsBoolean();
                 var careNeedId = hfCareNeedId.ValueAsInt();
 
-                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note}{( rtbNote.Text.IsNotNullOrWhiteSpace() ? ":" : "" )} {rtbNote.Text}", closeDialogOnSave, noteTemplate, true );
+                var noteCreated = createNote( rockContext, careNeedId, $"{noteTemplate.Note}{( rtbNote.Text.IsNotNullOrWhiteSpace() ? ":" : "" )} {rtbNote.Text}", closeDialogOnSave, noteTemplate, true, cbAlert.Checked, cbPrivate.Checked );
                 if ( noteCreated )
                 {
                     if ( GetAttributeValue( AttributeKey.MoveNeedToSnoozed ).AsBoolean() )
@@ -2135,9 +2194,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             if ( AvailableAttributes != null )
             {
+                phAttributeFilters.Controls.Clear();
+                phFollowUpAttributeFilters.Controls.Clear();
                 foreach ( var attribute in AvailableAttributes )
                 {
                     var control = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
+                    var controlFollowUp = attribute.FieldType.Field.FilterControl( attribute.QualifierValues, "filter_followup_" + attribute.Id.ToString(), false, Rock.Reporting.FilterMode.SimpleFilter );
                     if ( control != null )
                     {
                         if ( control is IRockControl )
@@ -2146,7 +2208,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             rockControl.Label = attribute.Name;
                             rockControl.Help = attribute.Description;
                             phAttributeFilters.Controls.Add( control );
-                            phFollowUpAttributeFilters.Controls.Add( control );
                         }
                         else
                         {
@@ -2155,7 +2216,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             wrapper.Label = attribute.Name;
                             wrapper.Controls.Add( control );
                             phAttributeFilters.Controls.Add( wrapper );
-                            phFollowUpAttributeFilters.Controls.Add( wrapper );
                         }
 
                         string savedValue = rFilter.GetUserPreference( attribute.Key );
@@ -2165,6 +2225,38 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             {
                                 var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
                                 attribute.FieldType.Field.SetFilterValues( control, attribute.QualifierValues, values );
+                            }
+                            catch
+                            {
+                                // intentionally ignore
+                            }
+                        }
+                    }
+                    if ( controlFollowUp != null )
+                    {
+                        if ( controlFollowUp is IRockControl )
+                        {
+                            var rockControl = ( IRockControl ) controlFollowUp;
+                            rockControl.Label = attribute.Name;
+                            rockControl.Help = attribute.Description;
+                            phFollowUpAttributeFilters.Controls.Add( controlFollowUp );
+                        }
+                        else
+                        {
+                            var wrapper = new RockControlWrapper();
+                            wrapper.ID = controlFollowUp.ID + "_wrapper";
+                            wrapper.Label = attribute.Name;
+                            wrapper.Controls.Add( controlFollowUp );
+                            phFollowUpAttributeFilters.Controls.Add( wrapper );
+                        }
+
+                        string savedValue = rFilter.GetUserPreference( "filter_followup_" + attribute.Key );
+                        if ( !string.IsNullOrWhiteSpace( savedValue ) )
+                        {
+                            try
+                            {
+                                var values = JsonConvert.DeserializeObject<List<string>>( savedValue );
+                                attribute.FieldType.Field.SetFilterValues( controlFollowUp, attribute.QualifierValues, values );
                             }
                             catch
                             {
@@ -2316,7 +2408,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var currentDateTime = RockDateTime.Now;
                 var last7Days = currentDateTime.AddDays( -7 );
-                var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime && !n.Caption.StartsWith( "Action" ) );
+                var careTouches = noteQry.Count( n => n.CreatedDateTime >= last7Days && n.CreatedDateTime <= currentDateTime && ( n.Caption == null || !n.Caption.StartsWith( "Action" ) ) );
 
                 lTouchesCount.Text = careTouches.ToString();
                 lCareNeedsCount.Text = outstandingCareNeeds.ToString();
@@ -2480,6 +2572,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 qry = qry.Where( cn => cn.AssignedPersons.Count( ap => ap.PersonAliasId == CurrentPersonAliasId ) > 0 );
             }
 
+            // Filter query by any configured attribute filters
+            if ( AvailableAttributes != null && AvailableAttributes.Any() )
+            {
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
+                    qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, careNeedService, Rock.Reporting.FilterMode.SimpleFilter );
+                }
+            }
+
             SortProperty sortProperty = gList.SortProperty;
             if ( sortProperty != null )
             {
@@ -2511,16 +2613,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     .ThenByDescending( a => a.DateEntered )
                     .ThenBy( a => a.ParentNeedId )
                     .ThenByDescending( a => a.Id );
-            }
-
-            // Filter query by any configured attribute filters
-            if ( AvailableAttributes != null && AvailableAttributes.Any() )
-            {
-                foreach ( var attribute in AvailableAttributes )
-                {
-                    var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                    qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, careNeedService, Rock.Reporting.FilterMode.SimpleFilter );
-                }
             }
 
             var list = qry.ToList();
@@ -2637,6 +2729,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 qry = qry.Where( cn => cn.AssignedPersons.Count( ap => ap.PersonAliasId == CurrentPersonAliasId ) > 0 );
             }
 
+            // Filter query by any configured attribute filters
+            if ( AvailableAttributes != null && AvailableAttributes.Any() )
+            {
+                foreach ( var attribute in AvailableAttributes )
+                {
+                    var filterControl = phFollowUpAttributeFilters.FindControl( "filter_followup_" + attribute.Id.ToString() );
+                    qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, careNeedService, Rock.Reporting.FilterMode.SimpleFilter );
+                }
+            }
+
             SortProperty sortProperty = gFollowUp.SortProperty;
             if ( sortProperty != null )
             {
@@ -2663,16 +2765,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             else
             {
                 qry = qry.OrderByDescending( a => a.DateEntered ).ThenByDescending( a => a.Id );
-            }
-
-            // Filter query by any configured attribute filters
-            if ( AvailableAttributes != null && AvailableAttributes.Any() )
-            {
-                foreach ( var attribute in AvailableAttributes )
-                {
-                    var filterControl = phFollowUpAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
-                    qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, careNeedService, Rock.Reporting.FilterMode.SimpleFilter );
-                }
             }
 
             var list = qry.ToList();
@@ -2755,13 +2847,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             notesTimeline.AllowAnonymousEntry = false;
             notesTimeline.SortDirection = ListSortDirection.Descending;
 
+            cbAlert.Visible = noteOptions.ShowAlertCheckBox;
+            cbAlert.Checked = false;
+            cbPrivate.Visible = noteOptions.ShowPrivateCheckBox;
+            cbPrivate.Checked = false;
+
             var noteEditor = ( NoteEditor ) notesTimeline.Controls[0];
             noteEditor.CssClass = "note-new-kfs";
             noteEditor.SaveButtonClick += mdMakeNote_SaveClick;
             noteEditor.Focus();
         }
 
-        private bool createNote( RockContext rockContext, int entityId, string noteText, bool displayDialog = false, NoteTemplate noteTemplate = null, bool countsForTouch = false )
+        private bool createNote( RockContext rockContext, int entityId, string noteText, bool displayDialog = false, NoteTemplate noteTemplate = null, bool countsForTouch = false, bool isAlert = false, bool isPrivate = false )
         {
             var noteService = new NoteService( rockContext );
             var noteType = _careNeedNoteTypes.FirstOrDefault();
@@ -2773,7 +2870,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     Id = 0,
                     IsSystem = false,
-                    IsAlert = false,
+                    IsAlert = isAlert,
+                    IsPrivateNote = isPrivate,
                     NoteTypeId = noteType.Id,
                     EntityId = entityId,
                     Text = noteText,
@@ -3021,13 +3119,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var lavaTemplate = GetAttributeValue( AttributeKey.QuickNoteStatusTemplate );
 
-                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                 mergeFields.Add( "CareNeed", careNeed );
                 mergeFields.Add( "TouchTemplates", catTouchTemplates );
                 mergeFields.Add( "CareNeedNotes", careNeedNotesList.Where( n => n.Caption == null || ( n.Caption != null && !n.Caption.StartsWith( "Action" ) ) ) );
                 mergeFields.Add( "CareNeedNotesWithActions", careNeedNotesList );
                 mergeFields.Add( "MinimumCareTouches", GetAttributeValue( AttributeKey.MinimumCareTouches ).AsInteger() );
                 mergeFields.Add( "MinimumCareTouchHours", GetAttributeValue( AttributeKey.MinimumCareTouchHours ).AsInteger() );
+                mergeFields.Add( "MinimumFollowUpCareTouchHours", GetAttributeValue( AttributeKey.MinimumFollowUpTouchHours ).AsInteger() );
                 lQuickNoteStatus.Text = lavaTemplate.ResolveMergeFields( mergeFields );
 
                 SetupNoteTimeline( careNeed );

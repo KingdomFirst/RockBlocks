@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright 2021 by Kingdom First Solutions
+// Copyright 2024 by Kingdom First Solutions
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -162,7 +162,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             // Parse the attribute filters
             AvailableAttributes = new List<AttributeCache>();
 
-            int entityTypeId = new CareNeed().TypeId;
+            int entityTypeId = new CareWorker().TypeId;
             foreach ( var attributeModel in new AttributeService( new RockContext() ).Queryable()
                 .Where( a =>
                     a.EntityTypeId == entityTypeId &&
@@ -440,16 +440,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 qry = qry.Where( b => b.CategoryValues.Contains( categoryValueId.ToString() ) );
             }
 
-            SortProperty sortProperty = gList.SortProperty;
-            if ( sortProperty != null )
-            {
-                qry = qry.Sort( sortProperty );
-            }
-            else
-            {
-                qry = qry.OrderBy( cw => cw.PersonAlias.Person.LastName ).ThenBy( cw => cw.PersonAlias.Person.FirstName ).ThenByDescending( cw => cw.Id );
-            }
-
             // Filter query by any configured attribute filters
             if ( AvailableAttributes != null && AvailableAttributes.Any() )
             {
@@ -458,6 +448,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     var filterControl = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
                     qry = attribute.FieldType.Field.ApplyAttributeQueryFilter( qry, filterControl, attribute, careWorkerService, Rock.Reporting.FilterMode.SimpleFilter );
                 }
+            }
+
+            SortProperty sortProperty = gList.SortProperty;
+            if ( sortProperty != null )
+            {
+                qry = qry.Sort( sortProperty );
+            }
+            else
+            {
+                qry = qry.OrderBy( cw => cw.PersonAlias.Person.LastName ).ThenBy( cw => cw.PersonAlias.Person.FirstName ).ThenByDescending( cw => cw.Id );
             }
 
             var list = qry.ToList();
@@ -559,6 +559,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
 
             careWorker.LoadAttributes();
+            phAttributes.Controls.Clear();
             Helper.AddEditControls( careWorker, phAttributes, true, BlockValidationGroup, 2 );
 
             ppPerson_SelectPerson( null, null );
