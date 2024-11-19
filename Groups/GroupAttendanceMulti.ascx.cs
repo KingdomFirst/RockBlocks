@@ -66,23 +66,23 @@ namespace Plugins.rocks_kfs.Groups
         Key = AttributeKey.GroupsToDisplay )]
 
     [LavaField( "Attendee Lava Template",
-        Description = "Lava template used per attendee to customize what the appearance should look like to choose the user.",
+        Description = "Lava template used to customize appearance of individual attendee selectors.",
         IsRequired = true,
         DefaultValue = DefaultValue.AttendeeLavaTemplate,
         Key = AttributeKey.AttendeeLavaTemplate )]
 
     [TextField( "Checkbox Column Class",
-        Description = "Column classes for width on various screen sizes, uses standard bootstrap 3 column classes. Default: col-xs-12 col-sm-6 col-md-3 col-lg-2",
+        Description = "The Bootstrap 3 CSS classes to use for column width on various screen sizes. Default: col-xs-12 col-sm-6 col-md-3 col-lg-2",
         DefaultValue = "col-xs-12 col-sm-6 col-md-3 col-lg-2",
         Key = AttributeKey.CheckboxColumnClass )]
 
     [BooleanField( "Display Group Names",
-        Description = "Display the group names in the panel title. Default: Yes",
+        Description = "Display the group names after the block name in the panel title. Default: Yes",
         DefaultBooleanValue = true,
         Key = AttributeKey.DisplayGroupNames )]
 
     [BooleanField( "Allow Groups from Page Parameter",
-        Description = "Allow GroupId's to be passed in via Page Parameter 'Groups' as a comma separated list, the current user must have permission to the groups for members to display. Default: No",
+        Description = "Allow GroupId's to be passed in via Page Parameter 'Groups' as a comma separated list. The current user must have permission to the groups for members to display. Default: No",
         DefaultBooleanValue = false,
         Key = AttributeKey.AllowGroupsPageParameter )]
 
@@ -119,7 +119,6 @@ namespace Plugins.rocks_kfs.Groups
         private static class PageParameterKey
         {
             public const string Date = "Date";
-            public const string Occurrence = "Occurrence";
             public const string Groups = "Groups";
         }
 
@@ -321,7 +320,7 @@ namespace Plugins.rocks_kfs.Groups
                 nbNotice.Text = "There are no members to display for the selected group(s). Please check if you have permission to Manage Members or Edit the group(s) selected.";
             }
 
-            _attendanceDate = PageParameter( PageParameterKey.Date ).AsDateTime() ?? PageParameter( PageParameterKey.Occurrence ).AsDateTime();
+            _attendanceDate = PageParameter( PageParameterKey.Date ).AsDateTime();
 
             if ( _attendanceDate.HasValue )
             {
@@ -366,7 +365,8 @@ namespace Plugins.rocks_kfs.Groups
             _attendees = _members
                 .Where( gm => tbSearch.Text.IsNullOrWhiteSpace() ||
                       ( searchParts.Length == 1 && gm.Person.LastName.ToLower().StartsWith( searchParts[0] ) ) ||
-                      ( searchParts.Length > 1 && gm.Person.FirstName.ToLower().StartsWith( searchParts[0] ) && gm.Person.LastName.ToLower().StartsWith( searchParts[1] ) )
+                      ( searchParts.Length > 1 && gm.Person.FirstName.ToLower().StartsWith( searchParts[0] ) && gm.Person.LastName.ToLower().StartsWith( searchParts[1] ) ||
+                      ( searchParts.Length > 1 && gm.Person.FirstName.ToLower().StartsWith( searchParts[1] ) && gm.Person.LastName.ToLower().StartsWith( searchParts[0] ) )
                 )
                 .OrderBy( gm => gm.Person.LastName )
                                                     .ThenBy( gm => gm.Person.FirstName )
@@ -441,7 +441,6 @@ namespace Plugins.rocks_kfs.Groups
 
                             var existingAttendees = occurrence.Attendees.ToList();
 
-                            int? campusId = group.CampusId;
 
                             occurrence.Schedule = occurrence.Schedule == null && occurrence.ScheduleId.HasValue ? new ScheduleService( rockContext ).Get( occurrence.ScheduleId.Value ) : occurrence.Schedule;
 
@@ -463,7 +462,7 @@ namespace Plugins.rocks_kfs.Groups
                                 {
                                     attendance = new Attendance();
                                     attendance.PersonAliasId = personAliasId;
-                                    attendance.CampusId = campusId;
+                                    attendance.CampusId = group.CampusId;
                                     attendance.StartDateTime = occurrence.Schedule != null && occurrence.Schedule.HasSchedule() ? occurrence.OccurrenceDate.Date.Add( occurrence.Schedule.StartTimeOfDay ) : occurrence.OccurrenceDate;
                                     attendance.DidAttend = attendee.Attended;
 
@@ -509,7 +508,5 @@ namespace Plugins.rocks_kfs.Groups
         public bool Attended { get; set; } = false;
 
         public List<int> Groups { get; set; }
-
-
     }
 }
