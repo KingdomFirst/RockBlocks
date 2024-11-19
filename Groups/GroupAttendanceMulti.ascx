@@ -67,6 +67,8 @@
                 <asp:ValidationSummary ID="ValidationSummary1" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
                 <asp:CustomValidator ID="cvAttendance" runat="server" Display="None" />
 
+                <asp:Literal ID="lIntroLava" runat="server" />
+
                 <div class="row mb-5">
                     <asp:Panel ID="pnlDate" runat="server" CssClass="col-sm-6">
                         <Rock:RockLiteral ID="lAttendanceDate" runat="server" Label="Enter Attendance For" />

@@ -24,6 +24,7 @@ using System.Web.UI.WebControls;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Lava;
 using Rock.Model;
 using Rock.Security;
 using Rock.Web.UI;
@@ -91,6 +92,13 @@ namespace Plugins.rocks_kfs.Groups
         Order = 5,
         Key = AttributeKey.AllowGroupsPageParameter )]
 
+    [LavaField( "Intro Lava Template",
+        Description = "Lava template used to display instructions or group information.",
+        IsRequired = false,
+        DefaultValue = DefaultValue.IntroLavaTemplate,
+        Order = 6,
+        Key = AttributeKey.IntroLavaTemplate )]
+
     [Rock.SystemGuid.BlockTypeGuid( "B8724DBC-F8FB-426D-9296-87A5944273B9" )]
     public partial class GroupAttendanceMulti : RockBlock
     {
@@ -104,6 +112,7 @@ namespace Plugins.rocks_kfs.Groups
             public const string CheckboxColumnClass = "CheckboxColumnClass";
             public const string DisplayGroupNames = "DisplayGroupNames";
             public const string AllowGroupsPageParameter = "AllowGroupsPageParameter";
+            public const string IntroLavaTemplate = "IntroLavaTemplate";
         }
 
         /// <summary>
@@ -122,6 +131,12 @@ namespace Plugins.rocks_kfs.Groups
 {% endcomment %}
 <img src=""{{ Person.PhotoUrl }}"" class=""img-circle col-xs-3 p-0 mr-3 pull-left""> {{ Person.FullName }}<br>
 <small class=""text-muted"">{{ Groups | Join:', ' }}</small>";
+            public const string IntroLavaTemplate = @"{% comment %}
+  This is the lava template for the introduction of GroupAttendanceMulti block
+   Available Lava Fields:
+
+   + Groups (the group(s) that are selected from the block settings)
+{% endcomment %}";
         }
 
         /// <summary>
@@ -209,6 +224,8 @@ namespace Plugins.rocks_kfs.Groups
 
             if ( !Page.IsPostBack )
             {
+                BuildIntroLava();
+
                 BindFields();
                 BindRepeat();
             }
@@ -247,6 +264,7 @@ namespace Plugins.rocks_kfs.Groups
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
+            BuildIntroLava();
             BindFields();
             BindRepeat();
         }
@@ -292,7 +310,7 @@ namespace Plugins.rocks_kfs.Groups
 
                 var lavaTemplate = GetAttributeValue( AttributeKey.AttendeeLavaTemplate );
 
-                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
+                var mergeFields = LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                 mergeFields.Add( "Person", _members.Where( gm => gm.PersonId == attendee.PersonId ).Select( gm => gm.Person ).FirstOrDefault() );
                 mergeFields.Add( "Attended", attendee.Attended );
                 mergeFields.Add( "GroupMembers", _members.Where( gm => attendee.GroupMemberIds.Contains( gm.Id ) ) );
@@ -517,6 +535,22 @@ namespace Plugins.rocks_kfs.Groups
                 {
                     return false;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Builds the intro lava.
+        /// </summary>
+        private void BuildIntroLava()
+        {
+            var introLavaTemplate = GetAttributeValue( AttributeKey.IntroLavaTemplate );
+
+            if ( introLavaTemplate.IsNotNullOrWhiteSpace() )
+            {
+                var mergeFields = LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
+                mergeFields.Add( "Groups", _groups );
+
+                lIntroLava.Text = introLavaTemplate.ResolveMergeFields( mergeFields );
             }
         }
 
