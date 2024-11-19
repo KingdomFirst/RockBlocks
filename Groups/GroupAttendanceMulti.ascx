@@ -78,7 +78,7 @@
                 </div>
                 <div class="row mb-3">
                     <asp:Panel ID="pnlSearch" runat="server" CssClass="col-xs-12 col-sm-10">
-                        <Rock:RockTextBox ID="tbSearch" runat="server" OnTextChanged="tbSearch_TextChanged" AutoPostBack="true" Placeholder="Search"></Rock:RockTextBox>
+                        <Rock:RockTextBox ID="tbSearch" runat="server" OnTextChanged="tbSearch_TextChanged" Placeholder="Search"></Rock:RockTextBox>
                     </asp:Panel>
                 </div>
                 <asp:Panel ID="pnlAttendance" runat="server" CssClass="d-flex flex-wrap">

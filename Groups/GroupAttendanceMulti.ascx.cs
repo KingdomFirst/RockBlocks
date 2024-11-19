@@ -63,27 +63,32 @@ namespace Plugins.rocks_kfs.Groups
                 g.Name 
         END",
         IsRequired = true,
+        Order = 1,
         Key = AttributeKey.GroupsToDisplay )]
 
     [LavaField( "Attendee Lava Template",
         Description = "Lava template used to customize appearance of individual attendee selectors.",
         IsRequired = true,
         DefaultValue = DefaultValue.AttendeeLavaTemplate,
+        Order = 2,
         Key = AttributeKey.AttendeeLavaTemplate )]
 
     [TextField( "Checkbox Column Class",
         Description = "The Bootstrap 3 CSS classes to use for column width on various screen sizes. Default: col-xs-12 col-sm-6 col-md-3 col-lg-2",
         DefaultValue = "col-xs-12 col-sm-6 col-md-3 col-lg-2",
+        Order = 3,
         Key = AttributeKey.CheckboxColumnClass )]
 
     [BooleanField( "Display Group Names",
         Description = "Display the group names after the block name in the panel title. Default: Yes",
         DefaultBooleanValue = true,
+        Order = 4,
         Key = AttributeKey.DisplayGroupNames )]
 
     [BooleanField( "Allow Groups from Page Parameter",
         Description = "Allow GroupId's to be passed in via Page Parameter 'Groups' as a comma separated list. The current user must have permission to the groups for members to display. Default: No",
         DefaultBooleanValue = false,
+        Order = 5,
         Key = AttributeKey.AllowGroupsPageParameter )]
 
     [Rock.SystemGuid.BlockTypeGuid( "B8724DBC-F8FB-426D-9296-87A5944273B9" )]
@@ -101,6 +106,9 @@ namespace Plugins.rocks_kfs.Groups
             public const string AllowGroupsPageParameter = "AllowGroupsPageParameter";
         }
 
+        /// <summary>
+        /// Long default values to use for Block Attributes
+        /// </summary>
         private static class DefaultValue
         {
             public const string AttendeeLavaTemplate = @"{% comment %}
@@ -116,6 +124,9 @@ namespace Plugins.rocks_kfs.Groups
 <small class=""text-muted"">{{ Groups | Join:', ' }}</small>";
         }
 
+        /// <summary>
+        /// Keys to use for Page Parameters
+        /// </summary>
         private static class PageParameterKey
         {
             public const string Date = "Date";
@@ -134,11 +145,21 @@ namespace Plugins.rocks_kfs.Groups
 
         #region Control Methods
 
+        /// <summary>
+        /// Restores the view-state information from a previous user control request that was saved by the <see cref="M:System.Web.UI.UserControl.SaveViewState" /> method.
+        /// </summary>
+        /// <param name="savedState">An <see cref="T:System.Object" /> that represents the user control state to be restored.</param>
         protected override void LoadViewState( object savedState )
         {
             base.LoadViewState( savedState );
             _attendees = ViewState["Attendees"] as List<AttendanceAttendee>;
         }
+        /// <summary>
+        /// Saves any user control view-state changes that have occurred since the last page postback.
+        /// </summary>
+        /// <returns>
+        /// Returns the user control's current view state. If there is no view state associated with the control, it returns <see langword="null" />.
+        /// </returns>
         protected override object SaveViewState()
         {
             ViewState["Attendees"] = _attendees;
@@ -155,7 +176,7 @@ namespace Plugins.rocks_kfs.Groups
 
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( pnlContent );
-            tbSearch.Attributes["onkeypress"] = $"clearTimeout(window.{tbSearch.ClientID}); window.{tbSearch.ClientID} = setTimeout('__doPostBack(\\'{tbSearch.UniqueID}\\',\\'\\')', 1000)";
+            tbSearch.Attributes["onkeyup"] = $"clearTimeout(window.{tbSearch.ClientID}); window.{tbSearch.ClientID} = setTimeout('__doPostBack(\\'{tbSearch.UniqueID}\\',\\'\\')', 1000)";
 
             _rockContext = new RockContext();
 
@@ -336,7 +357,7 @@ namespace Plugins.rocks_kfs.Groups
                 lAttendanceDate.Visible = false;
             }
 
-            lSchedule.Text = _groups.Where( g => g.Schedule != null ).ToList().Select( g => g.Schedule.FriendlyScheduleText ).JoinStrings( ", " );
+            lSchedule.Text = _groups.Where( g => g.Schedule != null ).ToList().Select( g => g.Schedule.FriendlyScheduleText ).Distinct().JoinStrings( ", " );
         }
 
         /// <summary>
@@ -345,28 +366,31 @@ namespace Plugins.rocks_kfs.Groups
         protected void BindRepeat()
         {
             var attendedIds = new List<int>();
-            using ( var rockContext = new RockContext() )
-            {
-                var groupIds = _groups.Select( g => g.Id ).ToList();
-                attendedIds = new AttendanceService( rockContext )
-                    .Queryable().AsNoTracking()
-                    .Where( a =>
-                        DbFunctions.DiffDays( a.StartDateTime, _attendanceDate ) == 0 &&
-                        a.DidAttend.HasValue &&
-                        a.DidAttend.Value &&
-                        a.Occurrence != null &&
-                        groupIds.Contains( a.Occurrence.GroupId.Value ) &&
-                        a.PersonAlias != null )
-                    .Select( a => a.PersonAlias.PersonId )
-                    .Distinct()
-                    .ToList();
-            }
+            var groupIds = _groups.Select( g => g.Id ).ToList();
+            attendedIds = new AttendanceService( _rockContext )
+                .Queryable().AsNoTracking()
+                .Where( a =>
+                    DbFunctions.DiffDays( a.StartDateTime, _attendanceDate ) == 0 &&
+                    a.DidAttend.HasValue &&
+                    a.DidAttend.Value &&
+                    a.Occurrence != null &&
+                    groupIds.Contains( a.Occurrence.GroupId.Value ) &&
+                    a.PersonAlias != null )
+                .Select( a => a.PersonAlias.PersonId )
+                .Distinct()
+                .ToList();
             var searchParts = tbSearch.Text.ToLower().SplitDelimitedValues();
             _attendees = _members
                 .Where( gm => tbSearch.Text.IsNullOrWhiteSpace() ||
                       ( searchParts.Length == 1 && gm.Person.LastName.ToLower().StartsWith( searchParts[0] ) ) ||
-                      ( searchParts.Length > 1 && gm.Person.FirstName.ToLower().StartsWith( searchParts[0] ) && gm.Person.LastName.ToLower().StartsWith( searchParts[1] ) ||
-                      ( searchParts.Length > 1 && gm.Person.FirstName.ToLower().StartsWith( searchParts[1] ) && gm.Person.LastName.ToLower().StartsWith( searchParts[0] ) )
+                      ( searchParts.Length > 1 && ( gm.Person.FirstName.ToLower().StartsWith( searchParts[0] ) ||
+                                                    gm.Person.NickName.ToLower().StartsWith( searchParts[0] )
+                                                  ) && gm.Person.LastName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
+                      ) ||
+                      ( searchParts.Length > 1 && ( gm.Person.FirstName.ToLower().StartsWith( searchParts[searchParts.Length - 1] ) ||
+                                                    gm.Person.NickName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
+                                                  ) && gm.Person.LastName.ToLower().StartsWith( searchParts[0] )
+                      )
                 )
                 .OrderBy( gm => gm.Person.LastName )
                                                     .ThenBy( gm => gm.Person.FirstName )
@@ -392,6 +416,7 @@ namespace Plugins.rocks_kfs.Groups
         /// <returns>boolean</returns>
         private bool SaveAttendance()
         {
+            // Loading a new RockContext when saving data.
             using ( var rockContext = new RockContext() )
             {
                 var occurrenceService = new AttendanceOccurrenceService( rockContext );
