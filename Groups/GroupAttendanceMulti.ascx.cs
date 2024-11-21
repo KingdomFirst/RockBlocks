@@ -225,7 +225,6 @@ namespace Plugins.rocks_kfs.Groups
             if ( !Page.IsPostBack )
             {
                 BuildIntroLava();
-
                 BindFields();
                 BindRepeat();
             }
