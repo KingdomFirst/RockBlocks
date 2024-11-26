@@ -1,6 +1,6 @@
-System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Controls/datePartsPicker', '@Obsidian/Controls/addressControl.obs', '@Obsidian/Utility/guid', '@Obsidian/Core/Controls/financialGateway', '@Obsidian/Enums/Controls/gatewayEmitStrings'], (function (exports) {
+System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Controls/datePartsPicker.obs', '@Obsidian/Controls/addressControl.obs', '@Obsidian/Utility/guid', '@Obsidian/Core/Controls/financialGateway', '@Obsidian/Enums/Controls/gatewayEmitStrings'], (function (exports) {
   'use strict';
-  var createElementVNode, createStaticVNode, defineComponent, ref, computed, onMounted, openBlock, createElementBlock, createVNode, unref, createCommentVNode, withDirectives, isRef, toDisplayString, vShow, createTextVNode, LoadingIndicator, DatePartsPicker, AddressControl, newGuid, onSubmitPayment, GatewayEmitStrings;
+  var createElementVNode, createStaticVNode, defineComponent, ref, computed, onMounted, openBlock, createElementBlock, createVNode, unref, createCommentVNode, withDirectives, vShow, isRef, toDisplayString, createTextVNode, LoadingIndicator, DatePartsPicker, AddressControl, newGuid, onSubmitPayment, GatewayEmitStrings;
   return {
     setters: [function (module) {
       createElementVNode = module.createElementVNode;
@@ -15,9 +15,9 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Contro
       unref = module.unref;
       createCommentVNode = module.createCommentVNode;
       withDirectives = module.withDirectives;
+      vShow = module.vShow;
       isRef = module.isRef;
       toDisplayString = module.toDisplayString;
-      vShow = module.vShow;
       createTextVNode = module.createTextVNode;
     }, function (module) {
       LoadingIndicator = module["default"];
@@ -75,7 +75,8 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Contro
         }
       };
       var _hoisted_3 = {
-        class: "gateway-address-container js-gateway-address-container"
+        class: "gateway-address-container js-gateway-address-container",
+        ref: "addressContainer"
       };
       var _hoisted_4 = createElementVNode("h4", null, "Billing", -1);
       var _hoisted_5 = {
@@ -153,6 +154,8 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Contro
             day: 0
           };
           var address = ref((_props$settings$addre = props.settings.address) !== null && _props$settings$addre !== void 0 ? _props$settings$addre : undefined);
+          var showAddress = ref(true);
+          var addressRules = ref("");
           var controlId = "cyberSource_".concat(newGuid());
           var paymentInputs = ref(null);
           function loadMicroformJsAsync(_x) {
@@ -365,6 +368,10 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Contro
                 number: undefined,
                 securityCode: undefined
               };
+              showAddress.value = props.settings.addressMode != "Hide";
+              if (props.settings.addressMode == "Required") {
+                addressRules.value = "required";
+              }
               initCybersourceMicroFormFields();
             } catch (_unused) {
               failedToLoad.value = true;
@@ -379,13 +386,13 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator', '@Obsidian/Contro
               class: "js-cybersource-payment-inputs cybersource-payment-inputs",
               ref_key: "paymentInputs",
               ref: paymentInputs
-            }, [createElementVNode("div", _hoisted_3, [_hoisted_4, createVNode(unref(AddressControl), {
+            }, [withDirectives(createElementVNode("div", _hoisted_3, [_hoisted_4, createVNode(unref(AddressControl), {
               label: "Address",
               modelValue: address.value,
               "onUpdate:modelValue": _cache[0] || (_cache[0] = $event => address.value = $event),
               disabled: isSaving.value,
-              rules: 'required'
-            }, null, 8, ["modelValue", "disabled"])]), createElementVNode("div", _hoisted_5, [_hoisted_6, createElementVNode("div", _hoisted_9, [createElementVNode("div", _hoisted_10, [_hoisted_11, createVNode(unref(DatePartsPicker), {
+              rules: addressRules.value
+            }, null, 8, ["modelValue", "disabled", "rules"])], 512), [[vShow, showAddress.value]]), createElementVNode("div", _hoisted_5, [_hoisted_6, createElementVNode("div", _hoisted_9, [createElementVNode("div", _hoisted_10, [_hoisted_11, createVNode(unref(DatePartsPicker), {
               label: "Expiration Date",
               isRequired: true,
               startYear: unref(nowYear),
