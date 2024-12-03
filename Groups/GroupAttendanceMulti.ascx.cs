@@ -99,6 +99,12 @@ namespace Plugins.rocks_kfs.Groups
         Order = 6,
         Key = AttributeKey.IntroLavaTemplate )]
 
+    [BooleanField( "Display LastName buttons",
+        Description = "Display a row of buttons with the first letter of LastName buttons. Default: Yes",
+        DefaultBooleanValue = true,
+        Order = 7,
+        Key = AttributeKey.DisplayLastNameButtons )]
+
     [Rock.SystemGuid.BlockTypeGuid( "B8724DBC-F8FB-426D-9296-87A5944273B9" )]
     public partial class GroupAttendanceMulti : RockBlock
     {
@@ -113,6 +119,7 @@ namespace Plugins.rocks_kfs.Groups
             public const string DisplayGroupNames = "DisplayGroupNames";
             public const string AllowGroupsPageParameter = "AllowGroupsPageParameter";
             public const string IntroLavaTemplate = "IntroLavaTemplate";
+            public const string DisplayLastNameButtons = "DisplayLastNameButtons";
         }
 
         /// <summary>
@@ -155,6 +162,7 @@ namespace Plugins.rocks_kfs.Groups
         private List<GroupMember> _members = new List<GroupMember>();
         private List<AttendanceAttendee> _attendees;
         private DateTime? _attendanceDate = null;
+        private string _lastnameLetter = "A";
 
         #endregion
 
@@ -301,6 +309,7 @@ namespace Plugins.rocks_kfs.Groups
             var attendee = e.Item.DataItem as AttendanceAttendee;
             var cbAttendee = e.Item.FindControl( "cbAttendee" ) as RockCheckBox;
             var pnlCardCheckbox = e.Item.FindControl( "pnlCardCheckbox" ) as Panel;
+            var lAnchor = e.Item.FindControl( "lAnchor" ) as Literal;
 
             if ( attendee != null && cbAttendee != null && pnlCardCheckbox != null )
             {
@@ -309,8 +318,17 @@ namespace Plugins.rocks_kfs.Groups
 
                 var lavaTemplate = GetAttributeValue( AttributeKey.AttendeeLavaTemplate );
 
+                var person = _members.Where( gm => gm.PersonId == attendee.PersonId ).Select( gm => gm.Person ).FirstOrDefault();
+
+                if ( person.LastName.Left( 1 ) != _lastnameLetter )
+                {
+                    _lastnameLetter = person.LastName.Left( 1 ).ToUpper();
+                    lAnchor.Visible = true;
+                    lAnchor.Text = $"<a name='lastname{_lastnameLetter}' id='lastname{_lastnameLetter}'></a>";
+                }
+
                 var mergeFields = LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
-                mergeFields.Add( "Person", _members.Where( gm => gm.PersonId == attendee.PersonId ).Select( gm => gm.Person ).FirstOrDefault() );
+                mergeFields.Add( "Person", person );
                 mergeFields.Add( "Attended", attendee.Attended );
                 mergeFields.Add( "GroupMembers", _members.Where( gm => attendee.GroupMemberIds.Contains( gm.Id ) ) );
                 mergeFields.Add( "Groups", _groups.Where( g => attendee.Groups.Contains( g.Id ) ) );
@@ -343,6 +361,7 @@ namespace Plugins.rocks_kfs.Groups
         /// </summary>
         protected void BindFields()
         {
+            divLastnameButtonRow.Visible = GetAttributeValue( AttributeKey.DisplayLastNameButtons ).AsBoolean();
             var displayGroupName = GetAttributeValue( AttributeKey.DisplayGroupNames ).AsBoolean();
             if ( displayGroupName )
             {
@@ -375,6 +394,8 @@ namespace Plugins.rocks_kfs.Groups
             }
 
             lSchedule.Text = _groups.Where( g => g.Schedule != null ).ToList().Select( g => g.Schedule.FriendlyScheduleText ).Distinct().JoinStrings( ", " );
+
+            lSchedule.Visible = lSchedule.Text.IsNotNullOrWhiteSpace();
         }
 
         /// <summary>
