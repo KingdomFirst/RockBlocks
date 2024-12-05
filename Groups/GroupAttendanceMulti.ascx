@@ -84,8 +84,12 @@
                     </asp:Panel>
                 </div>
                 <div class="row mb-3">
-                    <asp:Panel ID="pnlSearch" runat="server" CssClass="col-xs-12 col-sm-10">
+                    <asp:Panel ID="pnlSearch" runat="server" CssClass="col-xs-12 col-sm-9">
                         <Rock:RockTextBox ID="tbSearch" runat="server" OnTextChanged="tbSearch_TextChanged" Placeholder="Search"></Rock:RockTextBox>
+                    </asp:Panel>
+                    <asp:Panel ID="pnlAddPerson" runat="server" CssClass="col-xs-12 col-sm-3">
+                        <Rock:PersonPicker ID="ppAddPerson" runat="server" OnSelectPerson="ppAddPerson_SelectPerson" />
+                        <Rock:RockDropDownList ID="ddlAddPersonGroup" runat="server" OnSelectedIndexChanged="ddlAddPersonGroup_SelectedIndexChanged" AutoPostBack="true"></Rock:RockDropDownList>
                     </asp:Panel>
                 </div>
                 <div class="row mb-3 position-sticky-top" runat="server" id="divLastnameButtonRow">
