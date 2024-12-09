@@ -3,6 +3,13 @@
     .position-sticky-top {
         position: sticky;
         top: 0;
+        z-index: 1001;
+    }
+
+    @media screen and (min-width: 991px) {
+        .position-sticky-top {
+            top: 80px;
+        }
     }
 
     .card-checkbox .checkbox {
@@ -92,7 +99,7 @@
                         <Rock:RockDropDownList ID="ddlAddPersonGroup" runat="server" OnSelectedIndexChanged="ddlAddPersonGroup_SelectedIndexChanged" AutoPostBack="true"></Rock:RockDropDownList>
                     </asp:Panel>
                 </div>
-                <div class="row mb-3 position-sticky-top" runat="server" id="divLastnameButtonRow">
+                <div class="row mb-3 bg-white position-sticky-top" runat="server" id="divLastnameButtonRow">
                     <asp:Panel runat="server" ID="lastnameButtons" CssClass="col-xs-12 table-responsive">
                         <div class="btn-group d-flex">
                             <a href="#lastnameA" class="btn btn-lg btn-default">A</a>
