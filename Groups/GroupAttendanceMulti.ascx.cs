@@ -573,6 +573,8 @@ namespace Plugins.rocks_kfs.Groups
                                     .ThenBy( gm => gm.GroupName )
                                     .ToList();
 
+            lCount.Text = _attendees.Count( a => a.Attended ).ToString();
+
             rptrAttendance.ItemDataBound += RptrAttendance_ItemDataBound;
             rptrAttendance.DataSource = _attendees;
             rptrAttendance.DataBind();

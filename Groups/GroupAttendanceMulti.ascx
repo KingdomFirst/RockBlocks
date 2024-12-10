@@ -91,10 +91,13 @@
                     </asp:Panel>
                 </div>
                 <div class="row mb-3">
-                    <asp:Panel ID="pnlSearch" runat="server" CssClass="col-xs-12 col-sm-9">
+                    <asp:Panel ID="pnlCount" runat="server" CssClass="col-xs-12 col-sm-3 col-md-2 col-sm-push-9 col-md-push-10 text-center" style="line-height: 38px;">
+                        <strong><asp:Literal ID="lCount" runat="server" /></strong> Attended
+                    </asp:Panel>
+                    <asp:Panel ID="pnlSearch" runat="server" CssClass="col-xs-12 pb-2 pb-sm-0 col-sm-6 col-md-7 col-sm-pull-3 col-md-pull-2">
                         <Rock:RockTextBox ID="tbSearch" runat="server" OnTextChanged="tbSearch_TextChanged" Placeholder="Search"></Rock:RockTextBox>
                     </asp:Panel>
-                    <asp:Panel ID="pnlAddPerson" runat="server" CssClass="col-xs-12 col-sm-3">
+                    <asp:Panel ID="pnlAddPerson" runat="server" CssClass="col-xs-12 col-sm-4 col-md-3 col-sm-pull-3 col-md-pull-2">
                         <Rock:PersonPicker ID="ppAddPerson" runat="server" OnSelectPerson="ppAddPerson_SelectPerson" />
                         <Rock:RockDropDownList ID="ddlAddPersonGroup" runat="server" OnSelectedIndexChanged="ddlAddPersonGroup_SelectedIndexChanged" AutoPostBack="true"></Rock:RockDropDownList>
                     </asp:Panel>
