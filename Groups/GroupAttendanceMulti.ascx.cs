@@ -99,6 +99,24 @@ namespace Plugins.rocks_kfs.Groups
         Order = 6,
         Key = AttributeKey.IntroLavaTemplate )]
 
+    [BooleanField( "Display LastName buttons",
+        Description = "Display a row of buttons with the first letter of LastName buttons. Default: Yes",
+        DefaultBooleanValue = true,
+        Order = 7,
+        Key = AttributeKey.DisplayLastNameButtons )]
+
+    [BooleanField( "Allow Adding Person",
+        Description = "Should block support adding new people as attendees?",
+        DefaultBooleanValue = false,
+        Order = 8,
+        Key = AttributeKey.AllowAddingPerson )]
+
+    [BooleanField( "Combine Group Attendance",
+        Description = "Should the block combine multiple group attendance to each person?",
+        DefaultBooleanValue = false,
+        Order = 9,
+        Key = AttributeKey.CombineGroupAttendance )]
+
     [Rock.SystemGuid.BlockTypeGuid( "B8724DBC-F8FB-426D-9296-87A5944273B9" )]
     public partial class GroupAttendanceMulti : RockBlock
     {
@@ -113,6 +131,9 @@ namespace Plugins.rocks_kfs.Groups
             public const string DisplayGroupNames = "DisplayGroupNames";
             public const string AllowGroupsPageParameter = "AllowGroupsPageParameter";
             public const string IntroLavaTemplate = "IntroLavaTemplate";
+            public const string DisplayLastNameButtons = "DisplayLastNameButtons";
+            public const string AllowAddingPerson = "AllowAddingPerson";
+            public const string CombineGroupAttendance = "CombineGroupAttendance";
         }
 
         /// <summary>
@@ -155,6 +176,7 @@ namespace Plugins.rocks_kfs.Groups
         private List<GroupMember> _members = new List<GroupMember>();
         private List<AttendanceAttendee> _attendees;
         private DateTime? _attendanceDate = null;
+        private string _lastnameLetter = "A";
 
         #endregion
 
@@ -232,6 +254,7 @@ namespace Plugins.rocks_kfs.Groups
             {
                 if ( _attendees != null )
                 {
+                    var combineGroups = GetAttributeValue( AttributeKey.CombineGroupAttendance ).AsBoolean();
                     foreach ( RepeaterItem item in rptrAttendance.Items )
                     {
                         var hdnAttendeeId = item.FindControl( "hdnAttendeeId" ) as HiddenField;
@@ -241,7 +264,7 @@ namespace Plugins.rocks_kfs.Groups
                         {
                             int personId = hdnAttendeeId.ValueAsInt();
 
-                            var attendance = _attendees.Where( a => a.PersonId == personId ).FirstOrDefault();
+                            var attendance = _attendees.Where( a => ( combineGroups && a.PersonId == personId ) || a.GroupMemberIds.Contains( personId ) ).FirstOrDefault();
                             if ( attendance != null )
                             {
                                 attendance.Attended = cbAttendee.Checked;
@@ -299,23 +322,49 @@ namespace Plugins.rocks_kfs.Groups
         private void RptrAttendance_ItemDataBound( object sender, System.Web.UI.WebControls.RepeaterItemEventArgs e )
         {
             var attendee = e.Item.DataItem as AttendanceAttendee;
+            var hdnAttendeeId = e.Item.FindControl( "hdnAttendeeId" ) as HiddenField;
             var cbAttendee = e.Item.FindControl( "cbAttendee" ) as RockCheckBox;
             var pnlCardCheckbox = e.Item.FindControl( "pnlCardCheckbox" ) as Panel;
+            var lAnchor = e.Item.FindControl( "lAnchor" ) as Literal;
 
             if ( attendee != null && cbAttendee != null && pnlCardCheckbox != null )
             {
+                var combineGroups = GetAttributeValue( AttributeKey.CombineGroupAttendance ).AsBoolean();
+                if ( !combineGroups )
+                {
+                    hdnAttendeeId.Value = attendee.GroupMemberIds.First().ToString();
+                }
                 pnlCardCheckbox.AddCssClass( GetAttributeValue( AttributeKey.CheckboxColumnClass ) );
                 cbAttendee.Checked = attendee.Attended;
 
                 var lavaTemplate = GetAttributeValue( AttributeKey.AttendeeLavaTemplate );
 
+                var person = _members.Where( gm => gm.PersonId == attendee.PersonId ).Select( gm => gm.Person ).FirstOrDefault();
+
+                if ( person == null )
+                {
+                    person = new PersonService( _rockContext ).Get( attendee.PersonId );
+                }
+
+                if ( person.LastName.Left( 1 ) != _lastnameLetter )
+                {
+                    _lastnameLetter = person.LastName.Left( 1 ).ToUpper();
+                    lAnchor.Visible = true;
+                    lAnchor.Text = $"<a name='lastname{_lastnameLetter}' id='lastname{_lastnameLetter}'></a>";
+                }
+
                 var mergeFields = LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
-                mergeFields.Add( "Person", _members.Where( gm => gm.PersonId == attendee.PersonId ).Select( gm => gm.Person ).FirstOrDefault() );
+                mergeFields.Add( "Person", person );
                 mergeFields.Add( "Attended", attendee.Attended );
                 mergeFields.Add( "GroupMembers", _members.Where( gm => attendee.GroupMemberIds.Contains( gm.Id ) ) );
                 mergeFields.Add( "Groups", _groups.Where( g => attendee.Groups.Contains( g.Id ) ) );
 
                 cbAttendee.Text = lavaTemplate.ResolveMergeFields( mergeFields );
+
+                if ( cbAttendee.Text.IsNullOrWhiteSpace() )
+                {
+                    pnlCardCheckbox.Visible = false;
+                }
             }
         }
 
@@ -334,6 +383,58 @@ namespace Plugins.rocks_kfs.Groups
             }
         }
 
+        /// <summary>
+        /// Handles the SelectedIndexChanged event of the ddlAddPersonGroup control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void ddlAddPersonGroup_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            if ( ddlAddPersonGroup.SelectedValue != "" )
+            {
+                ddlAddPersonGroup.Visible = false;
+                ppAddPerson.Visible = true;
+            }
+        }
+
+        /// <summary>
+        /// Handles the SelectPerson event of the ppAddPerson control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void ppAddPerson_SelectPerson( object sender, EventArgs e )
+        {
+            if ( ppAddPerson.PersonId.HasValue )
+            {
+                if ( _attendees != null && !_attendees.Any( a => a.PersonId == ppAddPerson.PersonId.Value ) )
+                {
+                    var person = new PersonService( _rockContext ).Get( ppAddPerson.PersonId.Value );
+                    if ( person != null )
+                    {
+
+                        var attendee = new AttendanceAttendee();
+                        attendee.PersonId = person.Id;
+                        attendee.Attended = true;
+                        attendee.FirstName = person.FirstName;
+                        attendee.LastName = person.LastName;
+                        attendee.NickName = person.NickName;
+                        attendee.Groups = new List<int> { ddlAddPersonGroup.SelectedValue.ToIntSafe() };
+                        attendee.GroupName = ddlAddPersonGroup.SelectedItem.Text;
+
+                        _attendees.Add( attendee );
+                        SaveAttendance();
+                        BindRepeat();
+                    }
+                }
+            }
+
+            ppAddPerson.SelectedValue = null;
+            ppAddPerson.Visible = false;
+            ddlAddPersonGroup.SelectedIndex = 0;
+            ddlAddPersonGroup.Visible = true;
+            ppAddPerson.PersonName = "Select a Person to Add";
+        }
+
         #endregion
 
         #region Internal Methods
@@ -343,6 +444,9 @@ namespace Plugins.rocks_kfs.Groups
         /// </summary>
         protected void BindFields()
         {
+            divLastnameButtonRow.Visible = GetAttributeValue( AttributeKey.DisplayLastNameButtons ).AsBoolean();
+            pnlAddPerson.Visible = GetAttributeValue( AttributeKey.AllowAddingPerson ).AsBoolean();
+            ppAddPerson.PersonName = "Select a Person to Add";
             var displayGroupName = GetAttributeValue( AttributeKey.DisplayGroupNames ).AsBoolean();
             if ( displayGroupName )
             {
@@ -375,6 +479,17 @@ namespace Plugins.rocks_kfs.Groups
             }
 
             lSchedule.Text = _groups.Where( g => g.Schedule != null ).ToList().Select( g => g.Schedule.FriendlyScheduleText ).Distinct().JoinStrings( ", " );
+
+            lSchedule.Visible = lSchedule.Text.IsNotNullOrWhiteSpace();
+
+            ddlAddPersonGroup.DataSource = _groups.OrderBy( g => g.Name ).ToList();
+            ddlAddPersonGroup.DataValueField = "Id";
+            ddlAddPersonGroup.DataTextField = "Name";
+            ddlAddPersonGroup.DataBind();
+
+            ddlAddPersonGroup.Items.Insert( 0, new ListItem( "Add a New Attendee to Group", "" ) );
+            ddlAddPersonGroup.Visible = true;
+            ppAddPerson.Visible = false;
         }
 
         /// <summary>
@@ -382,9 +497,9 @@ namespace Plugins.rocks_kfs.Groups
         /// </summary>
         protected void BindRepeat()
         {
-            var attendedIds = new List<int>();
+            var combineGroupAttendance = GetAttributeValue( AttributeKey.CombineGroupAttendance ).AsBoolean();
             var groupIds = _groups.Select( g => g.Id ).ToList();
-            attendedIds = new AttendanceService( _rockContext )
+            _attendees = new AttendanceService( _rockContext )
                 .Queryable().AsNoTracking()
                 .Where( a =>
                     DbFunctions.DiffDays( a.StartDateTime, _attendanceDate ) == 0 &&
@@ -393,34 +508,72 @@ namespace Plugins.rocks_kfs.Groups
                     a.Occurrence != null &&
                     groupIds.Contains( a.Occurrence.GroupId.Value ) &&
                     a.PersonAlias != null )
-                .Select( a => a.PersonAlias.PersonId )
-                .Distinct()
-                .ToList();
+                .Select( a => new AttendanceAttendee
+                {
+                    PersonId = a.PersonAlias.PersonId,
+                    GroupMemberIds = a.Occurrence.Group.Members.Where( gm => gm.PersonId == a.PersonAlias.PersonId ).Select( gm => gm.Id ).ToList(),
+                    Attended = a.DidAttend ?? false,
+                    Groups = new List<int> { a.Occurrence.GroupId.Value },
+                    FirstName = a.PersonAlias.Person.FirstName,
+                    NickName = a.PersonAlias.Person.NickName,
+                    LastName = a.PersonAlias.Person.LastName,
+                    GroupName = ( a.Occurrence != null && a.Occurrence.Group != null ) ? a.Occurrence.Group.Name : ""
+                } ).ToList();
+
+            if ( combineGroupAttendance )
+            {
+                _attendees = _attendees.DistinctBy( a => a.PersonId ).ToList();
+
+                _attendees.AddRange( _members.Where( gm => !_attendees.Select( a => a.PersonId ).Contains( gm.PersonId ) )
+                                         .GroupBy( gm => gm.PersonId )
+                                         .Select( g => new AttendanceAttendee
+                                         {
+                                             PersonId = g.Key,
+                                             GroupMemberIds = g.Select( gm => gm.Id ).ToList(),
+                                             Attended = false,
+                                             Groups = g.Select( gm => gm.GroupId ).ToList(),
+                                             FirstName = g.Min( gm => gm.Person.FirstName ),
+                                             NickName = g.Min( gm => gm.Person.NickName ),
+                                             LastName = g.Min( gm => gm.Person.LastName ),
+                                             GroupName = g.Min( gm => gm.Group.Name ),
+                                         } )
+                                         .ToList() );
+            }
+            else
+            {
+                _attendees.AddRange( _members.Where( gm => !_attendees.Any( a => a.PersonId == gm.PersonId && a.GroupMemberIds.Contains( gm.Id ) ) )
+                             .Select( gm => new AttendanceAttendee
+                             {
+                                 PersonId = gm.PersonId,
+                                 GroupMemberIds = new List<int> { gm.Id },
+                                 Attended = false,
+                                 Groups = new List<int> { gm.GroupId },
+                                 FirstName = gm.Person.FirstName,
+                                 NickName = gm.Person.NickName,
+                                 LastName = gm.Person.LastName,
+                                 GroupName = gm.Group.Name
+                             } )
+                             .ToList() );
+            }
+
             var searchParts = tbSearch.Text.ToLower().SplitDelimitedValues();
-            _attendees = _members
-                .Where( gm => tbSearch.Text.IsNullOrWhiteSpace() ||
-                      ( searchParts.Length == 1 && gm.Person.LastName.ToLower().StartsWith( searchParts[0] ) ) ||
-                      ( searchParts.Length > 1 && ( gm.Person.FirstName.ToLower().StartsWith( searchParts[0] ) ||
-                                                    gm.Person.NickName.ToLower().StartsWith( searchParts[0] )
-                                                  ) && gm.Person.LastName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
-                      ) ||
-                      ( searchParts.Length > 1 && ( gm.Person.FirstName.ToLower().StartsWith( searchParts[searchParts.Length - 1] ) ||
-                                                    gm.Person.NickName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
-                                                  ) && gm.Person.LastName.ToLower().StartsWith( searchParts[0] )
-                      )
-                )
-                .OrderBy( gm => gm.Person.LastName )
-                                                    .ThenBy( gm => gm.Person.FirstName )
-                                                    .ThenBy( gm => gm.Group.Name )
-                                                    .GroupBy( gm => gm.PersonId )
-                                                    .Select( g => new AttendanceAttendee
-                                                    {
-                                                        PersonId = g.Key,
-                                                        GroupMemberIds = g.Select( gm => gm.Id ).ToList(),
-                                                        Attended = attendedIds.Contains( g.Key ),
-                                                        Groups = g.Select( gm => gm.GroupId ).ToList()
-                                                    } )
-                                                    .ToList();
+            _attendees = _attendees.Where( gm => tbSearch.Text.IsNullOrWhiteSpace() ||
+                                          ( searchParts.Length == 1 && gm.LastName.ToLower().StartsWith( searchParts[0] ) ) ||
+                                          ( searchParts.Length > 1 && ( gm.FirstName.ToLower().StartsWith( searchParts[0] ) ||
+                                                                        gm.NickName.ToLower().StartsWith( searchParts[0] )
+                                                                      ) && gm.LastName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
+                                          ) ||
+                                          ( searchParts.Length > 1 && ( gm.FirstName.ToLower().StartsWith( searchParts[searchParts.Length - 1] ) ||
+                                                                        gm.NickName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
+                                                                      ) && gm.LastName.ToLower().StartsWith( searchParts[0] )
+                                          )
+                                    )
+                                    .OrderBy( gm => gm.LastName )
+                                    .ThenBy( gm => gm.FirstName )
+                                    .ThenBy( gm => gm.GroupName )
+                                    .ToList();
+
+            lCount.Text = _attendees.Count( a => a.Attended ).ToString();
 
             rptrAttendance.ItemDataBound += RptrAttendance_ItemDataBound;
             rptrAttendance.DataSource = _attendees;
@@ -459,8 +612,9 @@ namespace Plugins.rocks_kfs.Groups
                         {
                             var scheduleId = group.ScheduleId;
                             AttendanceOccurrence occurrence = null;
+                            var locationId = group.GroupLocations.FirstOrDefault()?.Id;
 
-                            var occurrenceKey = $"{group.Id}_{scheduleId}";
+                            var occurrenceKey = $"{group.Id}_{scheduleId}_{locationId}";
 
                             if ( occurrence == null && occurrences.ContainsKey( occurrenceKey ) )
                             {
@@ -469,7 +623,7 @@ namespace Plugins.rocks_kfs.Groups
 
                             if ( occurrence == null && _attendanceDate.HasValue )
                             {
-                                occurrence = occurrenceService.Get( _attendanceDate.Value.Date, group.Id, null, scheduleId );
+                                occurrence = occurrenceService.Get( _attendanceDate.Value.Date, group.Id, locationId, scheduleId );
                             }
 
                             if ( occurrence == null )
@@ -477,6 +631,7 @@ namespace Plugins.rocks_kfs.Groups
                                 occurrence = new AttendanceOccurrence();
                                 occurrence.GroupId = group.Id;
                                 occurrence.ScheduleId = scheduleId;
+                                occurrence.LocationId = locationId;
                                 occurrence.OccurrenceDate = _attendanceDate.Value;
                                 occurrenceService.Add( occurrence );
                             }
@@ -566,5 +721,13 @@ namespace Plugins.rocks_kfs.Groups
         public bool Attended { get; set; } = false;
 
         public List<int> Groups { get; set; }
+
+        public string FirstName { get; set; }
+
+        public string NickName { get; set; }
+
+        public string LastName { get; set; }
+
+        public string GroupName { get; set; }
     }
 }
