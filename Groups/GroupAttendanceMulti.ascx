@@ -12,6 +12,12 @@
         }
     }
 
+    .kfs-add-person {
+        width: calc(100% - 22px);
+        display: inline-block;
+        margin-right: 6px;
+    }
+
     .card-checkbox .checkbox {
         padding-left: 0;
     }
@@ -91,15 +97,16 @@
                     </asp:Panel>
                 </div>
                 <div class="row mb-3">
-                    <asp:Panel ID="pnlCount" runat="server" CssClass="col-xs-12 col-sm-3 col-md-2 col-sm-push-9 col-md-push-10 text-center" style="line-height: 38px;">
+                    <asp:Panel ID="pnlCount" runat="server" CssClass="col-xs-12 col-sm-3 col-md-2 col-sm-push-9 col-md-push-10 text-center" Style="line-height: 38px;">
                         <strong><asp:Literal ID="lCount" runat="server" /></strong> Attended
                     </asp:Panel>
-                    <asp:Panel ID="pnlSearch" runat="server" CssClass="col-xs-12 pb-2 pb-sm-0 col-sm-6 col-md-7 col-sm-pull-3 col-md-pull-2">
+                    <asp:Panel ID="pnlSearch" runat="server" CssClass="col-xs-12 pb-2 pb-sm-0 col-sm-5 col-md-5 col-sm-pull-3 col-md-pull-2">
                         <Rock:RockTextBox ID="tbSearch" runat="server" OnTextChanged="tbSearch_TextChanged" Placeholder="Search"></Rock:RockTextBox>
                     </asp:Panel>
-                    <asp:Panel ID="pnlAddPerson" runat="server" CssClass="col-xs-12 col-sm-4 col-md-3 col-sm-pull-3 col-md-pull-2">
-                        <Rock:PersonPicker ID="ppAddPerson" runat="server" OnSelectPerson="ppAddPerson_SelectPerson" />
+                    <asp:Panel ID="pnlAddPerson" runat="server" CssClass="col-xs-12 col-sm-4 col-md-5 col-sm-pull-3 col-md-pull-2">
                         <Rock:RockDropDownList ID="ddlAddPersonGroup" runat="server" OnSelectedIndexChanged="ddlAddPersonGroup_SelectedIndexChanged" AutoPostBack="true"></Rock:RockDropDownList>
+                        <Rock:PersonPicker ID="ppAddPerson" runat="server" CssClass="kfs-add-person" OnSelectPerson="ppAddPerson_SelectPerson" />
+                        <asp:LinkButton ID="lbClearPerson" runat="server" OnClick="lbClearPerson_Click" CssClass="text-gray-500"><i class="fa fa-times"></i></asp:LinkButton>
                     </asp:Panel>
                 </div>
                 <div class="row mb-3 bg-white position-sticky-top" runat="server" id="divLastnameButtonRow">
