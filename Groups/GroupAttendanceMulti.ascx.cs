@@ -592,20 +592,20 @@ namespace Plugins.rocks_kfs.Groups
             }
 
             var searchParts = tbSearch.Text.ToLower().SplitDelimitedValues();
-            _attendees = _attendees.Where( gm => tbSearch.Text.IsNullOrWhiteSpace() ||
-                                          ( searchParts.Length == 1 && gm.LastName.ToLower().StartsWith( searchParts[0] ) ) ||
-                                          ( searchParts.Length > 1 && ( gm.FirstName.ToLower().StartsWith( searchParts[0] ) ||
-                                                                        gm.NickName.ToLower().StartsWith( searchParts[0] )
-                                                                      ) && gm.LastName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
+            _attendees = _attendees.Where( a => tbSearch.Text.IsNullOrWhiteSpace() ||
+                                          ( searchParts.Length == 1 && a.LastName.ToLower().StartsWith( searchParts[0] ) ) ||
+                                          ( searchParts.Length > 1 && ( a.FirstName.ToLower().StartsWith( searchParts[0] ) ||
+                                                                        a.NickName.ToLower().StartsWith( searchParts[0] )
+                                                                      ) && a.LastName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
                                           ) ||
-                                          ( searchParts.Length > 1 && ( gm.FirstName.ToLower().StartsWith( searchParts[searchParts.Length - 1] ) ||
-                                                                        gm.NickName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
-                                                                      ) && gm.LastName.ToLower().StartsWith( searchParts[0] )
+                                          ( searchParts.Length > 1 && ( a.FirstName.ToLower().StartsWith( searchParts[searchParts.Length - 1] ) ||
+                                                                        a.NickName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
+                                                                      ) && a.LastName.ToLower().StartsWith( searchParts[0] )
                                           )
                                     )
-                                    .OrderBy( gm => gm.LastName )
-                                    .ThenBy( gm => gm.FirstName )
-                                    .ThenBy( gm => gm.GroupName )
+                                    .OrderBy( a => a.LastName )
+                                    .ThenBy( a => a.FirstName )
+                                    .ThenBy( a => a.GroupName )
                                     .ToList();
 
             lCount.Text = _attendees.Count( a => a.Attended ).ToString();
@@ -717,6 +717,8 @@ namespace Plugins.rocks_kfs.Groups
                         }
                     }
                     rockContext.SaveChanges();
+
+                    lCount.Text = _attendees.Count( a => a.Attended ).ToString();
 
                     return true;
                 }
