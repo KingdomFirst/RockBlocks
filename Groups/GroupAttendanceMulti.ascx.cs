@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
+using System.Web.UI;
 using System.Web.UI.WebControls;
 
 using Rock;
@@ -398,6 +399,7 @@ namespace Plugins.rocks_kfs.Groups
                 ppAddPerson.Visible = true;
                 lbClearPerson.Visible = true;
                 ppAddPerson.PersonName = $"Add New {ddlAddPersonGroup.SelectedItem.Text} Attendee";
+                ScriptManager.RegisterStartupScript( Page, Page.GetType(), "OpenPersonPicker", "setTimeout(function() { $('.js-personpicker-toggle').click(); },500);", true );
             }
         }
 
