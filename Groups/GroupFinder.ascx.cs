@@ -1035,7 +1035,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var group = new GroupService( rockContext ).Get( e.RowKeyId );
                 if ( group != null )
                 {
-                    _urlParms.Add( "GroupGuid", group.Guid.ToString() );
+                    _urlParms.AddOrReplace( "GroupGuid", group.Guid.ToString() );
                     if ( !NavigateToLinkedPage( AttributeKey.RegisterPage, _urlParms ) )
                     {
                         ShowResults();
@@ -1591,6 +1591,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field.FilterControl( null, "filter_dow", false, Rock.Reporting.FilterMode.SimpleFilter );
                 string dayOfWeekLabel = GetAttributeValue( AttributeKey.DayOfWeekLabel );
+                if ( _autoPostback )
+                {
+                    AddAutoPostback( control );
+                }
                 AddFilterControl( control, dayOfWeekLabel, "", "filter_dow" );
             }
 
@@ -1598,6 +1602,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 var control = FieldTypeCache.Get( Rock.SystemGuid.FieldType.TIME ).Field.FilterControl( null, "filter_time", false, Rock.Reporting.FilterMode.SimpleFilter );
                 string timeOfDayLabel = GetAttributeValue( AttributeKey.TimeOfDayLabel );
+                if ( _autoPostback )
+                {
+                    AddAutoPostback( control );
+                }
                 AddFilterControl( control, timeOfDayLabel, "", "filter_time" );
             }
 
@@ -2053,7 +2061,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     }
                     else
                     {
-                        _filterValues.Add( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited( "^" ) );
+                        _filterValues.AddOrReplace( "FilterDows", dowsFilterControl.SelectedValuesAsInt.AsDelimited( "^" ) );
                     }
                     groupQry = groupQry.Where( g =>
                         ( g.Schedule.WeeklyDayOfWeek.HasValue && dows.Contains( g.Schedule.WeeklyDayOfWeek.Value ) ) ||
@@ -2075,7 +2083,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 //var expression = field.PropertyFilterExpression( null, filterValues, schedulePropertyExpression, "WeeklyDayOfWeek", typeof( DayOfWeek? ) );
                 //groupQry = groupQry.Where( groupParameterExpression, expression, null );
                 //Commented out property filter to have a custom DOW filter for iCalendarContent search.
-                _filterValues.Add( "FilterDow", filterValues.AsDelimited( "^" ) );
+                _filterValues.AddOrReplace( "FilterDow", filterValues.AsDelimited( "^" ) );
 
                 string formattedValue = string.Empty;
                 string searchStr = string.Empty;
@@ -2674,7 +2682,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     {
                         var field = FieldTypeCache.Get( Rock.SystemGuid.FieldType.DAY_OF_WEEK ).Field;
                         var filterValues = field.GetFilterValues( dowFilterControl, null, Rock.Reporting.FilterMode.SimpleFilter );
-                        _filterValues.Add( "FilterDow", filterValues.AsDelimited( "^" ) );
+                        _filterValues.AddOrReplace( "FilterDow", filterValues.AsDelimited( "^" ) );
 
                         if ( filterValues.Count > 1 )
                         {
