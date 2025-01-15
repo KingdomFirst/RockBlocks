@@ -20,7 +20,7 @@
 //
 // Modification (including but not limited to):
 // * Added ability to set default location so when address is enabled a campus can be selected and results auto load.
-// * Added single select setting so that multiselect filters will be a drop down.
+// * Added single select setting so that multiselect campus filter can be a drop down.
 // * Added ability to set filters by url param
 // * Added an override setting for PersonGuid mode that enables search options
 // * Added postal code search capability
@@ -35,7 +35,7 @@
 // * Added Auto Load Filter capability on value selection
 // * Added ability to sort how filters are displayed
 // * Added ability to load Group/Sign Up Opportunities into finder
-// Package Version 1.8.2
+// Package Version 1.8.3
 // </notice>
 //
 using System;
