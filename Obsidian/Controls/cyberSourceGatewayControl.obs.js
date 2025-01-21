@@ -20,11 +20,11 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
       toDisplayString = module.toDisplayString;
       createTextVNode = module.createTextVNode;
     }, function (module) {
-      LoadingIndicator = module["default"];
+      LoadingIndicator = module.default;
     }, function (module) {
-      DatePartsPicker = module["default"];
+      DatePartsPicker = module.default;
     }, function (module) {
-      AddressControl = module["default"];
+      AddressControl = module.default;
     }, function (module) {
       newGuid = module.newGuid;
     }, function (module) {
@@ -127,7 +127,7 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
       var _hoisted_20 = [_hoisted_19];
       var FlexJS;
       var script = exports('default', defineComponent({
-        name: 'cyberSourceGatewayControl',
+        __name: 'cyberSourceGatewayControl',
         props: {
           settings: {
             type: Object,
@@ -136,10 +136,11 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
         },
         setup(__props, _ref) {
           var _props$settings$addre;
-          var emit = _ref.emit;
-          var props = __props;
+          var __emit = _ref.emit;
           var standardStyling = "";
           var isSaving = ref(false);
+          var props = __props;
+          var emit = __emit;
           var nowYear = computed(() => {
             return new Date().getFullYear();
           });
@@ -250,11 +251,11 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
             return options;
           }
           function checkCybersourceFieldsLoaded() {
-            var _ref2, _FlexJS, _FlexJS$config, _FlexJS2, _FlexJS2$config, _FlexJS3, _FlexJS3$config;
+            var _ref2, _FlexJS, _FlexJS2, _FlexJS3;
             var clearTimer = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
             var currentTime = new Date().getTime();
-            var timeDiff = (_ref2 = currentTime - ((_FlexJS = FlexJS) === null || _FlexJS === void 0 ? void 0 : (_FlexJS$config = _FlexJS.config) === null || _FlexJS$config === void 0 ? void 0 : _FlexJS$config.flexTimeLoaded)) !== null && _ref2 !== void 0 ? _ref2 : 0;
-            if ((_FlexJS2 = FlexJS) !== null && _FlexJS2 !== void 0 && (_FlexJS2$config = _FlexJS2.config) !== null && _FlexJS2$config !== void 0 && _FlexJS2$config.flexTimeout && timeDiff >= ((_FlexJS3 = FlexJS) === null || _FlexJS3 === void 0 ? void 0 : (_FlexJS3$config = _FlexJS3.config) === null || _FlexJS3$config === void 0 ? void 0 : _FlexJS3$config.flexTimeout)) {
+            var timeDiff = (_ref2 = currentTime - ((_FlexJS = FlexJS) === null || _FlexJS === void 0 || (_FlexJS = _FlexJS.config) === null || _FlexJS === void 0 ? void 0 : _FlexJS.flexTimeLoaded)) !== null && _ref2 !== void 0 ? _ref2 : 0;
+            if ((_FlexJS2 = FlexJS) !== null && _FlexJS2 !== void 0 && (_FlexJS2 = _FlexJS2.config) !== null && _FlexJS2 !== void 0 && _FlexJS2.flexTimeout && timeDiff >= ((_FlexJS3 = FlexJS) === null || _FlexJS3 === void 0 || (_FlexJS3 = _FlexJS3.config) === null || _FlexJS3 === void 0 ? void 0 : _FlexJS3.flexTimeout)) {
               if (clearTimer) {
                 var _FlexJS4;
                 clearInterval((_FlexJS4 = FlexJS) === null || _FlexJS4 === void 0 ? void 0 : _FlexJS4.loadCheckInterval);
@@ -270,30 +271,30 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
             }
           }
           function initCybersourceMicroFormFields() {
-            var _FlexJS5, _FlexJS6, _FlexJS9, _FlexJS9$number, _FlexJS10, _FlexJS10$securityCod, _FlexJS11, _FlexJS11$number, _FlexJS12, _FlexJS12$number, _FlexJS13, _FlexJS13$number, _FlexJS15, _FlexJS15$config;
+            var _FlexJS5, _FlexJS6, _FlexJS9, _FlexJS10, _FlexJS11, _FlexJS12, _FlexJS13, _FlexJS15;
             if (((_FlexJS5 = FlexJS) === null || _FlexJS5 === void 0 ? void 0 : _FlexJS5.number) == undefined && ((_FlexJS6 = FlexJS) === null || _FlexJS6 === void 0 ? void 0 : _FlexJS6.securityCode) == undefined) {
-              var _FlexJS7, _FlexJS7$microform, _FlexJS8, _FlexJS8$microform;
-              FlexJS.number = (_FlexJS7 = FlexJS) === null || _FlexJS7 === void 0 ? void 0 : (_FlexJS7$microform = _FlexJS7.microform) === null || _FlexJS7$microform === void 0 ? void 0 : _FlexJS7$microform.createField('number', {
+              var _FlexJS7, _FlexJS8;
+              FlexJS.number = (_FlexJS7 = FlexJS) === null || _FlexJS7 === void 0 || (_FlexJS7 = _FlexJS7.microform) === null || _FlexJS7 === void 0 ? void 0 : _FlexJS7.createField('number', {
                 placeholder: '0000 0000 0000 0000'
               });
-              FlexJS.securityCode = (_FlexJS8 = FlexJS) === null || _FlexJS8 === void 0 ? void 0 : (_FlexJS8$microform = _FlexJS8.microform) === null || _FlexJS8$microform === void 0 ? void 0 : _FlexJS8$microform.createField('securityCode');
+              FlexJS.securityCode = (_FlexJS8 = FlexJS) === null || _FlexJS8 === void 0 || (_FlexJS8 = _FlexJS8.microform) === null || _FlexJS8 === void 0 ? void 0 : _FlexJS8.createField('securityCode');
             }
-            (_FlexJS9 = FlexJS) === null || _FlexJS9 === void 0 ? void 0 : (_FlexJS9$number = _FlexJS9.number) === null || _FlexJS9$number === void 0 ? void 0 : _FlexJS9$number.load('.cybersource-payment-inputs .js-credit-card-input');
-            (_FlexJS10 = FlexJS) === null || _FlexJS10 === void 0 ? void 0 : (_FlexJS10$securityCod = _FlexJS10.securityCode) === null || _FlexJS10$securityCod === void 0 ? void 0 : _FlexJS10$securityCod.load('.cybersource-payment-inputs .js-credit-card-cvv-input');
-            (_FlexJS11 = FlexJS) === null || _FlexJS11 === void 0 ? void 0 : (_FlexJS11$number = _FlexJS11.number) === null || _FlexJS11$number === void 0 ? void 0 : _FlexJS11$number.on('error', function (data) {
+            (_FlexJS9 = FlexJS) === null || _FlexJS9 === void 0 || (_FlexJS9 = _FlexJS9.number) === null || _FlexJS9 === void 0 || _FlexJS9.load('.cybersource-payment-inputs .js-credit-card-input');
+            (_FlexJS10 = FlexJS) === null || _FlexJS10 === void 0 || (_FlexJS10 = _FlexJS10.securityCode) === null || _FlexJS10 === void 0 || _FlexJS10.load('.cybersource-payment-inputs .js-credit-card-cvv-input');
+            (_FlexJS11 = FlexJS) === null || _FlexJS11 === void 0 || (_FlexJS11 = _FlexJS11.number) === null || _FlexJS11 === void 0 || _FlexJS11.on('error', function (data) {
               console.error(data);
               loading.value = false;
               validationMessage.value = data.message;
             });
-            (_FlexJS12 = FlexJS) === null || _FlexJS12 === void 0 ? void 0 : (_FlexJS12$number = _FlexJS12.number) === null || _FlexJS12$number === void 0 ? void 0 : _FlexJS12$number.on('load', function (data) {
+            (_FlexJS12 = FlexJS) === null || _FlexJS12 === void 0 || (_FlexJS12 = _FlexJS12.number) === null || _FlexJS12 === void 0 || _FlexJS12.on('load', function (data) {
               loading.value = false;
             });
             var cardIcon = document.querySelector('#cardDisplay');
             var cardSecurityCodeLabel = document.querySelector('label.credit-card-cvv-label');
-            (_FlexJS13 = FlexJS) === null || _FlexJS13 === void 0 ? void 0 : (_FlexJS13$number = _FlexJS13.number) === null || _FlexJS13$number === void 0 ? void 0 : _FlexJS13$number.on('change', function (data) {
+            (_FlexJS13 = FlexJS) === null || _FlexJS13 === void 0 || (_FlexJS13 = _FlexJS13.number) === null || _FlexJS13 === void 0 || _FlexJS13.on('change', function (data) {
               if (data.card.length === 1) {
-                var _FlexJS14, _FlexJS14$config;
-                cardIcon.className = 'fa-2x ' + ((_FlexJS14 = FlexJS) === null || _FlexJS14 === void 0 ? void 0 : (_FlexJS14$config = _FlexJS14.config) === null || _FlexJS14$config === void 0 ? void 0 : _FlexJS14$config.cardIcons[data.card[0].name]);
+                var _FlexJS14;
+                cardIcon.className = 'fa-2x ' + ((_FlexJS14 = FlexJS) === null || _FlexJS14 === void 0 || (_FlexJS14 = _FlexJS14.config) === null || _FlexJS14 === void 0 ? void 0 : _FlexJS14.cardIcons[data.card[0].name]);
                 cardSecurityCodeLabel.textContent = data.card[0].securityCode.name;
                 FlexJS.config.fields.cvv.title = data.card[0].securityCode.name;
               } else {
@@ -308,17 +309,17 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
                 FlexJS.config.flexTimeLoaded -= FlexJS.config.flexTimeout;
                 checkCybersourceFieldsLoaded(false);
               }
-            }, (_FlexJS15 = FlexJS) === null || _FlexJS15 === void 0 ? void 0 : (_FlexJS15$config = _FlexJS15.config) === null || _FlexJS15$config === void 0 ? void 0 : _FlexJS15$config.initialLoadTimeout);
+            }, (_FlexJS15 = FlexJS) === null || _FlexJS15 === void 0 || (_FlexJS15 = _FlexJS15.config) === null || _FlexJS15 === void 0 ? void 0 : _FlexJS15.initialLoadTimeout);
           }
           function submitCybersourceMicroFormInfo() {
-            var _FlexJS16, _FlexJS16$microform;
+            var _FlexJS16;
             isSaving.value = true;
             var options = {
               expirationMonth: ('00' + ccexpvalue.month).slice(-2),
               expirationYear: ccexpvalue.year
             };
             FlexJS.inSubmission = true;
-            (_FlexJS16 = FlexJS) === null || _FlexJS16 === void 0 ? void 0 : (_FlexJS16$microform = _FlexJS16.microform) === null || _FlexJS16$microform === void 0 ? void 0 : _FlexJS16$microform.createToken(options, function (err, token) {
+            (_FlexJS16 = FlexJS) === null || _FlexJS16 === void 0 || (_FlexJS16 = _FlexJS16.microform) === null || _FlexJS16 === void 0 || _FlexJS16.createToken(options, function (err, token) {
               if (err) {
                 console.error(err);
                 isSaving.value = false;
@@ -395,7 +396,7 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
             }, null, 8, ["modelValue", "disabled", "rules"])], 512), [[vShow, showAddress.value]]), createElementVNode("div", _hoisted_5, [_hoisted_6, createElementVNode("div", _hoisted_9, [createElementVNode("div", _hoisted_10, [_hoisted_11, createVNode(unref(DatePartsPicker), {
               label: "Expiration Date",
               isRequired: true,
-              startYear: unref(nowYear),
+              startYear: nowYear.value,
               futureYearCount: 15,
               modelValue: unref(ccexpvalue),
               "onUpdate:modelValue": _cache[1] || (_cache[1] = $event => isRef(ccexpvalue) ? ccexpvalue.value = $event : ccexpvalue = $event),
@@ -403,7 +404,7 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
               multiple: false,
               hideDay: true,
               disabled: isSaving.value
-            }, null, 8, ["startYear", "modelValue", "disabled"])]), createElementVNode("div", _hoisted_12, [createElementVNode("div", _hoisted_13, [createElementVNode("label", _hoisted_14, toDisplayString((_unref2 = unref(FlexJS)) === null || _unref2 === void 0 ? void 0 : _unref2.config.fields.cvv.title), 1), _hoisted_15])])])]), _hoisted_16], 512)], 512), [[vShow, !loading.value && !failedToLoad.value]]), withDirectives(createElementVNode("div", _hoisted_17, [createElementVNode("span", _hoisted_18, [createTextVNode(toDisplayString(validationMessage.value) + " ", 1), withDirectives(createElementVNode("p", null, _hoisted_20, 512), [[vShow, validationMessageShowReload.value]])])], 512), [[vShow, validationMessage.value]])]);
+            }, null, 8, ["startYear", "modelValue", "disabled"])]), createElementVNode("div", _hoisted_12, [createElementVNode("div", _hoisted_13, [createElementVNode("label", _hoisted_14, toDisplayString((_unref2 = unref(FlexJS)) === null || _unref2 === void 0 ? void 0 : _unref2.config.fields.cvv.title), 1), _hoisted_15])])])]), _hoisted_16], 512)], 512), [[vShow, !loading.value && !failedToLoad.value]]), withDirectives(createElementVNode("div", _hoisted_17, [createElementVNode("span", _hoisted_18, [createTextVNode(toDisplayString(validationMessage.value) + " ", 1), withDirectives(createElementVNode("p", null, [..._hoisted_20], 512), [[vShow, validationMessageShowReload.value]])])], 512), [[vShow, validationMessage.value]])]);
           };
         }
       }));
