@@ -1,4 +1,4 @@
-// <copyright>
+﻿// <copyright>
 // Copyright by the Spark Development Network
 //
 // Licensed under the Rock Community License (the "License");
@@ -266,9 +266,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 //
                 // Get the merge fields to be available.
                 //
-                var options = new CommonMergeFieldsOptions();
-                options.GetLegacyGlobalMergeFields = false;
-                var mergeFields = LavaHelper.GetCommonMergeFields( RockPage, CurrentPerson, options );
+                var mergeFields = LavaHelper.GetCommonMergeFields( RockPage, CurrentPerson );
                 mergeFields.AddOrReplace( "Group", item.GetPropertyValue( "Group" ) );
                 mergeFields.AddOrReplace( "Donor", item.GetPropertyValue( "Donor" ) );
                 mergeFields.AddOrReplace( "Participant", item.GetPropertyValue( "Participant" ) );

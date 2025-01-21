@@ -119,7 +119,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                         int? typeOfAlert = GetAttributeValue( AttributeKey.TypeOfAlert ).AsIntegerOrNull();
                         string classToAppend = GetAttributeValue( AttributeKey.AppendToContainer );
 
-                        var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, null, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                        var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, null );
                         mergeFields.Add( "CurrentFamily", CurrentCheckInState.CheckIn.CurrentFamily );
                         mergeFields.Add( "Families", CurrentCheckInState.CheckIn.Families );
                         mergeFields.Add( "CheckinCurrentPerson", CurrentCheckInState.CheckIn.CurrentPerson );

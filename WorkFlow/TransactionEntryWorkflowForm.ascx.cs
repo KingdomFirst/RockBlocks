@@ -3783,7 +3783,7 @@ TransactionAccountDetails: [
             if ( accountItem != null && txtAccountAmount != null )
             {
                 string accountHeaderTemplate = this.GetAttributeValue( "AccountHeaderTemplate" );
-                var mergeFields = LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                var mergeFields = LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                 var account = new FinancialAccountService( new RockContext() ).Get( accountItem.Id );
                 mergeFields.Add( "Account", account );
                 txtAccountAmount.Label = accountHeaderTemplate.ResolveMergeFields( mergeFields );
