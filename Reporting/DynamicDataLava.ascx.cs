@@ -867,7 +867,7 @@ namespace RockWeb.Plugins.rocks_kfs.Reporting
                     if ( GetAttributeValue( AttributeKey.EnableQuickReturn ).AsBoolean() && setData && RockPage.PageTitle.IsNotNullOrWhiteSpace() )
                     {
                         string quickReturnLava = "{{ Title | AddQuickReturn:'Dynamic Data Lava', 80 }}";
-                        var quickReturnMergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                        var quickReturnMergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                         quickReturnMergeFields.Add( "Title", RockPage.PageTitle );
                         quickReturnLava.ResolveMergeFields( quickReturnMergeFields );
                     }

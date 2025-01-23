@@ -17,7 +17,7 @@
 Our Group finder is a significantly modified version of the core Rock version. Including but not limited to these features:
 
 - Added ability to set default location so when address is enabled a campus can be selected and results auto load.
-- Added single select setting so that multiselect filters will be a drop down.
+- Added single select campus filter setting so that the campus multiselect filter will be a drop down instead.
 - Added ability to set filters by url parameter.
 - Added an override setting for PersonGuid mode that enables search options.
 - Added postal code search capability.
@@ -30,7 +30,8 @@ Our Group finder is a significantly modified version of the core Rock version. I
 - Added a setting to override groups Is Public setting to show on the finder.
 - Added ability to display Over Capacity groups with a filter.
 - Added Auto Load Filter capability on value selection.
-- Added ability to sort how filters are displayed
+- Added ability to sort how filters are displayed.
+- Added ability to load Group/Sign Up Opportunities into finder.
 
 <div style="page-break-after: always;"></div>
 

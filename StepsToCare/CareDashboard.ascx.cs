@@ -1268,7 +1268,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var childNeedStr = "";
                         var parentNeedStr = "";
                         var touchTooltipTemplate = GetAttributeValue( AttributeKey.TouchNeededTooltipTemplate );
-                        var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                        var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                         mergeFields.Add( "CareNeed", careNeed );
                         mergeFields.Add( "TouchTemplate", "" );
                         mergeFields.Add( "TouchCount", careTouchCount );
@@ -2171,7 +2171,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var template = GetAttributeValue( AttributeKey.CategoriesTemplate );
 
-                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson, new Rock.Lava.CommonMergeFieldsOptions { GetLegacyGlobalMergeFields = false } );
+                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
                 mergeFields.Add( "Categories", categoryDefinedType.DefinedValues );
                 mergeFields.Add( "Statuses", statusDefinedType.DefinedValues );
                 lCategories.Text = template.ResolveMergeFields( mergeFields );
