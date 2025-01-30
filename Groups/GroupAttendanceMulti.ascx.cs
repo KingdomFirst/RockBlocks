@@ -649,7 +649,7 @@ namespace Plugins.rocks_kfs.Groups
                         {
                             var scheduleId = group.ScheduleId;
                             AttendanceOccurrence occurrence = null;
-                            var locationId = group.GroupLocations.FirstOrDefault()?.Id;
+                            var locationId = group.GroupLocations.FirstOrDefault()?.LocationId;
 
                             var occurrenceKey = $"{group.Id}_{scheduleId}_{locationId}";
 
