@@ -243,9 +243,11 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                 var period = tbAccountingPeriod.Text.AsInteger();
 
                 var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
-                var groupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                sfJournal.GroupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                sfJournal.ProjectMode = ( GLEntryProjectMode ) GetAttributeValue( AttributeKey.ProjectHandlingMode ).AsInteger();
+                sfJournal.JournalMemoLava = GetAttributeValue( AttributeKey.JournalMemoLava );
 
-                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode );
+                var items = sfJournal.GetGLExcelLines( rockContext, _financialBatch, journalCode, period, ref debugLava );
 
                 if ( items.Count > 0 )
                 {
