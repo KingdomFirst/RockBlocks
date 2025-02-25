@@ -452,9 +452,10 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
                     var journalCode = ddlJournalType.SelectedValue;
                     var period = tbAccountingPeriod.Text.AsInteger();
-                    var groupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                    sfJournal.GroupingMode = (GLEntryGroupingMode) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                    sfJournal.JournalMemoLava = GetAttributeValue( AttributeKey.JournalMemoLava );
 
-                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode ) );
+                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava ) );
 
                     HistoryService.SaveChanges(
                         rockContext,
