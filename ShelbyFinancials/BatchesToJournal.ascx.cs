@@ -78,19 +78,28 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         Order = 3,
         Key = AttributeKey.AccountGroupingMode )]
 
+    [EnumField(
+        "Project Handling Mode",
+        Description = "Determines if Project should only be applied to debit lines, credit lines, or both debit and credit lines.",
+        IsRequired = true,
+        EnumSourceType = typeof( GLEntryProjectMode ),
+        DefaultEnumValue = ( int ) GLEntryProjectMode.DebitAndCreditLines,
+        Order = 4,
+        Key = AttributeKey.ProjectHandlingMode )]
+
     [LavaField(
         "Journal Description Lava",
         Description = "Lava for the journal description column per line. Default: Batch.Id: Batch.Name",
         IsRequired = true,
         DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
-        Order = 4,
+        Order = 5,
         Key = AttributeKey.JournalMemoLava )]
 
     [BooleanField(
         "Enable Debug",
         Description = "Outputs the object graph to help create your Lava syntax.",
         DefaultBooleanValue = false,
-        Order = 5,
+        Order = 6,
         Key = AttributeKey.EnableDebug )]
 
     #endregion
@@ -109,6 +118,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             public const string MonthsBack = "MonthsBack";
             public const string AccountGroupingMode = "AccountGroupingMode";
             public const string JournalMemoLava = "JournalDescriptionLava";
+            public const string ProjectHandlingMode = "ProjectHandlingMode";
             public const string EnableDebug = "EnableDebug";
         }
 
@@ -453,6 +463,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     var journalCode = ddlJournalType.SelectedValue;
                     var period = tbAccountingPeriod.Text.AsInteger();
                     sfJournal.GroupingMode = (GLEntryGroupingMode) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                    sfJournal.ProjectMode = (GLEntryProjectMode) GetAttributeValue( AttributeKey.ProjectHandlingMode ).AsInteger();
                     sfJournal.JournalMemoLava = GetAttributeValue( AttributeKey.JournalMemoLava );
 
                     items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava ) );

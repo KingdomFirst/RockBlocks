@@ -62,19 +62,28 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         Order = 2,
         Key = AttributeKey.AccountGroupingMode )]
 
+    [EnumField(
+        "Project Handling Mode",
+        Description = "Determines if Project should only be applied to debit lines, credit lines, or both debit and credit lines.",
+        IsRequired = true,
+        EnumSourceType = typeof( GLEntryProjectMode ),
+        DefaultEnumValue = ( int ) GLEntryProjectMode.DebitAndCreditLines,
+        Order = 3,
+        Key = AttributeKey.ProjectHandlingMode )]
+
     [LavaField(
         "Journal Description Lava",
         Description = "Lava for the journal description column per line. Default: Batch.Id: Batch.Name",
         IsRequired = true,
         DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
-        Order = 3,
+        Order = 4,
         Key = AttributeKey.JournalMemoLava )]
 
     [BooleanField(
         "Enable Debug",
         Description = "Outputs the object graph to help create your Lava syntax.",
         DefaultBooleanValue = false,
-        Order = 4,
+        Order = 5,
         Key = AttributeKey.EnableDebug )]
 
     #endregion
@@ -92,6 +101,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             public const string CloseBatch = "CloseBatch";
             public const string AccountGroupingMode = "AccountGroupingMode";
             public const string JournalMemoLava = "JournalDescriptionLava";
+            public const string ProjectHandlingMode = "ProjectHandlingMode";
             public const string EnableDebug = "EnableDebug";
         }
 
