@@ -78,19 +78,28 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         Order = 3,
         Key = AttributeKey.AccountGroupingMode )]
 
+    [EnumField(
+        "Project Handling Mode",
+        Description = "Determines if Project should only be applied to debit lines, credit lines, or both debit and credit lines.",
+        IsRequired = true,
+        EnumSourceType = typeof( GLEntryProjectMode ),
+        DefaultEnumValue = ( int ) GLEntryProjectMode.DebitAndCreditLines,
+        Order = 4,
+        Key = AttributeKey.ProjectHandlingMode )]
+
     [LavaField(
         "Journal Description Lava",
         Description = "Lava for the journal description column per line. Default: Batch.Id: Batch.Name",
         IsRequired = true,
         DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
-        Order = 4,
+        Order = 5,
         Key = AttributeKey.JournalMemoLava )]
 
     [BooleanField(
         "Enable Debug",
         Description = "Outputs the object graph to help create your Lava syntax.",
         DefaultBooleanValue = false,
-        Order = 5,
+        Order = 6,
         Key = AttributeKey.EnableDebug )]
 
     #endregion
@@ -109,6 +118,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
             public const string MonthsBack = "MonthsBack";
             public const string AccountGroupingMode = "AccountGroupingMode";
             public const string JournalMemoLava = "JournalDescriptionLava";
+            public const string ProjectHandlingMode = "ProjectHandlingMode";
             public const string EnableDebug = "EnableDebug";
         }
 
@@ -182,7 +192,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         {
             ddlStatus.BindToEnum<BatchStatus>();
             ddlStatus.Items.Insert( 0, Rock.Constants.All.ListItem );
-            string statusFilter = gfBatchesToExportFilter.GetUserPreference( "Status" );
+            string statusFilter = gfBatchesToExportFilter.GetFilterPreference( "Status" );
             if ( string.IsNullOrWhiteSpace( statusFilter ) )
             {
                 statusFilter = BatchStatus.Open.ConvertToInt().ToString();
@@ -190,7 +200,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
             ddlStatus.SetValue( statusFilter );
 
-            drpBatchDate.DelimitedValues = gfBatchesToExportFilter.GetUserPreference( "Date Range" );
+            drpBatchDate.DelimitedValues = gfBatchesToExportFilter.GetFilterPreference( "Date Range" );
         }
 
         /// <summary>
@@ -215,7 +225,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     .Where( b => b.BatchStartDateTime >= firstBatchDate )
                     .Where( b => b.ControlAmount == b.Transactions.Sum( t => t.TransactionDetails.Sum( d => d.Amount ) ) );
 
-                string dateRangeValue = gfBatchesToExportFilter.GetUserPreference( "Date Range" );
+                string dateRangeValue = gfBatchesToExportFilter.GetFilterPreference( "Date Range" );
                 if ( !string.IsNullOrWhiteSpace( dateRangeValue ) )
                 {
                     var drp = new DateRangePicker();
@@ -232,7 +242,7 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
                     }
                 }
 
-                var status = gfBatchesToExportFilter.GetUserPreference( "Status" ).ConvertToEnumOrNull<BatchStatus>();
+                var status = gfBatchesToExportFilter.GetFilterPreference( "Status" ).ConvertToEnumOrNull<BatchStatus>();
                 if ( status.HasValue )
                 {
                     qry = qry.Where( b => b.Status == status );
@@ -356,8 +366,8 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void gfBatchesToExportFilter_ApplyFilterClick( object sender, EventArgs e )
         {
-            gfBatchesToExportFilter.SaveUserPreference( "Status", ddlStatus.SelectedValue );
-            gfBatchesToExportFilter.SaveUserPreference( "Date Range", drpBatchDate.DelimitedValues );
+            gfBatchesToExportFilter.SetFilterPreference( "Status", ddlStatus.SelectedValue );
+            gfBatchesToExportFilter.SetFilterPreference( "Date Range", drpBatchDate.DelimitedValues );
 
             BindGrid();
         }
@@ -369,8 +379,8 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void gfBatchesToExportFilter_ClearFilterClick( object sender, EventArgs e )
         {
-            gfBatchesToExportFilter.DeleteUserPreferences();
-            gfBatchesToExportFilter.SaveUserPreference( "Status", BatchStatus.Open.ConvertToInt().ToString() );
+            gfBatchesToExportFilter.DeleteFilterPreferences();
+            gfBatchesToExportFilter.SetFilterPreference( "Status", BatchStatus.Open.ConvertToInt().ToString() );
             BindFilter();
             BindGrid();
         }
@@ -452,9 +462,11 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
                     var journalCode = ddlJournalType.SelectedValue;
                     var period = tbAccountingPeriod.Text.AsInteger();
-                    var groupingMode = ( GLEntryGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                    sfJournal.GroupingMode = (GLEntryGroupingMode) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                    sfJournal.ProjectMode = (GLEntryProjectMode) GetAttributeValue( AttributeKey.ProjectHandlingMode ).AsInteger();
+                    sfJournal.JournalMemoLava = GetAttributeValue( AttributeKey.JournalMemoLava );
 
-                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode ) );
+                    items.AddRange( sfJournal.GetGLExcelLines( rockContext, batch, journalCode, period, ref debugLava ) );
 
                     HistoryService.SaveChanges(
                         rockContext,
