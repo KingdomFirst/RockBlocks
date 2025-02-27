@@ -69,6 +69,7 @@ namespace RockWeb.Plugins.rocks_kfs.Eventbrite
 
             switch ( eventbriteData.Config.Action )
             {
+                case "attendee.updated":
                 case "attendee.checked_in":
                 case "barcode.checked_in":
                     // api_url example: https://www.eventbriteapi.com/v3/events/113027799190/attendees/1955015294/
