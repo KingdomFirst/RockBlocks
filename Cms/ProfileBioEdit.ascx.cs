@@ -17,7 +17,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -25,13 +24,13 @@ using NuGet;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Enums.Blocks.Crm.FamilyPreRegistration;
 using Rock.Model;
-using Rock.Security;
+using Rock.Search.Person;
+using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
-using rocks.kfs.StepsToCare;
-using rocks.kfs.StepsToCare.Model;
-
+using static IdentityModel.OidcConstants;
 namespace RockWeb.Plugins.rocks_kfs.Cms
 {
     #region Block Attributes
@@ -99,7 +98,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         "Nick Name",
         Key = AttributeKey.NickName,
         Description = "How should Nick Name be displayed?",
-        ListSource = ListSource.HIDE_DISABLE_REQUIRED,
+        ListSource = ListSource.HIDE_OPTIONAL_REQUIRED,
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Hide",
@@ -133,6 +132,26 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Required",
+        Order = 9 )]
+
+    [CustomDropdownListField(
+        "Grade",
+        Key = AttributeKey.Grade,
+        Description = "How should Grade be displayed?",
+        ListSource = ListSource.HIDE_OPTIONAL_REQUIRED,
+        Category = AttributeCategory.PersonFields,
+        IsRequired = false,
+        DefaultValue = "Optional",
+        Order = 9 )]
+
+    [CustomDropdownListField(
+        "Role",
+        Key = AttributeKey.Role,
+        Description = "How should Role be displayed?",
+        ListSource = ListSource.HIDE_OPTIONAL_REQUIRED,
+        Category = AttributeCategory.PersonFields,
+        IsRequired = false,
+        DefaultValue = "Optional",
         Order = 9 )]
 
     [CustomDropdownListField(
@@ -403,6 +422,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string Suffix = "Suffix";
             public const string Birthday = "Birthday";
             public const string Gender = "Gender";
+            public const string Grade = "Grade";
+            public const string Role = "Role";
             public const string Race = "Race";
             public const string Ethnicity = "Ethnicity";
             public const string MaritalStatus = "MaritalStatus";
@@ -421,7 +442,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string FamilyAttributes = "FamilyAttributes";
             public const string PersonAttributesAdults = "PersonAttributesAdults";
             public const string PersonAttributesChildren = "PersonAttributesChildren";
-            public const string CampusSelector = "CampusSelector";
+            public const string CampusSelector = "Campus";
             public const string CampusSelectorLabel = "CampusSelectorLabel";
             public const string CampusTypes = "CampusTypes";
             public const string CampusStatuses = "CampusStatuses";
@@ -432,6 +453,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
         private static class PageParameterKey
         {
+            public const string ReturnUrl = "ReturnUrl";
         }
 
         private static class ListSource
@@ -440,8 +462,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string HIDE_OPTIONAL_REQUIRED = "Hide,Optional,Required";
             public const string HIDE_DISABLE_REQUIRED = "Hide,Disable,Required";
             public const string Panels = "Person,Contact,Family,FamilyMember,Address";
-            public const string PersonFields = "Title,FirstName,NickName,LastName,Suffix,Birthday,Gender,Race,Ethnicity,MaritalStatus,Campus";
-            public const string ContactFields = "Phone,SmsEnabled,Email,EmailPreference,CommunicationPreference";
+            public const string PersonFields = "Photo,Title,FirstName,NickName,LastName,Suffix,Birthday,Graduation,Grade,Role,Gender,Race,Ethnicity,MaritalStatus,Campus,PersonAttributes,Spacer";
+            public const string ContactFields = "Phone,Email,EmailPreference,CommunicationPreference,Spacer";
         }
 
         private static class AttributeCategory
@@ -470,6 +492,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlCareEntry );
 
+            BuildForm();
         }
 
         /// <summary>
@@ -482,7 +505,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             confirmExit.Enabled = true;
 
-            BuildForm();
+            lbSave.ValidationGroup = BlockValidationGroup;
+
+            lbCancel.ValidationGroup = BlockValidationGroup;
+            lbCancel.CausesValidation = false;
+
         }
 
         #endregion Base Control Methods
@@ -508,7 +535,389 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         {
             if ( Page.IsValid )
             {
+                var rockContext = new RockContext();
+                var personGuid = hfPrimaryPersonGuid.Value.AsGuid();
+                var groupId = hfGroupId.Value.AsIntegerOrNull();
 
+                if ( !groupId.HasValue )
+                {
+                    // GroupId wasn't specified due to invalid situation
+                    // Return and report nothing.
+                    return;
+                }
+
+                var imgPhoto = pnlProfilePanels.FindControl( "imgPhoto" ) as ImageEditor;
+                var dvpTitle = pnlProfilePanels.FindControl( "dvpTitle" ) as DefinedValuePicker;
+                var tbFirstName = pnlProfilePanels.FindControl( "tbFirstName" ) as RockTextBox;
+                var tbNickName = pnlProfilePanels.FindControl( "tbNickName" ) as RockTextBox;
+                var tbLastName = pnlProfilePanels.FindControl( "tbLastName" ) as RockTextBox;
+                var dvpSuffix = pnlProfilePanels.FindControl( "dvpSuffix" ) as DefinedValuePicker;
+                var rpRace = pnlProfilePanels.FindControl( "rpRace" ) as RacePicker;
+                var epEthnicity = pnlProfilePanels.FindControl( "epEthnicity" ) as EthnicityPicker;
+                var bpBirthday = pnlProfilePanels.FindControl( "bpBirthday" ) as BirthdayPicker;
+                var ddlGender = pnlProfilePanels.FindControl( "ddlGender" ) as RockDropDownList;
+                var ypGraduation = pnlProfilePanels.FindControl( "ypGraduation" ) as YearPicker;
+                var ddlGrade = pnlProfilePanels.FindControl( "ddlGrade" ) as RockDropDownList;
+                var cpCampus = pnlProfilePanels.FindControl( "cpCampus" ) as CampusPicker;
+                var rblRole = pnlProfilePanels.FindControl( "rblRole" ) as RockTextBox;
+                var dvpMaritalStatus = pnlProfilePanels.FindControl( "dvpMaritalStatus" ) as DefinedValuePicker;
+                var avcPersonAttributes = pnlProfilePanels.FindControl( "avcPersonAttributes" ) as AttributeValuesContainer;
+
+                var ebEmail = pnlProfilePanels.FindControl( "ebEmail" ) as EmailBox;
+                var rblEmailPreference = pnlProfilePanels.FindControl( "rblEmailPreference" ) as RockRadioButtonList;
+                var rblCommunicationPreference = pnlProfilePanels.FindControl( "rblCommunicationPreference" ) as RockRadioButtonList;
+                var nbCommunicationPreferenceWarning = pnlProfilePanels.FindControl( "nbCommunicationPreferenceWarning" ) as NotificationBox;
+
+                var pnlAddress = pnlProfilePanels.FindControl( "pnlAddress" ) as Panel;
+                var acAddress = pnlAddress.FindControl( "acAddress" ) as AddressControl;
+                var cbIsMailingAddress = pnlAddress.FindControl( "cbIsMailingAddress" ) as RockCheckBox;
+
+                var avcFamilyAttributes = pnlProfilePanels.FindControl( "avcFamilyAttributes" ) as AttributeValuesContainer;
+
+                var wrapTransactionResult = rockContext.WrapTransactionIf( () =>
+                {
+                    var personService = new PersonService( rockContext );
+
+                    var person = personService.Get( personGuid );
+                    if ( person != null )
+                    {
+                        int? orphanedPhotoId = null;
+                        if ( imgPhoto != null && person.PhotoId != imgPhoto.BinaryFileId )
+                        {
+                            orphanedPhotoId = person.PhotoId;
+                            person.PhotoId = imgPhoto.BinaryFileId;
+                        }
+
+                        if ( dvpTitle != null )
+                        {
+                            person.TitleValueId = dvpTitle.SelectedValueAsInt();
+                        }
+                        if ( tbFirstName != null )
+                        {
+                            person.FirstName = tbFirstName.Text;
+                        }
+                        if ( tbNickName != null )
+                        {
+                            person.NickName = tbNickName.Text;
+                        }
+                        if ( tbLastName != null )
+                        {
+                            person.LastName = tbLastName.Text;
+                        }
+                        if ( dvpSuffix != null )
+                        {
+                            person.SuffixValueId = dvpSuffix.SelectedValueAsInt();
+                        }
+                        if ( rpRace != null )
+                        {
+                            person.RaceValueId = rpRace.SelectedValueAsId();
+                        }
+                        if ( epEthnicity != null )
+                        {
+                            person.EthnicityValueId = epEthnicity.SelectedValueAsId();
+                        }
+                        if ( bpBirthday != null )
+                        {
+                            var birthMonth = person.BirthMonth;
+                            var birthDay = person.BirthDay;
+                            var birthYear = person.BirthYear;
+
+                            var birthday = bpBirthday.SelectedDate;
+                            if ( birthday.HasValue )
+                            {
+                                // If setting a future birthdate, subtract a century until birthdate is not greater than today.
+                                var today = RockDateTime.Today;
+                                while ( birthday.Value.CompareTo( today ) > 0 )
+                                {
+                                    birthday = birthday.Value.AddYears( -100 );
+                                }
+
+                                person.BirthMonth = birthday.Value.Month;
+                                person.BirthDay = birthday.Value.Day;
+                                if ( birthday.Value.Year != DateTime.MinValue.Year )
+                                {
+                                    person.BirthYear = birthday.Value.Year;
+                                }
+                                else
+                                {
+                                    person.BirthYear = null;
+                                }
+                            }
+                            else
+                            {
+                                person.SetBirthDate( null );
+                            }
+                        }
+
+                        if ( ddlGrade != null && ddlGrade.Visible )
+                        {
+                            int? graduationYear = null;
+                            if ( ypGraduation.SelectedYear.HasValue )
+                            {
+                                graduationYear = ypGraduation.SelectedYear.Value;
+                            }
+
+                            person.GraduationYear = graduationYear;
+                        }
+
+                        if ( ddlGender != null )
+                        {
+                            person.Gender = ddlGender.SelectedValue.IsNotNullOrWhiteSpace() ? ddlGender.SelectedValueAsEnum<Gender>() : Gender.Unknown;
+                        }
+
+                        if ( cpCampus != null && cpCampus.Visible )
+                        {
+                            var primaryFamily = person.GetFamily( rockContext );
+                            if ( primaryFamily.CampusId != cpCampus.SelectedCampusId )
+                            {
+                                primaryFamily.CampusId = cpCampus.SelectedCampusId;
+                            }
+                        }
+
+                        var selectedPhoneTypes = GetAttributeValues( AttributeKey.PhoneTypes ).AsGuidList();
+
+                        if ( selectedPhoneTypes.Any() )
+                        {
+                            var phoneNumberTypeIds = new List<int>();
+
+                            bool smsSelected = false;
+
+                            var pnlContactBody = pnlProfilePanels.FindControl( "pnlContactBody" );
+
+                            foreach ( Control ctrl in pnlContactBody.ControlsOfTypeRecursive<Panel>().Where( p => p.ID != null ) )
+                            {
+                                var phoneTypeId = ctrl.ID.Replace( "pnlContainer", "" ).Replace( "_Phone", "" );
+
+                                HiddenField hfPhoneType = ctrl.FindControl( $"hfPhoneType{phoneTypeId}" ) as HiddenField;
+                                PhoneNumberBox pnbPhone = ctrl.FindControl( $"pnbPhone{phoneTypeId}" ) as PhoneNumberBox;
+                                CheckBox cbSms = ctrl.FindControl( $"cbSms{phoneTypeId}" ) as CheckBox;
+
+                                if ( hfPhoneType != null
+                                    && pnbPhone != null
+                                    && cbSms != null )
+                                {
+                                    if ( !string.IsNullOrWhiteSpace( PhoneNumber.CleanNumber( pnbPhone.Number ) ) )
+                                    {
+                                        int phoneNumberTypeId;
+                                        if ( int.TryParse( hfPhoneType.Value, out phoneNumberTypeId ) )
+                                        {
+                                            var phoneNumber = person.PhoneNumbers.FirstOrDefault( n => n.NumberTypeValueId == phoneNumberTypeId );
+                                            if ( phoneNumber == null )
+                                            {
+                                                phoneNumber = new PhoneNumber { NumberTypeValueId = phoneNumberTypeId };
+                                                person.PhoneNumbers.Add( phoneNumber );
+                                            }
+
+                                            phoneNumber.CountryCode = PhoneNumber.CleanNumber( pnbPhone.CountryCode );
+                                            phoneNumber.Number = PhoneNumber.CleanNumber( pnbPhone.Number );
+
+                                            // Only allow one number to have SMS selected
+                                            if ( smsSelected )
+                                            {
+                                                phoneNumber.IsMessagingEnabled = false;
+                                            }
+                                            else
+                                            {
+                                                phoneNumber.IsMessagingEnabled = cbSms.Checked;
+                                                smsSelected = cbSms.Checked;
+                                            }
+
+                                            phoneNumberTypeIds.Add( phoneNumberTypeId );
+                                        }
+                                    }
+                                }
+                            }
+
+                            var phoneNumberService = new PhoneNumberService( rockContext );
+
+                            // Remove any duplicate numbers
+                            var hasDuplicate = person.PhoneNumbers.GroupBy( pn => pn.Number ).Where( g => g.Count() > 1 ).Any();
+
+                            if ( hasDuplicate )
+                            {
+                                var listOfValidNumbers = person.PhoneNumbers
+                                    .OrderBy( o => o.NumberTypeValueId )
+                                    .GroupBy( pn => pn.Number )
+                                    .Select( y => y.First() )
+                                    .ToList();
+                                var removedNumbers = person.PhoneNumbers.Except( listOfValidNumbers ).ToList();
+                                phoneNumberService.DeleteRange( removedNumbers );
+                                person.PhoneNumbers = listOfValidNumbers;
+                            }
+                        }
+
+                        person.Email = ebEmail.Text.Trim();
+                        person.EmailPreference = rblEmailPreference.SelectedValue.ConvertToEnum<EmailPreference>();
+
+                        if ( rblCommunicationPreference != null )
+                        {
+                            var communicationPreference = rblCommunicationPreference.SelectedValueAsEnum<CommunicationType>();
+
+                            if ( rblCommunicationPreference.Visible && selectedPhoneTypes.Any() && communicationPreference == CommunicationType.SMS && nbCommunicationPreferenceWarning != null )
+                            {
+                                if ( !person.PhoneNumbers.Any( a => a.IsMessagingEnabled ) )
+                                {
+                                    nbCommunicationPreferenceWarning.Text = "A phone number with SMS enabled is required when Communication Preference is set to SMS.";
+                                    nbCommunicationPreferenceWarning.NotificationBoxType = NotificationBoxType.Warning;
+                                    nbCommunicationPreferenceWarning.Visible = true;
+                                    return false;
+                                }
+                            }
+
+                            person.CommunicationPreference = communicationPreference;
+                        }
+
+                        person.LoadAttributes();
+
+                        if ( avcPersonAttributes != null && avcPersonAttributes.Visible )
+                        {
+                            avcPersonAttributes.GetEditValues( person );
+                        }
+                        //else
+                        //{
+                        //    avcPersonAttributesChild.GetEditValues( person );
+                        //}
+
+                        if ( person.IsValid )
+                        {
+                            if ( rockContext.SaveChanges() > 0 )
+                            {
+                                if ( orphanedPhotoId.HasValue )
+                                {
+                                    BinaryFileService binaryFileService = new BinaryFileService( rockContext );
+                                    var binaryFile = binaryFileService.Get( orphanedPhotoId.Value );
+                                    if ( binaryFile != null )
+                                    {
+                                        // marked the old images as IsTemporary so they will get cleaned up later
+                                        binaryFile.IsTemporary = true;
+                                        rockContext.SaveChanges();
+                                    }
+                                }
+
+                                // if they used the ImageEditor, and cropped it, the original file is still in BinaryFile. So clean it up.
+                                if ( imgPhoto.CropBinaryFileId.HasValue )
+                                {
+                                    if ( imgPhoto.CropBinaryFileId != person.PhotoId )
+                                    {
+                                        BinaryFileService binaryFileService = new BinaryFileService( rockContext );
+                                        var binaryFile = binaryFileService.Get( imgPhoto.CropBinaryFileId.Value );
+                                        if ( binaryFile != null && binaryFile.IsTemporary )
+                                        {
+                                            string errorMessage;
+                                            if ( binaryFileService.CanDelete( binaryFile, out errorMessage ) )
+                                            {
+                                                binaryFileService.Delete( binaryFile );
+                                                rockContext.SaveChanges();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            person.SaveAttributeValues( rockContext );
+
+                            Guid? familyGroupTypeGuid = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY.AsGuidOrNull();
+                            if ( familyGroupTypeGuid.HasValue )
+                            {
+                                var familyGroup = new GroupService( rockContext )
+                                    .Queryable()
+                                    .Where( f =>
+                                        f.Id == groupId.Value &&
+                                        f.Members.Any( m => m.PersonId == person.Id ) )
+                                    .FirstOrDefault();
+                                if ( familyGroup != null )
+                                {
+                                    // save family information
+                                    if ( pnlAddress != null && pnlAddress.Visible && acAddress != null )
+                                    {
+                                        Guid? addressTypeGuid = GetAttributeValue( AttributeKey.AddressType ).AsGuidOrNull();
+                                        if ( addressTypeGuid.HasValue )
+                                        {
+                                            var groupLocationService = new GroupLocationService( rockContext );
+
+                                            var dvAddressType = DefinedValueCache.Get( addressTypeGuid.Value );
+                                            var familyAddress = groupLocationService.Queryable().Where( l => l.GroupId == familyGroup.Id && l.GroupLocationTypeValueId == dvAddressType.Id ).FirstOrDefault();
+                                            if ( familyAddress != null && string.IsNullOrWhiteSpace( acAddress.Street1 ) )
+                                            {
+                                                // delete the current address
+                                                groupLocationService.Delete( familyAddress );
+                                                rockContext.SaveChanges();
+                                            }
+                                            else
+                                            {
+                                                if ( !string.IsNullOrWhiteSpace( acAddress.Street1 ) )
+                                                {
+                                                    if ( familyAddress == null )
+                                                    {
+                                                        familyAddress = new GroupLocation();
+                                                        groupLocationService.Add( familyAddress );
+                                                        familyAddress.GroupLocationTypeValueId = dvAddressType.Id;
+                                                        familyAddress.GroupId = familyGroup.Id;
+                                                        familyAddress.IsMailingLocation = true;
+                                                        familyAddress.IsMappedLocation = true;
+                                                    }
+
+                                                    familyAddress.IsMailingLocation = cbIsMailingAddress.Checked;
+
+                                                    var loc = new Location();
+                                                    acAddress.GetValues( loc );
+
+                                                    familyAddress.Location = new LocationService( rockContext ).Get(
+                                                        loc.Street1, loc.Street2, loc.City, loc.State, loc.PostalCode, loc.Country, familyGroup, true );
+
+                                                    // since there can only be one mapped location, set the other locations to not mapped
+                                                    if ( familyAddress.IsMappedLocation )
+                                                    {
+                                                        var groupLocations = groupLocationService.Queryable()
+                                                            .Where( l => l.GroupId == familyGroup.Id && l.Id != familyAddress.Id ).ToList();
+
+                                                        foreach ( var groupLocation in groupLocations )
+                                                        {
+                                                            groupLocation.IsMappedLocation = false;
+                                                        }
+                                                    }
+
+                                                    rockContext.SaveChanges();
+                                                }
+                                            }
+                                        }
+
+                                    }
+
+                                    if ( avcFamilyAttributes != null )
+                                    {
+                                        familyGroup.LoadAttributes();
+                                        avcFamilyAttributes.GetEditValues( familyGroup );
+                                        familyGroup.SaveAttributeValues();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return true;
+                } );
+
+                if ( wrapTransactionResult )
+                {
+                    // When in EditOnly mode if there's a ReturnUrl specified navigate to that page.
+                    // Otherwise stay on the page, but show a saved success message.
+                    var returnUrl = PageParameter( PageParameterKey.ReturnUrl );
+
+                    if ( returnUrl.IsNotNullOrWhiteSpace() )
+                    {
+                        string redirectUrl = Server.UrlDecode( returnUrl );
+
+                        string queryString = string.Empty;
+                        if ( redirectUrl.Contains( "?" ) )
+                        {
+                            queryString = redirectUrl.Split( '?' ).Last();
+                        }
+                        Context.Response.Redirect( redirectUrl );
+                    }
+
+                    hlblSuccess.Visible = true;
+                }
             }
         }
 
@@ -544,6 +953,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             panelOrder.AddRange( missingPanels );
 
             var showFamilyMember = GetAttributeValue( AttributeKey.ShowFamilyMembers ).AsBoolean();
+            var showAddress = GetAttributeValue( AttributeKey.Address );
 
             Panel pnlPerson = GeneratePanel( "Person" );
             Panel pnlContact = GeneratePanel( "Contact" );
@@ -551,18 +961,550 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             Panel pnlFamilyMember = GeneratePanel( "FamilyMember" );
 
             var addressMergeFields = new Dictionary<string, object>();
-            addressMergeFields.Add( "Type", "Home" ); // make this dynamic
+            addressMergeFields.Add( "Type", "" );
             Panel pnlAddress = GeneratePanel( "Address", GetAttributeValue( AttributeKey.AddressFieldsHeader ).ResolveMergeFields( addressMergeFields ) );
+            pnlAddress.Visible = false;
 
             var pnlControls = new List<Panel> { pnlPerson, pnlContact, pnlFamily, pnlFamilyMember, pnlAddress };
 
             foreach ( var panel in panelOrder )
             {
-                pnlProfilePanels.Controls.Add( pnlControls.FirstOrDefault( p => p.ID == $"pnl{panel}" ) );
+                var panelById = pnlControls.FirstOrDefault( p => p.ID == $"pnl{panel}" );
+                if ( panelById != null )
+                {
+                    pnlProfilePanels.Controls.Add( panelById );
+                }
+            }
+            pnlFamilyMember.Visible = showFamilyMember;
+
+            var selectedFamily = CurrentPerson.GetFamily();
+            hfGroupId.Value = selectedFamily.Id.ToString();
+
+            #region Person Fields
+
+            Control pnlFamilyBody = pnlFamily.FindControl( "pnlFamilyBody" );
+
+            GeneratePersonFields( CurrentPerson.Guid, pnlPerson, pnlFamilyBody );
+
+            #endregion
+
+            #region Family Fields
+
+            var rockContext = new RockContext();
+            var groupId = hfGroupId.Value.AsIntegerOrNull();
+
+            if ( !groupId.HasValue )
+            {
+                groupId = CurrentPerson.GetFamily().Id;
+
+                if ( groupId == 0 )
+                {
+                    return;
+                }
+                hfGroupId.Value = groupId.ToString();
             }
 
-            pnlAddress.Visible = showFamilyMember;
+            var group = new GroupService( rockContext ).Get( groupId.Value );
+            if ( group == null )
+            {
+                // invalid situation; return and report nothing.
+                return;
+            }
 
+            var avcFamilyAttributes = new AttributeValuesContainer { ID = "avcFamilyAttributes" };
+            var familyAttributesGuidList = GetAttributeValue( AttributeKey.FamilyAttributes ).SplitDelimitedValues().AsGuidList();
+
+            avcFamilyAttributes.IncludedAttributes = familyAttributesGuidList.Select( a => AttributeCache.Get( a ) ).ToArray();
+            avcFamilyAttributes.AddEditControls( group, true );
+
+            pnlFamilyBody.Controls.Add( avcFamilyAttributes );
+
+            pnlFamily.Visible = familyAttributesGuidList.Any() || GetAttributeValue( AttributeKey.CampusSelector ) == "Show with Family";
+
+            #endregion
+
+            Guid? locationTypeGuid = GetAttributeValue( AttributeKey.AddressType ).AsGuidOrNull();
+            var acAddress = new AddressControl { ID = "acAddress", Required = showAddress == "Required", ValidationGroup = BlockValidationGroup };
+            if ( locationTypeGuid.HasValue )
+            {
+                pnlAddress.Visible = showAddress != "Hide";
+
+                var addressTypeDv = DefinedValueCache.Get( locationTypeGuid.Value );
+
+                addressMergeFields = new Dictionary<string, object>();
+                addressMergeFields.Add( "Type", addressTypeDv.Value ); // make this dynamic
+
+                var hdrAddress = pnlAddress.FindControl( "hdrAddress" ) as WebControl;
+                if ( hdrAddress != null && acAddress.Required )
+                {
+                    hdrAddress.Controls.Clear();
+                    hdrAddress.Controls.Add( new LiteralControl( GetAttributeValue( AttributeKey.AddressFieldsHeader ).ResolveMergeFields( addressMergeFields ) ) );
+                    hdrAddress.AddCssClass( "required-indicator" );
+                }
+
+                var cbIsMailingAddress = new RockCheckBox { ID = "cbIsMailingAddress", Text = "This is my mailing address" };
+                var familyGroupTypeGuid = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY.AsGuidOrNull();
+
+                if ( familyGroupTypeGuid.HasValue )
+                {
+                    var familyGroupType = GroupTypeCache.Get( familyGroupTypeGuid.Value );
+
+                    var familyAddress = new GroupLocationService( rockContext ).Queryable()
+                                        .Where( l => l.GroupId == groupId.Value
+                                                && l.GroupLocationTypeValueId == addressTypeDv.Id
+                                                && l.Group.Members.Any( m => m.PersonId == CurrentPerson.Id ) )
+                                        .FirstOrDefault();
+                    if ( familyAddress != null )
+                    {
+                        acAddress.SetValues( familyAddress.Location );
+                        cbIsMailingAddress.Checked = familyAddress.IsMailingLocation;
+                    }
+                }
+
+
+                var pnlAddressBody = pnlAddress.FindControl( "pnlAddressBody" );
+                if ( pnlAddressBody != null )
+                {
+                    pnlAddressBody.Controls.Add( acAddress );
+                    pnlAddressBody.Controls.Add( cbIsMailingAddress );
+                }
+            }
+
+            #region Contact Fields
+
+            GenerateContactFields( CurrentPerson.Guid, pnlContact );
+
+            #endregion
+
+        }
+
+        private void GeneratePersonFields( Guid personGuid, Panel pnlPerson, Control pnlFamilyBody )
+        {
+            WebControl lSpacer = new WebControl( HtmlTextWriterTag.Span ) { ID = "pSpacer" };
+            var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
+
+            RockContext rockContext = new RockContext();
+
+            var groupId = hfGroupId.Value.AsIntegerOrNull();
+
+            if ( !groupId.HasValue )
+            {
+                groupId = CurrentPerson.GetFamily().Id;
+
+                if ( groupId == 0 )
+                {
+                    return;
+                }
+
+                hfGroupId.Value = groupId.ToString();
+            }
+
+            if ( hfPrimaryPersonGuid.Value.IsNullOrWhiteSpace() && personGuid != Guid.Empty )
+            {
+                hfPrimaryPersonGuid.Value = personGuid.ToString();
+            }
+
+            var group = new GroupService( rockContext ).Get( groupId.Value );
+            if ( group == null )
+            {
+                return;
+            }
+
+            var personFields = ListSource.PersonFields.SplitDelimitedValues( false ).ToList();
+            var personFieldsOrder = GetAttributeValue( AttributeKey.PersonFieldsOrder ).SplitDelimitedValues( false ).ToList();
+
+            var missingPersonFields = personFields.Except( personFieldsOrder ).ToList();
+            personFieldsOrder.AddRange( missingPersonFields );
+
+            var imagePhotoEditor = GenerateControl( "Photo", typeof( ImageEditor ), "" ) as ImageEditor;
+            var dvpTitle = GenerateControl( "Title", typeof( DefinedValuePicker ), "Title", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ).Id ) as DefinedValuePicker;
+            var tbFirstName = GenerateControl( "FirstName", typeof( RockTextBox ), "First Name" ) as RockTextBox;
+            var tbNickName = GenerateControl( "NickName", typeof( RockTextBox ), "Nick Name" ) as RockTextBox;
+            var tbLastName = GenerateControl( "LastName", typeof( RockTextBox ), "Last Name" ) as RockTextBox;
+            var dvpSuffix = GenerateControl( "Suffix", typeof( DefinedValuePicker ), "Suffix", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) ).Id ) as DefinedValuePicker;
+            var bpBirthday = GenerateControl( "Birthday", typeof( BirthdayPicker ), "Birthday" ) as BirthdayPicker;
+            var ypGraduation = GenerateControl( "Graduation", typeof( YearPicker ), "", "hide" ) as YearPicker;
+            var ddlGrade = GenerateControl( "Grade", typeof( GradePicker ), "Grade" ) as GradePicker;
+            var ddlGender = GenerateControl( "Gender", typeof( RockDropDownList ), "Gender" ) as RockDropDownList;
+            var rblRole = GenerateControl( "Role", typeof( RockRadioButtonList ), "Role" ) as RockRadioButtonList;
+            var rpRace = GenerateControl( "Race", typeof( RacePicker ), null ) as RacePicker;
+            var epEthnicity = GenerateControl( "Ethnicity", typeof( EthnicityPicker ), null ) as EthnicityPicker;
+            var dvpMaritalStatus = GenerateControl( "MaritalStatus", typeof( DefinedValuePicker ), "Marital Status", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS ) ).Id ) as DefinedValuePicker;
+            var cpCampus = GenerateControl( "Campus", typeof( CampusPicker ), GetAttributeValue( AttributeKey.CampusSelectorLabel ) ) as CampusPicker;
+            var avcPersonAttributes = new AttributeValuesContainer { ID = "avcPersonAttributes", NumberOfColumns = 2 };
+
+            var personFieldControls = new List<Control> { imagePhotoEditor, dvpTitle, tbFirstName, tbNickName, tbLastName, dvpSuffix, bpBirthday, ypGraduation, ddlGrade, rblRole, ddlGender, rpRace, epEthnicity, dvpMaritalStatus, avcPersonAttributes, lSpacer };
+
+            var person = new Person();
+
+            if ( personGuid == Guid.Empty )
+            {
+                tbFirstName.Enabled = true;
+                tbLastName.Enabled = true;
+            }
+            else
+            {
+                rblRole.Visible = false;
+                person = new PersonService( rockContext ).Get( personGuid );
+            }
+
+            if ( person == null )
+            {
+                return;
+            }
+
+            var selectedFamily = person.GetFamily();
+
+            // Setup specific control settings
+
+            imagePhotoEditor.ButtonText = "<i class='fa fa-camera'></i>";
+            imagePhotoEditor.BinaryFileTypeGuid = new Guid( Rock.SystemGuid.BinaryFiletype.PERSON_IMAGE );
+            imagePhotoEditor.Visible = GetAttributeValue( AttributeKey.AllowPhotoEditing ).AsBoolean();
+            imagePhotoEditor.BinaryFileId = person.PhotoId;
+            imagePhotoEditor.NoPictureUrl = Person.GetPersonNoPictureUrl( person, 200, 200 );
+
+            dvpTitle.SetValue( person.TitleValueId );
+            tbFirstName.Text = person.FirstName;
+            tbNickName.Text = person.NickName;
+            tbLastName.Text = person.LastName;
+            dvpSuffix.SetValue( person.SuffixValueId );
+            bpBirthday.SelectedDate = person.BirthDate;
+
+            ddlGrade.UseAbbreviation = true;
+            ddlGrade.UseGradeOffsetAsValue = true;
+
+            if ( group.Members.Where( gm => gm.PersonId == person.Id && gm.GroupRole.Guid == childGuid ).Any() )
+            {
+                cpCampus.Visible = false;
+                dvpMaritalStatus.Visible = false;
+
+                if ( person.GraduationYear.HasValue )
+                {
+                    ypGraduation.SelectedYear = person.GraduationYear.Value;
+                }
+                else
+                {
+                    ypGraduation.SelectedYear = null;
+                }
+
+                ddlGrade.Visible = GetAttributeValue( AttributeKey.Grade ) != "Hide";
+                if ( !person.HasGraduated ?? false )
+                {
+                    int gradeOffset = person.GradeOffset.Value;
+                    var maxGradeOffset = ddlGrade.MaxGradeOffset;
+
+                    // keep trying until we find a Grade that has a gradeOffset that includes the Person's gradeOffset (for example, there might be combined grades)
+                    while ( !ddlGrade.Items.OfType<ListItem>().Any( a => a.Value.AsInteger() == gradeOffset ) && gradeOffset <= maxGradeOffset )
+                    {
+                        gradeOffset++;
+                    }
+
+                    ddlGrade.SetValue( gradeOffset );
+                }
+                else
+                {
+                    ddlGrade.SelectedIndex = 0;
+                }
+            }
+            else
+            {
+                ddlGrade.Visible = false;
+                dvpMaritalStatus.SetValue( person.MaritalStatusValueId );
+            }
+
+            ddlGender.Items.Add( new ListItem() );
+            ddlGender.Items.Add( new ListItem( "Male" ) );
+            ddlGender.Items.Add( new ListItem( "Female" ) );
+            ddlGender.SelectedValue = person.Gender == Gender.Unknown ? string.Empty : person.Gender.ConvertToString();
+
+            rblRole.Items.Clear();
+            var familyRoles = selectedFamily.GroupType.Roles.OrderBy( r => r.Order ).ToList();
+            foreach ( var role in familyRoles )
+            {
+                rblRole.Items.Add( new ListItem( role.Name, role.Id.ToString() ) );
+            }
+
+            if ( personGuid == Guid.Empty )
+            {
+                // make them pick the family role on a new person
+                rblRole.SelectedValue = null;
+            }
+            else
+            {
+                rblRole.SetValue( person.GetFamilyRole() );
+            }
+
+            rpRace.SetValue( person.RaceValueId );
+            epEthnicity.SetValue( person.EthnicityValueId );
+
+            switch ( GetAttributeValue( AttributeKey.CampusSelector ) )
+            {
+                case "Show with Person":
+                    personFieldControls.Add( cpCampus );
+                    break;
+                case "Show with Family":
+                    if ( pnlFamilyBody != null )
+                    {
+                        pnlFamilyBody.Controls.Add( cpCampus );
+                    }
+                    break;
+            }
+
+            if ( cpCampus.Visible )
+            {
+                cpCampus.Campuses = CampusCache.All( false );
+
+                var selectedCampusTypeIds = GetAttributeValue( AttributeKey.CampusTypes )
+                    .SplitDelimitedValues( true )
+                    .AsGuidList()
+                    .Select( a => DefinedValueCache.Get( a ) )
+                    .Where( a => a != null )
+                    .Select( a => a.Id )
+                    .ToList();
+
+                if ( selectedCampusTypeIds.Any() )
+                {
+                    cpCampus.CampusTypesFilter = selectedCampusTypeIds;
+                }
+
+                var selectedCampusStatusIds = GetAttributeValue( AttributeKey.CampusStatuses )
+                    .SplitDelimitedValues( true )
+                    .AsGuidList()
+                    .Select( a => DefinedValueCache.Get( a ) )
+                    .Where( a => a != null )
+                    .Select( a => a.Id )
+                    .ToList();
+
+                if ( selectedCampusStatusIds.Any() )
+                {
+                    cpCampus.CampusStatusFilter = selectedCampusStatusIds;
+                }
+
+                cpCampus.SelectedCampusId = person.PrimaryCampusId;
+            }
+
+            var personAttributeAdultGuidList = GetAttributeValue( AttributeKey.PersonAttributesAdults ).SplitDelimitedValues().AsGuidList();
+            var personAttributeChildGuidList = GetAttributeValue( AttributeKey.PersonAttributesChildren ).SplitDelimitedValues().AsGuidList();
+
+            avcPersonAttributes.IncludedAttributes = personAttributeAdultGuidList.Select( a => AttributeCache.Get( a ) ).ToArray();
+
+            avcPersonAttributes.AddEditControls( person, true );
+            //avcPersonAttributesChild.IncludedAttributes = personAttributeChildGuidList.Select( a => AttributeCache.Get( a ) ).ToArray();
+
+            // End Setup Specific Control Settings
+
+
+            // Add Controls to Panel in order in rows and columns
+
+            var pnlBody = pnlPerson.FindControl( "pnlPersonBody" );
+
+            var personFieldRow = new Panel { CssClass = "row" };
+            var personFieldCount = 0;
+            pnlBody.Controls.Add( personFieldRow );
+
+            foreach ( var ctrl in personFieldsOrder )
+            {
+                var actualCtrl = personFieldControls.FirstOrDefault( f => f.ID.EndsWith( ctrl ) );
+                var actualWebCtrl = actualCtrl as WebControl;
+                if ( actualCtrl != null && actualCtrl.Visible )
+                {
+                    var personFieldCol = new Panel { CssClass = "col-md-6" };
+
+                    if ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) )
+                    {
+                        personFieldRow.Controls.Add( personFieldCol );
+                        personFieldCol.Controls.Add( actualCtrl );
+                        personFieldCount++;
+                    }
+                    else
+                    {
+                        pnlBody.Controls.Add( actualCtrl );
+                    }
+
+                    if ( personFieldCount > 1 )
+                    {
+                        personFieldRow = new Panel { CssClass = "row" };
+                        personFieldCount = 0;
+                        pnlBody.Controls.Add( personFieldRow );
+                    }
+                }
+            }
+
+            if ( ddlGrade.Visible )
+            {
+                ScriptManager.RegisterStartupScript( ddlGrade, ddlGrade.GetType(), "grade-selection-" + BlockId.ToString(), ddlGrade.GetJavascriptForYearPicker( ypGraduation ), true );
+            }
+        }
+
+        private void GenerateContactFields( Guid personGuid, Panel pnlContact )
+        {
+            var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
+
+            var rockContext = new RockContext();
+
+            var person = new Person();
+
+            person = new PersonService( rockContext ).Get( personGuid );
+
+            if ( person == null )
+            {
+                return;
+            }
+
+            WebControl lSpacer = new WebControl( HtmlTextWriterTag.Span ) { ID = "cSpacer" };
+
+            var contactFields = ListSource.ContactFields.SplitDelimitedValues( false ).ToList();
+            var contactFieldsOrder = GetAttributeValue( AttributeKey.ContactFieldsOrder ).SplitDelimitedValues( false ).ToList();
+
+            var missingContactFields = contactFields.Except( contactFieldsOrder ).ToList();
+            contactFieldsOrder.AddRange( missingContactFields );
+
+            var ebEmail = GenerateControl( "Email", typeof( EmailBox ), "Email" ) as EmailBox;
+            var rblCommunicationPreference = GenerateControl( "CommunicationPreference", typeof( RockRadioButtonList ), "Communication Preference" ) as RockRadioButtonList;
+            var rblEmailPreference = GenerateControl( "EmailPreference", typeof( RockRadioButtonList ), "Email Preference" ) as RockRadioButtonList;
+
+            var contactFieldsControls = new List<Control> { ebEmail, rblCommunicationPreference, rblEmailPreference, lSpacer };
+
+            ebEmail.Text = person.Email;
+
+            var phoneNumbers = new List<PhoneNumber>();
+            var phoneNumberTypes = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE ) );
+            var mobilePhoneType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE ) );
+            var selectedPhoneTypeGuids = GetAttributeValues( AttributeKey.PhoneTypes ).AsGuidList();
+            var requiredPhoneTypes = GetAttributeValues( AttributeKey.RequiredAdultPhoneTypes ).AsGuidList();
+
+            if ( phoneNumberTypes.DefinedValues.Where( pnt => selectedPhoneTypeGuids.Contains( pnt.Guid ) ).Any() )
+            {
+                foreach ( var phoneNumberType in phoneNumberTypes.DefinedValues.Where( pnt => selectedPhoneTypeGuids.Contains( pnt.Guid ) ) )
+                {
+                    var phoneNumber = person.PhoneNumbers.FirstOrDefault( n => n.NumberTypeValueId == phoneNumberType.Id );
+                    if ( phoneNumber == null )
+                    {
+                        var numberType = new DefinedValue
+                        {
+                            Id = phoneNumberType.Id,
+                            Value = phoneNumberType.Value,
+                            Guid = phoneNumberType.Guid
+                        };
+
+                        phoneNumber = new PhoneNumber
+                        {
+                            NumberTypeValueId = numberType.Id,
+                            NumberTypeValue = numberType,
+                            IsMessagingEnabled = mobilePhoneType != null && phoneNumberType.Id == mobilePhoneType.Id
+                        };
+                    }
+                    else
+                    {
+                        phoneNumber.NumberFormatted = PhoneNumber.FormattedNumber( phoneNumber.CountryCode, phoneNumber.Number );
+                    }
+
+                    phoneNumbers.Add( phoneNumber );
+
+                    var pnlPhoneNumContainer = new Panel { CssClass = "form-group", ID = $"pnlContainer{phoneNumber.NumberTypeValueId}_Phone" };
+
+                    var lblPhone = new Label
+                    {
+                        CssClass = "control-label",
+                        Text = $"{phoneNumber.NumberTypeValue.Value} Phone"
+                    };
+
+                    var pnlPhoneNumControls = new Panel { CssClass = "controls" };
+
+                    pnlPhoneNumContainer.Controls.Add( lblPhone );
+                    pnlPhoneNumContainer.Controls.Add( pnlPhoneNumControls );
+
+                    var hfPhoneType = new HiddenField
+                    {
+                        ID = $"hfPhoneType{phoneNumber.NumberTypeValueId}",
+                        Value = phoneNumber.NumberTypeValueId.ToString()
+                    };
+                    var pnbPhone = new PhoneNumberBox
+                    {
+                        ID = $"pnbPhone{phoneNumber.NumberTypeValueId}",
+                        CountryCode = phoneNumber.CountryCode,
+                        Number = phoneNumber.NumberFormatted,
+                        RequiredErrorMessage = $"{phoneNumber.NumberTypeValue.Value} phone is required",
+                        Required = requiredPhoneTypes.Contains( phoneNumber.NumberTypeValue.Guid ),
+                        ValidationGroup = BlockValidationGroup
+                    };
+                    var cbSms = new RockCheckBox
+                    {
+                        ID = $"cbSms{phoneNumber.NumberTypeValueId}",
+                        Text = GetAttributeValue( AttributeKey.SMSEnableLabel ),
+                        Checked = phoneNumber.IsMessagingEnabled,
+                        ContainerCssClass = "mb-0",
+                        CssClass = "js-sms-number",
+                        Visible = GetAttributeValue( AttributeKey.ShowSMSEnable ).AsBoolean() && phoneNumber.NumberTypeValueId == Rock.Web.Cache.DefinedValueCache.GetId( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE ) )
+                    };
+                    lblPhone.AssociatedControlID = pnbPhone.ID;
+
+                    if ( pnbPhone.Required )
+                    {
+                        pnlPhoneNumContainer.AddCssClass( "required" );
+                    }
+
+                    pnlPhoneNumControls.Controls.Add( hfPhoneType );
+                    pnlPhoneNumControls.Controls.Add( pnbPhone );
+                    pnlPhoneNumControls.Controls.Add( cbSms );
+
+                    contactFieldsControls.Add( pnlPhoneNumContainer );
+                }
+            }
+
+            rblEmailPreference.Items.Clear();
+            rblEmailPreference.Items.Add( new ListItem( "All Emails", "EmailAllowed" ) );
+            rblEmailPreference.Items.Add( new ListItem( "Only Personalized", "NoMassEmails" ) );
+            rblEmailPreference.Items.Add( new ListItem( "Do Not Email", "DoNotEmail" ) );
+            rblEmailPreference.RepeatDirection = RepeatDirection.Horizontal;
+            rblEmailPreference.SelectedValue = person.EmailPreference.ConvertToString( false );
+
+            rblCommunicationPreference.Items.Clear();
+            rblCommunicationPreference.Items.Add( new ListItem( "Email", "1" ) );
+            rblCommunicationPreference.Items.Add( new ListItem( "SMS", "2" ) );
+            rblCommunicationPreference.RepeatDirection = RepeatDirection.Horizontal;
+            rblCommunicationPreference.SetValue( person.CommunicationPreference == CommunicationType.SMS ? "2" : "1" );
+
+            var pnlContactBody = pnlContact.FindControl( "pnlContactBody" );
+
+            var contactFieldRow = new Panel { CssClass = "row" };
+            var contactFieldCount = 0;
+            pnlContactBody.Controls.Add( contactFieldRow );
+
+            foreach ( var ctrl in contactFieldsOrder )
+            {
+                var actualCtrls = contactFieldsControls.Where( f => f.ID.EndsWith( ctrl ) );
+                foreach ( var actualCtrl in actualCtrls )
+                {
+                    var actualWebCtrl = actualCtrl as WebControl;
+                    if ( actualCtrl != null && actualCtrl.Visible )
+                    {
+                        var fieldCol = new Panel { CssClass = "col-md-6" };
+
+                        if ( ( actualCtrl != null && actualWebCtrl == null ) || ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) ) )
+                        {
+                            contactFieldRow.Controls.Add( fieldCol );
+                            fieldCol.Controls.Add( actualCtrl );
+                            contactFieldCount++;
+                        }
+                        else
+                        {
+                            contactFieldRow.Controls.Add( actualCtrl );
+                        }
+
+                        if ( contactFieldCount > 1 )
+                        {
+                            contactFieldRow = new Panel { CssClass = "row" };
+                            contactFieldCount = 0;
+                            pnlContactBody.Controls.Add( contactFieldRow );
+                        }
+                    }
+                }
+            }
+
+            var nbCommunicationPreferenceWarning = new NotificationBox { ID = "nbCommunicationPreferenceWarning", Visible = false };
+
+            pnlContactBody.Controls.Add( nbCommunicationPreferenceWarning );
         }
 
         private Panel GeneratePanel( string pnlName, string headerText = "", string cssClass = "", string bodyCssClass = "" )
@@ -572,13 +1514,17 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 headerText = GetAttributeValue( $"{pnlName}FieldsHeader" );
             }
 
-            var pnlParent = new Panel();
-            pnlParent.ID = $"pnl{pnlName}";
-            pnlParent.CssClass = $"card card-{pnlName.ToLower()} mb-3 {cssClass}";
+            var pnlParent = new Panel
+            {
+                ID = $"pnl{pnlName}",
+                CssClass = $"card card-{pnlName.ToLower()} mb-3 {cssClass}"
+            };
 
-            var pnlBody = new Panel();
-            pnlBody.ID = $"pnl{pnlName}Body";
-            pnlBody.CssClass = $"card-body card-body-{pnlName.ToLower()} {bodyCssClass}";
+            var pnlBody = new Panel
+            {
+                ID = $"pnl{pnlName}Body",
+                CssClass = $"card-body card-body-{pnlName.ToLower()} {bodyCssClass}"
+            };
             pnlParent.Controls.Add( pnlBody );
 
             if ( headerText.IsNotNullOrWhiteSpace() )
@@ -586,26 +1532,232 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 //var pnlHeader = new Panel();
                 //pnlHeader.ID = $"pnl{pnlName}Header";
                 //pnlHeader.CssClass = $"card-header";
+                var header = new WebControl( HtmlTextWriterTag.H5 );
+                //var header = new LiteralControl( $"<h5>{headerText}</h5>" );
+                header.ID = $"hdr{pnlName}";
+                header.Controls.Add( new LiteralControl( headerText ) );
 
-                var header = new LiteralControl( $"<h5>{headerText}</h5>" );
                 pnlBody.Controls.Add( header );
             }
 
             return pnlParent;
         }
 
-        private Control GenerateControl(string ctrlName, FieldType fieldType, string labelText = "", string cssClass = "")
+        private Control GenerateControl( string ctrlName, Type fieldType, string labelText = "", string cssClass = "", int configId = -1 )
         {
             var ctrl = new Control();
 
-            switch ( fieldType )
+            var displayControl = GetAttributeValue( ctrlName );
+
+            if ( fieldType == typeof( RockTextBox ) )
             {
+                var textbox = new RockTextBox
+                {
+                    ID = $"tb{ctrlName}",
+                    Label = labelText,
+                    CssClass = cssClass,
+                    Required = displayControl.Contains( "Required" ),
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
 
-                case null:
-                    break;
+                ctrl = textbox;
             }
-               
+            else if ( fieldType == typeof( EmailBox ) )
+            {
+                var textbox = new EmailBox
+                {
+                    ID = $"eb{ctrlName}",
+                    Label = labelText,
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
 
+                ctrl = textbox;
+            }
+            else if ( fieldType == typeof( DefinedValuePicker ) )
+            {
+                var dvp = new DefinedValuePicker
+                {
+                    ID = $"dvp{ctrlName}",
+                    Label = labelText,
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    DefinedTypeId = configId,
+                    ValidationGroup = BlockValidationGroup
+                };
+
+                ctrl = dvp;
+            }
+            else if ( fieldType == typeof( ImageEditor ) )
+            {
+                var imageEditor = new ImageEditor
+                {
+                    ID = $"img{ctrlName}",
+                    Label = labelText,
+                    CssClass = cssClass,
+                    ValidationGroup = BlockValidationGroup
+                };
+
+                ctrl = imageEditor;
+            }
+            else if ( fieldType == typeof( BirthdayPicker ) )
+            {
+                var birthday = new BirthdayPicker
+                {
+                    ID = $"bp{ctrlName}",
+                    Label = labelText,
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
+
+                ctrl = birthday;
+            }
+            else if ( fieldType == typeof( RockDropDownList ) )
+            {
+                var ddlCtrl = new RockDropDownList
+                {
+                    ID = $"ddl{ctrlName}",
+                    Label = labelText,
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
+
+                ctrl = ddlCtrl;
+            }
+            else if ( fieldType == typeof( RockRadioButtonList ) )
+            {
+                var control = new RockRadioButtonList
+                {
+                    ID = $"rbl{ctrlName}",
+                    Label = labelText,
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
+
+                ctrl = control;
+            }
+            else if ( fieldType == typeof( GradePicker ) )
+            {
+                var control = new GradePicker
+                {
+                    ID = $"ddl{ctrlName}",
+                    Label = labelText,
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
+
+                ctrl = control;
+            }
+            else if ( fieldType == typeof( YearPicker ) )
+            {
+                var control = new YearPicker
+                {
+                    ID = $"yp{ctrlName}",
+                    Label = labelText,
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
+
+                ctrl = control;
+            }
+            else if ( fieldType == typeof( RacePicker ) )
+            {
+                var control = new RacePicker
+                {
+                    ID = $"rp{ctrlName}",
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
+                if ( labelText != null )
+                {
+                    control.Label = labelText;
+                }
+
+                ctrl = control;
+            }
+            else if ( fieldType == typeof( EthnicityPicker ) )
+            {
+                var control = new EthnicityPicker
+                {
+                    ID = $"ep{ctrlName}",
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
+                if ( labelText != null )
+                {
+                    control.Label = labelText;
+                }
+
+                ctrl = control;
+            }
+            else if ( fieldType == typeof( CampusPicker ) )
+            {
+                var control = new CampusPicker
+                {
+                    ID = $"cp{ctrlName}",
+                    CssClass = cssClass,
+                    Required = displayControl == "Required",
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
+                if ( labelText != null )
+                {
+                    control.Label = labelText;
+                }
+
+                ctrl = control;
+            }
+            else if ( fieldType == typeof( Panel ) )
+            {
+                var control = new Panel
+                {
+                    ID = $"pnl{ctrlName}",
+                    CssClass = cssClass,
+                    Enabled = displayControl != "Disable",
+                    Visible = displayControl != "Hide"
+                };
+
+                ctrl = control;
+            }
+            else if ( fieldType == typeof( PlaceHolder ) )
+            {
+                var control = new PlaceHolder
+                {
+                    ID = $"ph{ctrlName}",
+                    Visible = displayControl != "Hide"
+                };
+
+                ctrl = control;
+            }
 
             return ctrl;
         }

@@ -5,7 +5,12 @@
             <asp:Panel ID="pnlProfilePanels" runat="server">
 
             </asp:Panel>
-            
+            <asp:HiddenField ID="hfGroupId" runat="server" />
+            <asp:HiddenField ID="hfPrimaryPersonGuid" runat="server" />
+
+            <div class="pull-right">
+                <Rock:HighlightLabel ID="hlblSuccess" runat="server" LabelType="Success" Text="Saved" Visible="false" />
+            </div>
 
             <asp:LinkButton ID="lbSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="lbSave_Click" />
             <asp:LinkButton ID="lbCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="lbCancel_Click" />
