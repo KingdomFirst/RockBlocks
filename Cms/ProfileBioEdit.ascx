@@ -1,10 +1,14 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ProfileBioEdit.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Cms.ProfileBioEdit" %>
+<style>
+    .card-familymember .panel-widget:first-of-type {
+        margin-top: 24px;
+    }
+</style>
 <asp:UpdatePanel runat="server" ID="upnlCareEntry">
     <ContentTemplate>
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
-            <asp:Panel ID="pnlProfilePanels" runat="server">
+            <asp:Panel ID="pnlProfilePanels" runat="server"></asp:Panel>
 
-            </asp:Panel>
             <asp:HiddenField ID="hfGroupId" runat="server" />
             <asp:HiddenField ID="hfPrimaryPersonGuid" runat="server" />
 
