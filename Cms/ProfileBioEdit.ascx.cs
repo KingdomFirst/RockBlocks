@@ -20,17 +20,15 @@ using System.ComponentModel;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+
 using NuGet;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
-using Rock.Enums.Blocks.Crm.FamilyPreRegistration;
 using Rock.Model;
-using Rock.Search.Person;
-using Rock.Web;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
-using static IdentityModel.OidcConstants;
+
 namespace RockWeb.Plugins.rocks_kfs.Cms
 {
     #region Block Attributes
@@ -48,6 +46,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Description = "Should you be able to edit the person photo?",
         DefaultBooleanValue = true,
         Key = AttributeKey.AllowPhotoEditing,
+        Order = 0 )]
+
+    [BooleanField(
+        "Display Buttons in All Panels",
+        Description = "Should the Save and Cancel button be added to each panel?",
+        DefaultBooleanValue = false,
+        Key = AttributeKey.DisplayButtonsInAllPanels,
         Order = 0 )]
 
     [TextField(
@@ -418,6 +423,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Key = AttributeKey.MatchPersonFieldsFamilyMember,
         Order = 36 )]
 
+    [LinkedPage(
+        "Redirect Page",
+        Description = "Page to redirect on Save or Cancel. By Default it will use a returnUrl page parameter if provided or display a modal stating your profile has been updated.",
+        IsRequired = false,
+        Key = AttributeKey.RedirectPage,
+        Order = 37 )]
+
     #endregion Block Settings
     public partial class ProfileBioEdit : Rock.Web.UI.RockBlock
     {
@@ -427,6 +439,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         private static class AttributeKey
         {
             public const string AllowPhotoEditing = "AllowPhotoEditing";
+            public const string DisplayButtonsInAllPanels = "DisplayButtonsInAllPanels";
             public const string FamilyMemberFieldsHeader = "FamilyMemberFieldsHeader";
             public const string ShowFamilyMembers = "ShowFamilyMembers";
             public const string PersonFieldsHeader = "PersonFieldsHeader";
@@ -466,6 +479,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string ContactFieldsOrder = "ContactFieldsOrder";
             public const string FamilyMemberFieldsOrder = "FamilyMemberFieldsOrder";
             public const string MatchPersonFieldsFamilyMember = "MatchPersonFieldsFamilyMember";
+            public const string RedirectPage = "RedirectPage";
         }
 
         private static class PageParameterKey
@@ -526,12 +540,26 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         {
             base.OnLoad( e );
 
-            confirmExit.Enabled = true;
+            //confirmExit.Enabled = true;
 
             lbSave.ValidationGroup = BlockValidationGroup;
 
             lbCancel.ValidationGroup = BlockValidationGroup;
             lbCancel.CausesValidation = false;
+
+            var displayButtonsInPanels = GetAttributeValue( AttributeKey.DisplayButtonsInAllPanels ).AsBoolean();
+
+            lbSave.Visible = !displayButtonsInPanels;
+            lbCancel.Visible = !displayButtonsInPanels;
+
+            pnlProfilePanels.DefaultButton = lbSave.ID;
+
+            // Initialize year picker javascript per grade ddl
+            //if ( ddlGrade.Visible )
+            //{
+            //    //ScriptManager.RegisterStartupScript( ddlGrade, ddlGrade.GetType(), "grade-selection-" + BlockId.ToString(), ddlGrade.GetJavascriptForYearPicker( ypGraduation ), true );
+            //}
+
 
         }
 
@@ -691,7 +719,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                 if ( wrapTransactionResult )
                 {
-                    confirmExit.Enabled = false;
+                    //confirmExit.Enabled = false;
 
                     // When in EditOnly mode if there's a ReturnUrl specified navigate to that page.
                     // Otherwise stay on the page, but show a saved success message.
@@ -708,8 +736,14 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         }
                         Context.Response.Redirect( redirectUrl );
                     }
+                    else
+                    {
+                        NavigateToLinkedPage( AttributeKey.RedirectPage );
+                    }
 
-                    hlblSuccess.Visible = true;
+                    //hlblSuccess.Visible = true;
+
+                    maAlert.Show( "Your profile has been updated!", ModalAlertType.None );
                 }
             }
         }
@@ -721,14 +755,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void lbCancel_Click( object sender, EventArgs e )
         {
-            var personId = this.PageParameter( "PersonId" ).AsIntegerOrNull();
-            var qryParams = new Dictionary<string, string>();
-            if ( personId.HasValue )
+            var redirect = NavigateToLinkedPage( AttributeKey.RedirectPage );
+            if ( !redirect )
             {
-                qryParams.Add( "PersonId", personId.ToString() );
+                NavigateToParentPage();
             }
-
-            NavigateToParentPage( qryParams );
         }
 
         /// <summary>
@@ -777,6 +808,160 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 pnlFamilyMemberBody.Controls.Remove( panelWidget );
                 var familyMember = FamilyMembers.First( a => a.PersonId == personId );
                 FamilyMembers.Remove( familyMember );
+            }
+        }
+
+        /// <summary>
+        /// Handles the SelectedIndexChanged event of the rblRole control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        private void rblRole_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            var rblRole = sender as RockRadioButtonList;
+            if ( rblRole != null )
+            {
+                var roleTypeId = rblRole.SelectedValueAsId();
+                var parentPanelWidget = rblRole.FirstParentControlOfType<PanelWidget>();
+                if ( parentPanelWidget != null && roleTypeId.HasValue )
+                {
+                    var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
+                    var groupTypeFamily = GroupTypeCache.GetFamilyGroupType();
+
+                    var ypGraduation = parentPanelWidget.FindControl( "ypGraduation" ) as YearPicker;
+                    var ddlGrade = parentPanelWidget.FindControl( "ddlGrade" ) as RockDropDownList;
+
+                    var dvpMaritalStatus = parentPanelWidget.FindControl( "dvpMaritalStatus" ) as DefinedValuePicker;
+                    var avcPersonAttributes = parentPanelWidget.FindControl( "avcPersonAttributes" ) as AttributeValuesContainer;
+                    var avcChildPersonAttributes = parentPanelWidget.FindControl( "avcChildPersonAttributes" ) as AttributeValuesContainer;
+                    var ebEmail = parentPanelWidget.FindControl( "ebEmail" ) as EmailBox;
+                    var rblEmailPreference = parentPanelWidget.FindControl( "rblEmailPreference" ) as RockRadioButtonList;
+                    var rblCommunicationPreference = parentPanelWidget.FindControl( "rblCommunicationPreference" ) as RockRadioButtonList;
+                    var emailRequired = GetAttributeValue( AttributeKey.Email );
+
+                    var requiredPhoneTypes = GetAttributeValues( AttributeKey.RequiredAdultPhoneTypes ).AsGuidList();
+                    var requiredPhoneTypeControls = new List<PhoneNumberBox>();
+                    if ( requiredPhoneTypes.Any() )
+                    {
+                        var phoneTypeValueIds = new DefinedValueService( new RockContext() )
+                            .GetByGuids( requiredPhoneTypes ).Select( v => v.Id );
+
+                        foreach ( var typeValueId in phoneTypeValueIds )
+                        {
+                            var pnbPhone = parentPanelWidget.FindControl( $"pnbPhone{typeValueId}" ) as PhoneNumberBox;
+                            if ( pnbPhone != null )
+                            {
+                                requiredPhoneTypeControls.Add( pnbPhone );
+                            }
+                        }
+                    }
+
+                    var displayEmailPreference = GetAttributeValue( AttributeKey.EmailPreference );
+                    var displayCommunicationPreference = GetAttributeValue( AttributeKey.CommunicationPreference );
+
+
+                    if ( groupTypeFamily.Roles.Where( gr => gr.Guid == childGuid && gr.Id == roleTypeId ).Any() )
+                    {
+                        if ( ddlGrade != null )
+                        {
+                            ddlGrade.Visible = true;
+                            var parentControl = ddlGrade.Parent as WebControl;
+                            if ( parentControl != null )
+                            {
+                                parentControl.CssClass = "col-md-6";
+                            }
+                        }
+                        if ( dvpMaritalStatus != null )
+                        {
+                            dvpMaritalStatus.Visible = false;
+                            var parentControl = dvpMaritalStatus.Parent as WebControl;
+                            if ( parentControl != null )
+                            {
+                                parentControl.CssClass = "";
+                            }
+                        }
+                        if ( avcPersonAttributes != null )
+                        {
+                            avcPersonAttributes.Visible = false;
+                        }
+                        if ( avcChildPersonAttributes != null )
+                        {
+                            avcChildPersonAttributes.Visible = true;
+                        }
+                        if ( ebEmail != null )
+                        {
+                            ebEmail.Required = emailRequired == "Required";
+                        }
+                        foreach ( var pnbPhone in requiredPhoneTypeControls )
+                        {
+                            pnbPhone.Required = false;
+                            var parentContainer = parentPanelWidget.FindControl( $"pnlContainer{pnbPhone.ID.Replace( "pnbPhone", "" )}_Phone" ) as WebControl;
+                            if ( parentContainer != null )
+                            {
+                                parentContainer.RemoveCssClass( "required" );
+                            }
+                        }
+                        if ( rblEmailPreference != null )
+                        {
+                            rblEmailPreference.Visible = displayEmailPreference == "Show on All";
+                        }
+                        if ( rblCommunicationPreference != null )
+                        {
+                            rblCommunicationPreference.Visible = displayCommunicationPreference == "Show on All";
+                        }
+                    }
+                    else
+                    {
+                        if ( ddlGrade != null )
+                        {
+                            ddlGrade.Visible = false;
+                            var parentControl = ddlGrade.Parent as WebControl;
+                            if ( parentControl != null )
+                            {
+                                parentControl.CssClass = "";
+                            }
+                        }
+                        if ( dvpMaritalStatus != null )
+                        {
+                            dvpMaritalStatus.Visible = true;
+                            var parentControl = dvpMaritalStatus.Parent as WebControl;
+                            if ( parentControl != null )
+                            {
+                                parentControl.CssClass = "col-md-6";
+                            }
+                        }
+                        if ( avcPersonAttributes != null )
+                        {
+                            avcPersonAttributes.Visible = true;
+                        }
+                        if ( avcChildPersonAttributes != null )
+                        {
+                            avcChildPersonAttributes.Visible = false;
+                        }
+                        if ( ebEmail != null )
+                        {
+                            ebEmail.Required = emailRequired.Contains( "Required" );
+                        }
+                        foreach ( var pnbPhone in requiredPhoneTypeControls )
+                        {
+                            pnbPhone.Required = true;
+                            var parentContainer = parentPanelWidget.FindControl( $"pnlContainer{pnbPhone.ID.Replace( "pnbPhone", "" )}_Phone" ) as WebControl;
+                            if ( parentContainer != null )
+                            {
+                                parentContainer.AddCssClass( "required" );
+                            }
+                        }
+                        if ( rblEmailPreference != null )
+                        {
+                            rblEmailPreference.Visible = displayEmailPreference != "Hide";
+                        }
+                        if ( rblCommunicationPreference != null )
+                        {
+                            rblCommunicationPreference.Visible = displayCommunicationPreference != "Hide";
+                        }
+                    }
+
+                }
             }
         }
         #endregion Events
@@ -925,6 +1110,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 var pnlFamilyMemberBody = pnlFamilyMember.FindControl( "pnlFamilyMemberBody" );
                 if ( pnlFamilyMemberBody != null )
                 {
+                    var pnlFamilyMemberHeader = pnlFamilyMember.FindControl( "pnlFamilyMemberHeader" );
                     var lbAddFamilyMember = new LinkButton
                     {
                         ID = "lbAddFamilyMember",
@@ -933,7 +1119,14 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     };
                     lbAddFamilyMember.Click += lbAddFamilyMember_Click;
                     lbAddFamilyMember.Controls.Add( new LiteralControl( "<i class='fa fa-plus'></i>" ) );
-                    pnlFamilyMemberBody.Controls.AddAt( 0, lbAddFamilyMember );
+                    if ( pnlFamilyMemberHeader != null )
+                    {
+                        pnlFamilyMemberHeader.Controls.AddAt( 0, lbAddFamilyMember );
+                    }
+                    else
+                    {
+                        pnlFamilyMemberBody.Controls.AddAt( 0, lbAddFamilyMember );
+                    }
 
                     var pnlFamilyMemberWidgets = new Panel { ID = "pnlFamilyMemberWidgets" };
                     pnlFamilyMemberBody.Controls.Add( pnlFamilyMemberWidgets );
@@ -960,13 +1153,19 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             };
             pwFamilyMember.DeleteClick += pwFamilyMember_DeleteClick;
 
-            var pnlFamilyMemberPerson = new Panel { ID = "pnlFamilyMemberPerson" };
+            var pnlFamilyMemberPerson = new Panel { ID = "pnlFamilyMemberPerson", CssClass = "d-flex flex-wrap" };
             pwFamilyMember.Controls.Add( pnlFamilyMemberPerson );
 
             GeneratePersonFields( fm.Guid, pnlFamilyMemberPerson, null, true );
             GenerateContactFields( fm.Guid, pnlFamilyMemberPerson, true );
 
             pnlFamilyMemberBody.Controls.Add( pwFamilyMember );
+
+            if ( expanded )
+            {
+                pwFamilyMember.Focus();
+                ScriptManager.RegisterStartupScript( pwFamilyMember, pwFamilyMember.GetType(), $"focus-{pwFamilyMember.ClientID}", $"$('html, body').animate({{scrollTop: $('#{pwFamilyMember.ClientID}').offset().top }}, 1000);", true );
+            }
         }
 
         private void GeneratePersonFields( Guid personGuid, Panel pnlPerson, Control pnlFamilyBody, bool familyMember = false )
@@ -1034,9 +1233,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var dvpMaritalStatus = GenerateControl( "MaritalStatus", typeof( DefinedValuePicker ), "Marital Status", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS ) ).Id ) as DefinedValuePicker;
             var cpCampus = GenerateControl( "Campus", typeof( CampusPicker ), GetAttributeValue( AttributeKey.CampusSelectorLabel ) ) as CampusPicker;
             var avcPersonAttributes = new AttributeValuesContainer { ID = "avcPersonAttributes", NumberOfColumns = 2 };
-            var avcPersonChildAttributes = new AttributeValuesContainer { ID = "avcPersonChildAttributes", NumberOfColumns = 2 };
+            var avcChildPersonAttributes = new AttributeValuesContainer { ID = "avcChildPersonAttributes", NumberOfColumns = 2 };
 
-            var personFieldControls = new List<Control> { imagePhotoEditor, dvpTitle, tbFirstName, tbNickName, tbLastName, dvpSuffix, bpBirthday, ypGraduation, ddlGrade, rblRole, ddlGender, rpRace, epEthnicity, dvpMaritalStatus, avcPersonAttributes, avcPersonChildAttributes, lSpacer };
+            var personFieldControls = new List<Control> { imagePhotoEditor, dvpTitle, tbFirstName, tbNickName, tbLastName, dvpSuffix, bpBirthday, ypGraduation, ddlGrade, rblRole, ddlGender, rpRace, epEthnicity, dvpMaritalStatus, avcPersonAttributes, avcChildPersonAttributes, lSpacer };
 
             var person = new Person();
 
@@ -1091,6 +1290,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             ddlGender.Items.Add( new ListItem( "Female" ) );
             ddlGender.SelectedValue = person.Gender == Gender.Unknown ? string.Empty : person.Gender.ConvertToString();
 
+            rblRole.SelectedIndexChanged += rblRole_SelectedIndexChanged;
+            rblRole.AutoPostBack = true;
             rblRole.RepeatDirection = RepeatDirection.Horizontal;
             rblRole.Items.Clear();
             var familyRoles = selectedFamily.GroupType.Roles.OrderBy( r => r.Order ).ToList();
@@ -1101,7 +1302,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             if ( personGuid == Guid.Empty )
             {
-                // make them pick the family role on a new person
                 rblRole.SelectedValue = null;
             }
             else
@@ -1205,26 +1405,27 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
 
             var personChildAttributeGuidList = GetAttributeValue( AttributeKey.PersonAttributesChildren ).SplitDelimitedValues().AsGuidList();
-            avcPersonChildAttributes.IncludedAttributes = personChildAttributeGuidList.Select( a => AttributeCache.Get( a ) ).ToArray();
-            avcPersonChildAttributes.ShowCategoryLabel = !familyMember;
-            avcPersonChildAttributes.AddEditControls( person, true );
+            avcChildPersonAttributes.IncludedAttributes = personChildAttributeGuidList.Select( a => AttributeCache.Get( a ) ).ToArray();
+            avcChildPersonAttributes.ShowCategoryLabel = false;
+            avcChildPersonAttributes.NumberOfColumns = 1;
+            avcChildPersonAttributes.AddEditControls( person, true );
 
             var personAttributeGuidList = GetAttributeValue( AttributeKey.PersonAttributesAdults ).SplitDelimitedValues().AsGuidList();
             avcPersonAttributes.IncludedAttributes = personAttributeGuidList.Select( a => AttributeCache.Get( a ) ).ToArray();
-            avcPersonAttributes.ShowCategoryLabel = !familyMember;
+            avcPersonAttributes.ShowCategoryLabel = false;
+            avcPersonAttributes.NumberOfColumns = 1;
             avcPersonAttributes.AddEditControls( person, true );
 
             if ( rblRole.SelectedValueAsInt() == childRoleId )
             {
                 avcPersonAttributes.Visible = false;
-                avcPersonChildAttributes.Visible = true;
+                avcChildPersonAttributes.Visible = true;
             }
             else
             {
                 avcPersonAttributes.Visible = true;
-                avcPersonChildAttributes.Visible = false;
+                avcChildPersonAttributes.Visible = false;
             }
-
 
             // End Setup Specific Control Settings
 
@@ -1232,47 +1433,38 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             // Add Controls to Panel in order in rows and columns
 
             var pnlBody = pnlPerson.FindControl( "pnlPersonBody" );
+            var pnlFields = new Panel { ID = $"pnlFields_{person.Id}", CssClass = "d-flex flex-wrap" };
 
             if ( pnlBody == null )
             {
-                pnlBody = pnlPerson;
+                pnlFields = pnlPerson;
             }
-
-            var personFieldRow = new Panel { CssClass = "row" };
-            var personFieldCount = 0;
-            pnlBody.Controls.Add( personFieldRow );
+            else
+            {
+                pnlBody.Controls.Add( pnlFields );
+            }
 
             foreach ( var ctrl in personFieldsOrder )
             {
-                var actualCtrl = personFieldControls.FirstOrDefault( f => f.ID.EndsWith( ctrl ) );
-                var actualWebCtrl = actualCtrl as WebControl;
-                if ( actualCtrl != null && actualCtrl.Visible )
+                var actualCtrls = personFieldControls.Where( f => f.ID.EndsWith( ctrl ) );
+                foreach ( var actualCtrl in actualCtrls )
                 {
-                    var personFieldCol = new Panel { CssClass = "col-md-6" };
+                    var actualWebCtrl = actualCtrl as WebControl;
+                    if ( actualCtrl != null )
+                    {
+                        var personFieldCol = new Panel { CssClass = actualCtrl.Visible ? "col-md-6" : "" };
 
-                    if ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) )
-                    {
-                        personFieldRow.Controls.Add( personFieldCol );
-                        personFieldCol.Controls.Add( actualCtrl );
-                        personFieldCount++;
-                    }
-                    else
-                    {
-                        pnlBody.Controls.Add( actualCtrl );
-                    }
-
-                    if ( personFieldCount > 1 )
-                    {
-                        personFieldRow = new Panel { CssClass = "row" };
-                        personFieldCount = 0;
-                        pnlBody.Controls.Add( personFieldRow );
+                        if ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) )
+                        {
+                            pnlFields.Controls.Add( personFieldCol );
+                            personFieldCol.Controls.Add( actualCtrl );
+                        }
+                        else
+                        {
+                            pnlFields.Controls.Add( actualCtrl );
+                        }
                     }
                 }
-            }
-
-            if ( ddlGrade.Visible )
-            {
-                //ScriptManager.RegisterStartupScript( ddlGrade, ddlGrade.GetType(), "grade-selection-" + BlockId.ToString(), ddlGrade.GetJavascriptForYearPicker( ypGraduation ), true );
             }
         }
 
@@ -1280,6 +1472,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         private void GenerateContactFields( Guid personGuid, Panel pnlContact, bool familyMember = false )
         {
             var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
+            var groupTypeFamily = GroupTypeCache.GetFamilyGroupType();
+            var isChild = false;
 
             var rockContext = new RockContext();
 
@@ -1314,6 +1508,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var missingContactFields = contactFields.Except( contactFieldsOrder ).ToList();
             contactFieldsOrder.AddRange( missingContactFields );
 
+            var rblRole = pnlContact.FindControl( "rblRole" ) as RockRadioButtonList;
+
             var ebEmail = GenerateControl( "Email", typeof( EmailBox ), "Email" ) as EmailBox;
             var rblCommunicationPreference = GenerateControl( "CommunicationPreference", typeof( RockRadioButtonList ), "Communication Preference" ) as RockRadioButtonList;
             var rblEmailPreference = GenerateControl( "EmailPreference", typeof( RockRadioButtonList ), "Email Preference" ) as RockRadioButtonList;
@@ -1321,6 +1517,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var contactFieldsControls = new List<Control> { ebEmail, rblCommunicationPreference, rblEmailPreference, lSpacer };
 
             ebEmail.Text = person.Email;
+            if ( rblRole != null && groupTypeFamily.Roles.Where( gr => gr.Guid == childGuid && gr.Id == rblRole.SelectedValueAsInt() ).Any() )
+            {
+                isChild = true;
+                ebEmail.Required = GetAttributeValue( AttributeKey.Email ) == "Required";
+            }
 
             var phoneNumbers = new List<PhoneNumber>();
             var phoneNumberTypes = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE ) );
@@ -1380,7 +1581,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         CountryCode = phoneNumber.CountryCode,
                         Number = phoneNumber.NumberFormatted,
                         RequiredErrorMessage = $"{phoneNumber.NumberTypeValue.Value} phone is required",
-                        Required = requiredPhoneTypes.Contains( phoneNumber.NumberTypeValue.Guid ),
+                        Required = requiredPhoneTypes.Contains( phoneNumber.NumberTypeValue.Guid ) && !isChild,
                         ValidationGroup = BlockValidationGroup
                     };
                     var cbSms = new RockCheckBox
@@ -1420,14 +1621,30 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             rblCommunicationPreference.RepeatDirection = RepeatDirection.Horizontal;
             rblCommunicationPreference.SetValue( person.CommunicationPreference == CommunicationType.SMS ? "2" : "1" );
 
+            if ( isChild )
+            {
+                var displayEmailPreference = GetAttributeValue( AttributeKey.EmailPreference );
+                rblEmailPreference.Visible = displayEmailPreference == "Show on All";
+
+                var displayCommunicationPreference = GetAttributeValue( AttributeKey.CommunicationPreference );
+                rblCommunicationPreference.Visible = displayCommunicationPreference == "Show on All";
+            }
+
             var pnlContactBody = pnlContact.FindControl( "pnlContactBody" );
             if ( pnlContactBody == null )
             {
                 pnlContactBody = pnlContact;
             }
-            var contactFieldRow = new Panel { CssClass = "row" };
-            var contactFieldCount = 0;
-            pnlContactBody.Controls.Add( contactFieldRow );
+
+            var pnlFieldsContact = new Panel { ID = $"pnlFieldsContact_{person.Id}", CssClass = "d-flex flex-wrap" };
+            if ( familyMember )
+            {
+                pnlFieldsContact = pnlContactBody as Panel;
+            }
+            else
+            {
+                pnlContactBody.Controls.Add( pnlFieldsContact );
+            }
 
             foreach ( var ctrl in contactFieldsOrder )
             {
@@ -1441,20 +1658,12 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                         if ( ( actualCtrl != null && actualWebCtrl == null ) || ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) ) )
                         {
-                            contactFieldRow.Controls.Add( fieldCol );
+                            pnlFieldsContact.Controls.Add( fieldCol );
                             fieldCol.Controls.Add( actualCtrl );
-                            contactFieldCount++;
                         }
                         else
                         {
-                            contactFieldRow.Controls.Add( actualCtrl );
-                        }
-
-                        if ( contactFieldCount > 1 )
-                        {
-                            contactFieldRow = new Panel { CssClass = "row" };
-                            contactFieldCount = 0;
-                            pnlContactBody.Controls.Add( contactFieldRow );
+                            pnlFieldsContact.Controls.Add( actualCtrl );
                         }
                     }
                 }
@@ -1462,7 +1671,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             var nbCommunicationPreferenceWarning = new NotificationBox { ID = "nbCommunicationPreferenceWarning", Visible = false };
 
-            pnlContactBody.Controls.Add( nbCommunicationPreferenceWarning );
+            pnlFieldsContact.Controls.Add( nbCommunicationPreferenceWarning );
         }
 
         private bool SavePerson( RockContext rockContext, ref Guid personGuid, int? groupId, Group group, Panel pnlPanel, out Person person )
@@ -1485,7 +1694,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var rblRole = pnlPanel.FindControl( "rblRole" ) as RockRadioButtonList;
             var dvpMaritalStatus = pnlPanel.FindControl( "dvpMaritalStatus" ) as DefinedValuePicker;
             var avcPersonAttributes = pnlPanel.FindControl( "avcPersonAttributes" ) as AttributeValuesContainer;
-            var avcPersonChildAttributes = pnlPanel.FindControl( "avcPersonChildAttributes" ) as AttributeValuesContainer;
+            var avcChildPersonAttributes = pnlPanel.FindControl( "avcChildPersonAttributes" ) as AttributeValuesContainer;
 
             var ebEmail = pnlPanel.FindControl( "ebEmail" ) as EmailBox;
             var rblEmailPreference = pnlPanel.FindControl( "rblEmailPreference" ) as RockRadioButtonList;
@@ -1743,8 +1952,14 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     }
                 }
 
-                person.Email = ebEmail.Text.Trim();
-                person.EmailPreference = rblEmailPreference.SelectedValue.ConvertToEnum<EmailPreference>();
+                if ( ebEmail != null )
+                {
+                    person.Email = ebEmail.Text.Trim();
+                }
+                if ( rblEmailPreference != null )
+                {
+                    person.EmailPreference = rblEmailPreference.SelectedValue.ConvertToEnum<EmailPreference>();
+                }
 
                 if ( rblCommunicationPreference != null )
                 {
@@ -1771,9 +1986,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     avcPersonAttributes.GetEditValues( person );
                 }
 
-                if ( avcPersonChildAttributes != null && avcPersonChildAttributes.Visible )
+                if ( avcChildPersonAttributes != null && avcChildPersonAttributes.Visible )
                 {
-                    avcPersonChildAttributes.GetEditValues( person );
+                    avcChildPersonAttributes.GetEditValues( person );
                 }
 
                 if ( person.IsValid )
@@ -1840,6 +2055,20 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 CssClass = $"card card-{pnlName.ToLower()} mb-3 {cssClass}"
             };
 
+            if ( headerText.IsNotNullOrWhiteSpace() )
+            {
+                var pnlHeader = new Panel();
+                pnlHeader.ID = $"pnl{pnlName}Header";
+                pnlHeader.CssClass = $"card-header";
+
+                var header = new WebControl( HtmlTextWriterTag.H5 );
+                header.ID = $"hdr{pnlName}";
+                header.Controls.Add( new LiteralControl( headerText ) );
+
+                pnlHeader.Controls.Add( header );
+                pnlParent.Controls.Add( pnlHeader );
+            }
+
             var pnlBody = new Panel
             {
                 ID = $"pnl{pnlName}Body",
@@ -1847,17 +2076,43 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             };
             pnlParent.Controls.Add( pnlBody );
 
-            if ( headerText.IsNotNullOrWhiteSpace() )
-            {
-                //var pnlHeader = new Panel();
-                //pnlHeader.ID = $"pnl{pnlName}Header";
-                //pnlHeader.CssClass = $"card-header";
-                var header = new WebControl( HtmlTextWriterTag.H5 );
-                //var header = new LiteralControl( $"<h5>{headerText}</h5>" );
-                header.ID = $"hdr{pnlName}";
-                header.Controls.Add( new LiteralControl( headerText ) );
+            var pnlFooter = new Panel();
+            pnlFooter.ID = $"pnl{pnlName}Footer";
+            pnlFooter.CssClass = $"card-footer";
 
-                pnlBody.Controls.Add( header );
+            var displayButtonsInPanels = GetAttributeValue( AttributeKey.DisplayButtonsInAllPanels ).AsBoolean();
+
+            if ( displayButtonsInPanels )
+            {
+                pnlParent.Controls.Add( pnlFooter );
+
+                var lbSave = new LinkButton
+                {
+                    ID = $"lbSave{pnlName}",
+                    AccessKey = "s",
+                    ToolTip = "Alt+s",
+                    Text = "Save",
+                    CssClass = "btn btn-primary",
+                    ValidationGroup = BlockValidationGroup
+                };
+                lbSave.Click += lbSave_Click;
+                pnlProfilePanels.DefaultButton = lbSave.ID;
+
+                pnlFooter.Controls.Add( lbSave );
+
+                var lbCancel = new LinkButton
+                {
+                    ID = $"lbCancel{pnlName}",
+                    AccessKey = "c",
+                    ToolTip = "Alt+c",
+                    Text = "Cancel",
+                    CssClass = "btn btn-link",
+                    CausesValidation = false,
+                    ValidationGroup = BlockValidationGroup
+                };
+                lbCancel.Click += lbCancel_Click;
+
+                pnlFooter.Controls.Add( lbCancel );
             }
 
             return pnlParent;
@@ -1891,7 +2146,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     ID = $"eb{ctrlName}",
                     Label = labelText,
                     CssClass = cssClass,
-                    Required = displayControl == "Required",
+                    Required = displayControl.Contains( "Required" ),
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup

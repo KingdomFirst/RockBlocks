@@ -3,11 +3,24 @@
     .card-familymember .panel-widget:first-of-type {
         margin-top: 24px;
     }
+
+    @media (min-width: 992px) {
+        .card-person fieldset, .family-member fieldset {
+            padding-left: 15px;
+            padding-right: 15px;
+            width: 100%;
+        }
+
+        .card-person .col-md-6 ~ fieldset, .family-member .col-md-6 ~ fieldset {
+            width: 50%;
+        }
+    }
 </style>
 <asp:UpdatePanel runat="server" ID="upnlCareEntry">
     <ContentTemplate>
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
             <asp:Panel ID="pnlProfilePanels" runat="server"></asp:Panel>
+            <Rock:ModalAlert ID="maAlert" runat="server"></Rock:ModalAlert>
 
             <asp:HiddenField ID="hfGroupId" runat="server" />
             <asp:HiddenField ID="hfPrimaryPersonGuid" runat="server" />
