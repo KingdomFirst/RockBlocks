@@ -43,18 +43,18 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     #region Block Settings
 
     [BooleanField(
-        "Allow Photo Editing",
-        Description = "Should editing person photo be allowed?",
-        DefaultBooleanValue = true,
-        Key = AttributeKey.AllowPhotoEditing,
-        Order = 0 )]
-
-    [BooleanField(
         "Display Buttons in All Panels",
         Description = "Should the Save and Cancel button be added to each panel?",
         DefaultBooleanValue = false,
         Key = AttributeKey.DisplayButtonsInAllPanels,
         Order = 0 )]
+
+    [LinkedPage(
+        "Redirect Page",
+        Description = "Page to redirect on Save or Cancel. By Default it will use a returnUrl page parameter if provided or display a modal stating your profile has been updated.",
+        IsRequired = false,
+        Key = AttributeKey.RedirectPage,
+        Order = 1 )]
 
     [TextField(
         "Family Member Panel Header",
@@ -62,6 +62,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Description = "The Header text for the \"Family Member\" panel.",
         IsRequired = false,
         DefaultValue = "Family Members",
+        Category = AttributeCategory.FamilyMembers,
         Order = 1 )]
 
     [BooleanField(
@@ -69,7 +70,24 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Description = "Should family members be shown to add/edit or not?",
         DefaultBooleanValue = true,
         Key = AttributeKey.ShowFamilyMembers,
+        Category = AttributeCategory.FamilyMembers,
         Order = 2 )]
+
+    [BooleanField(
+        "Use Person Fields settings for Family Members",
+        Description = "Should the display of Family Member fields be controlled by Person field display settings? If no, display of Family Member fields will be controlled by Family Member field settings.",
+        DefaultBooleanValue = true,
+        Key = AttributeKey.MatchPersonFieldsFamilyMember,
+        Category = AttributeCategory.FamilyMembers,
+        Order = 37 )]
+
+    [BooleanField(
+        "Allow Adding Family Members?",
+        Description = "Should this block allow the ability to add new Family Members?",
+        DefaultBooleanValue = true,
+        Key = AttributeKey.AllowAddingFamilyMembers,
+        Category = AttributeCategory.FamilyMembers,
+        Order = 38 )]
 
     [TextField(
         "Person Profile Panel Header",
@@ -79,6 +97,14 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultValue = "Profile Information",
         Category = AttributeCategory.PersonFields,
         Order = 3 )]
+
+    [BooleanField(
+        "Allow Photo Editing",
+        Description = "Should editing person photo be allowed?",
+        DefaultBooleanValue = true,
+        Key = AttributeKey.AllowPhotoEditing,
+        Category = AttributeCategory.PersonFields,
+        Order = 4 )]
 
     [CustomDropdownListField(
         "Title",
@@ -390,6 +416,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         key: AttributeKey.PanelOrder,
         required: false,
         customValues: ListSource.Panels,
+        category: AttributeCategory.Ordering,
         order: 32 )]
 
     [ValueListField(
@@ -397,7 +424,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         description: "Set the order of the person fields.",
         key: AttributeKey.PersonFieldsOrder,
         required: false,
-        customValues: ListSource.PersonFields + ",Spacer",
+        customValues: ListSource.PersonFields,
+        category: AttributeCategory.Ordering,
         order: 33 )]
 
     [ValueListField(
@@ -405,37 +433,27 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         description: "Set the order of the contact fields.",
         key: AttributeKey.ContactFieldsOrder,
         required: false,
-        customValues: ListSource.ContactFields + ",Spacer",
+        customValues: ListSource.ContactFields,
+        category: AttributeCategory.Ordering,
         order: 34 )]
 
     [ValueListField(
-        name: "Family Member Fields Order",
-        description: "Set the order of the family member fields.",
+        name: "Family Member Person Fields",
+        description: "If \"Use Person Fields settings for Family Members\" is set to \"No\", set the family member person fields that will be displayed and their order.",
         key: AttributeKey.FamilyMemberFieldsOrder,
         required: false,
-        customValues: ListSource.PersonFields + ",PersonSpacer," + ListSource.ContactFields + ",ContactSpacer",
+        customValues: ListSource.PersonFields,
+        category: AttributeCategory.Ordering,
         order: 35 )]
 
-    [BooleanField(
-        "Use Person Fields settings for Family Members",
-        Description = "Should the display of Family Member fields be controlled by Person field display settings? If no, display of Family Member fields will be controlled by Family Member field settings.",
-        DefaultBooleanValue = true,
-        Key = AttributeKey.MatchPersonFieldsFamilyMember,
-        Order = 36 )]
-
-    [BooleanField(
-        "Allow Adding Family Members?",
-        Description = "Should this block allow the ability to add new Family Members?",
-        DefaultBooleanValue = true,
-        Key = AttributeKey.AllowAddingFamilyMembers,
-        Order = 37 )]
-
-    [LinkedPage(
-        "Redirect Page",
-        Description = "Page to redirect on Save or Cancel. By Default it will use a returnUrl page parameter if provided or display a modal stating your profile has been updated.",
-        IsRequired = false,
-        Key = AttributeKey.RedirectPage,
-        Order = 38 )]
+    [ValueListField(
+        name: "Family Member Contact Fields",
+        description: "If \"Use Person Fields settings for Family Members\" is set to \"No\", set the family member contact fields that will be displayed and their order. (These appear after the person fields.)",
+        key: AttributeKey.FamilyMemberContactFieldsOrder,
+        required: false,
+        customValues: ListSource.ContactFields,
+        category: AttributeCategory.Ordering,
+        order: 36 )]
 
     #endregion Block Settings
     public partial class ProfileBioEdit : Rock.Web.UI.RockBlock
@@ -485,6 +503,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string PersonFieldsOrder = "PersonFieldsOrder";
             public const string ContactFieldsOrder = "ContactFieldsOrder";
             public const string FamilyMemberFieldsOrder = "FamilyMemberFieldsOrder";
+            public const string FamilyMemberContactFieldsOrder = "FamilyMemberContactFieldsOrder";
             public const string MatchPersonFieldsFamilyMember = "MatchPersonFieldsFamilyMember";
             public const string AllowAddingFamilyMembers = "AllowAddingFamilyMembers";
             public const string RedirectPage = "RedirectPage";
@@ -501,8 +520,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string HIDE_OPTIONAL_REQUIRED = "Hide,Optional,Required";
             public const string HIDE_DISABLE_REQUIRED = "Hide,Disable,Required";
             public const string Panels = "Person,Contact,Family,FamilyMember,Address";
-            public const string PersonFields = "Photo,Title,FirstName,NickName,LastName,Suffix,Birthday,Graduation,Grade,Role,Gender,Race,Ethnicity,MaritalStatus,Campus,PersonAttributes";
-            public const string ContactFields = "Phone,Email,EmailPreference,CommunicationPreference";
+            public const string PersonFields = "Photo,Title,FirstName,NickName,LastName,Suffix,Birthday,Graduation,Grade,Role,Gender,Race,Ethnicity,MaritalStatus,Campus,PersonAttributes,Spacer";
+            public const string ContactFields = "Phone,Email,EmailPreference,CommunicationPreference,Spacer";
         }
 
         private static class AttributeCategory
@@ -511,6 +530,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string ContactFields = "Contact Fields";
             public const string Campus = "Campus";
             public const string Attributes = "Attributes";
+            public const string Ordering = "Ordering";
+            public const string FamilyMembers = "Family Members";
         }
 
         private List<PersonFamilyMember> FamilyMembers
@@ -720,10 +741,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                 if ( wrapTransactionResult )
                 {
-                    //confirmExit.Enabled = false;
-
-                    // When in EditOnly mode if there's a ReturnUrl specified navigate to that page.
-                    // Otherwise stay on the page, but show a saved success message.
+                    // If there's a ReturnUrl specified navigate to that page.
+                    // Otherwise stay on the page, but show a saved success modal.
                     var returnUrl = PageParameter( PageParameterKey.ReturnUrl );
 
                     if ( returnUrl.IsNotNullOrWhiteSpace() )
@@ -741,8 +760,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     {
                         NavigateToLinkedPage( AttributeKey.RedirectPage );
                     }
-
-                    //hlblSuccess.Visible = true;
 
                     maAlert.Show( "Your profile has been updated!", ModalAlertType.None );
                 }
@@ -1206,14 +1223,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var personFieldsOrder = GetAttributeValue( AttributeKey.PersonFieldsOrder ).SplitDelimitedValues( false ).ToList();
 
             var matchPersonFieldsFamilyMember = GetAttributeValue( AttributeKey.MatchPersonFieldsFamilyMember ).AsBoolean();
-            if ( familyMember )
+            if ( familyMember && !matchPersonFieldsFamilyMember )
             {
-                personFields = ( ListSource.PersonFields + "," + ListSource.ContactFields ).Replace( ",Spacer", "" ).SplitDelimitedValues( false ).ToList();
                 personFieldsOrder = GetAttributeValue( AttributeKey.FamilyMemberFieldsOrder ).SplitDelimitedValues( false ).ToList();
-                if ( personFieldsOrder.Any() && !matchPersonFieldsFamilyMember )
-                {
-                    personFields = personFieldsOrder;
-                }
+                personFields = personFieldsOrder;
             }
 
             var missingPersonFields = personFields.Except( personFieldsOrder ).ToList();
@@ -1511,14 +1524,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var contactFieldsOrder = GetAttributeValue( AttributeKey.ContactFieldsOrder ).SplitDelimitedValues( false ).ToList();
 
             var matchPersonFieldsFamilyMember = GetAttributeValue( AttributeKey.MatchPersonFieldsFamilyMember ).AsBoolean();
-            if ( familyMember )
+            if ( familyMember && !matchPersonFieldsFamilyMember )
             {
-                contactFields = ( ListSource.PersonFields + "," + ListSource.ContactFields ).Replace( ",Spacer", "" ).SplitDelimitedValues( false ).ToList();
-                contactFieldsOrder = GetAttributeValue( AttributeKey.FamilyMemberFieldsOrder ).SplitDelimitedValues( false ).ToList();
-                if ( contactFieldsOrder.Any() && !matchPersonFieldsFamilyMember )
-                {
-                    contactFields = contactFieldsOrder;
-                }
+                contactFieldsOrder = GetAttributeValue( AttributeKey.FamilyMemberContactFieldsOrder ).SplitDelimitedValues( false ).ToList();
+                contactFields = contactFieldsOrder;
             }
 
             var missingContactFields = contactFields.Except( contactFieldsOrder ).ToList();
@@ -1675,15 +1684,17 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                         if ( ( actualCtrl != null && actualWebCtrl == null ) || ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) ) )
                         {
-                            var index = contactFieldsOrder.IndexOf( ctrl );
-                            if ( !pnlFieldsContact.ID.StartsWith( "pnlFieldsContact" ) && index <= pnlFieldsContact.Controls.Count )
-                            {
-                                pnlFieldsContact.Controls.AddAt( index + addedContactCtrls, fieldCol );
-                            }
-                            else
-                            {
-                                pnlFieldsContact.Controls.Add( fieldCol );
-                            }
+                            // attempt to insert contact fields at the right location, but without "every" field being accounted
+                            // for in the order, multiple phone types, multiple attribute fields, this will not work correctly.
+                            //var index = contactFieldsOrder.IndexOf( ctrl );
+                            //if ( !pnlFieldsContact.ID.StartsWith( "pnlFieldsContact" ) && index <= pnlFieldsContact.Controls.Count )
+                            //{
+                            //    pnlFieldsContact.Controls.AddAt( index + addedContactCtrls, fieldCol );
+                            //}
+                            //else
+                            //{
+                            pnlFieldsContact.Controls.Add( fieldCol );
+                            //}
                             fieldCol.Controls.Add( actualCtrl );
                         }
                         else
@@ -2127,7 +2138,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     ValidationGroup = BlockValidationGroup
                 };
                 lbSave.Click += lbSave_Click;
-                pnlProfilePanels.DefaultButton = lbSave.ID;
 
                 pnlFooter.Controls.Add( lbSave );
 
