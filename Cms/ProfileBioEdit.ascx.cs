@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Linq.Dynamic.Core;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -34,7 +35,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     #region Block Attributes
 
     [DisplayName( "Edit Profile" )]
-    [Category( "KFS > Cms" )]
+    [Category( "KFS > CMS" )]
     [Description( "Customized Edit Profile block to have more control over the fields and interface." )]
 
     #endregion Block Attributes
@@ -254,7 +255,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefinedTypeGuid = Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE,
         IsRequired = false,
         AllowMultiple = true,
-        DefaultValue = Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME,
         Category = AttributeCategory.ContactFields,
         Order = 19 )]
 
@@ -397,7 +397,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         description: "Set the order of the person fields.",
         key: AttributeKey.PersonFieldsOrder,
         required: false,
-        customValues: ListSource.PersonFields,
+        customValues: ListSource.PersonFields + ",Spacer",
         order: 33 )]
 
     [ValueListField(
@@ -405,7 +405,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         description: "Set the order of the contact fields.",
         key: AttributeKey.ContactFieldsOrder,
         required: false,
-        customValues: ListSource.ContactFields,
+        customValues: ListSource.ContactFields + ",Spacer",
         order: 34 )]
 
     [ValueListField(
@@ -413,7 +413,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         description: "Set the order of the person fields.",
         key: AttributeKey.FamilyMemberFieldsOrder,
         required: false,
-        customValues: ListSource.PersonFields + "," + ListSource.ContactFields,
+        customValues: ListSource.PersonFields + ",PersonSpacer," + ListSource.ContactFields + ",ContactSpacer",
         order: 35 )]
 
     [BooleanField(
@@ -423,12 +423,19 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Key = AttributeKey.MatchPersonFieldsFamilyMember,
         Order = 36 )]
 
+    [BooleanField(
+        "Allow Adding Family Members?",
+        Description = "Should this block allow the ability to add new Family Members?",
+        DefaultBooleanValue = true,
+        Key = AttributeKey.AllowAddingFamilyMembers,
+        Order = 37 )]
+
     [LinkedPage(
         "Redirect Page",
         Description = "Page to redirect on Save or Cancel. By Default it will use a returnUrl page parameter if provided or display a modal stating your profile has been updated.",
         IsRequired = false,
         Key = AttributeKey.RedirectPage,
-        Order = 37 )]
+        Order = 38 )]
 
     #endregion Block Settings
     public partial class ProfileBioEdit : Rock.Web.UI.RockBlock
@@ -479,6 +486,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string ContactFieldsOrder = "ContactFieldsOrder";
             public const string FamilyMemberFieldsOrder = "FamilyMemberFieldsOrder";
             public const string MatchPersonFieldsFamilyMember = "MatchPersonFieldsFamilyMember";
+            public const string AllowAddingFamilyMembers = "AllowAddingFamilyMembers";
             public const string RedirectPage = "RedirectPage";
         }
 
@@ -493,8 +501,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string HIDE_OPTIONAL_REQUIRED = "Hide,Optional,Required";
             public const string HIDE_DISABLE_REQUIRED = "Hide,Disable,Required";
             public const string Panels = "Person,Contact,Family,FamilyMember,Address";
-            public const string PersonFields = "Photo,Title,FirstName,NickName,LastName,Suffix,Birthday,Graduation,Grade,Role,Gender,Race,Ethnicity,MaritalStatus,Campus,PersonAttributes,Spacer";
-            public const string ContactFields = "Phone,Email,EmailPreference,CommunicationPreference,Spacer";
+            public const string PersonFields = "Photo,Title,FirstName,NickName,LastName,Suffix,Birthday,Graduation,Grade,Role,Gender,Race,Ethnicity,MaritalStatus,Campus,PersonAttributes";
+            public const string ContactFields = "Phone,Email,EmailPreference,CommunicationPreference";
         }
 
         private static class AttributeCategory
@@ -623,10 +631,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             {
                                 var familyMemberGuid = fm.Guid;
                                 var pwFamilyMember = pnlFamilyMemberBody.FindControl( $"pwFamilyMember_{fm.PersonId}" ) as PanelWidget;
-                                var pnlFamilyMemberPerson = pwFamilyMember.FindControl( "pnlFamilyMemberPerson" ) as Panel;
                                 var fmPerson = fm.Person;
                                 if ( pwFamilyMember != null )
                                 {
+                                    var pnlFamilyMemberPerson = pwFamilyMember.FindControl( "pnlFamilyMemberPerson" ) as Panel;
                                     returnVal = SavePerson( rockContext, ref familyMemberGuid, groupId, group, pnlFamilyMemberPerson, out fmPerson );
                                     if ( returnVal )
                                     {
@@ -1119,6 +1127,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     };
                     lbAddFamilyMember.Click += lbAddFamilyMember_Click;
                     lbAddFamilyMember.Controls.Add( new LiteralControl( "<i class='fa fa-plus'></i>" ) );
+                    lbAddFamilyMember.Visible = GetAttributeValue( AttributeKey.AllowAddingFamilyMembers ).AsBoolean();
                     if ( pnlFamilyMemberHeader != null )
                     {
                         pnlFamilyMemberHeader.Controls.AddAt( 0, lbAddFamilyMember );
@@ -1170,7 +1179,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
         private void GeneratePersonFields( Guid personGuid, Panel pnlPerson, Control pnlFamilyBody, bool familyMember = false )
         {
-            WebControl lSpacer = new WebControl( HtmlTextWriterTag.Span ) { ID = "pSpacer" };
+            WebControl lSpacer = new WebControl( HtmlTextWriterTag.Span ) { ID = "PersonSpacer" };
             var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
 
             RockContext rockContext = new RockContext();
@@ -1241,8 +1250,12 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             if ( personGuid == Guid.Empty )
             {
+                tbFirstName.Visible = true;
+                tbLastName.Visible = true;
                 tbFirstName.Enabled = true;
                 tbLastName.Enabled = true;
+                tbFirstName.Required = true;
+                tbLastName.Required = true;
             }
             else
             {
@@ -1444,6 +1457,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 pnlBody.Controls.Add( pnlFields );
             }
 
+            var visibleControlCount = 0;
             foreach ( var ctrl in personFieldsOrder )
             {
                 var actualCtrls = personFieldControls.Where( f => f.ID.EndsWith( ctrl ) );
@@ -1453,7 +1467,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     if ( actualCtrl != null )
                     {
                         var personFieldCol = new Panel { CssClass = actualCtrl.Visible ? "col-md-6" : "" };
-
+                        if ( actualCtrl.Visible )
+                        {
+                            visibleControlCount++;
+                        }
                         if ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) )
                         {
                             pnlFields.Controls.Add( personFieldCol );
@@ -1461,10 +1478,16 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         }
                         else
                         {
+                            visibleControlCount--;
                             pnlFields.Controls.Add( actualCtrl );
                         }
                     }
                 }
+            }
+
+            if ( pnlFields != null && visibleControlCount < 1 )
+            {
+                pnlPerson.Visible = false;
             }
         }
 
@@ -1489,7 +1512,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 return;
             }
 
-            WebControl lSpacer = new WebControl( HtmlTextWriterTag.Span ) { ID = "cSpacer" };
+            WebControl lSpacer = new WebControl( HtmlTextWriterTag.Span ) { ID = "ContactSpacer" };
 
             var contactFields = ListSource.ContactFields.SplitDelimitedValues( false ).ToList();
             var contactFieldsOrder = GetAttributeValue( AttributeKey.ContactFieldsOrder ).SplitDelimitedValues( false ).ToList();
@@ -1646,6 +1669,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 pnlContactBody.Controls.Add( pnlFieldsContact );
             }
 
+            var addedContactCtrls = 0;
             foreach ( var ctrl in contactFieldsOrder )
             {
                 var actualCtrls = contactFieldsControls.Where( f => f.ID.EndsWith( ctrl ) );
@@ -1658,7 +1682,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                         if ( ( actualCtrl != null && actualWebCtrl == null ) || ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) ) )
                         {
-                            pnlFieldsContact.Controls.Add( fieldCol );
+                            var index = contactFieldsOrder.IndexOf( ctrl );
+                            if ( !pnlFieldsContact.ID.StartsWith( "pnlFieldsContact" ) && index <= pnlFieldsContact.Controls.Count )
+                            {
+                                pnlFieldsContact.Controls.AddAt( index + addedContactCtrls, fieldCol );
+                            }
+                            else
+                            {
+                                pnlFieldsContact.Controls.Add( fieldCol );
+                            }
                             fieldCol.Controls.Add( actualCtrl );
                         }
                         else
@@ -1669,9 +1701,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 }
             }
 
-            var nbCommunicationPreferenceWarning = new NotificationBox { ID = "nbCommunicationPreferenceWarning", Visible = false };
-
-            pnlFieldsContact.Controls.Add( nbCommunicationPreferenceWarning );
+            if ( pnlFieldsContact != null && pnlFieldsContact.Controls.Cast<Control>().Count( control => control.Visible ) < 2 )
+            {
+                pnlContact.Visible = false;
+            }
+            else
+            {
+                var nbCommunicationPreferenceWarning = new NotificationBox { ID = "nbCommunicationPreferenceWarning", Visible = false };
+                pnlFieldsContact.Controls.Add( nbCommunicationPreferenceWarning );
+            }
         }
 
         private bool SavePerson( RockContext rockContext, ref Guid personGuid, int? groupId, Group group, Panel pnlPanel, out Person person )
