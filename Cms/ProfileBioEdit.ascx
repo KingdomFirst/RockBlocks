@@ -1,9 +1,5 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ProfileBioEdit.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Cms.ProfileBioEdit" %>
 <style>
-    .card-familymember .panel-widget:first-of-type {
-        margin-top: 24px;
-    }
-
     @media (min-width: 992px) {
         .card-person fieldset, .family-member fieldset {
             padding-left: 15px;
@@ -25,15 +21,8 @@
             <asp:HiddenField ID="hfGroupId" runat="server" />
             <asp:HiddenField ID="hfPrimaryPersonGuid" runat="server" />
 
-            <div class="pull-right">
-                <Rock:HighlightLabel ID="hlblSuccess" runat="server" LabelType="Success" Text="Saved" Visible="false" />
-            </div>
-
             <asp:LinkButton ID="lbSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="lbSave_Click" />
             <asp:LinkButton ID="lbCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="lbCancel_Click" />
         </asp:Panel>
-
-        <Rock:ConfirmPageUnload ID="confirmExit" runat="server" ConfirmationMessage="Changes have been made to your profile that have not yet been saved." Enabled="false" />
-
     </ContentTemplate>
 </asp:UpdatePanel>

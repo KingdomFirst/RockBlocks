@@ -44,7 +44,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
     [BooleanField(
         "Allow Photo Editing",
-        Description = "Should you be able to edit the person photo?",
+        Description = "Should editing person photo be allowed?",
         DefaultBooleanValue = true,
         Key = AttributeKey.AllowPhotoEditing,
         Order = 0 )]
@@ -57,9 +57,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Order = 0 )]
 
     [TextField(
-        "Family Member Header",
+        "Family Member Panel Header",
         Key = AttributeKey.FamilyMemberFieldsHeader,
-        Description = "The Header text for the \"Family Fields\" panel.",
+        Description = "The Header text for the \"Family Member\" panel.",
         IsRequired = false,
         DefaultValue = "Family Members",
         Order = 1 )]
@@ -72,9 +72,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Order = 2 )]
 
     [TextField(
-        "Person Fields Header",
+        "Person Profile Panel Header",
         Key = AttributeKey.PersonFieldsHeader,
-        Description = "The Header text for the \"Person Fields\" panel.",
+        Description = "The Header text for the \"Person Profile\" panel.",
         IsRequired = false,
         DefaultValue = "Profile Information",
         Category = AttributeCategory.PersonFields,
@@ -201,7 +201,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Order = 13 )]
 
     [TextField(
-        "Address Field Header",
+        "Address Panel Header",
         Key = AttributeKey.AddressFieldsHeader,
         Description = "The Header text for the \"Address\" panel.",
         IsRequired = false,
@@ -210,7 +210,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Order = 14 )]
 
     [CustomDropdownListField(
-        "Addresses",
+        "Address",
         Key = AttributeKey.Address,
         Description = "How should Address be displayed?",
         ListSource = ListSource.HIDE_OPTIONAL_REQUIRED,
@@ -222,7 +222,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     [GroupLocationTypeField(
         "Address Type",
         Key = AttributeKey.AddressType,
-        Description = "The type of address to be displayed / edited.",
+        Description = "The type of address to be displayed/edited.",
         GroupTypeGuid = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY,
         IsRequired = false,
         DefaultValue = Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME,
@@ -230,7 +230,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Order = 16 )]
 
     [TextField(
-        "Contact Fields Header",
+        "Contact Panel Header",
         Key = AttributeKey.ContactFieldsHeader,
         Description = "The Header text for the \"Contact Fields\" panel.",
         IsRequired = false,
@@ -251,7 +251,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     [DefinedValueField(
         "Phone Types",
         Key = AttributeKey.PhoneTypes,
-        Description = "The types of phone numbers to display / edit.",
+        Description = "The types of phone numbers to display/edit.",
         DefinedTypeGuid = Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE,
         IsRequired = false,
         AllowMultiple = true,
@@ -287,7 +287,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     [CustomDropdownListField(
         "Email Preference",
         Key = AttributeKey.EmailPreference,
-        Description = "Should Email Preference be displayed?",
+        Description = "How should Email Preference be displayed?",
         ListSource = "Hide,Show on Adult,Show on All",
         Category = AttributeCategory.ContactFields,
         IsRequired = false,
@@ -297,7 +297,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     [CustomDropdownListField(
         "Communication Preference",
         Key = AttributeKey.CommunicationPreference,
-        Description = "Should Communication Preference be displayed?",
+        Description = "How should Communication Preference be displayed?",
         ListSource = "Hide,Show on Adult,Show on All",
         Category = AttributeCategory.ContactFields,
         IsRequired = false,
@@ -305,9 +305,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Order = 24 )]
 
     [TextField(
-        "Family Field Header",
+        "Family Panel Header",
         Key = AttributeKey.FamilyFieldsHeader,
-        Description = "The Header text for the \"Family\" panel (primarily for family attributes, but can also contain campus).",
+        Description = "The Header text for the \"Family\" panel.",
         IsRequired = false,
         DefaultValue = "Family Information",
         Category = AttributeCategory.Attributes,
@@ -319,7 +319,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         EntityTypeGuid = Rock.SystemGuid.EntityType.GROUP,
         EntityTypeQualifierColumn = "GroupTypeId",
         EntityTypeQualifierValue = Rock.SystemGuid.GroupType.GROUPTYPE_FAMILY,
-        Description = "The family attributes that should be displayed / edited.",
+        Description = "The family attributes that should be displayed/edited.",
         IsRequired = false,
         AllowMultiple = true,
         Category = AttributeCategory.Attributes,
@@ -329,7 +329,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         "Person Attributes (adults)",
         Key = AttributeKey.PersonAttributesAdults,
         EntityTypeGuid = Rock.SystemGuid.EntityType.PERSON,
-        Description = "The person attributes that should be displayed / edited for adults.",
+        Description = "The person attributes that should be displayed/edited for adults.",
         IsRequired = false,
         AllowMultiple = true,
         Category = AttributeCategory.Attributes,
@@ -339,7 +339,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         "Person Attributes (children)",
         Key = AttributeKey.PersonAttributesChildren,
         EntityTypeGuid = Rock.SystemGuid.EntityType.PERSON,
-        Description = "The person attributes that should be displayed / edited for children.",
+        Description = "The person attributes that should be displayed/edited for children.",
         IsRequired = false,
         AllowMultiple = true,
         Category = AttributeCategory.Attributes,
@@ -348,7 +348,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
     [CustomDropdownListField(
         "Campus Selector",
         Key = AttributeKey.CampusSelector,
-        Description = "Should Campus Selector be displayed and where?",
+        Description = "How should Campus Selector be displayed?",
         ListSource = "Hide,Show with Person,Show with Family",
         Category = AttributeCategory.Campus,
         IsRequired = false,
@@ -386,7 +386,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
     [ValueListField(
         name: "Panel Order",
-        description: "Set the order of the panels, valid panel names: Person, Contact, Family, FamilyMember, Address",
+        description: "Set the display order of the panels.",
         key: AttributeKey.PanelOrder,
         required: false,
         customValues: ListSource.Panels,
@@ -410,15 +410,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
     [ValueListField(
         name: "Family Member Fields Order",
-        description: "Set the order of the person fields.",
+        description: "Set the order of the family member fields.",
         key: AttributeKey.FamilyMemberFieldsOrder,
         required: false,
         customValues: ListSource.PersonFields + ",PersonSpacer," + ListSource.ContactFields + ",ContactSpacer",
         order: 35 )]
 
     [BooleanField(
-        "Match Person Fields on Family Members",
-        Description = "Should all the person and contact fields that are displayed on the Current Person be displayed on all Family Members? If no, it will use the 'Family Member Fields Order' to also determine what fields are displayed.",
+        "Use Person Fields settings for Family Members",
+        Description = "Should the display of Family Member fields be controlled by Person field display settings? If no, display of Family Member fields will be controlled by Family Member field settings.",
         DefaultBooleanValue = true,
         Key = AttributeKey.MatchPersonFieldsFamilyMember,
         Order = 36 )]
@@ -519,11 +519,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             set { Session["FamilyMembers"] = value; }
         }
 
-        #region Properties
-
-
-        #endregion Properties
-
         #region Base Control Methods
 
         /// <summary>
@@ -547,8 +542,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         protected override void OnLoad( EventArgs e )
         {
             base.OnLoad( e );
-
-            //confirmExit.Enabled = true;
 
             lbSave.ValidationGroup = BlockValidationGroup;
 
