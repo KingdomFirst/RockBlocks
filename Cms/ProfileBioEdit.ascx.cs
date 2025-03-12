@@ -36,7 +36,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
     [DisplayName( "Edit Profile" )]
     [Category( "KFS > CMS" )]
-    [Description( "Customized Edit Profile block to have more control over the fields and interface." )]
+    [Description( "Highly customizable block for public users to edit their account information and family." )]
 
     #endregion Block Attributes
 
@@ -63,7 +63,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         DefaultValue = "Family Members",
         Category = AttributeCategory.FamilyMembers,
-        Order = 1 )]
+        Order = 2 )]
 
     [BooleanField(
         "Show Family Members",
@@ -71,7 +71,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultBooleanValue = true,
         Key = AttributeKey.ShowFamilyMembers,
         Category = AttributeCategory.FamilyMembers,
-        Order = 2 )]
+        Order = 3 )]
 
     [BooleanField(
         "Use Person Fields settings for Family Members",
@@ -79,7 +79,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultBooleanValue = true,
         Key = AttributeKey.MatchPersonFieldsFamilyMember,
         Category = AttributeCategory.FamilyMembers,
-        Order = 37 )]
+        Order = 4 )]
 
     [BooleanField(
         "Allow Adding Family Members?",
@@ -87,7 +87,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultBooleanValue = true,
         Key = AttributeKey.AllowAddingFamilyMembers,
         Category = AttributeCategory.FamilyMembers,
-        Order = 38 )]
+        Order = 5 )]
 
     [TextField(
         "Person Profile Panel Header",
@@ -96,7 +96,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         DefaultValue = "Profile Information",
         Category = AttributeCategory.PersonFields,
-        Order = 3 )]
+        Order = 6 )]
 
     [BooleanField(
         "Allow Photo Editing",
@@ -104,7 +104,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultBooleanValue = true,
         Key = AttributeKey.AllowPhotoEditing,
         Category = AttributeCategory.PersonFields,
-        Order = 4 )]
+        Order = 7 )]
 
     [CustomDropdownListField(
         "Title",
@@ -114,7 +114,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Optional",
-        Order = 4 )]
+        Order = 8 )]
 
     [CustomDropdownListField(
         "First Name",
@@ -124,7 +124,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Required",
-        Order = 5 )]
+        Order = 9 )]
 
     [CustomDropdownListField(
         "Nick Name",
@@ -134,7 +134,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Hide",
-        Order = 6 )]
+        Order = 10 )]
 
     [CustomDropdownListField(
         "Last Name",
@@ -144,7 +144,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Required",
-        Order = 7 )]
+        Order = 11 )]
 
     [CustomDropdownListField(
         "Suffix",
@@ -154,7 +154,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Optional",
-        Order = 8 )]
+        Order = 12 )]
 
     [CustomDropdownListField(
         "Birthday",
@@ -164,7 +164,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Required",
-        Order = 9 )]
+        Order = 13 )]
 
     [CustomDropdownListField(
         "Grade",
@@ -174,7 +174,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Optional",
-        Order = 9 )]
+        Order = 14 )]
 
     [CustomDropdownListField(
         "Role",
@@ -184,7 +184,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = "CustomSetting",
         IsRequired = false,
         DefaultValue = "Required",
-        Order = 9 )]
+        Order = 15 )]
 
     [CustomDropdownListField(
         "Gender",
@@ -194,7 +194,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Required",
-        Order = 10 )]
+        Order = 16 )]
 
     [CustomDropdownListField(
         "Race",
@@ -204,7 +204,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Hide",
-        Order = 11 )]
+        Order = 17 )]
 
     [CustomDropdownListField(
         "Ethnicity",
@@ -214,7 +214,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Hide",
-        Order = 12 )]
+        Order = 18 )]
 
     [CustomDropdownListField(
         "Marital Status",
@@ -224,7 +224,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Optional",
-        Order = 13 )]
+        Order = 19 )]
 
     [TextField(
         "Address Panel Header",
@@ -233,7 +233,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         DefaultValue = "{{ Type }} Address",
         Category = AttributeCategory.ContactFields,
-        Order = 14 )]
+        Order = 20 )]
 
     [CustomDropdownListField(
         "Address",
@@ -243,7 +243,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         DefaultValue = "Optional",
         Category = AttributeCategory.ContactFields,
-        Order = 15 )]
+        Order = 21 )]
 
     [GroupLocationTypeField(
         "Address Type",
@@ -253,7 +253,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         DefaultValue = Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME,
         Category = AttributeCategory.ContactFields,
-        Order = 16 )]
+        Order = 22 )]
 
     [TextField(
         "Contact Panel Header",
@@ -262,7 +262,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         DefaultValue = "Contact Information",
         Category = AttributeCategory.ContactFields,
-        Order = 17 )]
+        Order = 23 )]
 
     [CustomDropdownListField(
         "Email",
@@ -272,7 +272,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.ContactFields,
         IsRequired = false,
         DefaultValue = "Optional",
-        Order = 18 )]
+        Order = 24 )]
 
     [DefinedValueField(
         "Phone Types",
@@ -282,7 +282,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         AllowMultiple = true,
         Category = AttributeCategory.ContactFields,
-        Order = 19 )]
+        Order = 25 )]
 
     [DefinedValueField(
         "Required Adult Phone Types",
@@ -292,14 +292,14 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         AllowMultiple = true,
         Category = AttributeCategory.ContactFields,
-        Order = 20 )]
+        Order = 26 )]
 
     [BooleanField( "Show SMS Enable message",
         Description = "Should the \"Mobile\" phone type display a message to enable SMS?",
         DefaultBooleanValue = true,
         Key = AttributeKey.ShowSMSEnable,
         Category = AttributeCategory.ContactFields,
-        Order = 21 )]
+        Order = 27 )]
 
     [TextField(
         "SMS Enable Label",
@@ -308,7 +308,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         DefaultValue = "I would like to receive important text messages",
         Category = AttributeCategory.ContactFields,
-        Order = 22 )]
+        Order = 28 )]
 
     [CustomDropdownListField(
         "Email Preference",
@@ -318,7 +318,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.ContactFields,
         IsRequired = false,
         DefaultValue = "Hide",
-        Order = 23 )]
+        Order = 29 )]
 
     [CustomDropdownListField(
         "Communication Preference",
@@ -328,7 +328,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.ContactFields,
         IsRequired = false,
         DefaultValue = "Hide",
-        Order = 24 )]
+        Order = 30 )]
 
     [TextField(
         "Family Panel Header",
@@ -337,7 +337,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         DefaultValue = "Family Information",
         Category = AttributeCategory.Attributes,
-        Order = 24 )]
+        Order = 31 )]
 
     [AttributeField(
         "Family Attributes",
@@ -349,7 +349,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         AllowMultiple = true,
         Category = AttributeCategory.Attributes,
-        Order = 25 )]
+        Order = 32 )]
 
     [AttributeField(
         "Person Attributes (adults)",
@@ -359,7 +359,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         AllowMultiple = true,
         Category = AttributeCategory.Attributes,
-        Order = 26 )]
+        Order = 33 )]
 
     [AttributeField(
         "Person Attributes (children)",
@@ -369,7 +369,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         AllowMultiple = true,
         Category = AttributeCategory.Attributes,
-        Order = 27 )]
+        Order = 34 )]
 
     [CustomDropdownListField(
         "Campus Selector",
@@ -379,7 +379,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.Campus,
         IsRequired = false,
         DefaultValue = "Hide",
-        Order = 28 )]
+        Order = 35 )]
 
     [TextField(
         "Campus Selector Label",
@@ -388,7 +388,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         IsRequired = false,
         DefaultValue = "Campus",
         Category = AttributeCategory.Campus,
-        Order = 29 )]
+        Order = 36 )]
 
     [DefinedValueField(
         "Campus Types",
@@ -398,7 +398,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefinedTypeGuid = Rock.SystemGuid.DefinedType.CAMPUS_TYPE,
         AllowMultiple = true,
         Category = AttributeCategory.Campus,
-        Order = 30 )]
+        Order = 37 )]
 
     [DefinedValueField(
         "Campus Statuses",
@@ -408,7 +408,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefinedTypeGuid = Rock.SystemGuid.DefinedType.CAMPUS_STATUS,
         AllowMultiple = true,
         Category = AttributeCategory.Campus,
-        Order = 31 )]
+        Order = 38 )]
 
     [ValueListField(
         name: "Panel Order",
@@ -417,7 +417,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         required: false,
         customValues: ListSource.Panels,
         category: AttributeCategory.Ordering,
-        order: 32 )]
+        order: 39 )]
 
     [ValueListField(
         name: "Person Fields Order",
@@ -426,7 +426,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         required: false,
         customValues: ListSource.PersonFields,
         category: AttributeCategory.Ordering,
-        order: 33 )]
+        order: 40 )]
 
     [ValueListField(
         name: "Contact Fields Order",
@@ -435,7 +435,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         required: false,
         customValues: ListSource.ContactFields,
         category: AttributeCategory.Ordering,
-        order: 34 )]
+        order: 41 )]
 
     [ValueListField(
         name: "Family Member Person Fields",
@@ -444,7 +444,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         required: false,
         customValues: ListSource.PersonFields,
         category: AttributeCategory.Ordering,
-        order: 35 )]
+        order: 42 )]
 
     [ValueListField(
         name: "Family Member Contact Fields",
@@ -453,9 +453,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         required: false,
         customValues: ListSource.ContactFields,
         category: AttributeCategory.Ordering,
-        order: 36 )]
+        order: 43 )]
 
     #endregion Block Settings
+
     public partial class ProfileBioEdit : Rock.Web.UI.RockBlock
     {
         /// <summary>
