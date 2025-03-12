@@ -520,7 +520,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string HIDE_OPTIONAL_REQUIREDADULT_REQUIREDBOTH = "Hide,Optional,RequiredAdult^Required Adult,Required^Required Adult and Child";
             public const string HIDE_OPTIONAL_REQUIRED = "Hide,Optional,Required";
             public const string HIDE_DISABLE_REQUIRED = "Hide,Disable,Required";
-            public const string Panels = "Person,Contact,Family,FamilyMember,Address";
+            public const string Panels = "Person,Contact,Address,Family,FamilyMember";
             public const string PersonFields = "Photo,Title,FirstName,NickName,LastName,Suffix,Birthday,Graduation,Grade,Role,Gender,Race,Ethnicity,MaritalStatus,Campus,PersonAttributes,Spacer";
             public const string ContactFields = "Phone,Email,EmailPreference,CommunicationPreference,Spacer";
         }
@@ -1224,6 +1224,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             var missingPersonFields = personFields.Except( personFieldsOrder ).ToList();
             personFieldsOrder.AddRange( missingPersonFields );
+
+            if ( familyMember && personFieldsOrder.Last() == "Spacer" )
+            {
+                personFieldsOrder.Remove( "Spacer" );
+            }
 
             var imagePhotoEditor = GenerateControl( "Photo", typeof( ImageEditor ), "" ) as ImageEditor;
             var dvpTitle = GenerateControl( "Title", typeof( DefinedValuePicker ), "Title", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ).Id ) as DefinedValuePicker;
