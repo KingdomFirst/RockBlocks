@@ -575,14 +575,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             lbCancel.Visible = !displayButtonsInPanels;
 
             pnlProfilePanels.DefaultButton = lbSave.ID;
-
-            // Initialize year picker javascript per grade ddl
-            //if ( ddlGrade.Visible )
-            //{
-            //    //ScriptManager.RegisterStartupScript( ddlGrade, ddlGrade.GetType(), "grade-selection-" + BlockId.ToString(), ddlGrade.GetJavascriptForYearPicker( ypGraduation ), true );
-            //}
-
-
         }
 
         #endregion Base Control Methods
@@ -1175,10 +1167,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var pnlFamilyMemberPerson = new Panel { ID = "pnlFamilyMemberPerson", CssClass = "d-flex flex-wrap" };
             pwFamilyMember.Controls.Add( pnlFamilyMemberPerson );
 
+            pnlFamilyMemberBody.Controls.Add( pwFamilyMember );
+
             GeneratePersonFields( fm.Guid, pnlFamilyMemberPerson, null, true );
             GenerateContactFields( fm.Guid, pnlFamilyMemberPerson, true );
-
-            pnlFamilyMemberBody.Controls.Add( pwFamilyMember );
 
             if ( expanded )
             {
@@ -1489,6 +1481,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         }
                     }
                 }
+            }
+            if ( ddlGrade.Visible )
+            {
+                ScriptManager.RegisterStartupScript( ddlGrade, ddlGrade.GetType(), "grade-selection-" + BlockId.ToString() + "-" + ddlGrade.ClientID, ddlGrade.GetJavascriptForYearPicker( ypGraduation ), true );
             }
 
             if ( pnlFields != null && visibleControlCount < 1 )
