@@ -651,6 +651,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                         var rblRole = pnlFamilyMemberPerson.FindControl( "rblRole" ) as RockRadioButtonList;
                                         var roleText = fm.Person.AgeClassification != AgeClassification.Unknown ? fm.Person.GetFamilyRole().ToString() : rblRole?.SelectedItem?.Text;
                                         pwFamilyMember.Title = $"<h6>{fm.Person.FullName}<br><small>{roleText}</small></h6>";
+                                    } 
+                                    else 
+                                    {
+                                        break;
                                     }
                                 }
                             }
@@ -718,15 +722,14 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                         rockContext.SaveChanges();
                                     }
                                 }
-                            }
-
-                            if ( avcFamilyAttributes != null )
-                            {
-                                familyGroup.LoadAttributes();
-                                avcFamilyAttributes.GetEditValues( familyGroup );
-                                familyGroup.SaveAttributeValues();
-                            }
                         }
+                        if ( avcFamilyAttributes != null )
+                        {
+                            familyGroup.LoadAttributes();
+                            avcFamilyAttributes.GetEditValues( familyGroup );
+                            familyGroup.SaveAttributeValues();
+                        }
+                    }
                     }
 
                     return returnVal;
@@ -870,7 +873,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     var displayEmailPreference = GetAttributeValue( AttributeKey.EmailPreference );
                     var displayCommunicationPreference = GetAttributeValue( AttributeKey.CommunicationPreference );
 
-
                     if ( groupTypeFamily.Roles.Where( gr => gr.Guid == childGuid && gr.Id == roleTypeId ).Any() )
                     {
                         if ( ddlGrade != null )
@@ -997,9 +999,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             Panel pnlFamily = GeneratePanel( "Family" );
             Panel pnlFamilyMember = GeneratePanel( "FamilyMember" );
 
-            var addressMergeFields = new Dictionary<string, object>();
-            addressMergeFields.Add( "Type", "" );
-            Panel pnlAddress = GeneratePanel( "Address", GetAttributeValue( AttributeKey.AddressFieldsHeader ).ResolveMergeFields( addressMergeFields ) );
+            Panel pnlAddress = GeneratePanel( "Address", GetAttributeValue( AttributeKey.AddressFieldsHeader ) );
             pnlAddress.Visible = false;
 
             var pnlControls = new List<Panel> { pnlPerson, pnlContact, pnlFamily, pnlFamilyMember, pnlAddress };
@@ -1070,22 +1070,25 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             #endregion
 
             Guid? locationTypeGuid = GetAttributeValue( AttributeKey.AddressType ).AsGuidOrNull();
-            var acAddress = new AddressControl { ID = "acAddress", Required = showAddress == "Required", ValidationGroup = BlockValidationGroup };
+            pnlAddress.Visible = showAddress != "Hide";
             if ( locationTypeGuid.HasValue )
             {
-                pnlAddress.Visible = showAddress != "Hide";
+                var acAddress = new AddressControl { ID = "acAddress", Required = showAddress == "Required", ValidationGroup = BlockValidationGroup };
 
                 var addressTypeDv = DefinedValueCache.Get( locationTypeGuid.Value );
 
-                addressMergeFields = new Dictionary<string, object>();
-                addressMergeFields.Add( "Type", addressTypeDv.Value ); // make this dynamic
+                var addressMergeFields = new Dictionary<string, object>();
+                addressMergeFields.Add( "Type", addressTypeDv.Value );
 
                 var hdrAddress = pnlAddress.FindControl( "hdrAddress" ) as WebControl;
-                if ( hdrAddress != null && acAddress.Required )
+                if ( hdrAddress != null )
                 {
                     hdrAddress.Controls.Clear();
                     hdrAddress.Controls.Add( new LiteralControl( GetAttributeValue( AttributeKey.AddressFieldsHeader ).ResolveMergeFields( addressMergeFields ) ) );
-                    hdrAddress.AddCssClass( "required-indicator" );
+                    if ( acAddress.Required )
+                    {
+                        hdrAddress.AddCssClass( "required-indicator" );
+                    }
                 }
 
                 var cbIsMailingAddress = new RockCheckBox { ID = "cbIsMailingAddress", Text = "This is my mailing address" };
@@ -2351,28 +2354,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 {
                     control.Label = labelText;
                 }
-
-                ctrl = control;
-            }
-            else if ( fieldType == typeof( Panel ) )
-            {
-                var control = new Panel
-                {
-                    ID = $"pnl{ctrlName}",
-                    CssClass = cssClass,
-                    Enabled = displayControl != "Disable",
-                    Visible = displayControl != "Hide"
-                };
-
-                ctrl = control;
-            }
-            else if ( fieldType == typeof( PlaceHolder ) )
-            {
-                var control = new PlaceHolder
-                {
-                    ID = $"ph{ctrlName}",
-                    Visible = displayControl != "Hide"
-                };
 
                 ctrl = control;
             }
