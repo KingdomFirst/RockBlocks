@@ -1192,26 +1192,31 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var missingPersonFields = personFields.Except( personFieldsOrder ).ToList();
             personFieldsOrder.AddRange( missingPersonFields );
 
-            if ( familyMember && personFieldsOrder.Last() == "Spacer" )
+            var appendRequiredMessage = "";
+            if ( familyMember )
             {
-                personFieldsOrder.Remove( "Spacer" );
+                if ( personFieldsOrder.Last() == "Spacer" )
+                {
+                    personFieldsOrder.Remove( "Spacer" );
+                }
+                appendRequiredMessage = person.FullName;
             }
 
             var imagePhotoEditor = GenerateControl( "Photo", typeof( ImageEditor ), "" ) as ImageEditor;
-            var dvpTitle = GenerateControl( "Title", typeof( DefinedValuePicker ), "Title", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ).Id ) as DefinedValuePicker;
-            var tbFirstName = GenerateControl( "FirstName", typeof( RockTextBox ), "First Name" ) as RockTextBox;
-            var tbNickName = GenerateControl( "NickName", typeof( RockTextBox ), "Nick Name" ) as RockTextBox;
-            var tbLastName = GenerateControl( "LastName", typeof( RockTextBox ), "Last Name" ) as RockTextBox;
-            var dvpSuffix = GenerateControl( "Suffix", typeof( DefinedValuePicker ), "Suffix", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) ).Id ) as DefinedValuePicker;
-            var bpBirthday = GenerateControl( "Birthday", typeof( BirthdayPicker ), "Birthday" ) as BirthdayPicker;
-            var ypGraduation = GenerateControl( "Graduation", typeof( YearPicker ), "", "hide" ) as YearPicker;
-            var ddlGrade = GenerateControl( "Grade", typeof( GradePicker ), "Grade" ) as GradePicker;
-            var ddlGender = GenerateControl( "Gender", typeof( RockDropDownList ), "Gender" ) as RockDropDownList;
-            var rblRole = GenerateControl( "Role", typeof( RockRadioButtonList ), "Role" ) as RockRadioButtonList;
-            var rpRace = GenerateControl( "Race", typeof( RacePicker ), null ) as RacePicker;
-            var epEthnicity = GenerateControl( "Ethnicity", typeof( EthnicityPicker ), null ) as EthnicityPicker;
-            var dvpMaritalStatus = GenerateControl( "MaritalStatus", typeof( DefinedValuePicker ), "Marital Status", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS ) ).Id ) as DefinedValuePicker;
-            var cpCampus = GenerateControl( "Campus", typeof( CampusPicker ), GetAttributeValue( AttributeKey.CampusSelectorLabel ) ) as CampusPicker;
+            var dvpTitle = GenerateControl( "Title", typeof( DefinedValuePicker ), "Title", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ).Id, appendToRequiredMessage: appendRequiredMessage ) as DefinedValuePicker;
+            var tbFirstName = GenerateControl( "FirstName", typeof( RockTextBox ), "First Name", appendToRequiredMessage: appendRequiredMessage ) as RockTextBox;
+            var tbNickName = GenerateControl( "NickName", typeof( RockTextBox ), "Nick Name", appendToRequiredMessage: appendRequiredMessage ) as RockTextBox;
+            var tbLastName = GenerateControl( "LastName", typeof( RockTextBox ), "Last Name", appendToRequiredMessage: appendRequiredMessage ) as RockTextBox;
+            var dvpSuffix = GenerateControl( "Suffix", typeof( DefinedValuePicker ), "Suffix", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) ).Id, appendToRequiredMessage: appendRequiredMessage ) as DefinedValuePicker;
+            var bpBirthday = GenerateControl( "Birthday", typeof( BirthdayPicker ), "Birthday", appendToRequiredMessage: appendRequiredMessage ) as BirthdayPicker;
+            var ypGraduation = GenerateControl( "Graduation", typeof( YearPicker ), "", "hide", appendToRequiredMessage: appendRequiredMessage ) as YearPicker;
+            var ddlGrade = GenerateControl( "Grade", typeof( GradePicker ), "Grade", appendToRequiredMessage: appendRequiredMessage ) as GradePicker;
+            var ddlGender = GenerateControl( "Gender", typeof( RockDropDownList ), "Gender", appendToRequiredMessage: appendRequiredMessage ) as RockDropDownList;
+            var rblRole = GenerateControl( "Role", typeof( RockRadioButtonList ), "Role", appendToRequiredMessage: appendRequiredMessage ) as RockRadioButtonList;
+            var rpRace = GenerateControl( "Race", typeof( RacePicker ), null, appendToRequiredMessage: appendRequiredMessage ) as RacePicker;
+            var epEthnicity = GenerateControl( "Ethnicity", typeof( EthnicityPicker ), null, appendToRequiredMessage: appendRequiredMessage ) as EthnicityPicker;
+            var dvpMaritalStatus = GenerateControl( "MaritalStatus", typeof( DefinedValuePicker ), "Marital Status", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS ) ).Id, appendToRequiredMessage: appendRequiredMessage ) as DefinedValuePicker;
+            var cpCampus = GenerateControl( "Campus", typeof( CampusPicker ), GetAttributeValue( AttributeKey.CampusSelectorLabel ), appendToRequiredMessage: appendRequiredMessage ) as CampusPicker;
             var avcPersonAttributes = new AttributeValuesContainer { ID = "avcPersonAttributes", NumberOfColumns = 2 };
             var avcChildPersonAttributes = new AttributeValuesContainer { ID = "avcChildPersonAttributes", NumberOfColumns = 2 };
 
@@ -1478,7 +1483,12 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             var rblRole = pnlContact.FindControl( "rblRole" ) as RockRadioButtonList;
 
-            var ebEmail = GenerateControl( "Email", typeof( EmailBox ), "Email" ) as EmailBox;
+            var appendRequiredMessage = "";
+            if ( familyMember )
+            {
+                appendRequiredMessage = person.FullName;
+            }
+            var ebEmail = GenerateControl( "Email", typeof( EmailBox ), "Email", appendToRequiredMessage: appendRequiredMessage ) as EmailBox;
             var rblCommunicationPreference = GenerateControl( "CommunicationPreference", typeof( RockRadioButtonList ), "Communication Preference" ) as RockRadioButtonList;
             var rblEmailPreference = GenerateControl( "EmailPreference", typeof( RockRadioButtonList ), "Email Preference" ) as RockRadioButtonList;
 
@@ -1549,7 +1559,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         ID = $"pnbPhone{phoneNumber.NumberTypeValueId}",
                         CountryCode = phoneNumber.CountryCode,
                         Number = phoneNumber.NumberFormatted,
-                        RequiredErrorMessage = $"{phoneNumber.NumberTypeValue.Value} phone is required",
+                        RequiredErrorMessage = $"{appendRequiredMessage} {phoneNumber.NumberTypeValue.Value} phone is required",
                         Required = requiredPhoneTypes.Contains( phoneNumber.NumberTypeValue.Guid ) && !isChild,
                         ValidationGroup = BlockValidationGroup
                     };
@@ -2104,7 +2114,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             return pnlParent;
         }
 
-        private Control GenerateControl( string ctrlName, Type fieldType, string labelText = "", string cssClass = "", int configId = -1 )
+        private Control GenerateControl( string ctrlName, Type fieldType, string labelText = "", string cssClass = "", int configId = -1, string appendToRequiredMessage = null )
         {
             var ctrl = new Control();
 
@@ -2118,6 +2128,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     Label = labelText,
                     CssClass = cssClass,
                     Required = displayControl.Contains( "Required" ),
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2133,6 +2144,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     Label = labelText,
                     CssClass = cssClass,
                     Required = displayControl.Contains( "Required" ),
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2148,6 +2160,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     Label = labelText,
                     CssClass = cssClass,
                     Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     DefinedTypeId = configId,
@@ -2176,6 +2189,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     Label = labelText,
                     CssClass = cssClass,
                     Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2191,6 +2205,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     Label = labelText,
                     CssClass = cssClass,
                     Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2206,6 +2221,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     Label = labelText,
                     CssClass = cssClass,
                     Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2221,6 +2237,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     Label = labelText,
                     CssClass = cssClass,
                     Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2236,6 +2253,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     Label = labelText,
                     CssClass = cssClass,
                     Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2250,6 +2268,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     ID = $"rp{ctrlName}",
                     CssClass = cssClass,
                     Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2268,6 +2287,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     ID = $"ep{ctrlName}",
                     CssClass = cssClass,
                     Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2286,6 +2306,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     ID = $"cp{ctrlName}",
                     CssClass = cssClass,
                     Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
