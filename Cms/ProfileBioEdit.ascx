@@ -15,6 +15,7 @@
 <asp:UpdatePanel runat="server" ID="upnlCareEntry">
     <ContentTemplate>
         <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
+            <asp:ValidationSummary ID="valValidation" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
             <asp:Panel ID="pnlProfilePanels" runat="server"></asp:Panel>
             <Rock:ModalAlert ID="maAlert" runat="server"></Rock:ModalAlert>
 

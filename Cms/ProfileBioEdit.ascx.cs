@@ -625,10 +625,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     return;
                 }
 
-                var pnlAddress = pnlProfilePanels.FindControl( "pnlAddress" ) as Panel;
-                var acAddress = pnlAddress.FindControl( "acAddress" ) as AddressControl;
-                var cbIsMailingAddress = pnlAddress.FindControl( "cbIsMailingAddress" ) as RockCheckBox;
-
                 var avcFamilyAttributes = pnlProfilePanels.FindControl( "avcFamilyAttributes" ) as AttributeValuesContainer;
 
                 var wrapTransactionResult = rockContext.WrapTransactionIf( () =>
@@ -670,9 +666,12 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                     if ( group != null )
                     {
-                        // save family information
+                        var pnlAddress = pnlProfilePanels.FindControl( "pnlAddress" ) as Panel;
+                        var acAddress = pnlAddress.FindControl( "acAddress" ) as AddressControl;
+
                         if ( pnlAddress != null && pnlAddress.Visible && acAddress != null )
                         {
+                            var cbIsMailingAddress = pnlAddress.FindControl( "cbIsMailingAddress" ) as RockCheckBox;
                             Guid? addressTypeGuid = GetAttributeValue( AttributeKey.AddressType ).AsGuidOrNull();
                             if ( addressTypeGuid.HasValue )
                             {
@@ -738,7 +737,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                 if ( wrapTransactionResult )
                 {
-                    // If there's a ReturnUrl specified navigate to that page.
+                    // If there's a ReturnUrl or RedirectPage specified navigate to that page.
                     // Otherwise stay on the page, but show a saved success modal.
                     var returnUrl = PageParameter( PageParameterKey.ReturnUrl );
 
@@ -761,6 +760,17 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     maAlert.Show( "Your profile has been updated!", ModalAlertType.None );
                 }
             }
+            else
+            {
+                foreach ( BaseValidator validator in Page.Validators )
+                {
+                    if ( validator.Enabled && !validator.IsValid )
+                    {
+                        // Put a breakpoint here
+                        string clientID = validator.ClientID;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -773,7 +783,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var redirect = NavigateToLinkedPage( AttributeKey.RedirectPage );
             if ( !redirect )
             {
-                NavigateToParentPage();
+                Page.Response.Redirect( Page.Request.Url.ToString(), false );
             }
         }
 
@@ -904,10 +914,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         if ( ebEmail != null )
                         {
                             ebEmail.Required = emailRequired == "Required";
+                            ebEmail.RequiredFieldValidator.Enabled = ebEmail.Required;
                         }
                         foreach ( var pnbPhone in requiredPhoneTypeControls )
                         {
                             pnbPhone.Required = false;
+                            pnbPhone.RequiredFieldValidator.Enabled = pnbPhone.Required;
+
                             var parentContainer = parentPanelWidget.FindControl( $"pnlContainer{pnbPhone.ID.Replace( "pnbPhone", "" )}_Phone" ) as WebControl;
                             if ( parentContainer != null )
                             {
@@ -954,10 +967,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         if ( ebEmail != null )
                         {
                             ebEmail.Required = emailRequired.Contains( "Required" );
+                            ebEmail.RequiredFieldValidator.Enabled = ebEmail.Required;
                         }
                         foreach ( var pnbPhone in requiredPhoneTypeControls )
                         {
                             pnbPhone.Required = true;
+                            pnbPhone.RequiredFieldValidator.Enabled = pnbPhone.Required;
+
                             var parentContainer = parentPanelWidget.FindControl( $"pnlContainer{pnbPhone.ID.Replace( "pnbPhone", "" )}_Phone" ) as WebControl;
                             if ( parentContainer != null )
                             {
@@ -1232,7 +1248,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             dvpTitle.SetValue( person.TitleValueId );
             tbFirstName.Text = person.FirstName;
             tbNickName.Text = person.NickName;
-            tbLastName.Text = person.LastName;
+            tbLastName.Text = ( person.Id == 0 ) ? CurrentPerson.LastName : person.LastName;
             dvpSuffix.SetValue( person.SuffixValueId );
             bpBirthday.SelectedDate = person.BirthDate;
 
@@ -1424,7 +1440,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     }
                 }
             }
-            if ( ddlGrade.Visible )
+            if ( ddlGrade != null )
             {
                 ScriptManager.RegisterStartupScript( ddlGrade, ddlGrade.GetType(), "grade-selection-" + BlockId.ToString() + "-" + ddlGrade.ClientID, ddlGrade.GetJavascriptForYearPicker( ypGraduation ), true );
             }
@@ -1473,6 +1489,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             {
                 isChild = true;
                 ebEmail.Required = GetAttributeValue( AttributeKey.Email ) == "Required";
+                ebEmail.RequiredFieldValidator.Enabled = ebEmail.Required;
             }
 
             var phoneNumbers = new List<PhoneNumber>();
@@ -1978,7 +1995,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         }
 
                         // if they used the ImageEditor, and cropped it, the original file is still in BinaryFile. So clean it up.
-                        if ( imgPhoto.CropBinaryFileId.HasValue )
+                        if ( imgPhoto != null && imgPhoto.CropBinaryFileId.HasValue )
                         {
                             if ( imgPhoto.CropBinaryFileId != person.PhotoId )
                             {
