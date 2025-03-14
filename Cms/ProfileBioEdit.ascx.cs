@@ -541,6 +541,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             set { Session["FamilyMembers"] = value; }
         }
 
+        private Group _group = null;
+        private int? _groupId = null;
+        private Guid _childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
+        private RockContext _rockContext = new RockContext();
+
         #region Base Control Methods
 
         /// <summary>
@@ -553,6 +558,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             this.BlockUpdated += Block_BlockUpdated;
             this.AddConfigurationUpdateTrigger( upnlCareEntry );
+
+            _group = CurrentPerson.GetFamily();
+            _groupId = _group.Id;
 
             BuildForm();
         }
@@ -602,17 +610,16 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             if ( Page.IsValid )
             {
                 var rockContext = new RockContext();
-                var personGuid = hfPrimaryPersonGuid.Value.AsGuid();
-                var groupId = hfGroupId.Value.AsIntegerOrNull();
 
-                if ( !groupId.HasValue )
+                if ( !_groupId.HasValue )
                 {
                     // GroupId wasn't specified due to invalid situation
                     // Return and report nothing.
                     return;
                 }
 
-                var group = new GroupService( rockContext ).Get( groupId.Value );
+                // reload group in new Context to be able to update values
+                var group = new GroupService( rockContext ).Get( _groupId.Value );
                 if ( group == null )
                 {
                     return;
@@ -626,8 +633,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                 var wrapTransactionResult = rockContext.WrapTransactionIf( () =>
                 {
-                    Person person = null;
-                    var returnVal = SavePerson( rockContext, ref personGuid, groupId, group, pnlProfilePanels, out person );
+                    Person person = CurrentPerson;
+
+                    var returnVal = SavePerson( rockContext, ref person, pnlProfilePanels, group );
 
                     if ( returnVal )
                     {
@@ -636,13 +644,12 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         {
                             foreach ( var fm in FamilyMembers )
                             {
-                                var familyMemberGuid = fm.Guid;
                                 var pwFamilyMember = pnlFamilyMemberBody.FindControl( $"pwFamilyMember_{fm.PersonId}" ) as PanelWidget;
                                 var fmPerson = fm.Person;
                                 if ( pwFamilyMember != null )
                                 {
                                     var pnlFamilyMemberPerson = pwFamilyMember.FindControl( "pnlFamilyMemberPerson" ) as Panel;
-                                    returnVal = SavePerson( rockContext, ref familyMemberGuid, groupId, group, pnlFamilyMemberPerson, out fmPerson );
+                                    returnVal = SavePerson( rockContext, ref fmPerson, pnlFamilyMemberPerson, group );
                                     if ( returnVal )
                                     {
                                         fm.Person = fmPerson;
@@ -651,8 +658,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                         var rblRole = pnlFamilyMemberPerson.FindControl( "rblRole" ) as RockRadioButtonList;
                                         var roleText = fm.Person.AgeClassification != AgeClassification.Unknown ? fm.Person.GetFamilyRole().ToString() : rblRole?.SelectedItem?.Text;
                                         pwFamilyMember.Title = $"<h6>{fm.Person.FullName}<br><small>{roleText}</small></h6>";
-                                    } 
-                                    else 
+                                    }
+                                    else
                                     {
                                         break;
                                     }
@@ -661,13 +668,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         }
                     }
 
-                    var familyGroup = new GroupService( rockContext )
-                        .Queryable()
-                        .Where( f =>
-                            f.Id == groupId.Value &&
-                            f.Members.Any( m => m.Person.Guid == personGuid ) )
-                        .FirstOrDefault();
-                    if ( familyGroup != null )
+                    if ( group != null )
                     {
                         // save family information
                         if ( pnlAddress != null && pnlAddress.Visible && acAddress != null )
@@ -678,7 +679,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                 var groupLocationService = new GroupLocationService( rockContext );
 
                                 var dvAddressType = DefinedValueCache.Get( addressTypeGuid.Value );
-                                var familyAddress = groupLocationService.Queryable().Where( l => l.GroupId == familyGroup.Id && l.GroupLocationTypeValueId == dvAddressType.Id ).FirstOrDefault();
+                                var familyAddress = groupLocationService.Queryable().Where( l => l.GroupId == group.Id && l.GroupLocationTypeValueId == dvAddressType.Id ).FirstOrDefault();
                                 if ( familyAddress != null && string.IsNullOrWhiteSpace( acAddress.Street1 ) )
                                 {
                                     // delete the current address
@@ -694,7 +695,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                             familyAddress = new GroupLocation();
                                             groupLocationService.Add( familyAddress );
                                             familyAddress.GroupLocationTypeValueId = dvAddressType.Id;
-                                            familyAddress.GroupId = familyGroup.Id;
+                                            familyAddress.GroupId = group.Id;
                                             familyAddress.IsMailingLocation = true;
                                             familyAddress.IsMappedLocation = true;
                                         }
@@ -705,13 +706,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                         acAddress.GetValues( loc );
 
                                         familyAddress.Location = new LocationService( rockContext ).Get(
-                                            loc.Street1, loc.Street2, loc.City, loc.State, loc.PostalCode, loc.Country, familyGroup, true );
+                                            loc.Street1, loc.Street2, loc.City, loc.State, loc.PostalCode, loc.Country, group, true );
 
                                         // since there can only be one mapped location, set the other locations to not mapped
                                         if ( familyAddress.IsMappedLocation )
                                         {
                                             var groupLocations = groupLocationService.Queryable()
-                                                .Where( l => l.GroupId == familyGroup.Id && l.Id != familyAddress.Id ).ToList();
+                                                .Where( l => l.GroupId == group.Id && l.Id != familyAddress.Id ).ToList();
 
                                             foreach ( var groupLocation in groupLocations )
                                             {
@@ -722,14 +723,14 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                         rockContext.SaveChanges();
                                     }
                                 }
+                            }
                         }
                         if ( avcFamilyAttributes != null )
                         {
-                            familyGroup.LoadAttributes();
-                            avcFamilyAttributes.GetEditValues( familyGroup );
-                            familyGroup.SaveAttributeValues();
+                            group.LoadAttributes();
+                            avcFamilyAttributes.GetEditValues( group );
+                            group.SaveAttributeValues();
                         }
-                    }
                     }
 
                     return returnVal;
@@ -839,7 +840,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 var parentPanelWidget = rblRole.FirstParentControlOfType<PanelWidget>();
                 if ( parentPanelWidget != null && roleTypeId.HasValue )
                 {
-                    var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
                     var groupTypeFamily = GroupTypeCache.GetFamilyGroupType();
 
                     var ypGraduation = parentPanelWidget.FindControl( "ypGraduation" ) as YearPicker;
@@ -857,7 +857,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     var requiredPhoneTypeControls = new List<PhoneNumberBox>();
                     if ( requiredPhoneTypes.Any() )
                     {
-                        var phoneTypeValueIds = new DefinedValueService( new RockContext() )
+                        var phoneTypeValueIds = new DefinedValueService( _rockContext )
                             .GetByGuids( requiredPhoneTypes ).Select( v => v.Id );
 
                         foreach ( var typeValueId in phoneTypeValueIds )
@@ -873,7 +873,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     var displayEmailPreference = GetAttributeValue( AttributeKey.EmailPreference );
                     var displayCommunicationPreference = GetAttributeValue( AttributeKey.CommunicationPreference );
 
-                    if ( groupTypeFamily.Roles.Where( gr => gr.Guid == childGuid && gr.Id == roleTypeId ).Any() )
+                    if ( groupTypeFamily.Roles.Where( gr => gr.Guid == _childGuid && gr.Id == roleTypeId ).Any() )
                     {
                         if ( ddlGrade != null )
                         {
@@ -1014,13 +1014,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
             pnlFamilyMember.Visible = showFamilyMember;
 
-            var selectedFamily = CurrentPerson.GetFamily();
-            hfGroupId.Value = selectedFamily.Id.ToString();
-
             if ( !Page.IsPostBack )
             {
                 FamilyMembers = new List<PersonFamilyMember>();
-                foreach ( var groupMember in selectedFamily.Members.Where( gm => gm.PersonId != CurrentPerson.Id ) )
+                foreach ( var groupMember in _group.Members.Where( gm => gm.PersonId != CurrentPerson.Id ) )
                 {
                     FamilyMembers.Add( new PersonFamilyMember { Guid = groupMember.Person.Guid, PersonId = groupMember.Person.Id, Person = groupMember.Person } );
                 }
@@ -1030,38 +1027,17 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             Control pnlFamilyBody = pnlFamily.FindControl( "pnlFamilyBody" );
 
-            GeneratePersonFields( CurrentPerson.Guid, pnlPerson, pnlFamilyBody );
+            GeneratePersonFields( CurrentPerson, pnlPerson, pnlFamilyBody );
 
             #endregion
 
             #region Family Fields
 
-            var rockContext = new RockContext();
-            var groupId = hfGroupId.Value.AsIntegerOrNull();
-
-            if ( !groupId.HasValue )
-            {
-                groupId = CurrentPerson.GetFamily().Id;
-
-                if ( groupId == 0 )
-                {
-                    return;
-                }
-                hfGroupId.Value = groupId.ToString();
-            }
-
-            var group = new GroupService( rockContext ).Get( groupId.Value );
-            if ( group == null )
-            {
-                // invalid situation; return and report nothing.
-                return;
-            }
-
             var avcFamilyAttributes = new AttributeValuesContainer { ID = "avcFamilyAttributes" };
             var familyAttributesGuidList = GetAttributeValue( AttributeKey.FamilyAttributes ).SplitDelimitedValues().AsGuidList();
 
             avcFamilyAttributes.IncludedAttributes = familyAttributesGuidList.Select( a => AttributeCache.Get( a ) ).ToArray();
-            avcFamilyAttributes.AddEditControls( group, true );
+            avcFamilyAttributes.AddEditControls( _group, true );
 
             pnlFamilyBody.Controls.Add( avcFamilyAttributes );
 
@@ -1092,8 +1068,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 }
 
                 var cbIsMailingAddress = new RockCheckBox { ID = "cbIsMailingAddress", Text = "This is my mailing address" };
-                var familyAddress = new GroupLocationService( rockContext ).Queryable()
-                                    .Where( l => l.GroupId == groupId.Value
+                var familyAddress = new GroupLocationService( _rockContext ).Queryable()
+                                    .Where( l => l.GroupId == _groupId.Value
                                             && l.GroupLocationTypeValueId == addressTypeDv.Id
                                             && l.Group.Members.Any( m => m.PersonId == CurrentPerson.Id ) )
                                     .FirstOrDefault();
@@ -1113,7 +1089,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             #region Contact Fields
 
-            GenerateContactFields( CurrentPerson.Guid, pnlContact );
+            GenerateContactFields( CurrentPerson, pnlContact );
 
             #endregion
 
@@ -1173,8 +1149,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             pnlFamilyMemberBody.Controls.Add( pwFamilyMember );
 
-            GeneratePersonFields( fm.Guid, pnlFamilyMemberPerson, null, true );
-            GenerateContactFields( fm.Guid, pnlFamilyMemberPerson, true );
+            GeneratePersonFields( fm.Person, pnlFamilyMemberPerson, null, true );
+            GenerateContactFields( fm.Person, pnlFamilyMemberPerson, true );
 
             if ( expanded )
             {
@@ -1183,37 +1159,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
         }
 
-        private void GeneratePersonFields( Guid personGuid, Panel pnlPerson, Control pnlFamilyBody, bool familyMember = false )
+        private void GeneratePersonFields( Person person, Panel pnlPerson, Control pnlFamilyBody, bool familyMember = false )
         {
             WebControl lSpacer = new WebControl( HtmlTextWriterTag.Span ) { ID = "PersonSpacer" };
-            var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
-
-            RockContext rockContext = new RockContext();
-
-            var groupId = hfGroupId.Value.AsIntegerOrNull();
-
-            if ( !groupId.HasValue )
-            {
-                groupId = CurrentPerson.GetFamily().Id;
-
-                if ( groupId == 0 )
-                {
-                    return;
-                }
-
-                hfGroupId.Value = groupId.ToString();
-            }
-
-            if ( hfPrimaryPersonGuid.Value.IsNullOrWhiteSpace() && personGuid != Guid.Empty )
-            {
-                hfPrimaryPersonGuid.Value = personGuid.ToString();
-            }
-
-            var group = new GroupService( rockContext ).Get( groupId.Value );
-            if ( group == null )
-            {
-                return;
-            }
 
             var personFields = ListSource.PersonFields.SplitDelimitedValues( false ).ToList();
             var personFieldsOrder = GetAttributeValue( AttributeKey.PersonFieldsOrder ).SplitDelimitedValues( false ).ToList();
@@ -1253,9 +1201,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             var personFieldControls = new List<Control> { imagePhotoEditor, dvpTitle, tbFirstName, tbNickName, tbLastName, dvpSuffix, bpBirthday, ypGraduation, ddlGrade, rblRole, ddlGender, rpRace, epEthnicity, dvpMaritalStatus, avcPersonAttributes, avcChildPersonAttributes, lSpacer };
 
-            var person = new Person();
-
-            if ( personGuid == Guid.Empty )
+            if ( person.Id == 0 )
             {
                 tbFirstName.Visible = true;
                 tbLastName.Visible = true;
@@ -1263,28 +1209,16 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 tbLastName.Enabled = true;
                 tbFirstName.Required = true;
                 tbLastName.Required = true;
+
             }
             else
             {
                 rblRole.Visible = false;
-                person = new PersonService( rockContext ).Get( personGuid );
             }
 
             if ( person == null )
             {
                 return;
-            }
-
-            var selectedFamily = person.GetFamily();
-            if ( selectedFamily == null && groupId.HasValue )
-            {
-                var personFamilies = CurrentPerson.GetFamilies();
-                selectedFamily = personFamilies.FirstOrDefault( a => a.Id == groupId );
-            }
-
-            if ( selectedFamily == null )
-            {
-                selectedFamily = CurrentPerson.GetFamily();
             }
 
             // Setup specific control settings
@@ -1314,13 +1248,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             rblRole.AutoPostBack = true;
             rblRole.RepeatDirection = RepeatDirection.Horizontal;
             rblRole.Items.Clear();
-            var familyRoles = selectedFamily.GroupType.Roles.OrderBy( r => r.Order ).ToList();
+            var familyRoles = _group.GroupType.Roles.OrderBy( r => r.Order ).ToList();
             foreach ( var role in familyRoles )
             {
                 rblRole.Items.Add( new ListItem( role.Name, role.Id.ToString() ) );
             }
 
-            if ( personGuid == Guid.Empty )
+            if ( person.Id == 0 )
             {
                 rblRole.SelectedValue = null;
             }
@@ -1329,9 +1263,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 rblRole.SetValue( person.GetFamilyRole() );
             }
 
-            var childRoleId = familyRoles.FirstOrDefault( r => r.Guid == childGuid )?.Id;
+            var childRoleId = familyRoles.FirstOrDefault( r => r.Guid == _childGuid )?.Id;
 
-            if ( group.Members.Where( gm => gm.PersonId == person.Id && gm.GroupRole.Guid == childGuid ).Any() || rblRole.SelectedValueAsInt() == childRoleId )
+            if ( _group.Members.Where( gm => gm.PersonId == person.Id && gm.GroupRole.Guid == _childGuid ).Any() || rblRole.SelectedValueAsInt() == childRoleId )
             {
                 cpCampus.Visible = false;
                 dvpMaritalStatus.Visible = false;
@@ -1449,7 +1383,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             // End Setup Specific Control Settings
 
-
             // Add Controls to Panel in order in rows and columns
 
             var pnlBody = pnlPerson.FindControl( "pnlPersonBody" );
@@ -1502,21 +1435,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
         }
 
-
-        private void GenerateContactFields( Guid personGuid, Panel pnlContact, bool familyMember = false )
+        private void GenerateContactFields( Person person, Panel pnlContact, bool familyMember = false )
         {
-            var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
             var groupTypeFamily = GroupTypeCache.GetFamilyGroupType();
             var isChild = false;
-
-            var rockContext = new RockContext();
-
-            var person = new Person();
-
-            if ( personGuid != Guid.Empty )
-            {
-                person = new PersonService( rockContext ).Get( personGuid );
-            }
 
             if ( person == null )
             {
@@ -1547,7 +1469,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var contactFieldsControls = new List<Control> { ebEmail, rblCommunicationPreference, rblEmailPreference, lSpacer };
 
             ebEmail.Text = person.Email;
-            if ( rblRole != null && groupTypeFamily.Roles.Where( gr => gr.Guid == childGuid && gr.Id == rblRole.SelectedValueAsInt() ).Any() )
+            if ( rblRole != null && groupTypeFamily.Roles.Where( gr => gr.Guid == _childGuid && gr.Id == rblRole.SelectedValueAsInt() ).Any() )
             {
                 isChild = true;
                 ebEmail.Required = GetAttributeValue( AttributeKey.Email ) == "Required";
@@ -1721,7 +1643,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
         }
 
-        private bool SavePerson( RockContext rockContext, ref Guid personGuid, int? groupId, Group group, Panel pnlPanel, out Person person )
+        private bool SavePerson( RockContext rockContext, ref Person person, Panel pnlPanel, Group group )
         {
             var personService = new PersonService( rockContext );
 
@@ -1748,7 +1670,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var rblCommunicationPreference = pnlPanel.FindControl( "rblCommunicationPreference" ) as RockRadioButtonList;
             var nbCommunicationPreferenceWarning = pnlPanel.FindControl( "nbCommunicationPreferenceWarning" ) as NotificationBox;
 
-            if ( personGuid == Guid.Empty )
+            if ( person.Id == 0 )
             {
                 var groupMemberService = new GroupMemberService( rockContext );
                 var groupMember = new GroupMember() { Person = new Person(), Group = group, GroupId = group.Id };
@@ -1828,10 +1750,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                 groupMemberService.Add( groupMember );
                 rockContext.SaveChanges();
-                personGuid = groupMember.Person.Guid;
+                person = groupMember.Person;
             }
 
-            person = personService.Get( personGuid );
+            // reload person so it is on a Context we can modify.
+            person = personService.Get( person.Guid );
             if ( person != null )
             {
                 int? orphanedPhotoId = null;
