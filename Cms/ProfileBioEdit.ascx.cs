@@ -1502,7 +1502,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 ebEmail.RequiredFieldValidator.Enabled = ebEmail.Required;
             }
 
-            var phoneNumbers = new List<PhoneNumber>();
             var phoneNumberTypes = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_PHONE_TYPE ) );
             var mobilePhoneType = DefinedValueCache.Get( new Guid( Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE ) );
             var selectedPhoneTypeGuids = GetAttributeValues( AttributeKey.PhoneTypes ).AsGuidList();
@@ -1533,8 +1532,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     {
                         phoneNumber.NumberFormatted = PhoneNumber.FormattedNumber( phoneNumber.CountryCode, phoneNumber.Number );
                     }
-
-                    phoneNumbers.Add( phoneNumber );
 
                     var pnlPhoneNumContainer = new Panel { CssClass = "form-group", ID = $"pnlContainer{phoneNumber.NumberTypeValueId}_Phone" };
 
@@ -1885,7 +1882,13 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                     bool smsSelected = false;
 
-                    var pnlContactBody = pnlProfilePanels.FindControl( "pnlContactBody" );
+                    var pnlContactBody = pnlPanel.FindControl( "pnlContactBody" );
+                    if ( pnlContactBody == null )
+                    {
+                        pnlContactBody = pnlPanel;
+                    }
+
+                    var phoneNumberService = new PhoneNumberService( rockContext );
 
                     foreach ( Control ctrl in pnlContactBody.ControlsOfTypeRecursive<Panel>().Where( p => p.ID != null ) )
                     {
@@ -1928,10 +1931,21 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                                     phoneNumberTypeIds.Add( phoneNumberTypeId );
                                 }
                             }
+                            else
+                            {
+                                int phoneNumberTypeId;
+                                if ( int.TryParse( hfPhoneType.Value, out phoneNumberTypeId ) )
+                                {
+                                    var phoneNumber = person.PhoneNumbers.FirstOrDefault( n => n.NumberTypeValueId == phoneNumberTypeId );
+                                    if ( phoneNumber != null )
+                                    {
+                                        phoneNumberService.Delete( phoneNumber );
+                                        person.PhoneNumbers.Remove( phoneNumber );
+                                    }
+                                }
+                            }
                         }
                     }
-
-                    var phoneNumberService = new PhoneNumberService( rockContext );
 
                     // Remove any duplicate numbers
                     var hasDuplicate = person.PhoneNumbers.GroupBy( pn => pn.Number ).Where( g => g.Count() > 1 ).Any();
@@ -1970,6 +1984,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             nbCommunicationPreferenceWarning.NotificationBoxType = NotificationBoxType.Warning;
                             nbCommunicationPreferenceWarning.Visible = true;
                             return false;
+                        }
+                        else
+                        {
+                            nbCommunicationPreferenceWarning.Visible = false;
                         }
                     }
 
