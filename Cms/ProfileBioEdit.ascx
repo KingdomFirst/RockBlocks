@@ -1,5 +1,9 @@
-﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ProfileBioEdit.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Cms.ProfileBioEdit" %>
+﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="ProfileBioEdit.ascx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Cms.ProfileBioEdit" EnableViewState="false" %>
 <style>
+    .rock-panel-widget.family-member .btn + .btn {
+        margin-left: .5em;
+    }
+
     @media (min-width: 992px) {
         .card-person fieldset, .family-member fieldset {
             padding-left: 15px;

@@ -930,10 +930,28 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         if ( rblEmailPreference != null )
                         {
                             rblEmailPreference.Visible = displayEmailPreference == "Show on All";
+                            var parentControl = rblEmailPreference.Parent as WebControl;
+                            if ( parentControl != null && rblEmailPreference.Visible )
+                            {
+                                parentControl.AddCssClass( "col-md-6" );
+                            }
+                            else if ( parentControl != null )
+                            {
+                                parentControl.CssClass = "";
+                            }
                         }
                         if ( rblCommunicationPreference != null )
                         {
                             rblCommunicationPreference.Visible = displayCommunicationPreference == "Show on All";
+                            var parentControl = rblCommunicationPreference.Parent as WebControl;
+                            if ( parentControl != null && rblCommunicationPreference.Visible )
+                            {
+                                parentControl.AddCssClass( "col-md-6" );
+                            }
+                            else if ( parentControl != null )
+                            {
+                                parentControl.CssClass = "";
+                            }
                         }
                     }
                     else
@@ -983,10 +1001,28 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         if ( rblEmailPreference != null )
                         {
                             rblEmailPreference.Visible = displayEmailPreference != "Hide";
+                            var parentControl = rblEmailPreference.Parent as WebControl;
+                            if ( parentControl != null && rblEmailPreference.Visible )
+                            {
+                                parentControl.AddCssClass( "col-md-6" );
+                            }
+                            else if ( parentControl != null )
+                            {
+                                parentControl.CssClass = "";
+                            }
                         }
                         if ( rblCommunicationPreference != null )
                         {
                             rblCommunicationPreference.Visible = displayCommunicationPreference != "Hide";
+                            var parentControl = rblCommunicationPreference.Parent as WebControl;
+                            if ( parentControl != null && rblCommunicationPreference.Visible )
+                            {
+                                parentControl.AddCssClass( "col-md-6" );
+                            }
+                            else if ( parentControl != null )
+                            {
+                                parentControl.CssClass = "";
+                            }
                         }
                     }
 
@@ -1231,6 +1267,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 tbFirstName.Required = true;
                 tbLastName.Required = true;
 
+                if ( !personFieldsOrder.Contains( "Role" ) )
+                {
+                    personFieldsOrder.Add( "Role" );
+                }
             }
             else
             {
@@ -1427,6 +1467,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     var actualWebCtrl = actualCtrl as WebControl;
                     if ( actualCtrl != null )
                     {
+                        if ( familyMember && !matchPersonFieldsFamilyMember && !actualCtrl.Visible )
+                        {
+                            actualCtrl.Visible = true;
+                        }
+
                         var personFieldCol = new Panel { CssClass = actualCtrl.Visible ? "col-md-6" : "" };
                         if ( actualCtrl.Visible )
                         {
@@ -1445,7 +1490,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     }
                 }
             }
-            if ( ddlGrade != null )
+            if ( ddlGrade != null && pnlFields.FindControl( "ddlGrade" ) != null )
             {
                 ScriptManager.RegisterStartupScript( ddlGrade, ddlGrade.GetType(), "grade-selection-" + BlockId.ToString() + "-" + ddlGrade.ClientID, ddlGrade.GetJavascriptForYearPicker( ypGraduation ), true );
             }
@@ -2286,7 +2331,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     ID = $"rp{ctrlName}",
                     CssClass = cssClass,
                     Required = displayControl == "Required",
-                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2295,6 +2339,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 {
                     control.Label = labelText;
                 }
+                control.RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {control.Label} is required." : "";
 
                 ctrl = control;
             }
@@ -2305,7 +2350,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     ID = $"ep{ctrlName}",
                     CssClass = cssClass,
                     Required = displayControl == "Required",
-                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
                     Enabled = displayControl != "Disable",
                     Visible = displayControl != "Hide",
                     ValidationGroup = BlockValidationGroup
@@ -2314,6 +2358,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 {
                     control.Label = labelText;
                 }
+                control.RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {control.Label} is required." : "";
 
                 ctrl = control;
             }
