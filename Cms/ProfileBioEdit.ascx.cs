@@ -1101,7 +1101,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             pnlAddress.Visible = showAddress != "Hide";
             if ( locationTypeGuid.HasValue )
             {
-                var acAddress = new AddressControl { ID = "acAddress", Required = showAddress == "Required", ValidationGroup = BlockValidationGroup };
+                var acAddress = GenerateControl( "Address", typeof( AddressControl ), "Address" ) as AddressControl;
 
                 var addressTypeDv = DefinedValueCache.Get( locationTypeGuid.Value );
 
@@ -1137,6 +1137,10 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     pnlAddressBody.Controls.Add( acAddress );
                     pnlAddressBody.Controls.Add( cbIsMailingAddress );
                 }
+            }
+            else
+            {
+                pnlAddress.Visible = false;
             }
 
             #region Contact Fields
@@ -1271,10 +1275,6 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 {
                     personFieldsOrder.Add( "Role" );
                 }
-            }
-            else
-            {
-                rblRole.Visible = false;
             }
 
             if ( person == null )
@@ -1494,7 +1494,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             {
                 ScriptManager.RegisterStartupScript( ddlGrade, ddlGrade.GetType(), "grade-selection-" + BlockId.ToString() + "-" + ddlGrade.ClientID, ddlGrade.GetJavascriptForYearPicker( ypGraduation ), true );
             }
-
+            if ( person.Id != 0 && rblRole.Visible )
+            {
+                rblRole.Visible = false;
+                var parentCtrl = rblRole.Parent as WebControl;
+                if ( parentCtrl != null )
+                {
+                    parentCtrl.RemoveCssClass( "col-md-6" );
+                }
+            }
             if ( pnlFields != null && visibleControlCount < 1 )
             {
                 pnlPerson.Visible = false;
@@ -2379,6 +2387,18 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     control.Label = labelText;
                 }
 
+                ctrl = control;
+            }
+            else if ( fieldType == typeof( AddressControl ) )
+            {
+                var control = new AddressControl
+                {
+                    ID = $"ac{ctrlName}",
+                    Required = displayControl == "Required",
+                    RequiredErrorMessage = ( appendToRequiredMessage.IsNotNullOrWhiteSpace() ) ? $"{appendToRequiredMessage} - {labelText} is required." : "",
+                    Visible = displayControl != "Hide",
+                    ValidationGroup = BlockValidationGroup
+                };
                 ctrl = control;
             }
 
