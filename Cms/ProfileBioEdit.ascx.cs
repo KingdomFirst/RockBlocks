@@ -1609,7 +1609,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                         ID = $"pnbPhone{phoneNumber.NumberTypeValueId}",
                         CountryCode = phoneNumber.CountryCode,
                         Number = phoneNumber.NumberFormatted,
-                        RequiredErrorMessage = $"{appendRequiredMessage} {phoneNumber.NumberTypeValue.Value} phone is required",
+                        RequiredErrorMessage = $"{appendRequiredMessage} - {phoneNumber.NumberTypeValue.Value} phone is required",
                         Required = requiredPhoneTypes.Contains( phoneNumber.NumberTypeValue.Guid ) && !isChild,
                         ValidationGroup = BlockValidationGroup
                     };
