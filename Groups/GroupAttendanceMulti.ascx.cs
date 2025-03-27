@@ -68,6 +68,16 @@ namespace Plugins.rocks_kfs.Groups
         Order = 1,
         Key = AttributeKey.GroupsToDisplay )]
 
+    [CustomEnhancedListField( "Group Type Roles to Display",
+        Description = "Select the group type role(s) to display in this attendance block. You may also pass in a comma separated list of GroupTypeRoleId's via a PageParameter 'GroupRoles'.",
+        ListSource = @"SELECT gtr.[Id] as Value, CONCAT(gt.[Name],' > ',gtr.[Name]) as Text 
+            FROM GroupTypeRole gtr 
+            JOIN GroupType gt ON gt.Id = gtr.GroupTypeId
+            ORDER BY gt.[Name], gtr.[Order]",
+        IsRequired = false,
+        Order = 1,
+        Key = AttributeKey.GroupTypeRolesToDisplay )]
+
     [LavaField( "Attendee Lava Template",
         Description = "Lava template used to customize appearance of individual attendee selectors.",
         IsRequired = true,
@@ -135,6 +145,7 @@ namespace Plugins.rocks_kfs.Groups
             public const string DisplayLastNameButtons = "DisplayLastNameButtons";
             public const string AllowAddingPerson = "AllowAddingPerson";
             public const string CombineGroupAttendance = "CombineGroupAttendance";
+            public const string GroupTypeRolesToDisplay = "GroupTypeRolesToDisplay";
         }
 
         /// <summary>
@@ -168,6 +179,7 @@ namespace Plugins.rocks_kfs.Groups
         {
             public const string Date = "Date";
             public const string Groups = "Groups";
+            public const string GroupRoles = "GroupRoles";
         }
 
         #region Private Variables
@@ -222,11 +234,18 @@ namespace Plugins.rocks_kfs.Groups
             _combineGroupAttendance = GetAttributeValue( AttributeKey.CombineGroupAttendance ).AsBoolean();
             var allowGroupsPageParameter = GetAttributeValue( AttributeKey.AllowGroupsPageParameter ).AsBoolean();
             var groupIds = GetAttributeValues( AttributeKey.GroupsToDisplay ).AsIntegerList();
+            var groupRoleIds = GetAttributeValues( AttributeKey.GroupTypeRolesToDisplay ).AsIntegerList();
 
             var pageParamGroups = PageParameter( PageParameterKey.Groups );
             if ( allowGroupsPageParameter && pageParamGroups.IsNotNullOrWhiteSpace() )
             {
                 groupIds = pageParamGroups.Split( ',' ).AsIntegerList();
+            }
+
+            var pageParamGroupRoles = PageParameter( PageParameterKey.GroupRoles );
+            if ( allowGroupsPageParameter && pageParamGroupRoles.IsNotNullOrWhiteSpace() )
+            {
+                groupRoleIds = pageParamGroupRoles.Split( ',' ).AsIntegerList();
             }
 
             _groups = new GroupService( _rockContext ).GetByIds( groupIds ).ToList();
@@ -235,7 +254,15 @@ namespace Plugins.rocks_kfs.Groups
             {
                 if ( group != null && ( group.IsAuthorized( Authorization.MANAGE_MEMBERS, CurrentPerson ) || group.IsAuthorized( Authorization.EDIT, CurrentPerson ) ) )
                 {
-                    _members.AddRange( group.ActiveMembers() );
+                    if ( groupRoleIds.Any() )
+                    {
+                        var members = group.ActiveMembers();
+                        _members.AddRange( members.Where( m => groupRoleIds.Contains( m.GroupRoleId ) ) );
+                    }
+                    else
+                    {
+                        _members.AddRange( group.ActiveMembers() );
+                    }
                 }
             }
         }
