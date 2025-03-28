@@ -94,6 +94,7 @@
                     </asp:Panel>
                     <asp:Panel ID="pnlOther" runat="server" class="col-sm-6">
                         <Rock:RockLiteral ID="lSchedule" runat="server" Label="Schedule(s)" />
+                        <Rock:SchedulePicker ID="spSchedule" runat="server" Label="Schedule" ShowOnlyPublic="false" />
                     </asp:Panel>
                 </div>
                 <div class="row mb-3">
