@@ -75,62 +75,62 @@ namespace Plugins.rocks_kfs.Groups
             JOIN GroupType gt ON gt.Id = gtr.GroupTypeId
             ORDER BY gt.[Name], gtr.[Order]",
         IsRequired = false,
-        Order = 1,
+        Order = 2,
         Key = AttributeKey.GroupTypeRolesToDisplay )]
 
     [LavaField( "Attendee Lava Template",
         Description = "Lava template used to customize appearance of individual attendee selectors.",
         IsRequired = true,
         DefaultValue = DefaultValue.AttendeeLavaTemplate,
-        Order = 2,
+        Order = 3,
         Key = AttributeKey.AttendeeLavaTemplate )]
 
     [TextField( "Checkbox Column Class",
         Description = "The Bootstrap 3 CSS classes to use for column width on various screen sizes. Default: col-xs-12 col-sm-6 col-md-3 col-lg-2",
         DefaultValue = "col-xs-12 col-sm-6 col-md-3 col-lg-2",
-        Order = 3,
+        Order = 4,
         Key = AttributeKey.CheckboxColumnClass )]
 
     [BooleanField( "Display Group Names",
         Description = "Display the group names after the block name in the panel title. Default: Yes",
         DefaultBooleanValue = true,
-        Order = 4,
+        Order = 5,
         Key = AttributeKey.DisplayGroupNames )]
 
     [BooleanField( "Allow Groups from Page Parameter",
         Description = "Allow GroupId's to be passed in via Page Parameter 'Groups' as a comma separated list. The current user must have permission to the groups for members to display. Default: No",
         DefaultBooleanValue = false,
-        Order = 5,
+        Order = 6,
         Key = AttributeKey.AllowGroupsPageParameter )]
 
     [LavaField( "Intro Lava Template",
         Description = "Lava template used to display instructions or group information.",
         IsRequired = false,
         DefaultValue = DefaultValue.IntroLavaTemplate,
-        Order = 6,
+        Order = 7,
         Key = AttributeKey.IntroLavaTemplate )]
 
     [BooleanField( "Display LastName buttons",
         Description = "Display a row of buttons with the first letter of LastName buttons. Default: Yes",
         DefaultBooleanValue = true,
-        Order = 7,
+        Order = 8,
         Key = AttributeKey.DisplayLastNameButtons )]
 
     [BooleanField( "Allow Adding Person",
         Description = "Should block support adding new people as attendees?",
         DefaultBooleanValue = false,
-        Order = 8,
+        Order = 9,
         Key = AttributeKey.AllowAddingPerson )]
 
     [BooleanField( "Combine Group Attendance",
         Description = "Should the block display only one record per person? This will result in a group attendance for that person in each associated group.",
         DefaultBooleanValue = false,
-        Order = 9,
+        Order = 10,
         Key = AttributeKey.CombineGroupAttendance )]
 
     [CustomDropdownListField( "Schedule Selection Mode",
         Description = "Should the block display the schedule picker?",
-        ListSource = "Hide,Always allow editing,Only if Single Schedule/Group",
+        ListSource = "Hide,Always allow editing,Only if single schedule/group",
         DefaultValue = "Hide",
         Key = AttributeKey.ScheduleSelectionMode,
         Order = 11 )]
