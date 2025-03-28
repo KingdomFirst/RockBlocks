@@ -650,7 +650,7 @@ namespace Plugins.rocks_kfs.Groups
                 _attendees.AddRange( attended.Where( at => !_attendees.Any( a => a.PersonId == at.PersonId && at.Groups.Any( g => a.Groups.Contains( g ) ) ) ) );
             }
 
-            var searchParts = tbSearch.Text.ToLower().SplitDelimitedValues();
+            var searchParts = tbSearch.Text.ToLower().Split( new char[] { ',', ' ', ';', '.' }, StringSplitOptions.None );
             _attendees = _attendees.Where( a => tbSearch.Text.IsNullOrWhiteSpace() ||
                                           ( searchParts.Length == 1 && a.LastName.ToLower().StartsWith( searchParts[0] ) ) ||
                                           ( searchParts.Length > 1 && ( a.FirstName.ToLower().StartsWith( searchParts[0] ) ||

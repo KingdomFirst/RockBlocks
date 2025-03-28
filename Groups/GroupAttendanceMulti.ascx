@@ -102,7 +102,7 @@
                         <strong><asp:Literal ID="lCount" runat="server" /></strong> Attended
                     </asp:Panel>
                     <asp:Panel ID="pnlSearch" runat="server" CssClass="col-xs-12 pb-2 pb-sm-0 col-sm-5 col-md-5 col-sm-pull-3 col-md-pull-2">
-                        <Rock:RockTextBox ID="tbSearch" runat="server" OnTextChanged="tbSearch_TextChanged" Placeholder="Search"></Rock:RockTextBox>
+                        <Rock:RockTextBox ID="tbSearch" runat="server" OnTextChanged="tbSearch_TextChanged" Placeholder="Search" ToolTip="Enter a last name or a first name/last name combination. Use a comma after the name to search by first name only."></Rock:RockTextBox>
                     </asp:Panel>
                     <asp:Panel ID="pnlAddPerson" runat="server" CssClass="col-xs-12 col-sm-4 col-md-5 col-sm-pull-3 col-md-pull-2">
                         <Rock:RockDropDownList ID="ddlAddPersonGroup" runat="server" OnSelectedIndexChanged="ddlAddPersonGroup_SelectedIndexChanged" AutoPostBack="true"></Rock:RockDropDownList>
