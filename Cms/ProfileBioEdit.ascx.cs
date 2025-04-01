@@ -794,8 +794,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void lbAddFamilyMember_Click( object sender, EventArgs e )
         {
-            var pnlFamilyMemberBody = pnlProfilePanels.FindControl( "pnlFamilyMemberBody" );
-            if ( pnlFamilyMemberBody != null )
+            var pnlFamilyMemberWidgets = pnlProfilePanels.FindControl( "pnlFamilyMemberWidgets" );
+            if ( pnlFamilyMemberWidgets != null )
             {
                 var lastPersonId = FamilyMembers.OrderByDescending( fm => fm.PersonId ).Select( fm => fm.PersonId ).LastOrDefault();
                 if ( lastPersonId > 0 )
@@ -814,7 +814,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
                 FamilyMembers.Add( newFamilyMember );
 
-                AddFamilyMember( pnlFamilyMemberBody, newFamilyMember, true );
+                toggleFamilyMemberFooter( pnlProfilePanels );
+
+                AddFamilyMember( pnlFamilyMemberWidgets, newFamilyMember, true );
             }
         }
 
@@ -826,13 +828,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         private void pwFamilyMember_DeleteClick( object sender, EventArgs e )
         {
             PanelWidget panelWidget = sender as PanelWidget;
-            var pnlFamilyMemberBody = pnlProfilePanels.FindControl( "pnlFamilyMemberBody" );
-            if ( panelWidget != null && pnlFamilyMemberBody != null )
+            var pnlFamilyMemberWidgets = pnlProfilePanels.FindControl( "pnlFamilyMemberWidgets" );
+            if ( panelWidget != null && pnlFamilyMemberWidgets != null )
             {
                 var personId = panelWidget.ID.Replace( "pwFamilyMember_", string.Empty ).AsInteger();
-                pnlFamilyMemberBody.Controls.Remove( panelWidget );
                 var familyMember = FamilyMembers.First( a => a.PersonId == personId );
                 FamilyMembers.Remove( familyMember );
+                pnlFamilyMemberWidgets.Controls.Remove( panelWidget );
+
+                toggleFamilyMemberFooter( pnlProfilePanels );
             }
         }
 
@@ -1178,6 +1182,8 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     var pnlFamilyMemberWidgets = new Panel { ID = "pnlFamilyMemberWidgets" };
                     pnlFamilyMemberBody.Controls.Add( pnlFamilyMemberWidgets );
 
+                    toggleFamilyMemberFooter( pnlFamilyMember );
+
                     foreach ( var fm in FamilyMembers )
                     {
                         AddFamilyMember( pnlFamilyMemberWidgets, fm );
@@ -1186,6 +1192,21 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
             #endregion
 
+        }
+
+        private void toggleFamilyMemberFooter( Panel pnlFamilyMember )
+        {
+            var pnlFamilyMemberBody = pnlFamilyMember.FindControl( "pnlFamilyMemberBody" );
+            var pnlFamilyMemberFooter = pnlFamilyMember.FindControl( "pnlFamilyMemberFooter" );
+
+            if ( pnlFamilyMemberBody != null )
+            {
+                pnlFamilyMemberBody.Visible = FamilyMembers.Any();
+            }
+            if ( pnlFamilyMemberFooter != null )
+            {
+                pnlFamilyMemberFooter.Visible = FamilyMembers.Any();
+            }
         }
 
         private void AddFamilyMember( Control pnlFamilyMemberBody, PersonFamilyMember fm, bool expanded = false )
