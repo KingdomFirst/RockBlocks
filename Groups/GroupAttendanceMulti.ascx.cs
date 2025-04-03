@@ -21,7 +21,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-
+using MassTransit.Scheduling;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -130,7 +130,7 @@ namespace Plugins.rocks_kfs.Groups
 
     [CustomDropdownListField( "Schedule Selection Mode",
         Description = "Should the block display the schedule picker?",
-        ListSource = "Hide,Always allow editing,Only if single schedule/group",
+        ListSource = "Hide,Always allow editing on new attendance,Only if single group or common schedule",
         DefaultValue = "Hide",
         Key = AttributeKey.ScheduleSelectionMode,
         Order = 11 )]
@@ -540,7 +540,7 @@ namespace Plugins.rocks_kfs.Groups
 
             var scheduleSelectionMode = GetAttributeValue( AttributeKey.ScheduleSelectionMode );
 
-            if ( scheduleSelectionMode == "Always allow editing" || ( !lSchedule.Text.Contains( ',' ) && scheduleSelectionMode != "Hide" ) )
+            if ( scheduleSelectionMode == "Always allow editing on new attendance" || ( !lSchedule.Text.Contains( ',' ) && scheduleSelectionMode != "Hide" ) )
             {
                 spSchedule.Visible = true;
                 lSchedule.Visible = false;
@@ -683,15 +683,22 @@ namespace Plugins.rocks_kfs.Groups
 
             if ( lCount.Text != "0" )
             {
-                var attendeeSchedule = _attendees.Where( a => a.Schedules.Any() ).OrderBy( a => a.Attended ).Select( a => a.Schedules ).FirstOrDefault( a => a.Any( s => s != 0 ) ).FirstOrDefault();
-                if ( attendeeSchedule != 0 )
+                var attendeeSchedules = _attendees.Where( a => a.Schedules.Any() ).OrderBy( a => a.Attended ).SelectMany( a => a.Schedules ).Where( s => s != 0 ).Distinct().ToList();
+                if ( attendeeSchedules.Any() )
                 {
-                    var schedule = new ScheduleService( _rockContext ).Get( attendeeSchedule );
-                    if ( schedule != null )
+                    lSchedule.Text = "";
+
+                    foreach ( int scheduleId in attendeeSchedules )
                     {
-                        spSchedule.SetValue( schedule );
-                        spSchedule.ItemName = spSchedule.ItemName.IsNullOrWhiteSpace() ? schedule.FriendlyScheduleText : spSchedule.ItemName;
+                        var schedule = new ScheduleService( _rockContext ).Get( scheduleId );
+                        if ( schedule != null )
+                        {
+                            lSchedule.Text += $"{( lSchedule.Text.IsNotNullOrWhiteSpace() ? ", " : "" )} {schedule.FriendlyScheduleText}";
+                        }
                     }
+                    spSchedule.Visible = false;
+                    lSchedule.Visible = true;
+                    lSchedule.Text = $"Existing {"occurrence".PluralizeIf( attendeeSchedules.Count() > 1 )} {lSchedule.Text}";
                 }
             }
 
