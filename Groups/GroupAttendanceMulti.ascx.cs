@@ -651,17 +651,28 @@ namespace Plugins.rocks_kfs.Groups
                 _attendees.AddRange( attended.Where( at => !_attendees.Any( a => a.PersonId == at.PersonId && at.Groups.Any( g => a.Groups.Contains( g ) ) ) ) );
             }
 
-            var searchParts = tbSearch.Text.ToLower().Split( new char[] { ',', ' ', ';', '.' }, StringSplitOptions.None );
+            var searchParts = tbSearch.Text.ToLower().SplitDelimitedValues();
             _attendees = _attendees.Where( a => tbSearch.Text.IsNullOrWhiteSpace() ||
-                                          ( searchParts.Length == 1 && a.LastName.ToLower().StartsWith( searchParts[0] ) ) ||
-                                          ( searchParts.Length > 1 && ( a.FirstName.ToLower().StartsWith( searchParts[0] ) ||
-                                                                        a.NickName.ToLower().StartsWith( searchParts[0] )
-                                                                      ) && a.LastName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
-                                          ) ||
-                                          ( searchParts.Length > 1 && ( a.FirstName.ToLower().StartsWith( searchParts[searchParts.Length - 1] ) ||
-                                                                        a.NickName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
-                                                                      ) && a.LastName.ToLower().StartsWith( searchParts[0] )
-                                          )
+                                                searchParts.Length == 1 &&
+                                                ( a.FirstName.ToLower().StartsWith( searchParts[0] ) ||
+                                                  a.NickName.ToLower().StartsWith( searchParts[0] ) ||
+                                                  a.LastName.ToLower().StartsWith( searchParts[0] )
+                                                ) ||
+                                                searchParts.Length > 1 &&
+                                                (
+                                                    (
+                                                        ( a.FirstName.ToLower().StartsWith( searchParts[0] ) ||
+                                                          a.NickName.ToLower().StartsWith( searchParts[0] )
+                                                        ) &&
+                                                        a.LastName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
+                                                    ) ||
+                                                    (
+                                                        ( a.FirstName.ToLower().StartsWith( searchParts[searchParts.Length - 1] ) ||
+                                                          a.NickName.ToLower().StartsWith( searchParts[searchParts.Length - 1] )
+                                                        ) &&
+                                                        a.LastName.ToLower().StartsWith( searchParts[0] )
+                                                    )
+                                                )
                                     )
                                     .OrderBy( a => a.LastName )
                                     .ThenBy( a => a.FirstName )
