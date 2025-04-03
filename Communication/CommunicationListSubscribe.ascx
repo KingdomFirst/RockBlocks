@@ -33,14 +33,14 @@
                                         <asp:Repeater ID="rptCommunicationLists" runat="server" OnItemDataBound="rptCommunicationLists_ItemDataBound">
                                             <ItemTemplate>
                                                 <div class="row">
-                                                    <div class="col-xs-6">
+                                                    <asp:Panel ID="col1" runat="server" CssClass="col-xs-6">
                                                         <asp:HiddenField ID="hfGroupId" runat="server" />
                                                         <Rock:RockCheckBox ID="cbCommunicationListIsSubscribed" runat="server" AutoPostBack="true" OnCheckedChanged="cbCommunicationListIsSubscribed_CheckedChanged" />
                                                         <Rock:NotificationBox ID="nbGroupNotification" runat="server" Visible="false" />
-                                                    </div>
-                                                    <div class="col-xs-6">
+                                                    </asp:Panel>
+                                                    <asp:Panel ID="col2" runat="server" CssClass="col-xs-6">
                                                         <Rock:Toggle ID="tglCommunicationPreference" runat="server" OnText="Email" OffText="SMS" ButtonSizeCssClass="btn-xs" OnCssClass="btn-info" OffCssClass="btn-info" OnCheckedChanged="tglCommunicationPreference_CheckedChanged" />
-                                                    </div>
+                                                    </asp:Panel>
                                                 </div>
                                             </ItemTemplate>
                                         </asp:Repeater>
