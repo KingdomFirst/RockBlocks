@@ -69,7 +69,7 @@ namespace Plugins.rocks_kfs.Groups
         Key = AttributeKey.GroupsToDisplay )]
 
     [CustomEnhancedListField( "Group Type Roles to Display",
-        Description = "Select the group type role(s) to display in this attendance block. You may also pass in a comma separated list of GroupTypeRoleId's via a PageParameter 'GroupRoles'.",
+        Description = "Select the group type role(s) to display in this attendance block. You may also pass in a comma separated list of GroupTypeRoleId's via a PageParameter 'GroupRoles'. Make sure to only select roles from group types represented by the group(s) selected in the Groups To Display setting.",
         ListSource = @"SELECT gtr.[Id] as Value, CONCAT(gt.[Name],' > ',gtr.[Name]) as Text 
             FROM GroupTypeRole gtr 
             JOIN GroupType gt ON gt.Id = gtr.GroupTypeId
@@ -548,6 +548,7 @@ namespace Plugins.rocks_kfs.Groups
             else
             {
                 spSchedule.Visible = false;
+                lSchedule.Visible = true;
             }
 
             if ( !lSchedule.Text.Contains( ',' ) )
