@@ -80,6 +80,12 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         IsRequired = false,
         Key = AttributeKey.CommunicationListCategoriesExpanded,
         Order = 4 )]
+    [TextField(
+        "List Repeater CSS Class",
+        Description = "CSS Class to use on the category list repeater.",
+        DefaultValue = "row",
+        Key = AttributeKey.ListRepeaterCSSClass,
+        Order = 5 )]
 
     #endregion Block Attributes
 
@@ -96,6 +102,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             public const string ShowMediumPreference = "ShowMediumPreference";
             public const string ShowCommunicationListCategories = "ShowCommunicationListCategories";
             public const string CommunicationListCategoriesExpanded = "CommunicationListCategoriesOpen";
+            public const string ListRepeaterCSSClass = "ListRepeaterCSSClass";
         }
 
         #endregion Attribute Keys
@@ -179,6 +186,13 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             {
                 var pwCategoryPanel = e.Item.FindControl( "pwCategoryPanel" ) as PanelWidget;
                 var openCategoryGuids = this.GetAttributeValue( AttributeKey.CommunicationListCategoriesExpanded ).SplitDelimitedValues().AsGuidList();
+                var listRepeaterCssClass = GetAttributeValue( AttributeKey.ListRepeaterCSSClass );
+
+                var pnlListRepeaterParent = e.Item.FindControl( "pnlListRepeaterParent" ) as Panel;
+                if ( pnlListRepeaterParent != null )
+                {
+                    pnlListRepeaterParent.CssClass = listRepeaterCssClass;
+                }
 
                 pwCategoryPanel.Expanded = openCategoryGuids.Contains( category.Guid );
                 pwCategoryPanel.Title = category.Name;
@@ -262,6 +276,21 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 var tglCommunicationPreference = e.Item.FindControl( "tglCommunicationPreference" ) as Toggle;
                 tglCommunicationPreference.Checked = communicationType == CommunicationType.Email;
                 tglCommunicationPreference.Visible = showMediumPreference;
+
+                if ( !tglCommunicationPreference.Visible )
+                {
+                    var tglCommunicationPreferenceParent = tglCommunicationPreference.Parent as WebControl;
+                    if ( tglCommunicationPreferenceParent != null )
+                    {
+                        tglCommunicationPreferenceParent.Visible = false;
+                    }
+
+                    var hfGroupIdParent = hfGroupId.Parent as WebControl;
+                    if ( hfGroupIdParent != null )
+                    {
+                        hfGroupIdParent.CssClass = "col-xs-12";
+                    }
+                }
             }
         }
 
