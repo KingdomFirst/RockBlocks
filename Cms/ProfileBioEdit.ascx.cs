@@ -1221,7 +1221,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             };
             pwFamilyMember.DeleteClick += pwFamilyMember_DeleteClick;
 
-            var pnlFamilyMemberPerson = new Panel { ID = "pnlFamilyMemberPerson", CssClass = "d-flex flex-wrap" };
+            var pnlFamilyMemberPerson = new Panel { ID = "pnlFamilyMemberPerson", CssClass = "row d-flex flex-wrap" };
             pwFamilyMember.Controls.Add( pnlFamilyMemberPerson );
 
             pnlFamilyMemberBody.Controls.Add( pwFamilyMember );
@@ -1468,7 +1468,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             // Add Controls to Panel in order in rows and columns
 
             var pnlBody = pnlPerson.FindControl( "pnlPersonBody" );
-            var pnlFields = new Panel { ID = $"pnlFields_{person.Id}", CssClass = "d-flex flex-wrap" };
+            var pnlFields = new Panel { ID = $"pnlFields_{person.Id}", CssClass = "row d-flex flex-wrap" };
 
             if ( pnlBody == null )
             {
@@ -1686,7 +1686,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 pnlContactBody = pnlContact;
             }
 
-            var pnlFieldsContact = new Panel { ID = $"pnlFieldsContact_{person.Id}", CssClass = "d-flex flex-wrap" };
+            var pnlFieldsContact = new Panel { ID = $"pnlFieldsContact_{person.Id}", CssClass = "row d-flex flex-wrap" };
             if ( familyMember )
             {
                 pnlFieldsContact = pnlContactBody as Panel;
