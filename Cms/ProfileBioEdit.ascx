@@ -16,9 +16,9 @@
         }
     }
 </style>
-<asp:UpdatePanel runat="server" ID="upnlCareEntry">
+<asp:UpdatePanel runat="server" ID="upnlProfileBio">
     <ContentTemplate>
-        <asp:Panel ID="pnlView" runat="server" CssClass="panel panel-block">
+        <asp:Panel ID="pnlView" runat="server">
             <asp:ValidationSummary ID="valValidation" runat="server" HeaderText="Please correct the following:" CssClass="alert alert-validation" />
             <asp:Panel ID="pnlProfilePanels" runat="server"></asp:Panel>
             <Rock:ModalAlert ID="maAlert" runat="server"></Rock:ModalAlert>
@@ -26,8 +26,8 @@
             <asp:HiddenField ID="hfGroupId" runat="server" />
             <asp:HiddenField ID="hfPrimaryPersonGuid" runat="server" />
 
-            <asp:LinkButton ID="lbSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary" OnClick="lbSave_Click" />
-            <asp:LinkButton ID="lbCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link" CausesValidation="false" OnClick="lbCancel_Click" />
+            <asp:LinkButton ID="lbSave" runat="server" AccessKey="s" ToolTip="Alt+s" Text="Save" CssClass="btn btn-primary btn-save" OnClick="lbSave_Click" />
+            <asp:LinkButton ID="lbCancel" runat="server" AccessKey="c" ToolTip="Alt+c" Text="Cancel" CssClass="btn btn-link btn-cancel" CausesValidation="false" OnClick="lbCancel_Click" />
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>
