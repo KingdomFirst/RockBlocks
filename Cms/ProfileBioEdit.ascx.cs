@@ -557,7 +557,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             base.OnInit( e );
 
             this.BlockUpdated += Block_BlockUpdated;
-            this.AddConfigurationUpdateTrigger( upnlCareEntry );
+            this.AddConfigurationUpdateTrigger( upnlProfileBio );
 
             _group = CurrentPerson.GetFamily();
             _groupId = _group.Id;
@@ -2181,7 +2181,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     AccessKey = "s",
                     ToolTip = "Alt+s",
                     Text = "Save",
-                    CssClass = "btn btn-primary",
+                    CssClass = "btn btn-primary btn-save",
                     ValidationGroup = BlockValidationGroup
                 };
                 lbSave.Click += lbSave_Click;
@@ -2194,7 +2194,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     AccessKey = "c",
                     ToolTip = "Alt+c",
                     Text = "Cancel",
-                    CssClass = "btn btn-link",
+                    CssClass = "btn btn-link btn-cancel",
                     CausesValidation = false,
                     ValidationGroup = BlockValidationGroup
                 };
