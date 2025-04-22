@@ -459,10 +459,8 @@ namespace RockWeb.Plugins.rocks_kfs.FinancialEdge
 
                     batch.LoadAttributes();
 
-                    var newDate = string.Empty;
-
                     var oldDate = batch.GetAttributeValue( "rocks.kfs.FinancialEdge.DateExported" );
-                    newDate = RockDateTime.Now.ToString();
+                    var newDate = RockDateTime.Now;
                     History.EvaluateChange( changes, "Date Exported", oldDate, newDate.ToString() );
 
                     items.AddRange( feJournal.GetGlEntries( rockContext, batch, tbJournalType.Text ) );

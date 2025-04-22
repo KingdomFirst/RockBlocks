@@ -454,10 +454,8 @@ namespace RockWeb.Plugins.rocks_kfs.ShelbyFinancials
 
                     batch.LoadAttributes();
 
-                    var newDate = string.Empty;
-
                     var oldDate = batch.GetAttributeValue( "rocks.kfs.ShelbyFinancials.DateExported" );
-                    newDate = RockDateTime.Now.ToString();
+                    var newDate = RockDateTime.Now;
                     History.EvaluateChange( changes, "Date Exported", oldDate, newDate.ToString() );
 
                     var journalCode = ddlJournalType.SelectedValue;
