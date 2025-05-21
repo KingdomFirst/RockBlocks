@@ -137,6 +137,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultValue = "Hide",
         Key = AttributeKey.FollowUpWorkerAssignment )]
 
+    [LinkedPage( "Care Need History Page",
+        Description = "Page used to display history details.",
+        IsRequired = false,
+        Key = AttributeKey.HistoryPage )]
+
     [SecurityAction(
         SecurityActionKey.UpdateStatus,
         "The roles and/or users that have access to update the status of Care Needs." )]
@@ -169,6 +174,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string CompleteButtonText = "CompleteButtonText";
             public const string EnableCustomFollowUp = "EnableCustomFollowUp";
             public const string FollowUpWorkerAssignment = "FollowUpWorkerAssignment";
+            public const string HistoryPage = "CareNeedHistoryPage";
         }
 
         private static class PageParameterKey
@@ -315,6 +321,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 CareNeed careNeed = null;
                 int careNeedId = hfCareNeedId.ValueAsInt();
                 var isNew = false;
+                var changes = new History.HistoryChangeList();
 
                 if ( !careNeedId.Equals( 0 ) )
                 {
@@ -325,11 +332,20 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     isNew = true;
                     careNeed = new CareNeed { Id = 0 };
+                    changes.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Care Need" );
                 }
 
+                History.EvaluateChange( changes, "Details", careNeed.Details, dtbDetailsText.Text );
                 careNeed.Details = dtbDetailsText.Text;
+
+                var currentCampusName = CampusCache.Get( careNeed.CampusId ?? 0 )?.Name ?? "None";
+                var newCampusName = CampusCache.Get( cpCampus.SelectedCampusId ?? 0 )?.Name ?? "None";
+                History.EvaluateChange( changes, "Campus", currentCampusName, newCampusName );
                 careNeed.CampusId = cpCampus.SelectedCampusId;
 
+                string originalPerson = History.GetValue<PersonAlias>( null, careNeed.PersonAliasId.ToStringSafe().AsIntegerOrNull(), rockContext );
+                string personHistoryChange = History.GetValue<PersonAlias>( null, ppPerson.PersonAliasId, rockContext );
+                History.EvaluateChange( changes, "Person", originalPerson, personHistoryChange );
                 careNeed.PersonAliasId = ppPerson.PersonAliasId;
 
                 Person person = null;
@@ -417,6 +433,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             }
                         }
                     }
+                    personHistoryChange = History.GetValue<PersonAlias>( person?.PrimaryAlias, person?.PrimaryAliasId, rockContext );
+                    History.EvaluateChange( changes, "Person", originalPerson, personHistoryChange );
                     careNeed.PersonAliasId = person?.PrimaryAliasId;
 
                     if ( careNeed.PersonAliasId == null )
@@ -432,31 +450,40 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     person = new PersonService( rockContext ).Get( ppPerson.PersonId.Value );
                 }
 
+                string originalSubmitter = History.GetValue<PersonAlias>( careNeed.SubmitterPersonAlias, careNeed.SubmitterAliasId.ToStringSafe().AsIntegerOrNull(), rockContext );
+                string submitter = History.GetValue<PersonAlias>( null, ppSubmitter.PersonAliasId, rockContext );
+                History.EvaluateChange( changes, "Submitter", originalSubmitter, submitter );
                 careNeed.SubmitterAliasId = ppSubmitter.PersonAliasId;
 
                 if ( careNeed.StatusValueId != dvpStatus.SelectedDefinedValueId && dvpStatus.SelectedDefinedValueId == snoozedValueId )
                 {
+                    History.EvaluateChange( changes, "Snooze Date/Time", careNeed.SnoozeDate, RockDateTime.Now );
                     careNeed.SnoozeDate = RockDateTime.Now;
                 }
 
+                History.EvaluateChange( changes, "Status", DefinedValueCache.GetName( careNeed.StatusValueId ), DefinedValueCache.GetName( dvpStatus.SelectedDefinedValueId ) );
                 careNeed.StatusValueId = dvpStatus.SelectedDefinedValueId;
 
-                careNeed.CategoryValueId = dvpCategory.SelectedValue.AsIntegerOrNull();
+                History.EvaluateChange( changes, "Category", DefinedValueCache.GetName( careNeed.CategoryValueId ), DefinedValueCache.GetName( dvpCategory.SelectedDefinedValueId ) );
+                careNeed.CategoryValueId = dvpCategory.SelectedDefinedValueId;
 
-                if ( dpDate.SelectedDateTime.HasValue )
-                {
-                    careNeed.DateEntered = dpDate.SelectedDateTime.Value;
-                }
+                DateTime? dateEnteredDateTime = dpDate.SelectedDateTimeIsBlank ? null : dpDate.SelectedDateTime;
+                History.EvaluateChange( changes, "Date Entered", careNeed.DateEntered, dateEnteredDateTime );
+                careNeed.DateEntered = dpDate.SelectedDateTime;
 
                 if ( careNeed.DateEntered.HasValue )
                 {
                     dateDifference = ( careNeed.DateEntered.Value - DateTime.Now ).TotalDays;
                 }
 
+                History.EvaluateChange( changes, "Workers Only", careNeed.WorkersOnly, cbWorkersOnly.Checked );
                 careNeed.WorkersOnly = cbWorkersOnly.Checked;
 
+                History.EvaluateChange( changes, "Custom Follow Up", careNeed.CustomFollowUp, cbCustomFollowUp.Checked );
                 careNeed.CustomFollowUp = cbCustomFollowUp.Checked;
+                History.EvaluateChange( changes, "Follow Up After", careNeed.RenewPeriodDays, numbRepeatDays.IntegerValue );
                 careNeed.RenewPeriodDays = numbRepeatDays.IntegerValue;
+                History.EvaluateChange( changes, "Number of Times to Repeat", careNeed.RenewMaxCount, numbRepeatTimes.IntegerValue );
                 careNeed.RenewMaxCount = numbRepeatTimes.IntegerValue;
 
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
@@ -549,6 +576,42 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     // get attributes
                     careNeed.LoadAttributes();
+                    var attributeEditControls = Helper.GetAttributeEditControls( phAttributes, careNeed );
+
+                    // get attribute values for history purposes
+                    if ( attributeEditControls != null )
+                    {
+                        foreach ( var attributeEditControl in attributeEditControls )
+                        {
+                            var attribute = attributeEditControl.Key;
+                            var control = attributeEditControl.Value;
+                            if ( control != null )
+                            {
+                                var editValue = attribute.FieldType.Field.GetEditValue( control, attribute.QualifierValues );
+
+                                string originalValue = careNeed.GetAttributeValue( attribute.Key );
+                                string newValue = editValue.ToString();
+
+                                if ( ( originalValue ?? string.Empty ).Trim() != ( newValue ?? string.Empty ).Trim() )
+                                {
+                                    string formattedOriginalValue = string.Empty;
+                                    if ( !string.IsNullOrWhiteSpace( originalValue ) )
+                                    {
+                                        formattedOriginalValue = attribute.FieldType.Field.FormatValue( null, originalValue, attribute.QualifierValues, false );
+                                    }
+
+                                    string formattedNewValue = string.Empty;
+                                    if ( !string.IsNullOrWhiteSpace( newValue ) )
+                                    {
+                                        formattedNewValue = attribute.FieldType.Field.FormatValue( null, newValue, attribute.QualifierValues, false );
+                                    }
+
+                                    History.EvaluateChange( changes, attribute.Name, formattedOriginalValue, formattedNewValue );
+                                }
+                            }
+                        }
+                    }
+
                     Helper.GetEditValues( phAttributes, careNeed );
 
                     if ( cbIncludeFamily.Visible && cbIncludeFamily.Checked && ( isNew || ( careNeed.ChildNeeds == null || ( careNeed.ChildNeeds != null && !careNeed.ChildNeeds.Any() ) ) ) )
@@ -588,9 +651,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     rockContext.WrapTransaction( () =>
                     {
-                        rockContext.SaveChanges();
+                        if ( rockContext.SaveChanges() > 0 )
+                        {
+                            if ( changes.Any() )
+                            {
+                                HistoryService.SaveChanges(
+                                    rockContext,
+                                    typeof( CareNeed ),
+                                    rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                    careNeed.Id,
+                                    changes );
+                            }
+                        }
                         careNeed.SaveAttributeValues( rockContext );
                     } );
+
 
                     var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
                     var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
@@ -1024,6 +1099,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
         }
 
+        protected void btnViewHistory_Click( object sender, EventArgs e )
+        {
+            NavigateToLinkedPage( AttributeKey.HistoryPage, new Dictionary<string, string>
+            {
+                { "CareNeedId", hfCareNeedId.Value }
+            } );
+        }
+
         #endregion Events
 
         #region Methods
@@ -1075,6 +1158,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             pnlRecurrenceOptions.Visible = cbCustomFollowUp.Checked;
             numbRepeatDays.IntegerValue = careNeed.RenewPeriodDays;
             numbRepeatTimes.IntegerValue = careNeed.RenewMaxCount;
+
+            btnViewHistory.Visible = GetAttributeValue( AttributeKey.HistoryPage ).IsNotNullOrWhiteSpace() && careNeed.Id != 0;
+            btnViewHistoryFtr.Visible = GetAttributeValue( AttributeKey.HistoryPage ).IsNotNullOrWhiteSpace() && careNeed.Id != 0;
 
             var paramCampusId = PageParameter( PageParameterKey.CampusId ).AsIntegerOrNull();
             if ( careNeed.Campus != null )
