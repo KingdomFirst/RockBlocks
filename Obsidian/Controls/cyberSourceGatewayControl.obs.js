@@ -168,6 +168,8 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
                 script.type = "text/javascript";
                 script.src = props.settings.microFormJsPath;
                 script.setAttribute("data-variant", "inline");
+                script.setAttribute("crossorigin", "anonymous");
+                script.setAttribute("integrity", props.settings.integrity);
                 document.getElementsByTagName("head")[0].appendChild(script);
                 try {
                   yield new Promise((resolve, reject) => {
