@@ -2342,7 +2342,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
 
             var displayControl = GetAttributeValue( ctrlName );
 
-            if (labelText.IsNullOrWhiteSpace() )
+            if ( labelText.IsNullOrWhiteSpace() )
             {
                 labelText = GetAttributeValue( $"{ctrlName}Label" );
             }
