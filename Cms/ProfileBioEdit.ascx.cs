@@ -2184,7 +2184,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     {
                         if ( !person.PhoneNumbers.Any( a => a.IsMessagingEnabled ) )
                         {
-                            nbCommunicationPreferenceWarning.Text = $"A phone number with SMS enabled is required when {GetAttributeValue(AttributeKey.CommunicationPreference)} is set to SMS.";
+                            nbCommunicationPreferenceWarning.Text = $"A phone number with SMS enabled is required when {GetAttributeValue(AttributeKey.CommunicationPreferenceLabel)} is set to SMS.";
                             nbCommunicationPreferenceWarning.NotificationBoxType = NotificationBoxType.Warning;
                             nbCommunicationPreferenceWarning.Visible = true;
                             return false;
