@@ -488,6 +488,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
                 var newlyAssignedPersons = new List<AssignedPerson>();
+                var assignedPersonHistory = new Dictionary<PersonAlias, string>();
                 if ( careNeed.AssignedPersons != null || ( previewAssignedPeople && dateDifference <= futureThresholdDays ) )
                 {
                     if ( AssignedPersons.Any() )
@@ -524,9 +525,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 };
                                 careNeed.AssignedPersons.Add( assignedPerson );
                                 newlyAssignedPersons.Add( assignedPerson );
+                                History.EvaluateChange( changes, "Assigned Person", null, assignedPerson.PersonAlias, assignedPerson.PersonAliasId, rockContext );
+                                assignedPersonHistory.AddOrReplace( assignedPerson.PersonAlias, "ASSIGNED" );
                             }
                         }
                         var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.Id ).ToList().Contains( ap.Id ) ).ToList();
+                        foreach ( var removePerson in removePersons )
+                        {
+                            PersonAlias nullPersonAlias = null;
+                            History.EvaluateChange( changes, "Assigned Person", removePerson.PersonAliasId, nullPersonAlias, null, rockContext );
+                            assignedPersonHistory.AddOrReplace( removePerson.PersonAlias, "UNASSIGNED" );
+                        }
                         assignedPersonService.DeleteRange( removePersons );
                         careNeed.AssignedPersons.RemoveAll( removePersons );
 
@@ -544,6 +553,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     if ( checkBoxTemplateField != null && checkBoxTemplateField.Visible )
                                     {
                                         CheckBox checkBox = fieldCell.Controls[0] as CheckBox;
+                                        History.EvaluateChange( changes, $"Follow Up Worker on {assignedPerson.PersonAlias?.Person?.FullName}", assignedPerson.FollowUpWorker, checkBox.Checked );
                                         assignedPerson.FollowUpWorker = checkBox.Checked;
                                     }
                                 }
@@ -557,6 +567,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
                     else if ( careNeed.AssignedPersons != null && careNeed.AssignedPersons.Any() )
                     {
+                        foreach ( var removePerson in careNeed.AssignedPersons )
+                        {
+                            PersonAlias nullPersonAlias = null;
+                            History.EvaluateChange( changes, "Assigned Person", removePerson.PersonAliasId, nullPersonAlias, null, rockContext );
+                            assignedPersonHistory.AddOrReplace( removePerson.PersonAlias, "UNASSIGNED" );
+                        }
                         assignedPersonService.DeleteRange( careNeed.AssignedPersons );
                         careNeed.AssignedPersons.Clear();
                         if ( enableLogging )
@@ -614,15 +630,24 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     Helper.GetEditValues( phAttributes, careNeed );
 
+                    var fmChangesLists = new Dictionary<int?, History.HistoryChangeList>();
                     if ( cbIncludeFamily.Visible && cbIncludeFamily.Checked && ( isNew || ( careNeed.ChildNeeds == null || ( careNeed.ChildNeeds != null && !careNeed.ChildNeeds.Any() ) ) ) )
                     {
+                        History.EvaluateChange( changes, "Include Family", ( careNeed.ChildNeeds == null || ( careNeed.ChildNeeds != null && !careNeed.ChildNeeds.Any() ) ), cbIncludeFamily.Checked );
+
                         var family = person.GetFamilyMembers( false, rockContext );
                         foreach ( var fm in family )
                         {
+                            var fmChanges = new History.HistoryChangeList();
+
                             var copyNeed = ( CareNeed ) careNeed.Clone();
                             copyNeed.Id = 0;
                             copyNeed.Guid = Guid.NewGuid();
+                            fmChanges.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Care Need from Family" );
+                            fmChanges.AddRange( changes.Where( c => c.ValueName != "Person" ) );
                             copyNeed.PersonAliasId = fm.Person.PrimaryAliasId;
+                            History.EvaluateChange( fmChanges, "Person", null, fm.Person.PrimaryAlias, fm.Person.PrimaryAliasId, rockContext );
+
                             if ( copyNeed.Campus != null )
                             {
                                 copyNeed.Campus = null;
@@ -645,6 +670,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 careNeed.ChildNeeds = new List<CareNeed>();
                             }
                             careNeed.ChildNeeds.Add( copyNeed );
+                            changes.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, $"Child Care Need for {fm.Person.FullName}" );
+                            fmChangesLists.TryAdd( fm.Person.PrimaryAliasId, fmChanges );
                         }
                         childNeedsCreated = true;
                     }
@@ -660,7 +687,37 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     typeof( CareNeed ),
                                     rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
                                     careNeed.Id,
-                                    changes );
+                                    changes
+                                );
+                            }
+                            if ( fmChangesLists.Any() )
+                            {
+                                foreach ( var fmChanges in fmChangesLists )
+                                {
+                                    var childNeed = careNeed.ChildNeeds.FirstOrDefault( a => a.PersonAliasId == fmChanges.Key );
+                                    if ( childNeed != null )
+                                    {
+                                        HistoryService.SaveChanges(
+                                            rockContext,
+                                            typeof( CareNeed ),
+                                            rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                            childNeed.Id,
+                                            fmChanges.Value,
+                                            "Parent Care Need " + person.FullName,
+                                             typeof( CareNeed ),
+                                             careNeed.Id,
+                                             true
+                                        );
+                                    }
+                                }
+                            }
+                            // Save the assigned persons history after the care need is saved due to wanting the related id to be available
+                            if ( assignedPersonHistory.Any() )
+                            {
+                                foreach ( var assignedPerson in assignedPersonHistory )
+                                {
+                                    CareUtilities.AddPersonHistory( rockContext, careNeed, person, assignedPerson.Key, assignedPerson.Value, commitSave: true );
+                                }
                             }
                         }
                         careNeed.SaveAttributeValues( rockContext );
