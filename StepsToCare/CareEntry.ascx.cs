@@ -1141,9 +1141,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 var changes = new History.HistoryChangeList();
                 var completeChildNeeds = GetAttributeValue( AttributeKey.CompleteChildNeeds ).AsBoolean();
-                var completeValue = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
+                var completeValue = new DefinedValueService( rockContext ).Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
                 var completeValueId = completeValue.Id;
-                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, completeValue as DefinedValue, completeValueId );
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, completeValue, completeValueId );
                 careNeed.StatusValueId = completeValueId;
 
                 if ( completeChildNeeds && careNeed.ChildNeeds.Any() )
@@ -1151,8 +1151,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
                         var childNeedChanges = new History.HistoryChangeList();
-                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, childneed.Status, completeValueId );
-                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, childneed.Status, completeValueId );
+                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, completeValue, completeValueId );
+                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, completeValue, completeValueId );
                         childneed.StatusValueId = completeValueId;
 
                         if ( childNeedChanges.Any() )
@@ -1641,7 +1641,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 var changes = new History.HistoryChangeList();
                 var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
-                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, careNeed.Status, snoozeValueId );
+                var snoozeValue = new DefinedValueService( rockContext ).Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, snoozeValue, snoozeValueId );
                 careNeed.StatusValueId = snoozeValueId;
                 History.EvaluateChange( changes, "Snooze Date", careNeed.SnoozeDate, RockDateTime.Now );
                 careNeed.SnoozeDate = RockDateTime.Now;
@@ -1661,8 +1662,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
                         var childNeedChanges = new History.HistoryChangeList();
-                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, childneed.Status, snoozeValueId );
-                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, childneed.Status, snoozeValueId );
+                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, snoozeValue, snoozeValueId );
+                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, snoozeValue, snoozeValueId );
                         History.EvaluateChange( childNeedChanges, "Snooze Date", childneed.SnoozeDate, RockDateTime.Now );
 
                         childneed.StatusValueId = snoozeValueId;
