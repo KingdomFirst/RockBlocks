@@ -343,9 +343,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 History.EvaluateChange( changes, "Campus", currentCampusName, newCampusName );
                 careNeed.CampusId = cpCampus.SelectedCampusId;
 
-                string originalPerson = History.GetValue<PersonAlias>( null, careNeed.PersonAliasId.ToStringSafe().AsIntegerOrNull(), rockContext );
+                var originalPerson = careNeed.PersonAlias;
+                string originalPersonStr = History.GetValue<PersonAlias>( null, careNeed.PersonAliasId.ToStringSafe().AsIntegerOrNull(), rockContext );
                 string personHistoryChange = History.GetValue<PersonAlias>( null, ppPerson.PersonAliasId, rockContext );
-                History.EvaluateChange( changes, "Person", originalPerson, personHistoryChange );
+                History.EvaluateChange( changes, "Person", originalPersonStr, personHistoryChange );
                 careNeed.PersonAliasId = ppPerson.PersonAliasId;
 
                 Person person = null;
@@ -434,7 +435,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         }
                     }
                     personHistoryChange = History.GetValue<PersonAlias>( person?.PrimaryAlias, person?.PrimaryAliasId, rockContext );
-                    History.EvaluateChange( changes, "Person", originalPerson, personHistoryChange );
+                    History.EvaluateChange( changes, "Person", originalPersonStr, personHistoryChange );
                     careNeed.PersonAliasId = person?.PrimaryAliasId;
 
                     if ( careNeed.PersonAliasId == null )
@@ -689,6 +690,25 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     careNeed.Id,
                                     changes
                                 );
+                                if ( isNew || originalPersonStr != personHistoryChange )
+                                {
+                                    SavePersonNeedHistory( rockContext, careNeed );
+                                }
+                                if ( originalPersonStr != personHistoryChange && originalPerson != null )
+                                {
+                                    var personNeedHistory = new History.HistoryChangeList();
+                                    personNeedHistory.AddChange( History.HistoryVerb.Delete, History.HistoryChangeType.Record, "Care Need" );
+
+                                    HistoryService.SaveChanges( rockContext,
+                                            typeof( PersonAlias ),
+                                            rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_PERSON_STEPS_TO_CARE.AsGuid(),
+                                            originalPerson.PersonId,
+                                            personNeedHistory,
+                                            null,
+                                            typeof( CareNeed ),
+                                            careNeed.Id
+                                        );
+                                }
                             }
                             if ( fmChangesLists.Any() )
                             {
@@ -708,6 +728,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                              careNeed.Id,
                                              true
                                         );
+                                        SavePersonNeedHistory( rockContext, childNeed );
+
                                     }
                                 }
                             }
@@ -1117,21 +1139,54 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( careNeed != null )
             {
+                var changes = new History.HistoryChangeList();
                 var completeChildNeeds = GetAttributeValue( AttributeKey.CompleteChildNeeds ).AsBoolean();
-                var completeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
+                var completeValue = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
+                var completeValueId = completeValue.Id;
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, completeValue as DefinedValue, completeValueId );
                 careNeed.StatusValueId = completeValueId;
 
                 if ( completeChildNeeds && careNeed.ChildNeeds.Any() )
                 {
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
+                        var childNeedChanges = new History.HistoryChangeList();
+                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, childneed.Status, completeValueId );
+                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, childneed.Status, completeValueId );
                         childneed.StatusValueId = completeValueId;
+
+                        if ( childNeedChanges.Any() )
+                        {
+                            HistoryService.SaveChanges(
+                                rockContext,
+                                typeof( CareNeed ),
+                                rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                childneed.Id,
+                                childNeedChanges,
+                                "Parent Care Need " + careNeed.PersonAlias?.Person?.FullName,
+                                typeof( CareNeed ),
+                                careNeed.Id,
+                                false
+                            );
+                        }
                     }
                 }
 
                 rockContext.WrapTransaction( () =>
                 {
-                    rockContext.SaveChanges();
+                    if ( rockContext.SaveChanges() > 0 )
+                    {
+                        if ( changes.Any() )
+                        {
+                            HistoryService.SaveChanges(
+                                rockContext,
+                                typeof( CareNeed ),
+                                rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                careNeed.Id,
+                                changes
+                            );
+                        }
+                    }
                 } );
 
                 createNote( rockContext, careNeedId, GetAttributeValue( AttributeKey.CompleteButtonText ) );
@@ -1584,13 +1639,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( careNeed != null )
             {
+                var changes = new History.HistoryChangeList();
                 var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, careNeed.Status, snoozeValueId );
                 careNeed.StatusValueId = snoozeValueId;
+                History.EvaluateChange( changes, "Snooze Date", careNeed.SnoozeDate, RockDateTime.Now );
                 careNeed.SnoozeDate = RockDateTime.Now;
                 if ( selectedDateTime != null )
                 {
                     var dayDiff = ( selectedDateTime - RockDateTime.Now ).Value.TotalDays;
+                    History.EvaluateChange( changes, "Renewed Period", careNeed.RenewPeriodDays, Math.Ceiling( dayDiff ).ToIntSafe() );
                     careNeed.RenewPeriodDays = Math.Ceiling( dayDiff ).ToIntSafe();
+                    History.EvaluateChange( changes, "Renew Max Count", careNeed.RenewMaxCount, careNeed.RenewCurrentCount );
                     careNeed.RenewMaxCount = careNeed.RenewCurrentCount;
                 }
 
@@ -1600,19 +1660,54 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
+                        var childNeedChanges = new History.HistoryChangeList();
+                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, childneed.Status, snoozeValueId );
+                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, childneed.Status, snoozeValueId );
+                        History.EvaluateChange( childNeedChanges, "Snooze Date", childneed.SnoozeDate, RockDateTime.Now );
+
                         childneed.StatusValueId = snoozeValueId;
                         childneed.SnoozeDate = RockDateTime.Now;
                         if ( selectedDateTime != null )
                         {
+                            History.EvaluateChange( changes, "Renewed Period", childneed.RenewPeriodDays, careNeed.RenewPeriodDays );
                             childneed.RenewPeriodDays = careNeed.RenewPeriodDays;
+                            History.EvaluateChange( changes, "Renew Max Count", childneed.RenewMaxCount, childneed.RenewCurrentCount );
                             childneed.RenewMaxCount = childneed.RenewCurrentCount;
                         }
+
+                        if ( childNeedChanges.Any() )
+                        {
+                            HistoryService.SaveChanges(
+                                rockContext,
+                                typeof( CareNeed ),
+                                rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                childneed.Id,
+                                childNeedChanges,
+                                "Parent Care Need " + careNeed.PersonAlias?.Person?.FullName,
+                                typeof( CareNeed ),
+                                careNeed.Id,
+                                false
+                            );
+                        }
+
                     }
                 }
 
                 rockContext.WrapTransaction( () =>
                 {
-                    rockContext.SaveChanges();
+                    if ( rockContext.SaveChanges() > 0 )
+                    {
+                        if ( changes.Any() )
+                        {
+                            HistoryService.SaveChanges(
+                                rockContext,
+                                typeof( CareNeed ),
+                                rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                careNeed.Id,
+                                changes
+                            );
+                        }
+                    }
                 } );
 
                 createNote( rockContext, careNeedId, GetAttributeValue( AttributeKey.SnoozedButtonText ) );
@@ -1635,6 +1730,22 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 NavigateToParentPage( qryParams );
             }
+        }
+
+        private void SavePersonNeedHistory( RockContext rockContext, CareNeed careNeed )
+        {
+            var personNeedHistory = new History.HistoryChangeList();
+            personNeedHistory.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Care Need" );
+
+            HistoryService.SaveChanges( rockContext,
+                    typeof( PersonAlias ),
+                    rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_PERSON_STEPS_TO_CARE.AsGuid(),
+                    careNeed.PersonAlias.PersonId,
+                    personNeedHistory,
+                    "View Care Need",
+                    typeof( CareNeed ),
+                    careNeed.Id
+                );
         }
 
         #endregion Methods
