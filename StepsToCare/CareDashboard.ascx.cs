@@ -179,6 +179,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         Category = "Actions",
         Key = AttributeKey.BenevolenceDetailPage )]
 
+    [LinkedPage(
+        "Care Need History Page",
+        Description = "Page used to view history of Care Needs (if not set the action will not show)",
+        IsRequired = false,
+        Order = 11,
+        Category = "Actions",
+        Key = AttributeKey.CareNeedHistoryPage )]
+
     [BenevolenceTypeField( "Benevolence Type",
         Description = "The Benevolence type used when creating benevolence requests from Steps to Care 'Actions'",
         IsRequired = true,
@@ -347,6 +355,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string QuickNoteStatusTemplate = "QuickNoteStatusTemplate";
             public const string QuickNoteAutoSave = "QuickNoteAutoSave";
             public const string EnterCareNeed = "EnterCareNeed";
+            public const string CareNeedHistoryPage = "CareNeedHistoryPage";
         }
 
         /// <summary>
@@ -1253,6 +1262,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             actionItem5.Controls.Add( lbLaunchConnection );
                         }
 
+                        var careNeedHistoryPage = LinkedPageRoute( AttributeKey.CareNeedHistoryPage );
+                        if ( careNeedHistoryPage.IsNotNullOrWhiteSpace() )
+                        {
+                            var actionItem6 = new HtmlGenericControl( "li" );
+                            ddlMenu.Controls.Add( actionItem6 );
+
+                            var lbLaunchHistory = new LinkButton();
+                            lbLaunchHistory.Command += lbNeedAction_Click;
+                            lbLaunchHistory.CommandArgument = careNeed.Id.ToString();
+                            lbLaunchHistory.CommandName = "history";
+                            lbLaunchHistory.Text = "View History";
+                            actionItem6.Controls.Add( lbLaunchHistory );
+                        }
                     }
 
                     Literal lName = e.Row.FindControl( "lName" ) as Literal;
@@ -1628,6 +1650,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             mdSnoozeNeed.Show();
                         }
                     }
+                    break;
+                case "history":
+                    var qryParamsHistory = new Dictionary<string, string>
+                    {
+                        { "CareNeedId", id.ToString() }
+                    };
+                    NavigateToLinkedPage( AttributeKey.CareNeedHistoryPage, qryParamsHistory );
                     break;
                 default:
                     break;
