@@ -711,7 +711,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     personNeedHistory.AddChange( History.HistoryVerb.Delete, History.HistoryChangeType.Record, "Care Need" );
 
                                     HistoryService.SaveChanges( rockContext,
-                                            typeof( PersonAlias ),
+                                            typeof( Person ),
                                             rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_PERSON_STEPS_TO_CARE.AsGuid(),
                                             originalPerson.PersonId,
                                             personNeedHistory,
@@ -1747,8 +1747,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             var personNeedHistory = new History.HistoryChangeList();
             personNeedHistory.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Care Need" );
 
+            if ( careNeed.PersonAlias == null )
+            {
+                careNeed.PersonAlias = new PersonAliasService( rockContext ).Get( careNeed.PersonAliasId ?? 0 );
+            }
             HistoryService.SaveChanges( rockContext,
-                    typeof( PersonAlias ),
+                    typeof( Person ),
                     rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_PERSON_STEPS_TO_CARE.AsGuid(),
                     careNeed.PersonAlias.PersonId,
                     personNeedHistory,
