@@ -708,7 +708,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 if ( originalPersonStr != personHistoryChange && originalPerson != null )
                                 {
                                     var personNeedHistory = new History.HistoryChangeList();
-                                    personNeedHistory.AddChange( History.HistoryVerb.Delete, History.HistoryChangeType.Record, "Care Need" );
+                                    History.EvaluateChange( personNeedHistory, "Care Need Person", originalPersonStr, personHistoryChange );
 
                                     HistoryService.SaveChanges( rockContext,
                                             typeof( Person ),

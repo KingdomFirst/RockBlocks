@@ -1996,6 +1996,19 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         return;
                     }
 
+                    var personNeedHistory = new History.HistoryChangeList();
+                    personNeedHistory.AddChange( History.HistoryVerb.Delete, History.HistoryChangeType.Record, "Care Need" );
+
+                    HistoryService.SaveChanges( rockContext,
+                            typeof( Person ),
+                            rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_PERSON_STEPS_TO_CARE.AsGuid(),
+                            careNeed.PersonAlias.PersonId,
+                            personNeedHistory,
+                            null,
+                            typeof( CareNeed ),
+                            careNeed.Id
+                        );
+
                     service.Delete( careNeed );
                     rockContext.SaveChanges();
                 }
