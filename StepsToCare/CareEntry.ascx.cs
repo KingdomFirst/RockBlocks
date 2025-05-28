@@ -756,7 +756,6 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         careNeed.SaveAttributeValues( rockContext );
                     } );
 
-
                     var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
                     var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
                     var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
@@ -1650,7 +1649,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( careNeed != null )
             {
                 var changes = new History.HistoryChangeList();
-                var snoozeValue = CareUtilities.DefinedValueFromCache( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
+                var snoozeValue = CareUtilities.DefinedValueFromCache( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED );
                 History.EvaluateChange( changes, "Status", careNeed.StatusValueId, snoozeValue, snoozeValue.Id );
                 careNeed.StatusValueId = snoozeValue.Id;
                 History.EvaluateChange( changes, "Snooze Date", careNeed.SnoozeDate, RockDateTime.Now );
@@ -1673,10 +1672,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         var childNeedChanges = new History.HistoryChangeList();
                         History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, snoozeValue, snoozeValue.Id );
                         History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, snoozeValue, snoozeValue.Id );
-                        History.EvaluateChange( childNeedChanges, "Snooze Date", childneed.SnoozeDate, RockDateTime.Now );
+                        History.EvaluateChange( childNeedChanges, "Snooze Date", childneed.SnoozeDate, careNeed.SnoozeDate );
 
                         childneed.StatusValueId = snoozeValue.Id;
-                        childneed.SnoozeDate = RockDateTime.Now;
+                        childneed.SnoozeDate = careNeed.SnoozeDate;
                         if ( selectedDateTime != null )
                         {
                             History.EvaluateChange( changes, "Follow Up After", childneed.RenewPeriodDays, careNeed.RenewPeriodDays );
@@ -1745,7 +1744,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         private void SavePersonNeedHistory( RockContext rockContext, CareNeed careNeed )
         {
             var personNeedHistory = new History.HistoryChangeList();
-            personNeedHistory.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Care Need" );
+            personNeedHistory.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, $"Care Need [{careNeed.Id}]" );
 
             if ( careNeed.PersonAlias == null )
             {
@@ -1756,7 +1755,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_PERSON_STEPS_TO_CARE.AsGuid(),
                     careNeed.PersonAlias.PersonId,
                     personNeedHistory,
-                    "View Care Need",
+                    $"Care Need [{careNeed.Id}]",
                     typeof( CareNeed ),
                     careNeed.Id
                 );
