@@ -340,7 +340,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var currentCampusName = CampusCache.Get( careNeed.CampusId ?? 0 )?.Name ?? "None";
                 var newCampusName = CampusCache.Get( cpCampus.SelectedCampusId ?? 0 )?.Name ?? "None";
-                History.EvaluateChange( changes, "Campus", currentCampusName, newCampusName );
+                History.EvaluateChange( changes, "Campus", careNeed.CampusId == null ? null : currentCampusName, newCampusName );
                 careNeed.CampusId = cpCampus.SelectedCampusId;
 
                 var originalPerson = careNeed.PersonAlias;
@@ -458,14 +458,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 if ( careNeed.StatusValueId != dvpStatus.SelectedDefinedValueId && dvpStatus.SelectedDefinedValueId == snoozedValueId )
                 {
-                    History.EvaluateChange( changes, "Snooze Date/Time", careNeed.SnoozeDate, RockDateTime.Now );
+                    History.EvaluateChange( changes, "Snooze Date", careNeed.SnoozeDate, RockDateTime.Now );
                     careNeed.SnoozeDate = RockDateTime.Now;
                 }
 
-                History.EvaluateChange( changes, "Status", DefinedValueCache.GetName( careNeed.StatusValueId ), DefinedValueCache.GetName( dvpStatus.SelectedDefinedValueId ) );
+                var newStatusValue = CareUtilities.DefinedValueFromCache( dvpStatus.SelectedDefinedValueId );
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, newStatusValue, newStatusValue.Id );
                 careNeed.StatusValueId = dvpStatus.SelectedDefinedValueId;
 
-                History.EvaluateChange( changes, "Category", DefinedValueCache.GetName( careNeed.CategoryValueId ), DefinedValueCache.GetName( dvpCategory.SelectedDefinedValueId ) );
+                var newCategoryValue = CareUtilities.DefinedValueFromCache( dvpCategory.SelectedDefinedValueId );
+                History.EvaluateChange( changes, "Category", careNeed.CategoryValueId, newCategoryValue, newCategoryValue.Id );
                 careNeed.CategoryValueId = dvpCategory.SelectedDefinedValueId;
 
                 DateTime? dateEnteredDateTime = dpDate.SelectedDateTimeIsBlank ? null : dpDate.SelectedDateTime;
@@ -1141,19 +1143,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 var changes = new History.HistoryChangeList();
                 var completeChildNeeds = GetAttributeValue( AttributeKey.CompleteChildNeeds ).AsBoolean();
-                var completeValue = new DefinedValueService( rockContext ).Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
-                var completeValueId = completeValue.Id;
-                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, completeValue, completeValueId );
-                careNeed.StatusValueId = completeValueId;
+                var completeValue = CareUtilities.DefinedValueFromCache( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, completeValue, completeValue.Id );
+                careNeed.StatusValueId = completeValue.Id;
 
                 if ( completeChildNeeds && careNeed.ChildNeeds.Any() )
                 {
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
                         var childNeedChanges = new History.HistoryChangeList();
-                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, completeValue, completeValueId );
-                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, completeValue, completeValueId );
-                        childneed.StatusValueId = completeValueId;
+                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, completeValue, completeValue.Id );
+                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, completeValue, completeValue.Id );
+                        childneed.StatusValueId = completeValue.Id;
 
                         if ( childNeedChanges.Any() )
                         {
@@ -1640,18 +1641,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( careNeed != null )
             {
                 var changes = new History.HistoryChangeList();
-                var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
-                var snoozeValue = new DefinedValueService( rockContext ).Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
-                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, snoozeValue, snoozeValueId );
-                careNeed.StatusValueId = snoozeValueId;
+                var snoozeValue = CareUtilities.DefinedValueFromCache( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, snoozeValue, snoozeValue.Id );
+                careNeed.StatusValueId = snoozeValue.Id;
                 History.EvaluateChange( changes, "Snooze Date", careNeed.SnoozeDate, RockDateTime.Now );
                 careNeed.SnoozeDate = RockDateTime.Now;
                 if ( selectedDateTime != null )
                 {
                     var dayDiff = ( selectedDateTime - RockDateTime.Now ).Value.TotalDays;
-                    History.EvaluateChange( changes, "Renewed Period", careNeed.RenewPeriodDays, Math.Ceiling( dayDiff ).ToIntSafe() );
+                    History.EvaluateChange( changes, "Follow Up After", careNeed.RenewPeriodDays, Math.Ceiling( dayDiff ).ToIntSafe() );
                     careNeed.RenewPeriodDays = Math.Ceiling( dayDiff ).ToIntSafe();
-                    History.EvaluateChange( changes, "Renew Max Count", careNeed.RenewMaxCount, careNeed.RenewCurrentCount );
+                    History.EvaluateChange( changes, "Number of Times to Repeat", careNeed.RenewMaxCount, careNeed.RenewCurrentCount );
                     careNeed.RenewMaxCount = careNeed.RenewCurrentCount;
                 }
 
@@ -1662,17 +1662,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
                         var childNeedChanges = new History.HistoryChangeList();
-                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, snoozeValue, snoozeValueId );
-                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, snoozeValue, snoozeValueId );
+                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, snoozeValue, snoozeValue.Id );
+                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, snoozeValue, snoozeValue.Id );
                         History.EvaluateChange( childNeedChanges, "Snooze Date", childneed.SnoozeDate, RockDateTime.Now );
 
-                        childneed.StatusValueId = snoozeValueId;
+                        childneed.StatusValueId = snoozeValue.Id;
                         childneed.SnoozeDate = RockDateTime.Now;
                         if ( selectedDateTime != null )
                         {
-                            History.EvaluateChange( changes, "Renewed Period", childneed.RenewPeriodDays, careNeed.RenewPeriodDays );
+                            History.EvaluateChange( changes, "Follow Up After", childneed.RenewPeriodDays, careNeed.RenewPeriodDays );
                             childneed.RenewPeriodDays = careNeed.RenewPeriodDays;
-                            History.EvaluateChange( changes, "Renew Max Count", childneed.RenewMaxCount, childneed.RenewCurrentCount );
+                            History.EvaluateChange( changes, "Number of Times to Repeat", childneed.RenewMaxCount, childneed.RenewCurrentCount );
                             childneed.RenewMaxCount = childneed.RenewCurrentCount;
                         }
 
