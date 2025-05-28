@@ -636,7 +636,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     var fmChangesLists = new Dictionary<int?, History.HistoryChangeList>();
                     if ( cbIncludeFamily.Visible && cbIncludeFamily.Checked && ( isNew || ( careNeed.ChildNeeds == null || ( careNeed.ChildNeeds != null && !careNeed.ChildNeeds.Any() ) ) ) )
                     {
-                        History.EvaluateChange( changes, "Include Family", ( careNeed.ChildNeeds == null || ( careNeed.ChildNeeds != null && !careNeed.ChildNeeds.Any() ) ), cbIncludeFamily.Checked );
+                        History.EvaluateChange( changes, "Include Family", careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any(), cbIncludeFamily.Checked );
 
                         var family = person.GetFamilyMembers( false, rockContext );
                         foreach ( var fm in family )
@@ -647,9 +647,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             copyNeed.Id = 0;
                             copyNeed.Guid = Guid.NewGuid();
                             fmChanges.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Care Need from Family" );
-                            fmChanges.AddRange( changes.Where( c => c.ValueName != "Person" ) );
                             copyNeed.PersonAliasId = fm.Person.PrimaryAliasId;
                             History.EvaluateChange( fmChanges, "Person", null, fm.Person.PrimaryAlias, fm.Person.PrimaryAliasId, rockContext );
+                            History.EvaluateChange( fmChanges, "Details", null, dtbDetailsText.Text );
+                            History.EvaluateChange( fmChanges, "Campus", null, newCampusName );
+                            History.EvaluateChange( fmChanges, "Submitter", null, submitter );
+                            History.EvaluateChange( fmChanges, "Status", null, newStatusValue, newStatusValue.Id );
+                            History.EvaluateChange( fmChanges, "Category", null, newCategoryValue, newCategoryValue.Id );
+                            History.EvaluateChange( fmChanges, "Date Entered", null, dateEnteredDateTime );
+                            History.EvaluateChange( fmChanges, "Workers Only", null, cbWorkersOnly.Checked );
+                            History.EvaluateChange( fmChanges, "Custom Follow Up", null, cbCustomFollowUp.Checked );
+                            History.EvaluateChange( fmChanges, "Follow Up After", null, numbRepeatDays.IntegerValue );
+                            History.EvaluateChange( fmChanges, "Number of Times to Repeat", null, numbRepeatTimes.IntegerValue );
 
                             if ( copyNeed.Campus != null )
                             {
