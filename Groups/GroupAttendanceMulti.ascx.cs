@@ -130,7 +130,7 @@ namespace Plugins.rocks_kfs.Groups
 
     [CustomDropdownListField( "Schedule Selection Mode",
         Description = "Should the block display the schedule picker?",
-        ListSource = "Hide,Always allow editing on new attendance,Only if single group or common schedule",
+        ListSource = "Hide,Always allow editing on new attendance,Only if single group or common schedule,From Group Schedules",
         DefaultValue = "Hide",
         Key = AttributeKey.ScheduleSelectionMode,
         Order = 11 )]
@@ -285,6 +285,10 @@ namespace Plugins.rocks_kfs.Groups
             if ( !Page.IsPostBack )
             {
                 BuildIntroLava();
+
+                ddlSchedule.Items.Clear();
+                ddlSchedule.Items.Add( new ListItem( "Select One", "" ) );
+
                 BindFields();
                 BindRepeat();
             }
@@ -491,6 +495,22 @@ namespace Plugins.rocks_kfs.Groups
             ddlAddPersonGroup.Visible = true;
             ppAddPerson.PersonName = "Add New Attendee";
         }
+
+        protected void ddlSchedule_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            if ( ddlSchedule.SelectedValue.IsNotNullOrWhiteSpace() )
+            {
+                spSchedule.SetValue( ddlSchedule.SelectedValue.AsInteger() );
+                spSchedule.ItemName = ddlSchedule.SelectedItem.Text;
+            }
+            else
+            {
+                spSchedule.SetValue( null );
+                spSchedule.ItemName = string.Empty;
+            }
+            BindFields();
+            BindRepeat();
+        }
         #endregion
 
         #region Internal Methods
@@ -534,19 +554,53 @@ namespace Plugins.rocks_kfs.Groups
                 lAttendanceDate.Visible = false;
             }
 
-            lSchedule.Text = _groups.Where( g => g.Schedule != null ).ToList().Select( g => g.Schedule.FriendlyScheduleText ).Distinct().JoinStrings( ", " );
+            var groupSchedules = _groups.Where( g => g.Schedule != null ).Select( g => g.Schedule ).ToList();
+            groupSchedules.AddRange( _groups.SelectMany( g => g.GroupLocations ).Where( gl => gl.Schedules != null && gl.Schedules.Any() ).SelectMany( gl => gl.Schedules ) );
+            groupSchedules = groupSchedules.DistinctBy( s => s.Id ).ToList().OrderByOrderAndNextScheduledDateTime();
+
+            lSchedule.Text = groupSchedules.Select( s => s.FriendlyScheduleText ).Distinct().JoinStrings( ", " );
 
             lSchedule.Visible = lSchedule.Text.IsNotNullOrWhiteSpace();
 
+            foreach ( var schedule in groupSchedules )
+            {
+                if ( schedule != null && ddlSchedule.Items.FindByValue( schedule.Id.ToString() ) == null )
+                {
+                    var scheduleName = string.Empty;
+
+                    if ( schedule.Category != null )
+                    {
+                        scheduleName += BuildCategoryNameRecursive( schedule.Category ) + " > ";
+                    }
+                    if ( schedule.Name.IsNotNullOrWhiteSpace() )
+                    {
+                        scheduleName += schedule.Name;
+                    }
+                    else
+                    {
+                        scheduleName += schedule.FriendlyScheduleText;
+                    }
+                    ddlSchedule.Items.Add( new ListItem( scheduleName, schedule.Id.ToString() ) );
+                }
+            }
+
             var scheduleSelectionMode = GetAttributeValue( AttributeKey.ScheduleSelectionMode );
 
-            if ( scheduleSelectionMode == "Always allow editing on new attendance" || ( !lSchedule.Text.Contains( ',' ) && scheduleSelectionMode != "Hide" ) )
+            if ( scheduleSelectionMode == "From Group Schedules" )
+            {
+                ddlSchedule.Visible = groupSchedules.Count > 1;
+                lSchedule.Visible = groupSchedules.Count <= 1;
+                spSchedule.Visible = false;
+            }
+            else if ( scheduleSelectionMode == "Always allow editing on new attendance" || ( !lSchedule.Text.Contains( ',' ) && scheduleSelectionMode != "Hide" ) )
             {
                 spSchedule.Visible = true;
                 lSchedule.Visible = false;
+                ddlSchedule.Visible = false;
             }
             else
             {
+                ddlSchedule.Visible = false;
                 spSchedule.Visible = false;
                 lSchedule.Visible = true;
             }
@@ -555,6 +609,7 @@ namespace Plugins.rocks_kfs.Groups
             {
                 spSchedule.SetValue( _groups.FirstOrDefault( g => g.Schedule != null )?.Schedule );
                 spSchedule.ItemName = lSchedule.Text;
+                ddlSchedule.SetValue( _groups.FirstOrDefault( g => g.Schedule != null )?.Schedule.Id );
             }
 
             ddlAddPersonGroup.DataSource = _groups.OrderBy( g => g.Name ).ToList();
@@ -575,6 +630,7 @@ namespace Plugins.rocks_kfs.Groups
         {
             var groupIds = _groups.Select( g => g.Id ).ToList();
             _attendees = new List<AttendanceAttendee>();
+            var selectedSchedule = ddlSchedule.SelectedValueAsId();
             var attended = new AttendanceService( _rockContext )
                 .Queryable().AsNoTracking()
                 .Where( a =>
@@ -583,7 +639,8 @@ namespace Plugins.rocks_kfs.Groups
                     a.DidAttend.Value &&
                     a.Occurrence != null &&
                     groupIds.Contains( a.Occurrence.GroupId.Value ) &&
-                    a.PersonAlias != null )
+                    a.PersonAlias != null &&
+                    ( selectedSchedule == null || a.Occurrence.ScheduleId == selectedSchedule ) )
                 .Select( a => new AttendanceAttendee
                 {
                     PersonId = a.PersonAlias.PersonId,
@@ -696,8 +753,10 @@ namespace Plugins.rocks_kfs.Groups
                             lSchedule.Text += $"{( lSchedule.Text.IsNotNullOrWhiteSpace() ? ", " : "" )} {schedule.FriendlyScheduleText}";
                         }
                     }
+                    var scheduleSelectionMode = GetAttributeValue( AttributeKey.ScheduleSelectionMode );
+
                     spSchedule.Visible = false;
-                    lSchedule.Visible = true;
+                    lSchedule.Visible = scheduleSelectionMode != "From Group Schedules" || ddlSchedule.SelectedValueAsId() == null;
                     lSchedule.Text = $"Existing {"occurrence".PluralizeIf( attendeeSchedules.Count() > 1 )} {lSchedule.Text}";
                 }
             }
@@ -840,6 +899,18 @@ namespace Plugins.rocks_kfs.Groups
 
                 lIntroLava.Text = introLavaTemplate.ResolveMergeFields( mergeFields );
             }
+        }
+        private string BuildCategoryNameRecursive( Category category )
+        {
+            if ( category == null )
+            {
+                return string.Empty;
+            }
+
+            var parentName = BuildCategoryNameRecursive( category.ParentCategory );
+            return string.IsNullOrEmpty( parentName )
+                ? category.Name
+                : $"{parentName} > {category.Name}";
         }
 
         #endregion
