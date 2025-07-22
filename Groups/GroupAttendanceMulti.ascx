@@ -95,6 +95,7 @@
                     <asp:Panel ID="pnlOther" runat="server" class="col-sm-6">
                         <Rock:RockLiteral ID="lSchedule" runat="server" Label="Schedule(s)" />
                         <Rock:SchedulePicker ID="spSchedule" runat="server" Label="Schedule" ShowOnlyPublic="false" />
+                        <Rock:RockDropDownList ID="ddlSchedule" runat="server" Label="Schedule" OnSelectedIndexChanged="ddlSchedule_SelectedIndexChanged" AutoPostBack="true" EnhanceForLongLists="true" />
                     </asp:Panel>
                 </div>
                 <div class="row mb-3">
