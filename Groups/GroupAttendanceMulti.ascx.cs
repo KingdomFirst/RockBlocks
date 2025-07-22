@@ -900,6 +900,7 @@ namespace Plugins.rocks_kfs.Groups
                 lIntroLava.Text = introLavaTemplate.ResolveMergeFields( mergeFields );
             }
         }
+
         private string BuildCategoryNameRecursive( Category category )
         {
             if ( category == null )
@@ -908,7 +909,7 @@ namespace Plugins.rocks_kfs.Groups
             }
 
             var parentName = BuildCategoryNameRecursive( category.ParentCategory );
-            return string.IsNullOrEmpty( parentName )
+            return string.IsNullOrWhiteSpace( parentName )
                 ? category.Name
                 : $"{parentName} > {category.Name}";
         }
