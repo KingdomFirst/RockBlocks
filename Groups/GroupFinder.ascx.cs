@@ -35,7 +35,8 @@
 // * Added Auto Load Filter capability on value selection
 // * Added ability to sort how filters are displayed
 // * Added ability to load Group/Sign Up Opportunities into finder
-// Package Version 1.8.3
+// * Added a setting to use Abbreviated Attribute Name in the filter control
+// Package Version 1.8.4
 // </notice>
 //
 using System;
@@ -127,6 +128,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Description = "Add the merge field GroupOpportunities to the lava result with a custom object for Sign-up Opportunities. See documentation for field properties.",
         DefaultBooleanValue = false,
         Key = AttributeKey.AddGroupOpportunities )]
+    [BooleanField( "Use Abbreviated Attribute Name",
+        Description = "Use the Abbreviated Attribute name when displaying the filter control.",
+        DefaultBooleanValue = false,
+        Key = AttributeKey.UseAbbreviatedAttributeName )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page",
@@ -472,6 +477,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string FormattedOutputEnabledLavaCommands = "FormattedOutputEnabledLavaCommands";
             public const string FilterOrder = "FilterOrder";
             public const string AddGroupOpportunities = "AddGroupOpportunities";
+            public const string UseAbbreviatedAttributeName = "UseAbbreviatedAttributeName";
         }
 
         private static class AttributeDefaultLava
@@ -1688,6 +1694,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 hideAttributeValues();
                 var existingFilters = new HashSet<string>();
+                var UseAbbreviatedName = GetAttributeValue( AttributeKey.UseAbbreviatedAttributeName ).AsBoolean();
                 foreach ( var attribute in AttributeFilters )
                 {
                     var filterId = $"filter_{attribute.Key}_{attribute.FieldType.Id}";
@@ -1712,7 +1719,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             ctrl.Attributes.Add( "data-placeholder", $"Select {attribute.Name}" );
                         }
 
-                        AddFilterControl( control, attribute.Name, attribute.Description, attribute.Guid.ToString() );
+                        AddFilterControl( control, ( UseAbbreviatedName ) ? attribute.AbbreviatedName : attribute.Name, attribute.Description, attribute.Guid.ToString() );
                     }
                 }
             }
