@@ -1597,7 +1597,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     EditedByPersonAliasId = CurrentPersonAliasId,
                     EditedDateTime = RockDateTime.Now,
                     NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl(),
-                    Caption = !countsForTouch ? "Action" : string.Empty
+                    Caption = !countsForTouch ? $"Action - {CurrentPerson.FullName}" : string.Empty
                 };
                 if ( noteType.RequiresApprovals )
                 {
