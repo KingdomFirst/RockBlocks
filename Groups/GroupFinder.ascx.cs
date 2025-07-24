@@ -1694,7 +1694,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 hideAttributeValues();
                 var existingFilters = new HashSet<string>();
-                var UseAbbreviatedName = GetAttributeValue( AttributeKey.UseAbbreviatedAttributeName ).AsBoolean();
+                var useAbbreviatedName = GetAttributeValue( AttributeKey.UseAbbreviatedAttributeName ).AsBoolean();
                 foreach ( var attribute in AttributeFilters )
                 {
                     var filterId = $"filter_{attribute.Key}_{attribute.FieldType.Id}";
@@ -1719,7 +1719,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             ctrl.Attributes.Add( "data-placeholder", $"Select {attribute.Name}" );
                         }
 
-                        AddFilterControl( control, ( UseAbbreviatedName ) ? attribute.AbbreviatedName : attribute.Name, attribute.Description, attribute.Guid.ToString() );
+                        AddFilterControl( control, ( useAbbreviatedName ) ? attribute.AbbreviatedName : attribute.Name, attribute.Description, attribute.Guid.ToString() );
                     }
                 }
             }
