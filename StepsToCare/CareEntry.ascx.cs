@@ -683,7 +683,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             }
                             careNeed.ChildNeeds.Add( copyNeed );
                             changes.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, $"Child Care Need for {fm.Person.FullName}" );
-                            fmChangesLists.TryAdd( fm.Person.PrimaryAliasId, fmChanges );
+                            fmChangesLists.AddOrIgnore( fm.Person.PrimaryAliasId, fmChanges );
                         }
                         childNeedsCreated = true;
                     }
