@@ -742,11 +742,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         string message = "There was an error sending your batch to Intacct. This is either an issue with your credentials or malformed data. Please check your settings and try again.";
                         if ( logResponse )
                         {
-                            message += "<br /><br />If the issue is data related the response from Intacct has been logged to the batch Audit Log.";
+                            message += "<br /><br />If the issue is data-related, the response from Intacct has been logged to the batch Audit Log.";
                         }
                         else
                         {
-                            message += "<br /><br />If the issue is data related enable the 'Log Response' setting and try again to see the response from Intacct.";
+                            message += "<br /><br />If the issue is data-related, enable the 'Log Response' setting and try again to see the response from Intacct.";
                         }
                         maWarningDialog.Show( message, ModalAlertType.Warning );
                         return;
