@@ -384,7 +384,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         {
             var checkinFilterId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_FILTER ).Id;
             var areas = new GroupTypeService( _rockContext )
-                .GetAllAssociatedDescendentsOrdered( CheckInConfigurationTypeId.AsInteger() )
+                .GetCheckinAreaDescendantsOrdered( CheckInConfigurationTypeId.AsInteger() )
                 .Where( t => !t.GroupTypePurposeValueId.HasValue || ( t.GroupTypePurposeValueId.HasValue && t.GroupTypePurposeValueId != checkinFilterId ) )
                 .Distinct()
                 .OrderBy( a => a.Order )
@@ -404,7 +404,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
         {
             if ( args.Item.ItemType == ListItemType.Item || args.Item.ItemType == ListItemType.AlternatingItem )
             {
-                GroupType area = ( GroupType ) args.Item.DataItem;
+                GroupTypeCache area = ( GroupTypeCache ) args.Item.DataItem;
                 RockCheckBoxList rockCheckBoxList = ( RockCheckBoxList ) args.Item.FindControl( "cblGroups" );
                 rockCheckBoxList.DataSource = LoadCheckInGroupsCheckBoxes( area.Id );
                 rockCheckBoxList.DataTextField = "Value";
@@ -463,7 +463,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
                     // get the group types
                     var checkinFilterId = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUPTYPE_PURPOSE_CHECKIN_FILTER ).Id;
                     var groupTypeIds = new GroupTypeService( _rockContext )
-                        .GetAllAssociatedDescendentsOrdered( checkinAreaTypeId )
+                        .GetCheckinAreaDescendantsOrdered( checkinAreaTypeId )
                         .Where( t => !t.GroupTypePurposeValueId.HasValue || ( t.GroupTypePurposeValueId.HasValue && t.GroupTypePurposeValueId != checkinFilterId ) )
                         .Distinct()
                         .Select( t => t.Id )
