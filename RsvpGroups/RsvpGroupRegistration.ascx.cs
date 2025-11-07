@@ -20,6 +20,7 @@
 //
 // Modification (including but not limited to):
 // * Modified the GroupRegistration block for use with RSVP Groups
+// * Added support for Group Member Attributes
 // </notice>
 //
 using System;
