@@ -34,6 +34,7 @@
                     </asp:Panel>
                     <Rock:EmailBox ID="tbEmail" runat="server" Label="Email"></Rock:EmailBox>
                     <Rock:AddressControl ID="acAddress" runat="server" />
+                    <Rock:AttributeValuesContainer ID="avcGroupMemberAttributes" runat="server" NumberOfColumns="2" />
                 </asp:Panel>
             </div>
             <div class="text-center">

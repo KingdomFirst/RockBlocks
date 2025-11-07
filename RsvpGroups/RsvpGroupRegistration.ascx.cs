@@ -34,6 +34,7 @@ using Rock.Attribute;
 using Rock.Communication;
 using Rock.Data;
 using Rock.Model;
+using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
@@ -152,6 +153,19 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
         Order = 13,
         Key = AttributeKey.RequiredMobile )]
 
+    [BooleanField( "Show Attributes",
+        Description = "Should group member attributes show on the registration? (Only attributes marked as 'Public' will be shown.)",
+        DefaultBooleanValue = false,
+        Order = 14,
+        Key = AttributeKey.ShowAttributes )]
+
+    [IntegerField( "Attribute Columns",
+        Description = "How many columns should the attribute editor use.",
+        DefaultIntegerValue = 2,
+        IsRequired = true,
+        Order = 15,
+        Key = AttributeKey.AttributeColumns )]
+
     #endregion
 
     public partial class RsvpGroupRegistration : RockBlock
@@ -172,6 +186,8 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
             public const string RegisterButtonAltText = "RegisterButtonAltText";
             public const string RequireEmail = "IsRequireEmail";
             public const string RequiredMobile = "IsRequiredMobile";
+            public const string ShowAttributes = "ShowAttributes";
+            public const string AttributeColumns = "AttributeColumns";
         }
         #region Fields
 
@@ -571,12 +587,16 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 phoneLabel = phoneLabel.Trim().EndsWith( "Phone" ) ? phoneLabel : phoneLabel + " Phone";
                 pnCell.Label = phoneLabel;
 
+                GroupMember groupMember = null;
+
                 if ( CurrentPersonId.HasValue && _autoFill )
                 {
                     var personService = new PersonService( _rockContext );
                     Person person = personService
                         .Queryable( "PhoneNumbers.NumberTypeValue" ).AsNoTracking()
                         .FirstOrDefault( p => p.Id == CurrentPersonId.Value );
+
+                    groupMember = new GroupMemberService( _rockContext ).GetByGroupIdAndPersonId( _group.Id, CurrentPersonId.Value ).FirstOrDefault();
 
                     tbFirstName.Text = CurrentPerson.FirstName;
                     tbLastName.Text = CurrentPerson.LastName;
@@ -610,6 +630,46 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                             acAddress.SetValues( homeAddress );
                         }
                     }
+
+                    if ( groupMember == null )
+                    {
+                        // only create a new one if parent was specified
+                        if ( _group != null )
+                        {
+                            groupMember = new GroupMember { Id = 0 };
+                            groupMember.GroupId = _group.Id;
+                            groupMember.Group = new GroupService( _rockContext ).Get( groupMember.GroupId );
+                            groupMember.GroupRoleId = groupMember.Group.GroupType.DefaultGroupRoleId ?? 0;
+                            groupMember.GroupMemberStatus = GroupMemberStatus.Active;
+                            groupMember.DateTimeAdded = RockDateTime.Now;
+                        }
+                    }
+
+                    if ( GetAttributeValue( AttributeKey.ShowAttributes ).AsBoolean() && groupMember != null )
+                    {
+                        groupMember.LoadAttributes();
+                        avcGroupMemberAttributes.Visible = false;
+                        avcGroupMemberAttributes.NumberOfColumns = GetAttributeValue( AttributeKey.AttributeColumns ).AsIntegerOrNull() ?? 2;
+
+                        List<string> editableGroupMemberAttributes;
+
+                        if ( _group.IsAuthorized( Authorization.ADMINISTRATE, this.CurrentPerson ) )
+                        {
+                            editableGroupMemberAttributes = groupMember.Attributes.Where( a => a.Value.IsPublic ).Select( a => a.Key ).ToList();
+                        }
+                        else
+                        {
+                            editableGroupMemberAttributes = groupMember.Attributes.Where( a => a.Value.IsAuthorized( Authorization.EDIT, this.CurrentPerson ) && a.Value.IsPublic ).Select( a => a.Key ).ToList();
+                        }
+
+                        if ( editableGroupMemberAttributes.Any() )
+                        {
+                            avcGroupMemberAttributes.Visible = true;
+                            avcGroupMemberAttributes.ExcludedAttributes = groupMember.Attributes.Where( a => !editableGroupMemberAttributes.Contains( a.Key ) ).Select( a => a.Value ).ToArray();
+                            avcGroupMemberAttributes.AddEditControls( groupMember );
+                        }
+                    }
+
                 }
             }
 
@@ -671,6 +731,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 if ( groupMember != null )
                 {
                     groupMember.LoadAttributes();
+                    avcGroupMemberAttributes.GetEditValues( groupMember );
                     groupMember.SetAttributeValue( "RSVPCount", numHowMany.Value );
                     groupMember.SaveAttributeValues();
 
