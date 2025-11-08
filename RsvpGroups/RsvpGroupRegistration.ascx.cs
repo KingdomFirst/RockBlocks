@@ -35,7 +35,6 @@ using Rock.Attribute;
 using Rock.Communication;
 using Rock.Data;
 using Rock.Model;
-using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
@@ -652,16 +651,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                         avcGroupMemberAttributes.Visible = false;
                         avcGroupMemberAttributes.NumberOfColumns = GetAttributeValue( AttributeKey.AttributeColumns ).AsIntegerOrNull() ?? 2;
 
-                        List<string> editableGroupMemberAttributes;
-
-                        if ( _group.IsAuthorized( Authorization.ADMINISTRATE, this.CurrentPerson ) )
-                        {
-                            editableGroupMemberAttributes = groupMember.Attributes.Where( a => a.Value.IsPublic ).Select( a => a.Key ).ToList();
-                        }
-                        else
-                        {
-                            editableGroupMemberAttributes = groupMember.Attributes.Where( a => a.Value.IsAuthorized( Authorization.EDIT, this.CurrentPerson ) && a.Value.IsPublic ).Select( a => a.Key ).ToList();
-                        }
+                        List<string> editableGroupMemberAttributes = groupMember.Attributes.Where( a => a.Value.IsPublic ).Select( a => a.Key ).ToList();
 
                         if ( editableGroupMemberAttributes.Any() )
                         {
@@ -670,7 +660,6 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                             avcGroupMemberAttributes.AddEditControls( groupMember );
                         }
                     }
-
                 }
             }
 
