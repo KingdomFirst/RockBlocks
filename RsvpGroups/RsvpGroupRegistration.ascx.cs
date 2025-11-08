@@ -630,35 +630,35 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                             acAddress.SetValues( homeAddress );
                         }
                     }
+                }
 
-                    if ( groupMember == null )
+                if ( groupMember == null )
+                {
+                    // only create a new one if parent was specified
+                    if ( _group != null )
                     {
-                        // only create a new one if parent was specified
-                        if ( _group != null )
-                        {
-                            groupMember = new GroupMember { Id = 0 };
-                            groupMember.GroupId = _group.Id;
-                            groupMember.Group = new GroupService( _rockContext ).Get( groupMember.GroupId );
-                            groupMember.GroupRoleId = groupMember.Group.GroupType.DefaultGroupRoleId ?? 0;
-                            groupMember.GroupMemberStatus = GroupMemberStatus.Active;
-                            groupMember.DateTimeAdded = RockDateTime.Now;
-                        }
+                        groupMember = new GroupMember { Id = 0 };
+                        groupMember.GroupId = _group.Id;
+                        groupMember.Group = new GroupService( _rockContext ).Get( groupMember.GroupId );
+                        groupMember.GroupRoleId = groupMember.Group.GroupType.DefaultGroupRoleId ?? 0;
+                        groupMember.GroupMemberStatus = GroupMemberStatus.Active;
+                        groupMember.DateTimeAdded = RockDateTime.Now;
                     }
+                }
 
-                    if ( GetAttributeValue( AttributeKey.ShowAttributes ).AsBoolean() && groupMember != null )
+                if ( GetAttributeValue( AttributeKey.ShowAttributes ).AsBoolean() && groupMember != null )
+                {
+                    groupMember.LoadAttributes();
+                    avcGroupMemberAttributes.Visible = false;
+                    avcGroupMemberAttributes.NumberOfColumns = GetAttributeValue( AttributeKey.AttributeColumns ).AsIntegerOrNull() ?? 2;
+
+                    List<string> editableGroupMemberAttributes = groupMember.Attributes.Where( a => a.Value.IsPublic ).Select( a => a.Key ).ToList();
+
+                    if ( editableGroupMemberAttributes.Any() )
                     {
-                        groupMember.LoadAttributes();
-                        avcGroupMemberAttributes.Visible = false;
-                        avcGroupMemberAttributes.NumberOfColumns = GetAttributeValue( AttributeKey.AttributeColumns ).AsIntegerOrNull() ?? 2;
-
-                        List<string> editableGroupMemberAttributes = groupMember.Attributes.Where( a => a.Value.IsPublic ).Select( a => a.Key ).ToList();
-
-                        if ( editableGroupMemberAttributes.Any() )
-                        {
-                            avcGroupMemberAttributes.Visible = true;
-                            avcGroupMemberAttributes.ExcludedAttributes = groupMember.Attributes.Where( a => !editableGroupMemberAttributes.Contains( a.Key ) ).Select( a => a.Value ).ToArray();
-                            avcGroupMemberAttributes.AddEditControls( groupMember );
-                        }
+                        avcGroupMemberAttributes.Visible = true;
+                        avcGroupMemberAttributes.ExcludedAttributes = groupMember.Attributes.Where( a => !editableGroupMemberAttributes.Contains( a.Key ) ).Select( a => a.Value ).ToArray();
+                        avcGroupMemberAttributes.AddEditControls( groupMember );
                     }
                 }
             }
