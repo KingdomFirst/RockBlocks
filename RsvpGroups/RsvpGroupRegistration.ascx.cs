@@ -510,6 +510,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 var current = GetCurrentRsvps();
                 var remaining = capacity - current;
                 numHowMany.Maximum = remaining;
+                maxCapacity.Value = remaining.ToString();
 
                 nbCapacity.Title = string.Format( "{0} Full", _group.GroupType.GroupTerm );
 
@@ -518,6 +519,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                     nbCapacity.Text = string.Format( "<p>This {0} has reached its capacity.</p>", _group.GroupType.GroupTerm );
                     nbCapacity.Visible = true;
                     numHowMany.Maximum = 0;
+                    maxCapacity.Value = "0";
                     numHowMany.Value = 0;
                     btnRegister.Enabled = false;
                 }
@@ -660,6 +662,25 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                         avcGroupMemberAttributes.ExcludedAttributes = groupMember.Attributes.Where( a => !editableGroupMemberAttributes.Contains( a.Key ) ).Select( a => a.Value ).ToArray();
                         avcGroupMemberAttributes.AddEditControls( groupMember );
                     }
+
+                    if ( editableGroupMemberAttributes.Contains( "RSVPCount" ) )
+                    {
+                        numHowMany.Visible = false;
+
+                        var rsvpAttribute = groupMember.Attributes.FirstOrDefault( a => a.Key == "RSVPCount" ).Value;
+
+                        if ( rsvpAttribute != null )
+                        {
+                            var rsvpControl = ( NumberBox ) avcGroupMemberAttributes.FindControl( $"attribute_field_{rsvpAttribute.Id}" );
+
+                            if ( rsvpControl != null )
+                            {
+                                rsvpControl.AutoPostBack = true;
+                                rsvpControl.TextChanged -= numHowMany_NumberUpdated;
+                                rsvpControl.TextChanged += numHowMany_NumberUpdated;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -722,7 +743,10 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 {
                     groupMember.LoadAttributes();
                     avcGroupMemberAttributes.GetEditValues( groupMember );
-                    groupMember.SetAttributeValue( "RSVPCount", numHowMany.Value );
+                    if ( avcGroupMemberAttributes.IncludedAttributes.FirstOrDefault( a => a.Key == "RSVPCount" ) != null )
+                    {
+                        groupMember.SetAttributeValue( "RSVPCount", numHowMany.Value );
+                    }
                     groupMember.SaveAttributeValues();
 
                     SendGroupEmail( groupMember );

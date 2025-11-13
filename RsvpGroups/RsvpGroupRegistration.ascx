@@ -40,6 +40,7 @@
             <div class="text-center">
                 <Rock:NotificationBox ID="nbCapacity" runat="server" Visible="false" NotificationBoxType="Warning" />
                 <Rock:NumberUpDown ID="numHowMany" runat="server" CssClass="input-lg" OnNumberUpdated="numHowMany_NumberUpdated" />
+                <asp:HiddenField ID="maxCapacity" runat="server" />
             </div>
 
             <div class="actions">
