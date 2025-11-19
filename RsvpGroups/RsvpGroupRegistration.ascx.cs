@@ -743,7 +743,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 {
                     groupMember.LoadAttributes();
                     avcGroupMemberAttributes.GetEditValues( groupMember );
-                    if ( avcGroupMemberAttributes.IncludedAttributes.FirstOrDefault( a => a.Key == "RSVPCount" ) != null )
+                    if ( numHowMany.Visible )
                     {
                         groupMember.SetAttributeValue( "RSVPCount", numHowMany.Value );
                     }
