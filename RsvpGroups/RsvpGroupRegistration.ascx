@@ -34,11 +34,13 @@
                     </asp:Panel>
                     <Rock:EmailBox ID="tbEmail" runat="server" Label="Email"></Rock:EmailBox>
                     <Rock:AddressControl ID="acAddress" runat="server" />
+                    <Rock:AttributeValuesContainer ID="avcGroupMemberAttributes" runat="server" NumberOfColumns="2" />
                 </asp:Panel>
             </div>
             <div class="text-center">
                 <Rock:NotificationBox ID="nbCapacity" runat="server" Visible="false" NotificationBoxType="Warning" />
                 <Rock:NumberUpDown ID="numHowMany" runat="server" CssClass="input-lg" OnNumberUpdated="numHowMany_NumberUpdated" />
+                <asp:HiddenField ID="maxCapacity" runat="server" Value="0" />
             </div>
 
             <div class="actions">

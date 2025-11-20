@@ -20,6 +20,7 @@
 //
 // Modification (including but not limited to):
 // * Modified the GroupRegistration block for use with RSVP Groups
+// * Added support for Group Member Attributes
 // </notice>
 //
 using System;
@@ -50,31 +51,159 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
 
     #region Block Settings
 
-    [GroupField( "Group", "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).", false, "", "", 0 )]
-    [BooleanField( "Enable Passing Group Id", "If enabled, allows the ability to pass in a group's Id (GroupId=) instead of the Guid.", true, "", 0 )]
-    [CustomRadioListField( "Mode", "The mode to use when displaying registration details.", "Simple^Simple,Full^Full", true, "Simple", "", 1 )]
-    [CustomRadioListField( "Group Member Status", "The group member status to use when adding person to group (default: 'Pending'.)", "2^Pending,1^Active,0^Inactive", true, "2", "", 2 )]
-    [DefinedValueField( "2E6540EA-63F0-40FE-BE50-F2A84735E600", "Connection Status", "The connection status to use for new individuals (default: 'Web Prospect'.)", true, false, "368DD475-242C-49C4-A42C-7278BE690CC2", "", 3 )]
-    [DefinedValueField( "8522BADD-2871-45A5-81DD-C76DA07E2E7E", "Record Status", "The record status to use for new individuals (default: 'Pending'.)", true, false, "283999EC-7346-42E3-B807-BCE9B2BABB49", "", 4 )]
-    [WorkflowTypeField( "Workflow", "An optional workflow to start when registration is created. The GroupMember will set as the workflow 'Entity' when processing is started.", false, false, "", "", 5 )]
-    [CodeEditorField( "Lava Template", "The lava template to use to format the group details.", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, false, @"
-", "", 7 )]
-    [LinkedPage( "Result Page", "An optional page to redirect user to after they have been registered for the group.", false, "", "", 8 )]
-    [CodeEditorField( "Result Lava Template", "The lava template to use to format result message after user has been registered. Will only display if user is not redirected to a Result Page ( previous setting ).", CodeEditorMode.Lava, CodeEditorTheme.Rock, 400, false, @"
-", "", 9 )]
-    [CustomRadioListField( "Auto Fill Form", "If set to FALSE then the form will not load the context of the logged in user (default: 'True'.)", "true^True,false^False", true, "true", "", 10 )]
-    [TextField( "Register Button Alt Text", "Alternate text to use for the Register button (default is 'Register').", false, "", "", 11 )]
-    [BooleanField( "Require Email", "Should email be required for registration?", true, key: REQUIRE_EMAIL_KEY )]
-    [BooleanField( "Require Mobile Phone", "Should mobile phone numbers be required for registration?", false, key: REQUIRE_MOBILE_KEY )]
+    [GroupField( "Group", Description = "Optional group to add person to. If omitted, the group's Guid should be passed via the Query string (GroupGuid=).",
+        IsRequired = false,
+        Order = 0,
+        Key = AttributeKey.Group )]
+
+    [BooleanField( "Enable Passing Group Id",
+        Description = "If enabled, allows the ability to pass in a group's Id (GroupId=) instead of the Guid.",
+        DefaultBooleanValue = true,
+        Order = 1,
+        Key = AttributeKey.EnablePassingGroupId )]
+
+    [CustomRadioListField( "Mode",
+        Description = "The mode to use when displaying registration details.",
+        ListSource = "Simple^Simple,Full^Full",
+        IsRequired = true,
+        DefaultValue = "Simple",
+        Order = 2,
+        Key = AttributeKey.Mode )]
+
+    [CustomRadioListField( "Group Member Status",
+        Description = "The group member status to use when adding person to group (default: 'Pending'.)",
+        ListSource = "2^Pending,1^Active,0^Inactive",
+        IsRequired = true,
+        DefaultValue = "2",
+        Order = 3,
+        Key = AttributeKey.GroupMemberStatus )]
+
+    [DefinedValueField( "Connection Status",
+        Description = "The connection status to use for new individuals (default: 'Web Prospect'.)",
+        DefinedTypeGuid = "2E6540EA-63F0-40FE-BE50-F2A84735E600",
+        IsRequired = true,
+        AllowMultiple = false,
+        DefaultValue = "368DD475-242C-49C4-A42C-7278BE690CC2",
+        Order = 4,
+        Key = AttributeKey.ConnectionStatus )]
+
+    [DefinedValueField( "Record Status",
+        Description = "The record status to use for new individuals (default: 'Pending'.)",
+        DefinedTypeGuid = "8522BADD-2871-45A5-81DD-C76DA07E2E7E",
+        IsRequired = true,
+        AllowMultiple = false,
+        DefaultValue = "283999EC-7346-42E3-B807-BCE9B2BABB49",
+        Order = 5,
+        Key = AttributeKey.RecordStatus )]
+
+    [WorkflowTypeField( "Workflow",
+        Description = "An optional workflow to start when registration is created. The GroupMember will set as the workflow 'Entity' when processing is started.",
+        IsRequired = false,
+        AllowMultiple = false,
+        Order = 6,
+        Key = AttributeKey.Workflow )]
+
+    [CodeEditorField( "Lava Template",
+        Description = "The lava template to use to format the group details.",
+        EditorMode = CodeEditorMode.Lava,
+        EditorTheme = CodeEditorTheme.Rock,
+        EditorHeight = 400,
+        IsRequired = false,
+        Order = 7,
+        Key = AttributeKey.LavaTemplate )]
+
+    [LinkedPage( "Result Page",
+        Description = "An optional page to redirect user to after they have been registered for the group.",
+        IsRequired = false,
+        Order = 8,
+        Key = AttributeKey.ResultPage )]
+
+    [CodeEditorField( "Result Lava Template",
+        Description = "The lava template to use to format result message after user has been registered. Will only display if user is not redirected to a Result Page ( previous setting ).",
+        EditorMode = CodeEditorMode.Lava,
+        EditorTheme = CodeEditorTheme.Rock,
+        EditorHeight = 400,
+        IsRequired = false,
+        Order = 9,
+        Key = AttributeKey.ResultLavaTemplate )]
+
+    [CustomRadioListField( "Auto Fill Form",
+        Description = "If set to FALSE then the form will not load the context of the logged in user (default: 'True'.)",
+        ListSource = "true^True,false^False",
+        IsRequired = true,
+        DefaultValue = "true",
+        Order = 10,
+        Key = AttributeKey.AutoFillForm )]
+
+    [TextField( "Register Button Alt Text",
+        Description = "Alternate text to use for the Register button (default is 'Register').",
+        IsRequired = false,
+        Order = 11,
+        Key = AttributeKey.RegisterButtonAltText )]
+
+    [BooleanField( "Require Email",
+        Description = "Should email be required for registration?",
+        DefaultBooleanValue = true,
+        Order = 12,
+        Key = AttributeKey.RequireEmail )]
+
+    [BooleanField( "Require Mobile Phone",
+        Description = "Should mobile phone numbers be required for registration?",
+        DefaultBooleanValue = false,
+        Order = 13,
+        Key = AttributeKey.RequiredMobile )]
+
+    [BooleanField( "Show Attributes",
+        Description = "Should group member attributes show on the registration? (Only attributes marked as 'Public' will be shown.)",
+        DefaultBooleanValue = false,
+        Order = 14,
+        Key = AttributeKey.ShowAttributes )]
+
+    [IntegerField( "Attribute Columns",
+        Description = "How many columns should the attribute editor use.",
+        DefaultIntegerValue = 2,
+        IsRequired = true,
+        Order = 15,
+        Key = AttributeKey.AttributeColumns )]
+
+    [TextField( "Enable SMS Alt Text",
+        Description = "Alternate text to use for the Enable SMS Checkbox (default is 'Enable SMS').",
+        IsRequired = false,
+        Order = 16,
+        Key = AttributeKey.EnableSMSAltText )]
+
+    [TextField( "RSVP Control Label Text",
+        Description = "Text to use for the default RSVP Number Control (default is no label).",
+        IsRequired = false,
+        Order = 17,
+        Key = AttributeKey.RSVPControlLabelText )]
 
     #endregion
 
     public partial class RsvpGroupRegistration : RockBlock
     {
+        public static class AttributeKey
+        {
+            public const string Group = "Group";
+            public const string EnablePassingGroupId = "EnablePassingGroupId";
+            public const string Mode = "Mode";
+            public const string GroupMemberStatus = "GroupMemberStatus";
+            public const string ConnectionStatus = "ConnectionStatus";
+            public const string RecordStatus = "RecordStatus";
+            public const string Workflow = "Workflow";
+            public const string LavaTemplate = "LavaTemplate";
+            public const string ResultPage = "ResultPage";
+            public const string ResultLavaTemplate = "ResultLavaTemplate";
+            public const string AutoFillForm = "AutoFillForm";
+            public const string RegisterButtonAltText = "RegisterButtonAltText";
+            public const string RequireEmail = "IsRequireEmail";
+            public const string RequiredMobile = "IsRequiredMobile";
+            public const string ShowAttributes = "ShowAttributes";
+            public const string AttributeColumns = "AttributeColumns";
+            public const string EnableSMSAltText = "EnableSMSAltText";
+            public const string RSVPControlLabelText = "RSVPControlLabelText";
+        }
         #region Fields
-
-        private const string REQUIRE_EMAIL_KEY = "IsRequireEmail";
-        private const string REQUIRE_MOBILE_KEY = "IsRequiredMobile";
 
         private RockContext _rockContext = null;
         private string _mode = "Simple";
@@ -318,7 +447,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
 
                 // Check to see if a workflow should be launched for each person
                 WorkflowTypeCache workflowType = null;
-                Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
+                Guid? workflowTypeGuid = GetAttributeValue( AttributeKey.Workflow ).AsGuidOrNull();
                 if ( workflowTypeGuid.HasValue )
                 {
                     workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
@@ -337,7 +466,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 mergeFields.Add( "Group", _group );
                 mergeFields.Add( "GroupMembers", newGroupMembers );
 
-                string template = GetAttributeValue( "ResultLavaTemplate" );
+                string template = GetAttributeValue( AttributeKey.ResultLavaTemplate );
                 lResult.Text = template.ResolveMergeFields( mergeFields );
 
                 // Will only redirect if a value is specifed
@@ -395,6 +524,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 var current = GetCurrentRsvps();
                 var remaining = capacity - current;
                 numHowMany.Maximum = remaining;
+                maxCapacity.Value = remaining.ToString();
 
                 nbCapacity.Title = string.Format( "{0} Full", _group.GroupType.GroupTerm );
 
@@ -403,6 +533,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                     nbCapacity.Text = string.Format( "<p>This {0} has reached its capacity.</p>", _group.GroupType.GroupTerm );
                     nbCapacity.Visible = true;
                     numHowMany.Maximum = 0;
+                    maxCapacity.Value = "0";
                     numHowMany.Value = 0;
                     btnRegister.Enabled = false;
                 }
@@ -458,11 +589,11 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 var mergeFields = new Dictionary<string, object>();
                 mergeFields.Add( "Group", _group );
 
-                string template = GetAttributeValue( "LavaTemplate" );
+                string template = GetAttributeValue( AttributeKey.LavaTemplate );
                 lLavaOverview.Text = template.ResolveMergeFields( mergeFields );
 
-                tbEmail.Required = GetAttributeValue( REQUIRE_EMAIL_KEY ).AsBoolean();
-                pnCell.Required = GetAttributeValue( REQUIRE_MOBILE_KEY ).AsBoolean();
+                tbEmail.Required = GetAttributeValue( AttributeKey.RequireEmail ).AsBoolean();
+                pnCell.Required = GetAttributeValue( AttributeKey.RequiredMobile ).AsBoolean();
 
                 pnlHomePhone.Visible = !IsSimple;
                 pnlCellPhone.Visible = !IsSimple;
@@ -472,12 +603,16 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 phoneLabel = phoneLabel.Trim().EndsWith( "Phone" ) ? phoneLabel : phoneLabel + " Phone";
                 pnCell.Label = phoneLabel;
 
+                GroupMember groupMember = null;
+
                 if ( CurrentPersonId.HasValue && _autoFill )
                 {
                     var personService = new PersonService( _rockContext );
                     Person person = personService
                         .Queryable( "PhoneNumbers.NumberTypeValue" ).AsNoTracking()
                         .FirstOrDefault( p => p.Id == CurrentPersonId.Value );
+
+                    groupMember = new GroupMemberService( _rockContext ).GetByGroupIdAndPersonId( _group.Id, CurrentPersonId.Value ).FirstOrDefault();
 
                     tbFirstName.Text = CurrentPerson.FirstName;
                     tbLastName.Text = CurrentPerson.LastName;
@@ -512,10 +647,59 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                         }
                     }
                 }
+
+                if ( groupMember == null )
+                {
+                    // only create a new one if parent was specified
+                    if ( _group != null )
+                    {
+                        groupMember = new GroupMember { Id = 0 };
+                        groupMember.GroupId = _group.Id;
+                        groupMember.Group = new GroupService( _rockContext ).Get( groupMember.GroupId );
+                        groupMember.GroupRoleId = groupMember.Group.GroupType.DefaultGroupRoleId ?? 0;
+                        groupMember.GroupMemberStatus = GroupMemberStatus.Active;
+                        groupMember.DateTimeAdded = RockDateTime.Now;
+                    }
+                }
+
+                if ( GetAttributeValue( AttributeKey.ShowAttributes ).AsBoolean() && groupMember != null )
+                {
+                    groupMember.LoadAttributes();
+                    avcGroupMemberAttributes.Visible = false;
+                    avcGroupMemberAttributes.NumberOfColumns = GetAttributeValue( AttributeKey.AttributeColumns ).AsIntegerOrNull() ?? 2;
+
+                    List<string> editableGroupMemberAttributes = groupMember.Attributes.Where( a => a.Value.IsPublic ).Select( a => a.Key ).ToList();
+
+                    if ( editableGroupMemberAttributes.Any() )
+                    {
+                        avcGroupMemberAttributes.Visible = true;
+                        avcGroupMemberAttributes.ExcludedAttributes = groupMember.Attributes.Where( a => !editableGroupMemberAttributes.Contains( a.Key ) ).Select( a => a.Value ).ToArray();
+                        avcGroupMemberAttributes.AddEditControls( groupMember );
+                    }
+
+                    if ( editableGroupMemberAttributes.Contains( "RSVPCount" ) )
+                    {
+                        numHowMany.Visible = false;
+
+                        var rsvpAttribute = groupMember.Attributes.FirstOrDefault( a => a.Key == "RSVPCount" ).Value;
+
+                        if ( rsvpAttribute != null )
+                        {
+                            var rsvpControl = ( NumberBox ) avcGroupMemberAttributes.FindControl( $"attribute_field_{rsvpAttribute.Id}" );
+
+                            if ( rsvpControl != null )
+                            {
+                                rsvpControl.AutoPostBack = true;
+                                rsvpControl.TextChanged -= numHowMany_NumberUpdated;
+                                rsvpControl.TextChanged += numHowMany_NumberUpdated;
+                            }
+                        }
+                    }
+                }
             }
 
-            string registerButtonText = GetAttributeValue( "RegisterButtonAltText" );
-            if ( string.IsNullOrWhiteSpace( registerButtonText ) )
+            string registerButtonText = GetAttributeValue( AttributeKey.RegisterButtonAltText );
+            if ( registerButtonText.IsNullOrWhiteSpace() )
             {
                 registerButtonText = "Register";
             }
@@ -524,6 +708,18 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 registerButtonText = "Update";
             }
             btnRegister.Text = registerButtonText;
+
+            string enableSMSText = GetAttributeValue( AttributeKey.EnableSMSAltText );
+            if ( enableSMSText.IsNotNullOrWhiteSpace() )
+            {
+                cbSms.Text = enableSMSText;
+            }
+
+            string RSVPControlLabelText = GetAttributeValue( AttributeKey.RSVPControlLabelText );
+            if ( RSVPControlLabelText.IsNotNullOrWhiteSpace() )
+            {
+                numHowMany.Label = RSVPControlLabelText;
+            }
         }
 
         /// <summary>
@@ -547,14 +743,14 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                     groupMember = new GroupMember();
                     groupMember.PersonId = person.Id;
                     groupMember.GroupRoleId = _defaultGroupRole.Id;
-                    groupMember.GroupMemberStatus = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
+                    groupMember.GroupMemberStatus = ( GroupMemberStatus ) GetAttributeValue( AttributeKey.GroupMemberStatus ).AsInteger();
                     groupMember.GroupId = _group.Id;
                     groupMemberService.Add( groupMember );
                     rockContext.SaveChanges();
                 }
                 else
                 {
-                    GroupMemberStatus status = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
+                    GroupMemberStatus status = ( GroupMemberStatus ) GetAttributeValue( AttributeKey.GroupMemberStatus ).AsInteger();
                     groupMember = _group.Members.Where( m =>
                        m.PersonId == person.Id &&
                        m.GroupRoleId == _defaultGroupRole.Id ).FirstOrDefault();
@@ -572,7 +768,11 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 if ( groupMember != null )
                 {
                     groupMember.LoadAttributes();
-                    groupMember.SetAttributeValue( "RSVPCount", numHowMany.Value );
+                    avcGroupMemberAttributes.GetEditValues( groupMember );
+                    if ( numHowMany.Visible )
+                    {
+                        groupMember.SetAttributeValue( "RSVPCount", numHowMany.Value );
+                    }
                     groupMember.SaveAttributeValues();
 
                     SendGroupEmail( groupMember );
@@ -651,14 +851,14 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
         {
             _rockContext = _rockContext ?? new RockContext();
 
-            _mode = GetAttributeValue( "Mode" );
+            _mode = GetAttributeValue( AttributeKey.Mode );
 
-            _autoFill = GetAttributeValue( "AutoFillForm" ).AsBoolean();
+            _autoFill = GetAttributeValue( AttributeKey.AutoFillForm ).AsBoolean();
 
             var groupService = new GroupService( _rockContext );
             bool groupIsFromQryString = true;
 
-            Guid? groupGuid = GetAttributeValue( "Group" ).AsGuidOrNull();
+            Guid? groupGuid = GetAttributeValue( AttributeKey.Group ).AsGuidOrNull();
             if ( groupGuid.HasValue )
             {
                 _group = groupService.Get( groupGuid.Value );
@@ -674,7 +874,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 }
             }
 
-            if ( _group == null && GetAttributeValue( "EnablePassingGroupId" ).AsBoolean( false ) )
+            if ( _group == null && GetAttributeValue( AttributeKey.EnablePassingGroupId ).AsBoolean( false ) )
             {
                 int? groupId = PageParameter( "GroupId" ).AsIntegerOrNull();
                 if ( groupId.HasValue )
@@ -713,7 +913,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 }
             }
 
-            _dvcConnectionStatus = DefinedValueCache.Get( GetAttributeValue( "ConnectionStatus" ).AsGuid() );
+            _dvcConnectionStatus = DefinedValueCache.Get( GetAttributeValue( AttributeKey.ConnectionStatus ).AsGuid() );
             if ( _dvcConnectionStatus == null )
             {
                 nbNotice.Heading = "Invalid Connection Status";
@@ -721,7 +921,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 return false;
             }
 
-            _dvcRecordStatus = DefinedValueCache.Get( GetAttributeValue( "RecordStatus" ).AsGuid() );
+            _dvcRecordStatus = DefinedValueCache.Get( GetAttributeValue( AttributeKey.RecordStatus ).AsGuid() );
             if ( _dvcRecordStatus == null )
             {
                 nbNotice.Heading = "Invalid Record Status";
