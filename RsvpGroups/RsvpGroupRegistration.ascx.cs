@@ -166,6 +166,18 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
         Order = 15,
         Key = AttributeKey.AttributeColumns )]
 
+    [TextField( "Enable SMS Alt Text",
+        Description = "Alternate text to use for the Enable SMS Checkbox (default is 'Enable SMS').",
+        IsRequired = false,
+        Order = 16,
+        Key = AttributeKey.EnableSMSAltText )]
+
+    [TextField( "RSVP Control Label Text",
+        Description = "Text to use for the default RSVP Number Control (default is no label).",
+        IsRequired = false,
+        Order = 17,
+        Key = AttributeKey.RSVPControlLabelText )]
+
     #endregion
 
     public partial class RsvpGroupRegistration : RockBlock
@@ -188,6 +200,8 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
             public const string RequiredMobile = "IsRequiredMobile";
             public const string ShowAttributes = "ShowAttributes";
             public const string AttributeColumns = "AttributeColumns";
+            public const string EnableSMSAltText = "EnableSMSAltText";
+            public const string RSVPControlLabelText = "RSVPControlLabelText";
         }
         #region Fields
 
@@ -685,7 +699,7 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
             }
 
             string registerButtonText = GetAttributeValue( AttributeKey.RegisterButtonAltText );
-            if ( string.IsNullOrWhiteSpace( registerButtonText ) )
+            if ( registerButtonText.IsNullOrWhiteSpace() )
             {
                 registerButtonText = "Register";
             }
@@ -694,6 +708,18 @@ namespace RockWeb.Plugins.rocks_kfs.RsvpGroups
                 registerButtonText = "Update";
             }
             btnRegister.Text = registerButtonText;
+
+            string enableSMSText = GetAttributeValue( AttributeKey.EnableSMSAltText );
+            if ( enableSMSText.IsNotNullOrWhiteSpace() )
+            {
+                cbSms.Text = enableSMSText;
+            }
+
+            string RSVPControlLabelText = GetAttributeValue( AttributeKey.RSVPControlLabelText );
+            if ( RSVPControlLabelText.IsNotNullOrWhiteSpace() )
+            {
+                numHowMany.Label = RSVPControlLabelText;
+            }
         }
 
         /// <summary>
