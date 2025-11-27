@@ -527,6 +527,16 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.Campus,
         Order = 38 )]
 
+    [CustomDropdownListField(
+        "Require Campus",
+        Key = AttributeKey.Campus,
+        Description = "Should the Campus be required?",
+        ListSource = "No,Required^Yes",
+        Category = AttributeCategory.Campus,
+        IsRequired = false,
+        DefaultValue = "No",
+        Order = 39 )]
+
     [ValueListField(
         name: "Panel Order",
         description: "Set the display order of the panels.",
@@ -613,10 +623,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string FamilyAttributes = "FamilyAttributes";
             public const string PersonAttributesAdults = "PersonAttributesAdults";
             public const string PersonAttributesChildren = "PersonAttributesChildren";
-            public const string CampusSelector = "Campus";
+            public const string CampusSelector = "CampusSelector";
             public const string CampusSelectorLabel = "CampusSelectorLabel";
             public const string CampusTypes = "CampusTypes";
             public const string CampusStatuses = "CampusStatuses";
+            public const string Campus = "Campus";
             public const string PanelOrder = "PanelOrder";
             public const string PersonFieldsOrder = "PersonFieldsOrder";
             public const string ContactFieldsOrder = "ContactFieldsOrder";
