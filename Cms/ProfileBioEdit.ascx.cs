@@ -527,6 +527,16 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.Campus,
         Order = 38 )]
 
+    [CustomDropdownListField(
+        "Require Campus",
+        Key = AttributeKey.Campus,
+        Description = "Should the Campus be required?",
+        ListSource = "No,Required^Yes",
+        Category = AttributeCategory.Campus,
+        IsRequired = false,
+        DefaultValue = "No",
+        Order = 39 )]
+
     [ValueListField(
         name: "Panel Order",
         description: "Set the display order of the panels.",
@@ -613,10 +623,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string FamilyAttributes = "FamilyAttributes";
             public const string PersonAttributesAdults = "PersonAttributesAdults";
             public const string PersonAttributesChildren = "PersonAttributesChildren";
-            public const string CampusSelector = "Campus";
+            public const string CampusSelector = "CampusSelector";
             public const string CampusSelectorLabel = "CampusSelectorLabel";
             public const string CampusTypes = "CampusTypes";
             public const string CampusStatuses = "CampusStatuses";
+            public const string Campus = "Campus";
             public const string PanelOrder = "PanelOrder";
             public const string PersonFieldsOrder = "PersonFieldsOrder";
             public const string ContactFieldsOrder = "ContactFieldsOrder";
@@ -1025,7 +1036,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = ddlGrade.Parent as WebControl;
                             if ( parentControl != null )
                             {
-                                parentControl.CssClass = "col-md-6";
+                                parentControl.CssClass = "col-12 col-xs-12 col-sm-6";
                             }
                         }
                         if ( dvpMaritalStatus != null )
@@ -1067,7 +1078,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = rblEmailPreference.Parent as WebControl;
                             if ( parentControl != null && rblEmailPreference.Visible )
                             {
-                                parentControl.AddCssClass( "col-md-6" );
+                                parentControl.AddCssClass( "col-12 col-xs-12 col-sm-6" );
                             }
                             else if ( parentControl != null )
                             {
@@ -1080,7 +1091,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = rblCommunicationPreference.Parent as WebControl;
                             if ( parentControl != null && rblCommunicationPreference.Visible )
                             {
-                                parentControl.AddCssClass( "col-md-6" );
+                                parentControl.AddCssClass( "col-12 col-xs-12 col-sm-6" );
                             }
                             else if ( parentControl != null )
                             {
@@ -1105,7 +1116,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = dvpMaritalStatus.Parent as WebControl;
                             if ( parentControl != null )
                             {
-                                parentControl.CssClass = "col-md-6";
+                                parentControl.CssClass = "col-12 col-xs-12 col-sm-6";
                             }
                         }
                         if ( avcPersonAttributes != null )
@@ -1138,7 +1149,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = rblEmailPreference.Parent as WebControl;
                             if ( parentControl != null && rblEmailPreference.Visible )
                             {
-                                parentControl.AddCssClass( "col-md-6" );
+                                parentControl.AddCssClass( "col-12 col-xs-12 col-sm-6" );
                             }
                             else if ( parentControl != null )
                             {
@@ -1151,7 +1162,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = rblCommunicationPreference.Parent as WebControl;
                             if ( parentControl != null && rblCommunicationPreference.Visible )
                             {
-                                parentControl.AddCssClass( "col-md-6" );
+                                parentControl.AddCssClass( "col-12 col-xs-12 col-sm-6" );
                             }
                             else if ( parentControl != null )
                             {
@@ -1623,7 +1634,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             actualCtrl.Visible = true;
                         }
 
-                        var personFieldCol = new Panel { CssClass = actualCtrl.Visible ? "col-md-6" : "" };
+                        var personFieldCol = new Panel { CssClass = actualCtrl.Visible ? "col-12 col-xs-12 col-sm-6" : "" };
                         if ( actualCtrl.Visible )
                         {
                             visibleControlCount++;
@@ -1651,7 +1662,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 var parentCtrl = rblRole.Parent as WebControl;
                 if ( parentCtrl != null )
                 {
-                    parentCtrl.RemoveCssClass( "col-md-6" );
+                    parentCtrl.RemoveCssClass( "col-12 col-xs-12 col-sm-6" );
                 }
             }
             if ( pnlFields != null && visibleControlCount < 1 )
@@ -1835,7 +1846,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     var actualWebCtrl = actualCtrl as WebControl;
                     if ( actualCtrl != null && actualCtrl.Visible )
                     {
-                        var fieldCol = new Panel { CssClass = "col-md-6" };
+                        var fieldCol = new Panel { CssClass = "col-12 col-xs-12 col-sm-6" };
 
                         if ( ( actualCtrl != null && actualWebCtrl == null ) || ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) ) )
                         {
