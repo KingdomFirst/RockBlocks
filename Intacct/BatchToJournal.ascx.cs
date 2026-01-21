@@ -79,7 +79,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         "Log Request",
         Description = "Flag indicating if the Intacct Request should be logged to the Exception Log",
         DefaultBooleanValue = false,
-        Order = 3,
+        Order = 4,
         Key = AttributeKey.LogRequest )]
 
     [LavaField(
