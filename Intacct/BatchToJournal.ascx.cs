@@ -75,6 +75,13 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Order = 3,
         Key = AttributeKey.LogResponse )]
 
+    [BooleanField(
+        "Log Request",
+        Description = "Flag indicating if the Intacct Request should be logged to the Exception Log",
+        DefaultBooleanValue = false,
+        Order = 4,
+        Key = AttributeKey.LogRequest )]
+
     [LavaField(
         "Journal Memo Lava",
         Description = "Lava for the journal (or other receipt if configured) memo per line. Default: Batch.Id: Batch.Name",
@@ -199,6 +206,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             public const string ExportMode = "ExportMode";
             public const string UndepositedFundsAccount = "UndepositedFundsAccount";
             public const string AccountGroupingMode = "AccountGroupingMode";
+            public const string LogRequest = "LogRequest";
         }
 
         #endregion Keys
@@ -443,7 +451,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             var postXml = checkingAccountList.GetBankAccountsXML( _intacctAuth, _financialBatch.Id, accountFields );
 
             var endpoint = new IntacctEndpoint();
-            var resultXml = endpoint.PostToIntacct( postXml );
+            var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
+            var resultXml = endpoint.PostToIntacct( postXml, logRequest );
             return endpoint.ParseListCheckingAccountsResponse( resultXml, _financialBatch.Id );
 
         }
@@ -498,8 +507,9 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, _financialBatch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
                 }
 
-                var resultXml = endpoint.PostToIntacct( postXml );
                 var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
+                var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
+                var resultXml = endpoint.PostToIntacct( postXml, logRequest );
                 var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, logResponse );
 
                 if ( success )
