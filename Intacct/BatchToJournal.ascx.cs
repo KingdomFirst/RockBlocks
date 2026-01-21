@@ -509,8 +509,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                 var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
                 var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
-                var resultXml = endpoint.PostToIntacct( postXml, logResponse );
-                var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, logRequest );
+                var resultXml = endpoint.PostToIntacct( postXml, logRequest );
+                var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, logResponse );
 
                 if ( success )
                 {
