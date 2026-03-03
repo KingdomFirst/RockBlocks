@@ -21,7 +21,9 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+
 using Newtonsoft.Json;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -29,6 +31,7 @@ using Rock.Model;
 using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
+
 using rocks.kfs.StepsToCare.Model;
 
 namespace RockWeb.Plugins.rocks_kfs.StepsToCare
@@ -119,7 +122,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             _canAddEditDelete = IsUserAuthorized( Authorization.EDIT );
 
             gList.GridRebind += gList_GridRebind;
-            //gList.RowDataBound += gList_RowDataBound;
+            gList.RowDataBound += gList_RowDataBound;
             gList.DataKeyNames = new string[] { "Id" };
             gList.Actions.ShowAdd = _canAddEditDelete;
             gList.Actions.AddClick += gList_AddClick;
@@ -257,8 +260,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void rFilter_ApplyFilterClick( object sender, EventArgs e )
         {
-            rFilter.SaveUserPreference( UserPreferenceKey.Category, "Category", dvpFilterCategory.SelectedDefinedValueId.ToString() );
-            rFilter.SaveUserPreference( UserPreferenceKey.Campus, "Campus", cpFilterCampus.SelectedCampusId.ToString() );
+            rFilter.SetFilterPreference( UserPreferenceKey.Category, "Category", dvpFilterCategory.SelectedDefinedValueId.ToString() );
+            rFilter.SetFilterPreference( UserPreferenceKey.Campus, "Campus", cpFilterCampus.SelectedCampusId.ToString() );
 
             if ( AvailableAttributes != null )
             {
@@ -270,7 +273,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         try
                         {
                             var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                            rFilter.SaveUserPreference( attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                            rFilter.SetFilterPreference( attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
                         }
                         catch
                         {
@@ -335,6 +338,33 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="System.Web.UI.WebControls.GridViewRowEventArgs"/> instance containing the event data.</param>
         public void gList_RowDataBound( object sender, System.Web.UI.WebControls.GridViewRowEventArgs e )
         {
+            if ( e.Row.RowType == DataControlRowType.DataRow )
+            {
+                CareWorker careWorker = e.Row.DataItem as CareWorker;
+                if ( careWorker.Campuses.IsNotNullOrWhiteSpace() )
+                {
+                    var campusIds = careWorker.Campuses.SplitDelimitedValues( "," ).Select( c => c.AsInteger() ).ToList();
+                    var campuses = new List<string>();
+                    string delimitedCampuses = string.Empty;
+                    foreach ( var campusId in campusIds )
+                    {
+                        var campus = CampusCache.Get( campusId );
+                        if ( campus != null )
+                        {
+                            campuses.Add( campus.Name );
+                        }
+                    }
+                    if ( campuses.Any() )
+                    {
+                        delimitedCampuses = campuses.AsDelimited( ", " );
+                        var lCampus = e.Row.FindControl( "lCampus" ) as Literal;
+                        if ( lCampus != null )
+                        {
+                            lCampus.Text = delimitedCampuses;
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>

@@ -12,13 +12,30 @@
         padding: 0;
     }
 
+    .assigned {
+        background-color: oldlace;
+        /*background-color: var(--color-interface-soft);
+            colors ignored for now due to v16 support that does not have these color variables.
+        */
+    }
+
     .table-striped > tbody > tr.assigned:nth-of-type(odd) {
         background-color: oldlace;
+        /*background-color: color-mix(in srgb, var(--color-interface-soft) 90%, transparent 40%);*/
     }
 
     .table-striped > tbody > tr.assigned:nth-of-type(even) {
         background-color: #fff2da;
+        /*background-color: var(--color-interface-soft);*/
     }
+
+    .table-striped > tbody > tr.assigned > td {
+        color: #2d2e31;
+    }
+
+        .table-striped > tbody > tr.assigned > td:hover {
+            color: #6e7179;
+        }
 
     .care-dashboard .table-responsive {
         overflow-y: auto;
@@ -61,10 +78,12 @@
 
     .table-striped > tbody > tr.assigned.hasParentNeedAssigned:nth-of-type(odd) {
         background-color: oldlace !important;
+        /*background-color: color-mix(in srgb, var(--color-interface-soft) 90%, transparent 40%) !important;*/
     }
 
     .table-striped > tbody > tr.assigned.hasParentNeedAssigned:nth-of-type(even) {
         background-color: #fff2da !important;
+        /*background-color: var(--color-interface-soft) !important;*/
     }
 
     .assigned.hasParentNeed {
@@ -273,18 +292,17 @@
                         sanitize: false,
                         delay: 500,
                         html: true,
-                        content: function ()
-                        {
-                            var dataUrl = Rock.settings.get( 'baseUrl' ) + 'api/People/GetSearchDetails?id=' + $( this ).attr( 'personid' ) + '';
+                        content: function () {
+                            var dataUrl = Rock.settings.get('baseUrl') + 'api/People/GetSearchDetails?id=' + $(this).attr('personid') + '';
 
-                            var result = $.ajax( {
+                            var result = $.ajax({
                                 type: 'GET',
                                 url: dataUrl,
                                 dataType: 'text/html',
                                 async: false
-                            } ).responseText;
+                            }).responseText;
 
-                            return result.replace( /^"/i, '' ).replace( /"$/i, '' ).replace( /\\"/ig, '"' ).replace( /<span class=['"]email['"]>(.*)<\/span>/ig, '<a href="/Communication?person=' + $( this ).attr( 'personid' ) + '" class="email">$1</a>' );
+                            return result.replace(/^"/i, '').replace(/"$/i, '').replace(/\\"/ig, '"').replace(/<span class=['"]email['"]>(.*)<\/span>/ig, '<a href="/Communication?person=' + $(this).attr('personid') + '" class="email">$1</a>');
 
                         }
                     }).on('mouseenter', function () {
@@ -300,8 +318,8 @@
                                 $(_this).popover('hide')
                             }
                         }, 100);
-                    } );
-                    $('.js-person-popover-simple').popover( {
+                    });
+                    $('.js-person-popover-simple').popover({
                         placement: 'right',
                         trigger: 'manual',
                         sanitize: false,
@@ -336,7 +354,7 @@
                             }
                         }, 100);
                     });
-                    $('.fa-flag[data-toggle="tooltip"]').tooltip({html: true, sanitize: false});
+                    $('.fa-flag[data-toggle="tooltip"]').tooltip({ html: true, sanitize: false });
                 }
                 Sys.Application.add_load(initDashboard);
 
@@ -358,8 +376,8 @@
                     <asp:Panel ID="pnlQuickNoteText" runat="server" CssClass="noteentry-control meta-body" Visible="false">
                         <Rock:RockTextBox ID="rtbNote" runat="server" Placeholder="Write an additional note..." Rows="3" TextMode="MultiLine" ValidationGroup="QuickNoteMakeNote"></Rock:RockTextBox>
                         <div class="settings clearfix">
-                            <asp:Checkbox ID="cbAlert" runat="server" Text="Alert" CssClass="js-notealert" />
-                            <asp:Checkbox ID="cbPrivate" runat="server" Text="Private" CssClass="js-noteprivate" />
+                            <asp:CheckBox ID="cbAlert" runat="server" Text="Alert" CssClass="js-notealert" />
+                            <asp:CheckBox ID="cbPrivate" runat="server" Text="Private" CssClass="js-noteprivate" />
                             <Rock:BootstrapButton ID="rbBtnQuickNoteSave" runat="server" DataLoadingText="Saving..." Text="Save Note" CssClass="commands btn btn-primary btn-xs" OnClick="rbBtnQuickNoteSave_Click" ValidationGroup="QuickNoteMakeNote"></Rock:BootstrapButton>
                         </div>
                     </asp:Panel>

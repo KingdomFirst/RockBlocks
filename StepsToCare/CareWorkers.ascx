@@ -28,7 +28,11 @@
                         <Columns>
                             <Rock:PersonField DataField="PersonAlias.Person" SortExpression="PersonAlias.Person.LastName, PersonAlias.Person.NickName, LastName, FirstName" HeaderText="Name"></Rock:PersonField>
                             <Rock:DefinedValueField DataField="CategoryValues" HeaderText="Category"></Rock:DefinedValueField>
-                            <Rock:CampusField DataField="Campuses" HeaderText="Campus" SortExpression="Campuses" />
+                            <Rock:RockTemplateField HeaderText="Campus" SortExpression="Campuses" >
+                                <ItemTemplate>
+                                    <asp:Literal ID="lCampus" runat="server" />
+                                </ItemTemplate>
+                            </Rock:RockTemplateField>
                             <Rock:RockBoundField DataField="AgeRangeMin" HeaderText="Age Min"></Rock:RockBoundField>
                             <Rock:RockBoundField DataField="AgeRangeMax" HeaderText="Age Max"></Rock:RockBoundField>
                             <Rock:RockBoundField DataField="Gender" HeaderText="Gender"></Rock:RockBoundField>

@@ -742,16 +742,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void rFilter_ApplyFilterClick( object sender, EventArgs e )
         {
-            rFilter.SaveUserPreference( UserPreferenceKey.StartDate, "Start Date", drpDate.LowerValue.HasValue ? drpDate.LowerValue.Value.ToString( "o" ) : string.Empty );
-            rFilter.SaveUserPreference( UserPreferenceKey.EndDate, "End Date", drpDate.UpperValue.HasValue ? drpDate.UpperValue.Value.ToString( "o" ) : string.Empty );
-            rFilter.SaveUserPreference( UserPreferenceKey.FirstName, "First Name", tbFirstName.Text );
-            rFilter.SaveUserPreference( UserPreferenceKey.LastName, "Last Name", tbLastName.Text );
-            rFilter.SaveUserPreference( UserPreferenceKey.SubmittedBy, "Submitted By", ddlSubmitter.SelectedItem.Value );
-            rFilter.SaveUserPreference( UserPreferenceKey.Category, "Category", dvpCategory.SelectedValues.AsDelimited( ";" ) );
-            rFilter.SaveUserPreference( UserPreferenceKey.Status, "Status", dvpStatus.SelectedValues.AsDelimited( ";" ) );
-            rFilter.SaveUserPreference( UserPreferenceKey.Campus, "Campus", cpCampus.SelectedCampusId.ToString() );
-            rFilter.SaveUserPreference( UserPreferenceKey.AssignedToMe, "Assigned to Me", cbAssignedToMe.Checked.ToString() );
-            rFilter.SaveUserPreference( UserPreferenceKey.IncludeScheduledNeeds, "Include Scheduled Needs", cbIncludeFutureNeeds.Checked.ToString() );
+            rFilter.SetFilterPreference( UserPreferenceKey.StartDate, "Start Date", drpDate.LowerValue.HasValue ? drpDate.LowerValue.Value.ToString( "o" ) : string.Empty );
+            rFilter.SetFilterPreference( UserPreferenceKey.EndDate, "End Date", drpDate.UpperValue.HasValue ? drpDate.UpperValue.Value.ToString( "o" ) : string.Empty );
+            rFilter.SetFilterPreference( UserPreferenceKey.FirstName, "First Name", tbFirstName.Text );
+            rFilter.SetFilterPreference( UserPreferenceKey.LastName, "Last Name", tbLastName.Text );
+            rFilter.SetFilterPreference( UserPreferenceKey.SubmittedBy, "Submitted By", ddlSubmitter.SelectedItem.Value );
+            rFilter.SetFilterPreference( UserPreferenceKey.Category, "Category", dvpCategory.SelectedValues.AsDelimited( ";" ) );
+            rFilter.SetFilterPreference( UserPreferenceKey.Status, "Status", dvpStatus.SelectedValues.AsDelimited( ";" ) );
+            rFilter.SetFilterPreference( UserPreferenceKey.Campus, "Campus", cpCampus.SelectedCampusId.ToString() );
+            rFilter.SetFilterPreference( UserPreferenceKey.AssignedToMe, "Assigned to Me", cbAssignedToMe.Checked.ToString() );
+            rFilter.SetFilterPreference( UserPreferenceKey.IncludeScheduledNeeds, "Include Scheduled Needs", cbIncludeFutureNeeds.Checked.ToString() );
 
             if ( AvailableAttributes != null )
             {
@@ -763,7 +763,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         try
                         {
                             var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                            rFilter.SaveUserPreference( attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                            rFilter.SetFilterPreference( attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
                         }
                         catch
                         {
@@ -783,14 +783,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void rFollowUpFilter_ApplyFilterClick( object sender, EventArgs e )
         {
-            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.StartDateFollowUp, "Start Date", drpFollowUpDate.LowerValue.HasValue ? drpFollowUpDate.LowerValue.Value.ToString( "o" ) : string.Empty );
-            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.EndDateFollowUp, "End Date", drpFollowUpDate.UpperValue.HasValue ? drpFollowUpDate.UpperValue.Value.ToString( "o" ) : string.Empty );
-            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.FirstNameFollowUp, "First Name", tbFollowUpFirstName.Text );
-            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.LastNameFollowUp, "Last Name", tbFollowUpLastName.Text );
-            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.SubmittedByFollowUp, "Submitted By", ddlFollowUpSubmitter.SelectedItem.Value );
-            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.CategoryFollowUp, "Category", dvpFollowUpCategory.SelectedValues.AsDelimited( ";" ) );
-            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.CampusFollowUp, "Campus", cpFollowUpCampus.SelectedCampusId.ToString() );
-            rFollowUpFilter.SaveUserPreference( UserPreferenceKey.AssignedToMeFollowUp, "Assigned to Me", cbFollowUpAssignedToMe.Checked.ToString() );
+            rFollowUpFilter.SetFilterPreference( UserPreferenceKey.StartDateFollowUp, "Start Date", drpFollowUpDate.LowerValue.HasValue ? drpFollowUpDate.LowerValue.Value.ToString( "o" ) : string.Empty );
+            rFollowUpFilter.SetFilterPreference( UserPreferenceKey.EndDateFollowUp, "End Date", drpFollowUpDate.UpperValue.HasValue ? drpFollowUpDate.UpperValue.Value.ToString( "o" ) : string.Empty );
+            rFollowUpFilter.SetFilterPreference( UserPreferenceKey.FirstNameFollowUp, "First Name", tbFollowUpFirstName.Text );
+            rFollowUpFilter.SetFilterPreference( UserPreferenceKey.LastNameFollowUp, "Last Name", tbFollowUpLastName.Text );
+            rFollowUpFilter.SetFilterPreference( UserPreferenceKey.SubmittedByFollowUp, "Submitted By", ddlFollowUpSubmitter.SelectedItem.Value );
+            rFollowUpFilter.SetFilterPreference( UserPreferenceKey.CategoryFollowUp, "Category", dvpFollowUpCategory.SelectedValues.AsDelimited( ";" ) );
+            rFollowUpFilter.SetFilterPreference( UserPreferenceKey.CampusFollowUp, "Campus", cpFollowUpCampus.SelectedCampusId.ToString() );
+            rFollowUpFilter.SetFilterPreference( UserPreferenceKey.AssignedToMeFollowUp, "Assigned to Me", cbFollowUpAssignedToMe.Checked.ToString() );
 
             if ( AvailableAttributes != null )
             {
@@ -802,7 +802,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         try
                         {
                             var values = attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter );
-                            rFollowUpFilter.SaveUserPreference( "filter_followup_" + attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
+                            rFollowUpFilter.SetFilterPreference( "filter_followup_" + attribute.Key, attribute.Name, attribute.FieldType.Field.GetFilterValues( filterControl, attribute.QualifierValues, Rock.Reporting.FilterMode.SimpleFilter ).ToJson() );
                         }
                         catch
                         {
