@@ -326,7 +326,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         protected void rFilter_ClearFilterClick( object sender, EventArgs e )
         {
-            rFilter.DeleteUserPreferences();
+            rFilter.DeleteFilterPreferences();
             BindFilter();
             BindGrid();
         }
@@ -434,13 +434,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             cpCampus.Campuses = CampusCache.All();
             cpFilterCampus.Campuses = CampusCache.All();
-            cpFilterCampus.SelectedCampusId = rFilter.GetUserPreference( UserPreferenceKey.Campus ).AsInteger();
+            cpFilterCampus.SelectedCampusId = rFilter.GetFilterPreference( UserPreferenceKey.Campus ).AsInteger();
 
             dvpFilterCategory.DefinedTypeId = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) ).Id;
-            string categoryValue = rFilter.GetUserPreference( UserPreferenceKey.Category );
+            string categoryValue = rFilter.GetFilterPreference( UserPreferenceKey.Category );
             if ( !string.IsNullOrWhiteSpace( categoryValue ) )
             {
-                dvpFilterCategory.SetValue( rFilter.GetUserPreference( UserPreferenceKey.Category ) );
+                dvpFilterCategory.SetValue( rFilter.GetFilterPreference( UserPreferenceKey.Category ) );
             }
 
             // set attribute filters
@@ -690,7 +690,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             phAttributeFilters.Controls.Add( wrapper );
                         }
 
-                        string savedValue = rFilter.GetUserPreference( attribute.Key );
+                        string savedValue = rFilter.GetFilterPreference( attribute.Key );
                         if ( !string.IsNullOrWhiteSpace( savedValue ) )
                         {
                             try
@@ -732,8 +732,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
         private void BindFilter()
         {
-            cpFilterCampus.SelectedCampusId = rFilter.GetUserPreference( UserPreferenceKey.Campus ).AsInteger();
-            dvpFilterCategory.SetValue( rFilter.GetUserPreference( UserPreferenceKey.Category ) );
+            cpFilterCampus.SelectedCampusId = rFilter.GetFilterPreference( UserPreferenceKey.Campus ).AsInteger();
+            dvpFilterCategory.SetValue( rFilter.GetFilterPreference( UserPreferenceKey.Category ) );
 
             if ( AvailableAttributes != null )
             {
@@ -742,7 +742,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     var control = phAttributeFilters.FindControl( "filter_" + attribute.Id.ToString() );
                     if ( control != null )
                     {
-                        string savedValue = rFilter.GetUserPreference( attribute.Key );
+                        string savedValue = rFilter.GetFilterPreference( attribute.Key );
                         try
                         {
                             var values = JsonConvert.DeserializeObject<List<string>>( savedValue );

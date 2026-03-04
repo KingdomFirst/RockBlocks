@@ -2181,15 +2181,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             using ( var rockContext = new RockContext() )
             {
-                drpDate.LowerValue = rFilter.GetUserPreference( UserPreferenceKey.StartDate ).AsDateTime();
-                drpDate.UpperValue = rFilter.GetUserPreference( UserPreferenceKey.EndDate ).AsDateTime();
-                drpFollowUpDate.LowerValue = rFollowUpFilter.GetUserPreference( UserPreferenceKey.StartDateFollowUp ).AsDateTime();
-                drpFollowUpDate.UpperValue = rFollowUpFilter.GetUserPreference( UserPreferenceKey.EndDateFollowUp ).AsDateTime();
+                drpDate.LowerValue = rFilter.GetFilterPreference( UserPreferenceKey.StartDate ).AsDateTime();
+                drpDate.UpperValue = rFilter.GetFilterPreference( UserPreferenceKey.EndDate ).AsDateTime();
+                drpFollowUpDate.LowerValue = rFollowUpFilter.GetFilterPreference( UserPreferenceKey.StartDateFollowUp ).AsDateTime();
+                drpFollowUpDate.UpperValue = rFollowUpFilter.GetFilterPreference( UserPreferenceKey.EndDateFollowUp ).AsDateTime();
 
                 cpCampus.Campuses = CampusCache.All();
-                cpCampus.SelectedCampusId = rFilter.GetUserPreference( UserPreferenceKey.Campus ).AsInteger();
+                cpCampus.SelectedCampusId = rFilter.GetFilterPreference( UserPreferenceKey.Campus ).AsInteger();
                 cpFollowUpCampus.Campuses = CampusCache.All();
-                cpFollowUpCampus.SelectedCampusId = rFollowUpFilter.GetUserPreference( UserPreferenceKey.CampusFollowUp ).AsInteger();
+                cpFollowUpCampus.SelectedCampusId = rFollowUpFilter.GetFilterPreference( UserPreferenceKey.CampusFollowUp ).AsInteger();
 
                 // hide the First/Last name filter if this is being used as a Person block
                 tbFirstName.Visible = TargetPerson == null;
@@ -2197,10 +2197,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 tbFollowUpFirstName.Visible = TargetPerson == null;
                 tbFollowUpLastName.Visible = TargetPerson == null;
 
-                tbFirstName.Text = rFilter.GetUserPreference( UserPreferenceKey.FirstName );
-                tbLastName.Text = rFilter.GetUserPreference( UserPreferenceKey.LastName );
-                tbFollowUpFirstName.Text = rFollowUpFilter.GetUserPreference( UserPreferenceKey.FirstNameFollowUp );
-                tbFollowUpLastName.Text = rFollowUpFilter.GetUserPreference( UserPreferenceKey.LastNameFollowUp );
+                tbFirstName.Text = rFilter.GetFilterPreference( UserPreferenceKey.FirstName );
+                tbLastName.Text = rFilter.GetFilterPreference( UserPreferenceKey.LastName );
+                tbFollowUpFirstName.Text = rFollowUpFilter.GetFilterPreference( UserPreferenceKey.FirstNameFollowUp );
+                tbFollowUpLastName.Text = rFollowUpFilter.GetFilterPreference( UserPreferenceKey.LastNameFollowUp );
 
                 var listData = new CareNeedService( rockContext ).Queryable( "PersonAlias,PersonAlias.Person" )
                     .Where( cn => cn.SubmitterAliasId != null )
@@ -2212,18 +2212,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 ddlSubmitter.DataValueField = "PrimaryAliasId";
                 ddlSubmitter.DataBind();
                 ddlSubmitter.Items.Insert( 0, new ListItem() );
-                ddlSubmitter.SetValue( rFilter.GetUserPreference( UserPreferenceKey.SubmittedBy ) );
+                ddlSubmitter.SetValue( rFilter.GetFilterPreference( UserPreferenceKey.SubmittedBy ) );
 
                 ddlFollowUpSubmitter.DataSource = listData;
                 ddlFollowUpSubmitter.DataTextField = "FullName";
                 ddlFollowUpSubmitter.DataValueField = "PrimaryAliasId";
                 ddlFollowUpSubmitter.DataBind();
                 ddlFollowUpSubmitter.Items.Insert( 0, new ListItem() );
-                ddlFollowUpSubmitter.SetValue( rFollowUpFilter.GetUserPreference( UserPreferenceKey.SubmittedByFollowUp ) );
+                ddlFollowUpSubmitter.SetValue( rFollowUpFilter.GetFilterPreference( UserPreferenceKey.SubmittedByFollowUp ) );
 
                 var categoryDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_CATEGORY ) );
                 dvpCategory.DefinedTypeId = categoryDefinedType.Id;
-                string categoryValue = rFilter.GetUserPreference( UserPreferenceKey.Category );
+                string categoryValue = rFilter.GetFilterPreference( UserPreferenceKey.Category );
                 if ( !string.IsNullOrWhiteSpace( categoryValue ) )
                 {
                     dvpCategory.SetValues( categoryValue.Split( ';' ).ToList() );
@@ -2233,7 +2233,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     dvpCategory.ClearSelection();
                 }
                 dvpFollowUpCategory.DefinedTypeId = categoryDefinedType.Id;
-                string categoryValueFollowUp = rFollowUpFilter.GetUserPreference( UserPreferenceKey.CategoryFollowUp );
+                string categoryValueFollowUp = rFollowUpFilter.GetFilterPreference( UserPreferenceKey.CategoryFollowUp );
                 if ( !string.IsNullOrWhiteSpace( categoryValueFollowUp ) )
                 {
                     dvpFollowUpCategory.SetValues( categoryValueFollowUp.Split( ';' ).ToList() );
@@ -2245,16 +2245,16 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 var statusDefinedType = DefinedTypeCache.Get( new Guid( rocks.kfs.StepsToCare.SystemGuid.DefinedType.CARE_NEED_STATUS ) );
                 dvpStatus.DefinedTypeId = statusDefinedType.Id;
-                var statusValue = rFilter.GetUserPreference( UserPreferenceKey.Status );
+                var statusValue = rFilter.GetFilterPreference( UserPreferenceKey.Status );
                 if ( string.IsNullOrWhiteSpace( statusValue ) && TargetPerson == null )
                 {
                     statusValue = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_OPEN.AsGuid() ).Id.ToString();
                 }
                 dvpStatus.SetValues( statusValue.Split( ';' ).ToList() );
 
-                cbAssignedToMe.Checked = rFilter.GetUserPreference( UserPreferenceKey.AssignedToMe ).AsBoolean();
-                cbIncludeFutureNeeds.Checked = rFilter.GetUserPreference( UserPreferenceKey.IncludeScheduledNeeds ).AsBoolean();
-                var followUpAssignedToMe = rFollowUpFilter.GetUserPreference( UserPreferenceKey.AssignedToMeFollowUp );
+                cbAssignedToMe.Checked = rFilter.GetFilterPreference( UserPreferenceKey.AssignedToMe ).AsBoolean();
+                cbIncludeFutureNeeds.Checked = rFilter.GetFilterPreference( UserPreferenceKey.IncludeScheduledNeeds ).AsBoolean();
+                var followUpAssignedToMe = rFollowUpFilter.GetFilterPreference( UserPreferenceKey.AssignedToMeFollowUp );
                 if ( !string.IsNullOrWhiteSpace( followUpAssignedToMe ) )
                 {
                     cbFollowUpAssignedToMe.Checked = followUpAssignedToMe.AsBoolean();
@@ -2314,7 +2314,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             phAttributeFilters.Controls.Add( wrapper );
                         }
 
-                        string savedValue = rFilter.GetUserPreference( attribute.Key );
+                        string savedValue = rFilter.GetFilterPreference( attribute.Key );
                         if ( !string.IsNullOrWhiteSpace( savedValue ) )
                         {
                             try
@@ -2346,7 +2346,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             phFollowUpAttributeFilters.Controls.Add( wrapper );
                         }
 
-                        string savedValue = rFilter.GetUserPreference( "filter_followup_" + attribute.Key );
+                        string savedValue = rFilter.GetFilterPreference( "filter_followup_" + attribute.Key );
                         if ( !string.IsNullOrWhiteSpace( savedValue ) )
                         {
                             try
