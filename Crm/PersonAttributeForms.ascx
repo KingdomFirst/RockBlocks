@@ -38,7 +38,7 @@
     });
 </script>
 
-<asp:UpdatePanel ID="upnlContent" runat="server" ChildrenAsTriggers="false" UpdateMode="Conditional">
+<asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
 
         <asp:HiddenField ID="hfTriggerScroll" runat="server" Value="" />
@@ -50,7 +50,8 @@
         <%-- View Panel --%>
         <asp:Panel ID="pnlView" runat="server" Visible="false">
 
-            <h1><asp:Literal ID="lTitle" runat="server" /></h1>
+            <h1>
+                <asp:Literal ID="lTitle" runat="server" /></h1>
 
             <asp:Panel ID="pnlProgressBar" runat="server">
                 <div class="progress">
@@ -69,6 +70,25 @@
             </asp:Panel>
 
             <asp:PlaceHolder ID="phContent" runat="server" />
+
+            <%-- Electronic Signature UI --%>
+            <asp:Panel ID="pnlElectronicSignature" runat="server" CssClass="js-validation-group" Visible="false">
+
+
+                <%-- Put the signature document html in an Iframe so it doesn't inherit styling from the page --%>
+                <div class="styled-scroll">
+                    <asp:Panel ID="pnlIframeSignatureDocumentHTML" class="signaturedocument-container" runat="server">
+                        <iframe id="iframeSignatureDocumentHTML" name="signature-document-html-iframe" class="signaturedocument-iframe js-signaturedocument-iframe" runat="server" src="javascript: window.frameElement.getAttribute('srcdoc');" style="width: 100%"></iframe>
+                    </asp:Panel>
+                </div>
+                <Rock:ElectronicSignatureControl ID="escElectronicSignatureControl" runat="server" OnCompleteSignatureClicked="btnSignSignature_Click" CssClass="well" />
+
+            </asp:Panel>
+            <script type="text/javascript">
+                function resizeIframe(el) {
+                    el.style.height = el.contentWindow.document.documentElement.scrollHeight + 'px';
+                }
+            </script>
 
             <asp:Literal ID="lFooter" runat="server" />
 
@@ -112,7 +132,40 @@
                                     <div class="col-md-4">
                                         <Rock:PagePicker ID="ppDonePage" runat="server" Label="Done Page"
                                             Help="An optional page to redirect user to after they have finished entering information on all the forms." />
+                                        <Rock:RockDropDownList ID="ddlSignatureDocumentTemplate" runat="server" Label="Signature Document" AutoPostBack="true"
+                                            Help="A document that needs to be signed when this Person Attribute Form is completed." OnSelectedIndexChanged="ddlSignatureDocumentTemplate_SelectedIndexChanged" />
                                     </div>
+                                </div>
+                                <asp:Panel ID="pnlSignatureDocumentFields" runat="server" CssClass="row well" Visible="false">
+                                    <div class="col-xs-12">
+                                        <h3>Signature Document Fields</h3>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <Rock:RockDropDownList ID="ddlSignedBy" runat="server" Label="Signed By"
+                                            Help="The person that signed the document. Current Person and Person being edited may return the same result in most instances.">
+                                            <asp:ListItem Value="Current Person" Text="Current Person" Selected="True" />
+                                            <asp:ListItem Value="Person being edited" Text="Person being edited" />
+                                            <asp:ListItem Value="Specific Person" Text="Specific Person" />
+                                        </Rock:RockDropDownList>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <Rock:RockDropDownList ID="ddlAppliesTo" runat="server" Label="Applies To"
+                                            Help="The person that the document applies to. Current Person and Person being edited may return the same result in most instances.">
+                                            <asp:ListItem Value="Current Person" Text="Current Person" />
+                                            <asp:ListItem Value="Person being edited" Text="Person being edited" Selected="True" />
+                                            <asp:ListItem Value="Specific Person" Text="Specific Person" />
+                                        </Rock:RockDropDownList>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <Rock:RockDropDownList ID="ddlAssignedTo" runat="server" Label="Assigned To"
+                                            Help="The person that the document is assigned to. This is only needed if the signature will be completed via an email.">
+                                            <asp:ListItem Value="Current Person" Text="Current Person" Selected="True" />
+                                            <asp:ListItem Value="Person being edited" Text="Person being edited" />
+                                            <asp:ListItem Value="Specific Person" Text="Specific Person" />
+                                        </Rock:RockDropDownList>
+                                    </div>
+                                </asp:Panel>
+                                <div class="row">
                                     <div class="col-md-12">
                                         <Rock:CodeEditor ID="ceConfirmationText" runat="server" Label="Confirmation Text" EditorMode="Html" EditorTheme="Rock" Height="300"
                                             Help="The message to display after form is completed if Done Page is not set." />

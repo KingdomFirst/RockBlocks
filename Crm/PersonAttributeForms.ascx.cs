@@ -27,19 +27,21 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-
 using Newtonsoft.Json;
 
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
+using Rock.ElectronicSignature;
 using Rock.Field;
 using Rock.Field.Types;
 using Rock.Lava;
 using Rock.Model;
+using Rock.Pdf;
 using Rock.Security;
 using Rock.Web.Cache;
 using Rock.Web.UI;
@@ -78,7 +80,15 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
     [LinkedPage( "Done Page", "The page to redirect to when done.", false, "", "CustomSetting" )]
     [TextField( "Forms", "The forms to show.", false, "", "CustomSetting" )]
     [CodeEditorField( "Confirmation Text", "", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "", "CustomSetting" )]
-
+    [SignatureDocumentTemplateField( "Signature Document Template",
+        Description = "If a signature field is included in the form, this setting determines the template to use when generating the signature document.",
+        Key = "SignatureDocumentTemplate",
+        IsRequired = false,
+        Category = "CustomSetting",
+        ShowTemplatesThatHaveExternalProviders = false )]
+    [CustomDropdownListField( "Signature Document Applies To", "Determines who a signature document should be applied to when a signature field is included in the form. Options are: 'Current Person', 'Person being edited', or 'Specific Person'. If 'Specific Person' is selected, then the Guid of that person should be passed in via the Query string (SignatureAppliesToPersonGuid=).", "Current Person,Person being edited,Specific Person", true, "Person being edited", "CustomSetting" )]
+    [CustomDropdownListField( "Signature Document Assigned To", "Determines who a signature document should be assigned to when a signature field is included in the form. Options are: 'Current Person', 'Person being edited', or 'Specific Person'. If 'Specific Person' is selected, then the Guid of that person should be passed in via the Query string (SignatureAssignedToPersonGuid=).", "Current Person,Person being edited,Specific Person", true, "Current Person", "CustomSetting" )]
+    [CustomDropdownListField( "Signature Document Signed By", "Determines who a signature document should be signed by when a signature field is included in the form. Options are: 'Current Person', 'Person being edited', or 'Specific Person'. If 'Specific Person' is selected, then the Guid of that person should be passed in via the Query string (SignatureSignedByPersonGuid=).", "Current Person,Person being edited,Specific Person", true, "Current Person", "CustomSetting" )]
     #endregion
 
     public partial class PersonAttributeForms : RockBlockCustomSettings
@@ -101,6 +111,15 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         private Dictionary<int, string> AttributeValueState { get; set; }
 
         /// <summary>
+        /// Gets or sets the state of the signature document template.
+        /// </summary>
+        /// <value>
+        /// The state of the signature document template.
+        /// </value>
+        private List<SignatureDocumentTemplate> SignatureDocumentTemplateState { get; set; }
+
+
+        /// <summary>
         /// Gets the settings tool tip.
         /// </summary>
         /// <value>
@@ -121,6 +140,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         {
             get { return ViewState["ProgressBarSteps"] as decimal? ?? 1.0m; }
             set { ViewState["ProgressBarSteps"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the signature document HTML, not including the SignatureData.
+        /// </summary>
+        /// <value>The signature document HTML.</value>
+        public string SignatureDocumentHtml
+        {
+            get { return ViewState["SignatureDocumentHtml"] as string; }
+            set { ViewState["SignatureDocumentHtml"] = value; }
         }
 
         #endregion Properties
@@ -165,6 +194,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             else
             {
                 AttributeValueState = JsonConvert.DeserializeObject<Dictionary<int, string>>( json );
+            }
+
+            json = ViewState["SignatureDocumentTemplateStateJSON"] as string;
+            if ( json.IsNullOrWhiteSpace() )
+            {
+                SignatureDocumentTemplateState = new List<SignatureDocumentTemplate>();
+            }
+            else
+            {
+                SignatureDocumentTemplateState = JsonConvert.DeserializeObject<List<SignatureDocumentTemplate>>( json );
             }
 
             CurrentPageIndex = ViewState["CurrentPageIndex"] as int? ?? 0;
@@ -342,6 +381,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             ViewState["FormState"] = JsonConvert.SerializeObject( FormState, Formatting.None, jsonSetting );
             ViewState["PersonValueState"] = JsonConvert.SerializeObject( PersonValueState, Formatting.None, jsonSetting );
             ViewState["AttributeValueState"] = JsonConvert.SerializeObject( AttributeValueState, Formatting.None, jsonSetting );
+            ViewState["SignatureDocumentTemplateStateJSON"] = JsonConvert.SerializeObject( SignatureDocumentTemplateState, Formatting.None, jsonSetting );
             ViewState["CurrentPageIndex"] = CurrentPageIndex;
             ViewState["Mode"] = _mode;
 
@@ -624,219 +664,19 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                             if ( CurrentPageIndex >= FormState.Count )
                             {
-                                int? connectionRequestId = null;
-                                if ( GetAttributeValue( "AllowConnectionOpportunity" ).AsBoolean() )
+                                if ( GetSelectedTemplate( rockContext ) != null )
                                 {
-                                    var opportunityService = new ConnectionOpportunityService( rockContext );
-                                    var connectionRequestService = new ConnectionRequestService( rockContext );
-
-                                    var personCampus = person.GetCampus();
-                                    if ( personCampus != null )
-                                    {
-                                        campusId = personCampus.Id;
-                                    }
-
-                                    var opportunities = RockPage.PageParameter( "OpportunityId" ).SplitDelimitedValues().AsIntegerList();
-                                    foreach ( var opportunityId in opportunities )
-                                    {
-                                        var opportunity = opportunityService
-                                            .Queryable()
-                                            .Where( o => o.Id == opportunityId )
-                                            .FirstOrDefault();
-
-                                        int defaultStatusId = opportunity.ConnectionType.ConnectionStatuses
-                                            .Where( s => s.IsDefault )
-                                            .Select( s => s.Id )
-                                            .FirstOrDefault();
-
-                                        // If opportunity is valid and has a default status
-                                        if ( opportunity != null && defaultStatusId > 0 )
-                                        {
-                                            var connectionRequest = new ConnectionRequest();
-                                            connectionRequest.PersonAliasId = person.PrimaryAliasId.Value;
-                                            connectionRequest.Comments = string.Empty;
-                                            connectionRequest.ConnectionOpportunityId = opportunity.Id;
-                                            connectionRequest.ConnectionState = ConnectionState.Active;
-                                            connectionRequest.ConnectionStatusId = defaultStatusId;
-                                            connectionRequest.CampusId = campusId;
-                                            connectionRequest.ConnectorPersonAliasId = opportunity.GetDefaultConnectorPersonAliasId( campusId );
-                                            if ( campusId.HasValue &&
-                                                opportunity != null &&
-                                                opportunity.ConnectionOpportunityCampuses != null )
-                                            {
-                                                var campus = opportunity.ConnectionOpportunityCampuses
-                                                    .Where( c => c.CampusId == campusId.Value )
-                                                    .FirstOrDefault();
-                                                if ( campus != null )
-                                                {
-                                                    connectionRequest.ConnectorPersonAliasId = campus.DefaultConnectorPersonAliasId;
-                                                }
-                                            }
-
-                                            if ( !connectionRequest.IsValid )
-                                            {
-                                                // Controls will show warnings
-                                                return;
-                                            }
-
-                                            connectionRequestService.Add( connectionRequest );
-
-                                            rockContext.SaveChanges();
-
-                                            // get id for workflow
-                                            if ( opportunities.Count == 1 )
-                                            {
-                                                connectionRequestId = connectionRequest.Id;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                var urlConnectionRequestId = PageParameter( "ConnectionRequestId" ).AsIntegerOrNull();
-                                if ( urlConnectionRequestId.HasValue && !connectionRequestId.HasValue )
-                                {
-                                    var request = new ConnectionRequestService( rockContext ).Get( urlConnectionRequestId.Value );
-
-                                    if ( request != null )
-                                    {
-                                        connectionRequestId = request.Id;
-                                    }
-                                }
-
-                                int? groupMemberId = null;
-                                if ( GetAttributeValue( "AllowGroupMembership" ).AsBoolean() )
-                                {
-                                    Group group = null;
-                                    GroupTypeRole defaultGroupRole = null;
-                                    var groupService = new GroupService( rockContext );
-                                    bool groupIsFromQryString = true;
-
-                                    Guid? groupGuid = GetAttributeValue( "Group" ).AsGuidOrNull();
-                                    if ( groupGuid.HasValue )
-                                    {
-                                        group = groupService.Get( groupGuid.Value );
-                                        groupIsFromQryString = false;
-                                    }
-
-                                    if ( group == null )
-                                    {
-                                        groupGuid = PageParameter( "GroupGuid" ).AsGuidOrNull();
-                                        if ( groupGuid.HasValue )
-                                        {
-                                            group = groupService.Get( groupGuid.Value );
-                                        }
-                                    }
-
-                                    if ( group == null && GetAttributeValue( "EnablePassingGroupId" ).AsBoolean() )
-                                    {
-                                        int? groupId = PageParameter( "GroupId" ).AsIntegerOrNull();
-                                        if ( groupId.HasValue )
-                                        {
-                                            group = groupService.Get( groupId.Value );
-                                        }
-                                    }
-
-                                    if ( group != null )
-                                    {
-                                        var groupTypeGuids = this.GetAttributeValue( "AllowedGroupTypes" ).SplitDelimitedValues().AsGuidList();
-
-                                        if ( groupIsFromQryString && groupTypeGuids.Any() && !groupTypeGuids.Contains( group.GroupType.Guid ) )
-                                        {
-                                            group = null;
-                                        }
-                                        else
-                                        {
-                                            defaultGroupRole = group.GroupType.DefaultGroupRole;
-                                        }
-
-                                        if ( group != null )
-                                        {
-                                            if ( !group.Members
-                                                .Any( m =>
-                                                    m.PersonId == person.Id &&
-                                                    m.GroupRoleId == defaultGroupRole.Id ) )
-                                            {
-                                                var groupMemberService = new GroupMemberService( rockContext );
-                                                var groupMember = new GroupMember();
-                                                groupMember.PersonId = person.Id;
-                                                groupMember.GroupRoleId = defaultGroupRole.Id;
-                                                groupMember.GroupMemberStatus = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
-                                                groupMember.GroupId = group.Id;
-                                                groupMemberService.Add( groupMember );
-                                                rockContext.SaveChanges();
-
-                                                // get id for workflow
-                                                groupMemberId = groupMember.Id;
-                                            }
-                                            else
-                                            {
-                                                groupMemberId = group.Members
-                                                .FirstOrDefault( m =>
-                                                    m.PersonId == person.Id &&
-                                                    m.GroupRoleId == defaultGroupRole.Id )
-                                                .Id;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
-                                if ( workflowTypeGuid.HasValue )
-                                {
-                                    var workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
-                                    if ( workflowType != null && ( workflowType.IsActive ?? true ) )
-                                    {
-                                        try
-                                        {
-                                            var workflowEntity = GetAttributeValue( "WorkflowEntity" );
-
-                                            if ( workflowEntity.Equals( "ConnectionRequest" ) && connectionRequestId.HasValue )
-                                            {
-                                                ConnectionRequest connectionRequest = null;
-                                                connectionRequest = new ConnectionRequestService( rockContext ).Get( connectionRequestId.Value );
-                                                if ( connectionRequest != null )
-                                                {
-                                                    var workflow = Workflow.Activate( workflowType, person.FullName );
-                                                    List<string> workflowErrors;
-                                                    new WorkflowService( rockContext ).Process( workflow, connectionRequest, out workflowErrors );
-                                                }
-                                            }
-                                            else if ( workflowEntity.Equals( "GroupMember" ) && groupMemberId.HasValue )
-                                            {
-                                                GroupMember groupMember = null;
-                                                groupMember = new GroupMemberService( rockContext ).Get( groupMemberId.Value );
-                                                if ( groupMember != null )
-                                                {
-                                                    var workflow = Workflow.Activate( workflowType, person.FullName );
-                                                    List<string> workflowErrors;
-                                                    new WorkflowService( rockContext ).Process( workflow, groupMember, out workflowErrors );
-                                                }
-                                            }
-                                            else
-                                            {
-                                                var workflow = Workflow.Activate( workflowType, person.FullName );
-                                                List<string> workflowErrors;
-                                                new WorkflowService( rockContext ).Process( workflow, person, out workflowErrors );
-                                            }
-                                        }
-                                        catch ( Exception ex )
-                                        {
-                                            ExceptionLogService.LogException( ex, this.Context );
-                                        }
-                                    }
-                                }
-
-                                if ( GetAttributeValue( "DonePage" ).AsGuidOrNull().HasValue )
-                                {
-                                    NavigateToLinkedPage( "DonePage" );
+                                    BuildDigitalSignature( rockContext, person );
                                 }
                                 else
                                 {
-                                    pnlView.Visible = false;
-                                    litConfirmationText.Visible = true;
-                                    litConfirmationText.Text = GetAttributeValue( "ConfirmationText" );
+                                    bool flowControl = RunAfterSaveFunctions( rockContext, person, campusId );
+                                    if ( !flowControl )
+                                    {
+                                        return;
+                                    }
                                 }
-                                upnlContent.Update();
+                                //upnlContent.Update();
                             }
                             else
                             {
@@ -852,6 +692,224 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 ShowPage();
                 hfTriggerScroll.Value = "true";
             }
+        }
+
+        private bool RunAfterSaveFunctions( RockContext rockContext, Person person, int? campusId )
+        {
+            int? connectionRequestId = null;
+            if ( GetAttributeValue( "AllowConnectionOpportunity" ).AsBoolean() )
+            {
+                var opportunityService = new ConnectionOpportunityService( rockContext );
+                var connectionRequestService = new ConnectionRequestService( rockContext );
+
+                var personCampus = person.GetCampus();
+                if ( personCampus != null )
+                {
+                    campusId = personCampus.Id;
+                }
+
+                var opportunities = RockPage.PageParameter( "OpportunityId" ).SplitDelimitedValues().AsIntegerList();
+                foreach ( var opportunityId in opportunities )
+                {
+                    var opportunity = opportunityService
+                        .Queryable()
+                        .Where( o => o.Id == opportunityId )
+                        .FirstOrDefault();
+
+                    int defaultStatusId = opportunity.ConnectionType.ConnectionStatuses
+                        .Where( s => s.IsDefault )
+                        .Select( s => s.Id )
+                        .FirstOrDefault();
+
+                    // If opportunity is valid and has a default status
+                    if ( opportunity != null && defaultStatusId > 0 )
+                    {
+                        var connectionRequest = new ConnectionRequest();
+                        connectionRequest.PersonAliasId = person.PrimaryAliasId.Value;
+                        connectionRequest.Comments = string.Empty;
+                        connectionRequest.ConnectionOpportunityId = opportunity.Id;
+                        connectionRequest.ConnectionState = ConnectionState.Active;
+                        connectionRequest.ConnectionStatusId = defaultStatusId;
+                        connectionRequest.CampusId = campusId;
+                        connectionRequest.ConnectorPersonAliasId = opportunity.GetDefaultConnectorPersonAliasId( campusId );
+                        if ( campusId.HasValue &&
+                            opportunity != null &&
+                            opportunity.ConnectionOpportunityCampuses != null )
+                        {
+                            var campus = opportunity.ConnectionOpportunityCampuses
+                                .Where( c => c.CampusId == campusId.Value )
+                                .FirstOrDefault();
+                            if ( campus != null )
+                            {
+                                connectionRequest.ConnectorPersonAliasId = campus.DefaultConnectorPersonAliasId;
+                            }
+                        }
+
+                        if ( !connectionRequest.IsValid )
+                        {
+                            // Controls will show warnings
+                            return false;
+                        }
+
+                        connectionRequestService.Add( connectionRequest );
+
+                        rockContext.SaveChanges();
+
+                        // get id for workflow
+                        if ( opportunities.Count == 1 )
+                        {
+                            connectionRequestId = connectionRequest.Id;
+                        }
+                    }
+                }
+            }
+
+            var urlConnectionRequestId = PageParameter( "ConnectionRequestId" ).AsIntegerOrNull();
+            if ( urlConnectionRequestId.HasValue && !connectionRequestId.HasValue )
+            {
+                var request = new ConnectionRequestService( rockContext ).Get( urlConnectionRequestId.Value );
+
+                if ( request != null )
+                {
+                    connectionRequestId = request.Id;
+                }
+            }
+
+            int? groupMemberId = null;
+            if ( GetAttributeValue( "AllowGroupMembership" ).AsBoolean() )
+            {
+                Group group = null;
+                GroupTypeRole defaultGroupRole = null;
+                var groupService = new GroupService( rockContext );
+                bool groupIsFromQryString = true;
+
+                Guid? groupGuid = GetAttributeValue( "Group" ).AsGuidOrNull();
+                if ( groupGuid.HasValue )
+                {
+                    group = groupService.Get( groupGuid.Value );
+                    groupIsFromQryString = false;
+                }
+
+                if ( group == null )
+                {
+                    groupGuid = PageParameter( "GroupGuid" ).AsGuidOrNull();
+                    if ( groupGuid.HasValue )
+                    {
+                        group = groupService.Get( groupGuid.Value );
+                    }
+                }
+
+                if ( group == null && GetAttributeValue( "EnablePassingGroupId" ).AsBoolean() )
+                {
+                    int? groupId = PageParameter( "GroupId" ).AsIntegerOrNull();
+                    if ( groupId.HasValue )
+                    {
+                        group = groupService.Get( groupId.Value );
+                    }
+                }
+
+                if ( group != null )
+                {
+                    var groupTypeGuids = this.GetAttributeValue( "AllowedGroupTypes" ).SplitDelimitedValues().AsGuidList();
+
+                    if ( groupIsFromQryString && groupTypeGuids.Any() && !groupTypeGuids.Contains( group.GroupType.Guid ) )
+                    {
+                        group = null;
+                    }
+                    else
+                    {
+                        defaultGroupRole = group.GroupType.DefaultGroupRole;
+                    }
+
+                    if ( group != null )
+                    {
+                        if ( !group.Members
+                            .Any( m =>
+                                m.PersonId == person.Id &&
+                                m.GroupRoleId == defaultGroupRole.Id ) )
+                        {
+                            var groupMemberService = new GroupMemberService( rockContext );
+                            var groupMember = new GroupMember();
+                            groupMember.PersonId = person.Id;
+                            groupMember.GroupRoleId = defaultGroupRole.Id;
+                            groupMember.GroupMemberStatus = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
+                            groupMember.GroupId = group.Id;
+                            groupMemberService.Add( groupMember );
+                            rockContext.SaveChanges();
+
+                            // get id for workflow
+                            groupMemberId = groupMember.Id;
+                        }
+                        else
+                        {
+                            groupMemberId = group.Members
+                            .FirstOrDefault( m =>
+                                m.PersonId == person.Id &&
+                                m.GroupRoleId == defaultGroupRole.Id )
+                            .Id;
+                        }
+                    }
+                }
+            }
+
+            Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
+            if ( workflowTypeGuid.HasValue )
+            {
+                var workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
+                if ( workflowType != null && ( workflowType.IsActive ?? true ) )
+                {
+                    try
+                    {
+                        var workflowEntity = GetAttributeValue( "WorkflowEntity" );
+
+                        if ( workflowEntity.Equals( "ConnectionRequest" ) && connectionRequestId.HasValue )
+                        {
+                            ConnectionRequest connectionRequest = null;
+                            connectionRequest = new ConnectionRequestService( rockContext ).Get( connectionRequestId.Value );
+                            if ( connectionRequest != null )
+                            {
+                                var workflow = Workflow.Activate( workflowType, person.FullName );
+                                List<string> workflowErrors;
+                                new WorkflowService( rockContext ).Process( workflow, connectionRequest, out workflowErrors );
+                            }
+                        }
+                        else if ( workflowEntity.Equals( "GroupMember" ) && groupMemberId.HasValue )
+                        {
+                            GroupMember groupMember = null;
+                            groupMember = new GroupMemberService( rockContext ).Get( groupMemberId.Value );
+                            if ( groupMember != null )
+                            {
+                                var workflow = Workflow.Activate( workflowType, person.FullName );
+                                List<string> workflowErrors;
+                                new WorkflowService( rockContext ).Process( workflow, groupMember, out workflowErrors );
+                            }
+                        }
+                        else
+                        {
+                            var workflow = Workflow.Activate( workflowType, person.FullName );
+                            List<string> workflowErrors;
+                            new WorkflowService( rockContext ).Process( workflow, person, out workflowErrors );
+                        }
+                    }
+                    catch ( Exception ex )
+                    {
+                        ExceptionLogService.LogException( ex, this.Context );
+                    }
+                }
+            }
+
+            if ( GetAttributeValue( "DonePage" ).AsGuidOrNull().HasValue )
+            {
+                NavigateToLinkedPage( "DonePage" );
+            }
+            else
+            {
+                pnlView.Visible = false;
+                litConfirmationText.Visible = true;
+                litConfirmationText.Text = GetAttributeValue( "ConfirmationText" );
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -893,6 +951,11 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             var ppFieldType = new PageReferenceFieldType();
             SetAttributeValue( "DonePage", ppFieldType.GetEditValue( ppDonePage, null ) );
 
+            SetAttributeValue( "SignatureDocumentTemplate", ddlSignatureDocumentTemplate.SelectedValue );
+            SetAttributeValue( "SignatureDocumentSignedBy", ddlSignedBy.SelectedValue );
+            SetAttributeValue( "SignatureDocumentAssignedTo", ddlAssignedTo.SelectedValue );
+            SetAttributeValue( "SignatureDocumentAppliesTo", ddlAppliesTo.SelectedValue );
+
             ParseEditControls();
             var jsonSetting = new JsonSerializerSettings
             {
@@ -912,19 +975,19 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             ShowDetail();
 
-            upnlContent.Update();
+            //upnlContent.Update();
         }
 
         protected void btnCancel_Click( object sender, EventArgs e )
         {
             ShowDetail();
 
-            upnlContent.Update();
+            //upnlContent.Update();
         }
 
         private void ddlCountry_indexChanged( object sender, EventArgs e )
         {
-            upnlContent.Update();
+            //upnlContent.Update();
         }
 
         /// <summary>
@@ -937,6 +1000,20 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             var qs = new Dictionary<string, string>();
             qs.Add( "Person", ddlFamilyMembers.SelectedValueAsGuid().ToString() );
             NavigateToCurrentPageReference( qs );
+        }
+
+        /// <summary>
+        /// Handles the SelectedIndexChanged event of the ddlSignatureDocumentTemplate control.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void ddlSignatureDocumentTemplate_SelectedIndexChanged( object sender, EventArgs e )
+        {
+            var selectedTemplate = GetSelectedTemplate();
+            var isNonLegacySelected = selectedTemplate != null && selectedTemplate.IsLegacy != true;
+            var isLegacySelected = selectedTemplate != null && selectedTemplate.IsLegacy == true;
+
+            pnlSignatureDocumentFields.Visible = selectedTemplate != null;
         }
 
         #region Form Control Events
@@ -1453,6 +1530,10 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 }
 
                 ProgressBarSteps = FormState.Count();
+                if ( GetSelectedTemplate() != null )
+                {
+                    ProgressBarSteps += 1;
+                }
                 CurrentPageIndex = 0;
                 ShowPage();
             }
@@ -1475,14 +1556,15 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             lbPrev.Visible = CurrentPageIndex > 0;
             lbNext.Visible = CurrentPageIndex < FormState.Count;
-            lbNext.Text = CurrentPageIndex < FormState.Count() - 1 ? "Next" : "Finish";
+            lbNext.Text = ( CurrentPageIndex < FormState.Count() - 1 ) || ( GetSelectedTemplate() != null ) ? "Next" : "Finish";
 
-            upnlContent.Update();
+            //upnlContent.Update();
         }
 
         private void BuildViewControls( bool setValues )
         {
             phContent.Controls.Clear();
+            pnlElectronicSignature.Visible = false;
 
             if ( FormState != null )
             {
@@ -1536,7 +1618,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 fieldVisibilityWrapper.EditValueUpdated += ( object sender, FieldVisibilityWrapper.FieldEventArgs args ) =>
                                 {
                                     FieldVisibilityWrapper.ApplyFieldVisibilityRules( phContent );
-                                    upnlContent.Update();
+                                    //upnlContent.Update();
                                 };
 
                                 phContent.Controls.Add( fieldVisibilityWrapper );
@@ -2204,14 +2286,12 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             cbDisplayProgressBar.Checked = GetAttributeValue( "DisplayProgressBar" ).AsBoolean();
             ddlSaveValues.SetValue( GetAttributeValue( "SaveValues" ) );
+            var rockContext = new RockContext();
 
             Guid? wtGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
             if ( wtGuid.HasValue )
             {
-                using ( var rockContext = new RockContext() )
-                {
-                    wtpWorkflow.SetValue( new WorkflowTypeService( rockContext ).Get( wtGuid.Value ) );
-                }
+                wtpWorkflow.SetValue( new WorkflowTypeService( rockContext ).Get( wtGuid.Value ) );
             }
             else
             {
@@ -2221,6 +2301,23 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             var ppFieldType = new PageReferenceFieldType();
             ppFieldType.SetEditValue( ppDonePage, null, GetAttributeValue( "DonePage" ) );
+
+            var selectedSignatureDocument = GetAttributeValue( "SignatureDocumentTemplate" ).AsInteger();
+            ddlSignatureDocumentTemplate.Items.Clear();
+            ddlSignatureDocumentTemplate.Items.Add( new ListItem() );
+
+            SignatureDocumentTemplateState = new SignatureDocumentTemplateService( rockContext ).Queryable().Where( d => d.IsActive || d.Id == selectedSignatureDocument ).AsNoTracking().OrderBy( t => t.Name ).ToList();
+
+            foreach ( var documentType in SignatureDocumentTemplateState )
+            {
+                ddlSignatureDocumentTemplate.Items.Add( new ListItem( documentType.Name, documentType.Id.ToString() ) );
+            }
+            ddlSignatureDocumentTemplate.SetValue( selectedSignatureDocument );
+            pnlSignatureDocumentFields.Visible = selectedSignatureDocument != 0;
+
+            ddlSignedBy.SetValue( GetAttributeValue( "SignatureDocumentSignedBy" ) );
+            ddlAppliesTo.SetValue( GetAttributeValue( "SignatureDocumentAppliesTo" ) );
+            ddlAssignedTo.SetValue( GetAttributeValue( "SignatureDocumentAssignedTo" ) );
 
             string json = GetAttributeValue( "Forms" );
             if ( string.IsNullOrWhiteSpace( json ) )
@@ -2243,7 +2340,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             _mode = "EDIT";
 
-            upnlContent.Update();
+            //upnlContent.Update();
         }
 
         /// <summary>
@@ -2266,7 +2363,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 }
             }
 
-            upnlContent.Update();
+            //upnlContent.Update();
         }
 
         /// <summary>
@@ -2565,7 +2662,297 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             }
         }
 
+        /// <summary>
+        /// Gets the selected template.
+        /// </summary>
+        /// <returns></returns>
+        private SignatureDocumentTemplate GetSelectedTemplate( RockContext rockContext = null )
+        {
+            var selectedId = ddlSignatureDocumentTemplate.SelectedValueAsInt() ?? 0;
+            if ( selectedId == 0 )
+            {
+                selectedId = GetAttributeValue( "SignatureDocumentTemplate" ).AsInteger();
+            }
+            if ( SignatureDocumentTemplateState != null )
+            {
+                return SignatureDocumentTemplateState?.Find( m => m.Id == selectedId );
+            }
+            else
+            {
+                if ( rockContext == null )
+                {
+                    rockContext = new RockContext();
+                }
+                return new SignatureDocumentTemplateService( rockContext ).Get( selectedId );
+            }
+        }
+
         #endregion Edit Mode
+
+        #region ElectronicSignature Related stuff
+
+        /// <summary>
+        /// Builds the digital signature.
+        /// </summary>
+        private void BuildDigitalSignature( RockContext rockContext, Person person )
+        {
+            phContent.Controls.Clear();
+
+            decimal currentStep = CurrentPageIndex + 1;
+            PercentComplete = ( currentStep / ProgressBarSteps ) * 100.0m;
+            pnlProgressBar.Visible = GetAttributeValue( "DisplayProgressBar" ).AsBoolean() && ( FormState.Count > 1 );
+
+            pnlElectronicSignature.Visible = true;
+            lbPrev.Visible = CurrentPageIndex > 0;
+            lbNext.Visible = false;
+
+            var signatureDocumentTemplate = GetSelectedTemplate( rockContext );
+            if ( signatureDocumentTemplate == null )
+            {
+                ShowMessage( NotificationBoxType.Danger, "Configuration Error", "Unable to determine Signature Template." );
+                return;
+            }
+
+            escElectronicSignatureControl.SignatureType = signatureDocumentTemplate.SignatureType;
+            escElectronicSignatureControl.DocumentTerm = signatureDocumentTemplate.DocumentTerm;
+
+            var signedByPersonAliasId = this.CurrentPersonAliasId;
+
+            var signatureDocumentSignedBy = GetAttributeValue( "SignatureDocumentSignedBy" );
+            if ( signatureDocumentSignedBy == "Specific Person" )
+            {
+                var ppSignedByGuid = PageParameter( "SignatureSignedByPersonGuid" )?.AsGuidOrNull();
+                if ( ppSignedByGuid != null )
+                {
+                    signedByPersonAliasId = new PersonAliasService( rockContext ).Get( ppSignedByGuid.Value )?.Id;
+                }
+            }
+            else if ( signatureDocumentSignedBy == "Person being edited" )
+            {
+                signedByPersonAliasId = person.PrimaryAliasId;
+            }
+            if ( signedByPersonAliasId.HasValue )
+            {
+                // Default email to the SignedByPerson's email
+                var signedByPerson = new PersonAliasService( rockContext ).GetPerson( signedByPersonAliasId.Value );
+                escElectronicSignatureControl.SignedByEmail = signedByPerson?.Email;
+
+                // When in Drawn Mode, we want to prefill the 'Confirm' Legal Name. (But not the Signed Name)
+                escElectronicSignatureControl.LegalName = signedByPerson?.FullName;
+            }
+
+            // If not logged-in or the Workflow hasn't specified a SignedByPerson, show the name that was typed when on the Completion step
+            escElectronicSignatureControl.ShowNameOnCompletionStepWhenInTypedSignatureMode = ( signedByPersonAliasId == null );
+
+            escElectronicSignatureControl.EmailAddressPrompt = signatureDocumentTemplate.CompletionSystemCommunicationId.HasValue
+                ? ElectronicSignatureControl.EmailAddressPromptType.CompletionEmail
+                : ElectronicSignatureControl.EmailAddressPromptType.PersonEmail;
+
+            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
+            var lavaTemplate = signatureDocumentTemplate.LavaTemplate;
+            this.SignatureDocumentHtml = lavaTemplate?.ResolveMergeFields( mergeFields );
+            iframeSignatureDocumentHTML.Attributes["srcdoc"] = this.SignatureDocumentHtml;
+            iframeSignatureDocumentHTML.Attributes.Add( "onload", "resizeIframe(this)" );
+            iframeSignatureDocumentHTML.Attributes.Add( "onresize", "resizeIframe(this)" );
+        }
+
+        /// <summary>
+        /// Handles the Click event of the <see cref="ElectronicSignatureControl" />
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected void btnSignSignature_Click( object sender, EventArgs e )
+        {
+
+            var rockContext = new RockContext();
+            var signatureDocumentTemplate = GetSelectedTemplate( rockContext );
+            if ( signatureDocumentTemplate == null )
+            {
+                ShowMessage( NotificationBoxType.Danger, "Configuration Error", "Unable to determine Signature Template." );
+                return;
+            }
+
+            var signedByPersonAliasId = this.CurrentPersonAliasId;
+            var signatureDocumentSignedBy = GetAttributeValue( "SignatureDocumentSignedBy" );
+            if ( signatureDocumentSignedBy == "Specific Person" )
+            {
+                var ppSignedByGuid = PageParameter( "SignatureSignedByPersonGuid" )?.AsGuidOrNull();
+                if ( ppSignedByGuid != null )
+                {
+                    signedByPersonAliasId = new PersonAliasService( rockContext ).Get( ppSignedByGuid.Value )?.Id;
+                }
+            }
+            else if ( signatureDocumentSignedBy == "Person being edited" )
+            {
+                signedByPersonAliasId = _person.PrimaryAliasId;
+            }
+
+            Person signedByPerson;
+            if ( signedByPersonAliasId.HasValue )
+            {
+                signedByPerson = new PersonAliasService( rockContext ).GetPerson( signedByPersonAliasId.Value );
+            }
+            else
+            {
+                signedByPerson = null;
+            }
+
+            var appliesToPersonAliasId = this.CurrentPersonAliasId;
+
+            var signatureDocumentAppliesTo = GetAttributeValue( "SignatureDocumentAppliesTo" );
+            if ( signatureDocumentAppliesTo == "Specific Person" )
+            {
+                var ppAppliesToGuid = PageParameter( "SignatureAppliesToPersonGuid" )?.AsGuidOrNull();
+                if ( ppAppliesToGuid != null )
+                {
+                    appliesToPersonAliasId = new PersonAliasService( rockContext ).Get( ppAppliesToGuid.Value )?.Id;
+                }
+            }
+            else if ( signatureDocumentAppliesTo == "Person being edited" )
+            {
+                appliesToPersonAliasId = _person.PrimaryAliasId;
+            }
+
+            var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
+            mergeFields.Add( "SignatureDocumentTemplate", signatureDocumentTemplate );
+
+            var signatureDocumentName = "Signed Document";
+
+            var assignedToPersonAliasId = this.CurrentPersonAliasId;
+            var signatureDocumentAssignedTo = GetAttributeValue( "SignatureDocumentAssignedTo" );
+            if ( signatureDocumentAssignedTo == "Specific Person" )
+            {
+                var ppAssignedToGuid = PageParameter( "SignatureAssignedToPersonGuid" )?.AsGuidOrNull();
+                if ( ppAssignedToGuid != null )
+                {
+                    assignedToPersonAliasId = new PersonAliasService( rockContext ).Get( ppAssignedToGuid.Value )?.Id;
+                }
+            }
+            else if ( signatureDocumentAssignedTo == "Person being edited" )
+            {
+                assignedToPersonAliasId = _person.PrimaryAliasId;
+            }
+
+            // Glue stuff into the signature document
+            var signatureDocument = new SignatureDocument();
+
+            // From Workflow Action
+            signatureDocument.SignatureDocumentTemplateId = signatureDocumentTemplate.Id;
+            signatureDocument.Status = SignatureDocumentStatus.Signed;
+            signatureDocument.Name = signatureDocumentName;
+            signatureDocument.EntityTypeId = EntityTypeCache.GetId<Person>();
+            signatureDocument.EntityId = _person?.Id;
+            signatureDocument.SignedByPersonAliasId = signedByPersonAliasId;
+            signatureDocument.AssignedToPersonAliasId = assignedToPersonAliasId;
+            signatureDocument.AppliesToPersonAliasId = appliesToPersonAliasId;
+
+            // From Workflow Entry
+            signatureDocument.SignedDocumentText = this.SignatureDocumentHtml;
+            signatureDocument.LastStatusDate = RockDateTime.Now;
+            signatureDocument.SignedDateTime = RockDateTime.Now;
+
+            // From ElectronicSignatureControl
+            signatureDocument.SignatureData = escElectronicSignatureControl.DrawnSignatureImageDataUrl;
+            signatureDocument.SignedName = escElectronicSignatureControl.SignedName;
+            signatureDocument.SignedByEmail = escElectronicSignatureControl.SignedByEmail;
+
+            // From System.Web
+            signatureDocument.SignedClientIp = this.GetClientIpAddress();
+            signatureDocument.SignedClientUserAgent = Request.UserAgent;
+
+            // Needed before determing SignatureInformation (Signed Name, metadata)
+            signatureDocument.SignatureVerificationHash = SignatureDocumentService.CalculateSignatureVerificationHash( signatureDocument );
+
+            var signatureInformationHtmlArgs = new GetSignatureInformationHtmlOptions
+            {
+                SignatureType = signatureDocumentTemplate.SignatureType,
+                SignedName = escElectronicSignatureControl.SignedName,
+                DrawnSignatureDataUrl = escElectronicSignatureControl.DrawnSignatureImageDataUrl,
+                SignedByPerson = signedByPerson,
+                SignedDateTime = signatureDocument.SignedDateTime,
+                SignedClientIp = signatureDocument.SignedClientIp,
+                SignatureVerificationHash = signatureDocument.SignatureVerificationHash
+            };
+
+            // Helper takes care of generating HTML and combining SignatureDocumentHTML and signedSignatureDocumentHtml into the final Signed Document
+            var signatureInformationHtml = ElectronicSignatureHelper.GetSignatureInformationHtml( signatureInformationHtmlArgs );
+            var signedSignatureDocumentHtml = ElectronicSignatureHelper.GetSignedDocumentHtml( this.SignatureDocumentHtml, signatureInformationHtml );
+
+            // PDF Generator to BinaryFile
+            BinaryFile pdfFile;
+            try
+            {
+                using ( var pdfGenerator = new PdfGenerator() )
+                {
+                    var binaryFileTypeId = signatureDocumentTemplate.BinaryFileTypeId;
+                    if ( !binaryFileTypeId.HasValue )
+                    {
+                        binaryFileTypeId = BinaryFileTypeCache.GetId( Rock.SystemGuid.BinaryFiletype.DIGITALLY_SIGNED_DOCUMENTS.AsGuid() );
+                    }
+
+                    pdfFile = pdfGenerator.GetAsBinaryFileFromHtml( binaryFileTypeId ?? 0, signatureDocumentName, signedSignatureDocumentHtml );
+                }
+            }
+            catch ( PdfGeneratorException pdfGeneratorException )
+            {
+                LogException( pdfGeneratorException );
+                ShowMessage( NotificationBoxType.Danger, "Document Error", pdfGeneratorException.Message );
+                return;
+            }
+
+            pdfFile.IsTemporary = false;
+            new BinaryFileService( rockContext ).Add( pdfFile );
+            rockContext.SaveChanges();
+            signatureDocument.BinaryFileId = pdfFile.Id;
+
+            // Save Signature Documen to database
+            var signatureDocumentService = new SignatureDocumentService( rockContext );
+            signatureDocumentService.Add( signatureDocument );
+            rockContext.SaveChanges();
+
+            // reload with new context to get navigation properties to load. This wil be needed to save values back to Workflow Attributes
+            signatureDocument = new SignatureDocumentService( new RockContext() ).Get( signatureDocument.Id );
+
+            // Send Communication
+            if ( signatureDocumentTemplate.CompletionSystemCommunication != null )
+            {
+                ElectronicSignatureHelper.SendSignatureCompletionCommunication( signatureDocument.Id, out _ );
+            }
+
+            // campusId is now not passed in due to this method being fired differently, does that need to be thought through?
+            bool flowControl = RunAfterSaveFunctions( rockContext, _person, 0 );
+            if ( !flowControl )
+            {
+                return;
+            }
+            //upnlContent.Update();
+
+        }
+
+        /// <summary>
+        /// Shows the message.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <param name="title">The title.</param>
+        /// <param name="message">The message.</param>
+        /// <param name="hideForm">if set to <c>true</c> [hide form].</param>
+        private void ShowMessage( NotificationBoxType type, string title, string message, bool hideForm = true )
+        {
+            nbMain.NotificationBoxType = type;
+            nbMain.Title = title;
+            nbMain.Text = message;
+            nbMain.Visible = true;
+            nbMain.Dismissable = false;
+
+            if ( hideForm )
+            {
+                phContent.Visible = false;
+                escElectronicSignatureControl.Visible = false;
+            }
+        }
+
+
+        #endregion Electronic Signature Related stuff
 
         #region Dialog Methods
 
