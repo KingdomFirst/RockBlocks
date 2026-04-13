@@ -109,6 +109,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
         private Dictionary<PersonFieldType, string> PersonValueState { get; set; }
         private Dictionary<int, string> AttributeValueState { get; set; }
+        private SignatureDocumentTemplate _SignatureDocumentTemplate { get; set; }
 
         /// <summary>
         /// Gets or sets the state of the signature document template.
@@ -664,7 +665,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                             if ( CurrentPageIndex >= FormState.Count )
                             {
-                                if ( GetSelectedTemplate( rockContext ) != null )
+                                if ( GetSelectedTemplate( rockContext, person ) != null )
                                 {
                                     BuildDigitalSignature( rockContext, person );
                                 }
@@ -1009,7 +1010,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void ddlSignatureDocumentTemplate_SelectedIndexChanged( object sender, EventArgs e )
         {
-            var selectedTemplate = GetSelectedTemplate();
+            var selectedTemplate = GetSelectedTemplate( checkIfValid: false );
             var isNonLegacySelected = selectedTemplate != null && selectedTemplate.IsLegacy != true;
             var isLegacySelected = selectedTemplate != null && selectedTemplate.IsLegacy == true;
 
@@ -2666,25 +2667,81 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         /// Gets the selected template.
         /// </summary>
         /// <returns></returns>
-        private SignatureDocumentTemplate GetSelectedTemplate( RockContext rockContext = null )
+        private SignatureDocumentTemplate GetSelectedTemplate( RockContext rockContext = null, Person person = null, bool checkIfValid = true )
         {
+            if ( person == null )
+            {
+                person = _person;
+            }
             var selectedId = ddlSignatureDocumentTemplate.SelectedValueAsInt() ?? 0;
             if ( selectedId == 0 )
             {
                 selectedId = GetAttributeValue( "SignatureDocumentTemplate" ).AsInteger();
             }
-            if ( SignatureDocumentTemplateState != null )
+
+            SignatureDocumentTemplate retSignatureDocumentTemplate = _SignatureDocumentTemplate;
+            if ( retSignatureDocumentTemplate == null || _SignatureDocumentTemplate.Id != selectedId )
             {
-                return SignatureDocumentTemplateState?.Find( m => m.Id == selectedId );
+                if ( SignatureDocumentTemplateState != null )
+                {
+                    retSignatureDocumentTemplate = SignatureDocumentTemplateState?.Find( m => m.Id == selectedId );
+                }
+                else
+                {
+                    if ( rockContext == null )
+                    {
+                        rockContext = new RockContext();
+                    }
+                    retSignatureDocumentTemplate = new SignatureDocumentTemplateService( rockContext ).Get( selectedId );
+                }
+                _SignatureDocumentTemplate = retSignatureDocumentTemplate;
+            }
+
+            if ( checkIfValid && checkDocumentValidInFuture( _SignatureDocumentTemplate, person, rockContext ) )
+            {
+                return null;
             }
             else
             {
-                if ( rockContext == null )
-                {
-                    rockContext = new RockContext();
-                }
-                return new SignatureDocumentTemplateService( rockContext ).Get( selectedId );
+                return retSignatureDocumentTemplate;
             }
+        }
+
+        private bool checkDocumentValidInFuture( SignatureDocumentTemplate documentTemplate, Person person, RockContext rockContext = null )
+        {
+            if ( rockContext == null )
+            {
+                rockContext = new RockContext();
+            }
+            if ( documentTemplate.IsValidInFuture && documentTemplate.ValidityDurationInDays.HasValue )
+            {
+                // When thinking about date comparisons, think in terms of extremes:
+                //  - If they signed a document today, and it's only valid for 1 day, it's still valid (at any point) today.
+                //  - If they signed a document (at any point) yesterday or before, and it's only valid for 1 day, it's no longer valid today.
+                // With this in mind, add one day to the specified ValidityDurationInDays before comparing.
+                var earliestSignatureDate = RockDateTime.Today.AddDays( -documentTemplate.ValidityDurationInDays.ToIntSafe() + 1 );
+                var existingSignatureDocument = new SignatureDocumentService( rockContext )
+                .Queryable().AsNoTracking().Where( d =>
+                        (
+                            ( d.AppliesToPersonAlias != null && d.AppliesToPersonAlias.PersonId == person.Id ) ||
+                            ( d.AssignedToPersonAlias != null && d.AssignedToPersonAlias.PersonId == person.Id ) ||
+                            ( d.SignedByPersonAlias != null && d.SignedByPersonAlias.PersonId == person.Id )
+                        ) &&
+                        d.SignatureDocumentTemplateId == documentTemplate.Id &&
+                        d.SignedDateTime >= earliestSignatureDate )
+                    .OrderByDescending( d => d.SignedDateTime )
+                    .Select( d => new
+                    {
+                        d.Guid
+                    } )
+                    .FirstOrDefault();
+
+                if ( existingSignatureDocument != null )
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         #endregion Edit Mode
@@ -2706,7 +2763,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             lbPrev.Visible = CurrentPageIndex > 0;
             lbNext.Visible = false;
 
-            var signatureDocumentTemplate = GetSelectedTemplate( rockContext );
+            var signatureDocumentTemplate = GetSelectedTemplate( rockContext, person );
             if ( signatureDocumentTemplate == null )
             {
                 ShowMessage( NotificationBoxType.Danger, "Configuration Error", "Unable to determine Signature Template." );
