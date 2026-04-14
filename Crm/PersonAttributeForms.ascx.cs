@@ -331,6 +331,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     if ( _mode == "VIEW" )
                     {
                         ParseViewControls();
+
+                        UpdateProgress();
                     }
 
                     if ( _mode == "EDIT" )
@@ -1549,9 +1551,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
         private void ShowPage()
         {
-            decimal currentStep = CurrentPageIndex + 1;
-            PercentComplete = ( currentStep / ProgressBarSteps ) * 100.0m;
-            pnlProgressBar.Visible = GetAttributeValue( "DisplayProgressBar" ).AsBoolean() && ( FormState.Count > 1 );
+            UpdateProgress();
 
             BuildViewControls( true );
 
@@ -2755,9 +2755,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         {
             phContent.Controls.Clear();
 
-            decimal currentStep = CurrentPageIndex + 1;
-            PercentComplete = ( currentStep / ProgressBarSteps ) * 100.0m;
-            pnlProgressBar.Visible = GetAttributeValue( "DisplayProgressBar" ).AsBoolean() && ( FormState.Count > 1 );
+            UpdateProgress();
 
             pnlElectronicSignature.Visible = true;
             lbPrev.Visible = CurrentPageIndex > 0;
@@ -2811,6 +2809,13 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             iframeSignatureDocumentHTML.Attributes["srcdoc"] = this.SignatureDocumentHtml;
             iframeSignatureDocumentHTML.Attributes.Add( "onload", "resizeIframe(this)" );
             iframeSignatureDocumentHTML.Attributes.Add( "onresize", "resizeIframe(this)" );
+        }
+
+        private void UpdateProgress()
+        {
+            decimal currentStep = CurrentPageIndex + 1;
+            PercentComplete = ( currentStep / ProgressBarSteps ) * 100.0m;
+            pnlProgressBar.Visible = GetAttributeValue( "DisplayProgressBar" ).AsBoolean() && ( FormState.Count > 1 );
         }
 
         /// <summary>
