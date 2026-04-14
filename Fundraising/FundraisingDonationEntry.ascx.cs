@@ -166,7 +166,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
             if ( baseGroup != null )
             {
                 groupIds.Add( baseGroup.Id );
-                groupIds.AddRange( service.GetAllDescendents( baseGroup.Id ).Select( g => g.Id ) );
+                groupIds.AddRange( service.GetAllDescendentGroupIds( baseGroup.Id, false ) );
             }
 
             return groupIds;
