@@ -21,7 +21,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using NuGet;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
