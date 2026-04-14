@@ -2713,7 +2713,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             {
                 rockContext = new RockContext();
             }
-            if ( documentTemplate.IsValidInFuture && documentTemplate.ValidityDurationInDays.HasValue )
+            if ( documentTemplate != null && documentTemplate.IsValidInFuture && documentTemplate.ValidityDurationInDays.HasValue )
             {
                 // When thinking about date comparisons, think in terms of extremes:
                 //  - If they signed a document today, and it's only valid for 1 day, it's still valid (at any point) today.
