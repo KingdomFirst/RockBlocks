@@ -47,6 +47,8 @@ using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
+using ConnectionState = Rock.Model.ConnectionState;
+
 namespace RockWeb.Plugins.rocks_kfs.Crm
 {
     /// <summary>
