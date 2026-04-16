@@ -21,12 +21,12 @@
 // Modification (including but not limited to):
 // * This adds ability to include person properties as form fields
 // * Added Conditional Field/Form Field Filter support to person attributes
+// * Added support for signature documents as part of the process
 // </notice>
 //
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
