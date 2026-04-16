@@ -21,7 +21,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using NuGet;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -683,7 +683,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             }
                             careNeed.ChildNeeds.Add( copyNeed );
                             changes.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, $"Child Care Need for {fm.Person.FullName}" );
-                            fmChangesLists.AddOrIgnore( fm.Person.PrimaryAliasId, fmChanges );
+                            fmChangesLists.AddOrReplace( fm.Person.PrimaryAliasId, fmChanges );
                         }
                         childNeedsCreated = true;
                     }
@@ -995,7 +995,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         protected void bddlAddWorker_SelectionChanged( object sender, EventArgs e )
         {
             var selectedVal = bddlAddWorker.SelectedValue.SplitDelimitedValues( "^" );
-            if ( selectedVal.IsNotNull() && selectedVal.Length > 1 && !AssignedPersons.Any( ap => ap.PersonAliasId == selectedVal[0].AsIntegerOrNull() ) )
+            if ( selectedVal != null && selectedVal.Length > 1 && !AssignedPersons.Any( ap => ap.PersonAliasId == selectedVal[0].AsIntegerOrNull() ) )
             {
                 var followUpWorkerAssignment = GetAttributeValue( AttributeKey.FollowUpWorkerAssignment );
                 var addPerson = new AssignedPerson
