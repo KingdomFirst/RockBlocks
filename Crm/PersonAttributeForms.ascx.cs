@@ -2274,6 +2274,13 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             }
         }
 
+        private void UpdateProgress()
+        {
+            decimal currentStep = CurrentPageIndex + 1;
+            PercentComplete = ( currentStep / ProgressBarSteps ) * 100.0m;
+            pnlProgressBar.Visible = GetAttributeValue( "DisplayProgressBar" ).AsBoolean() && ( FormState.Count > 1 );
+        }
+
         #endregion View Mode
 
         #region Edit Mode
@@ -2663,6 +2670,10 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             }
         }
 
+        #endregion Edit Mode
+
+        #region ElectronicSignature Related stuff
+
         /// <summary>
         /// Gets the selected template.
         /// </summary>
@@ -2744,10 +2755,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             return false;
         }
 
-        #endregion Edit Mode
-
-        #region ElectronicSignature Related stuff
-
         /// <summary>
         /// Builds the digital signature.
         /// </summary>
@@ -2809,13 +2816,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             iframeSignatureDocumentHTML.Attributes["srcdoc"] = this.SignatureDocumentHtml;
             iframeSignatureDocumentHTML.Attributes.Add( "onload", "resizeIframe(this)" );
             iframeSignatureDocumentHTML.Attributes.Add( "onresize", "resizeIframe(this)" );
-        }
-
-        private void UpdateProgress()
-        {
-            decimal currentStep = CurrentPageIndex + 1;
-            PercentComplete = ( currentStep / ProgressBarSteps ) * 100.0m;
-            pnlProgressBar.Visible = GetAttributeValue( "DisplayProgressBar" ).AsBoolean() && ( FormState.Count > 1 );
         }
 
         /// <summary>
