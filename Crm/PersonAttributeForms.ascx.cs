@@ -31,6 +31,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+
 using Newtonsoft.Json;
 
 using Rock;
@@ -86,9 +87,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         IsRequired = false,
         Category = "CustomSetting",
         ShowTemplatesThatHaveExternalProviders = false )]
-    [CustomDropdownListField( "Signature Document Applies To", "Determines who a signature document should be applied to when a signature field is included in the form. Options are: 'Current Person', 'Person being edited', or 'Specific Person'. If 'Specific Person' is selected, then the Guid of that person should be passed in via the Query string (SignatureAppliesToPersonGuid=).", "Current Person,Person being edited,Specific Person", true, "Person being edited", "CustomSetting" )]
-    [CustomDropdownListField( "Signature Document Assigned To", "Determines who a signature document should be assigned to when a signature field is included in the form. Options are: 'Current Person', 'Person being edited', or 'Specific Person'. If 'Specific Person' is selected, then the Guid of that person should be passed in via the Query string (SignatureAssignedToPersonGuid=).", "Current Person,Person being edited,Specific Person", true, "Current Person", "CustomSetting" )]
-    [CustomDropdownListField( "Signature Document Signed By", "Determines who a signature document should be signed by when a signature field is included in the form. Options are: 'Current Person', 'Person being edited', or 'Specific Person'. If 'Specific Person' is selected, then the Guid of that person should be passed in via the Query string (SignatureSignedByPersonGuid=).", "Current Person,Person being edited,Specific Person", true, "Current Person", "CustomSetting" )]
+    [BooleanField( "Disable Form for Children", "Should we disable the form if it has a required signature document and the Current Person is a child age classification?", false, "CustomSetting" )]
+    [CodeEditorField( "Disable Form Warning Text", "", CodeEditorMode.Html, CodeEditorTheme.Rock, 200, false, "<p>You are not eligible to fill out this form due to a required signature document and your age classification.</p>", "CustomSetting" )]
     #endregion
 
     public partial class PersonAttributeForms : RockBlockCustomSettings
@@ -955,9 +955,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             SetAttributeValue( "DonePage", ppFieldType.GetEditValue( ppDonePage, null ) );
 
             SetAttributeValue( "SignatureDocumentTemplate", ddlSignatureDocumentTemplate.SelectedValue );
-            SetAttributeValue( "SignatureDocumentSignedBy", ddlSignedBy.SelectedValue );
-            SetAttributeValue( "SignatureDocumentAssignedTo", ddlAssignedTo.SelectedValue );
-            SetAttributeValue( "SignatureDocumentAppliesTo", ddlAppliesTo.SelectedValue );
+            SetAttributeValue( "DisableFormforChildren", cbDisableFormForChildren.Checked.ToString() );
+            SetAttributeValue( "DisableFormWarningText", ceDisableFormWarningText.Text );
 
             ParseEditControls();
             var jsonSetting = new JsonSerializerSettings
@@ -1332,6 +1331,16 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             else
             {
                 FormState = JsonConvert.DeserializeObject<List<AttributeForm>>( json );
+            }
+
+            var disableFormForChildren = GetAttributeValue( "DisableFormforChildren" ).AsBoolean();
+
+            if ( disableFormForChildren && _person != null && GetSelectedTemplate( checkIfValid: false ) != null && _person.AgeClassification == AgeClassification.Child )
+            {
+                var childrenWarningText = GetAttributeValue( "DisableFormWarningText" );
+
+                ShowMessage( NotificationBoxType.Warning, "Form Unavailable", string.IsNullOrWhiteSpace( childrenWarningText ) ? "This form is not available for children." : childrenWarningText, true );
+                return;
             }
 
             if ( FormState.Count > 0 )
@@ -2323,9 +2332,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             ddlSignatureDocumentTemplate.SetValue( selectedSignatureDocument );
             pnlSignatureDocumentFields.Visible = selectedSignatureDocument != 0;
 
-            ddlSignedBy.SetValue( GetAttributeValue( "SignatureDocumentSignedBy" ) );
-            ddlAppliesTo.SetValue( GetAttributeValue( "SignatureDocumentAppliesTo" ) );
-            ddlAssignedTo.SetValue( GetAttributeValue( "SignatureDocumentAssignedTo" ) );
+            cbDisableFormForChildren.Checked = GetAttributeValue( "DisableFormforChildren" ).AsBoolean();
+            ceDisableFormWarningText.Text = GetAttributeValue( "DisableFormWarningText" );
 
             string json = GetAttributeValue( "Forms" );
             if ( string.IsNullOrWhiteSpace( json ) )
@@ -2733,11 +2741,8 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 var earliestSignatureDate = RockDateTime.Today.AddDays( -documentTemplate.ValidityDurationInDays.ToIntSafe() + 1 );
                 var existingSignatureDocument = new SignatureDocumentService( rockContext )
                 .Queryable().AsNoTracking().Where( d =>
-                        (
-                            ( d.AppliesToPersonAlias != null && d.AppliesToPersonAlias.PersonId == person.Id ) ||
-                            ( d.AssignedToPersonAlias != null && d.AssignedToPersonAlias.PersonId == person.Id ) ||
-                            ( d.SignedByPersonAlias != null && d.SignedByPersonAlias.PersonId == person.Id )
-                        ) &&
+                        d.AssignedToPersonAlias != null &&
+                        d.AssignedToPersonAlias.PersonId == person.Id &&
                         d.SignatureDocumentTemplateId == documentTemplate.Id &&
                         d.SignedDateTime >= earliestSignatureDate )
                     .OrderByDescending( d => d.SignedDateTime )
@@ -2779,24 +2784,13 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             escElectronicSignatureControl.DocumentTerm = signatureDocumentTemplate.DocumentTerm;
 
             var signedByPersonAliasId = this.CurrentPersonAliasId;
+            var appliesToPerson = person;
+            Person signedByPerson = null;
 
-            var signatureDocumentSignedBy = GetAttributeValue( "SignatureDocumentSignedBy" );
-            if ( signatureDocumentSignedBy == "Specific Person" )
-            {
-                var ppSignedByGuid = PageParameter( "SignatureSignedByPersonGuid" )?.AsGuidOrNull();
-                if ( ppSignedByGuid != null )
-                {
-                    signedByPersonAliasId = new PersonAliasService( rockContext ).Get( ppSignedByGuid.Value )?.Id;
-                }
-            }
-            else if ( signatureDocumentSignedBy == "Person being edited" )
-            {
-                signedByPersonAliasId = person.PrimaryAliasId;
-            }
             if ( signedByPersonAliasId.HasValue )
             {
                 // Default email to the SignedByPerson's email
-                var signedByPerson = new PersonAliasService( rockContext ).GetPerson( signedByPersonAliasId.Value );
+                signedByPerson = new PersonAliasService( rockContext ).GetPerson( signedByPersonAliasId.Value );
                 escElectronicSignatureControl.SignedByEmail = signedByPerson?.Email;
 
                 // When in Drawn Mode, we want to prefill the 'Confirm' Legal Name. (But not the Signed Name)
@@ -2811,6 +2805,9 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 : ElectronicSignatureControl.EmailAddressPromptType.PersonEmail;
 
             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
+            mergeFields.Add( "SignatureDocumentTemplate", signatureDocumentTemplate );
+            mergeFields.Add( "SignedByPerson", signedByPerson );
+            mergeFields.Add( "AppliesToPerson", appliesToPerson );
             var lavaTemplate = signatureDocumentTemplate.LavaTemplate;
             this.SignatureDocumentHtml = lavaTemplate?.ResolveMergeFields( mergeFields );
             iframeSignatureDocumentHTML.Attributes["srcdoc"] = this.SignatureDocumentHtml;
@@ -2835,19 +2832,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             }
 
             var signedByPersonAliasId = this.CurrentPersonAliasId;
-            var signatureDocumentSignedBy = GetAttributeValue( "SignatureDocumentSignedBy" );
-            if ( signatureDocumentSignedBy == "Specific Person" )
-            {
-                var ppSignedByGuid = PageParameter( "SignatureSignedByPersonGuid" )?.AsGuidOrNull();
-                if ( ppSignedByGuid != null )
-                {
-                    signedByPersonAliasId = new PersonAliasService( rockContext ).Get( ppSignedByGuid.Value )?.Id;
-                }
-            }
-            else if ( signatureDocumentSignedBy == "Person being edited" )
-            {
-                signedByPersonAliasId = _person.PrimaryAliasId;
-            }
 
             Person signedByPerson;
             if ( signedByPersonAliasId.HasValue )
@@ -2859,41 +2843,14 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 signedByPerson = null;
             }
 
-            var appliesToPersonAliasId = this.CurrentPersonAliasId;
-
-            var signatureDocumentAppliesTo = GetAttributeValue( "SignatureDocumentAppliesTo" );
-            if ( signatureDocumentAppliesTo == "Specific Person" )
-            {
-                var ppAppliesToGuid = PageParameter( "SignatureAppliesToPersonGuid" )?.AsGuidOrNull();
-                if ( ppAppliesToGuid != null )
-                {
-                    appliesToPersonAliasId = new PersonAliasService( rockContext ).Get( ppAppliesToGuid.Value )?.Id;
-                }
-            }
-            else if ( signatureDocumentAppliesTo == "Person being edited" )
-            {
-                appliesToPersonAliasId = _person.PrimaryAliasId;
-            }
+            var appliesToPersonAliasId = _person.PrimaryAliasId;
 
             var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
             mergeFields.Add( "SignatureDocumentTemplate", signatureDocumentTemplate );
+            mergeFields.Add( "SignedByPerson", signedByPerson );
+            mergeFields.Add( "AppliesToPerson", _person );
 
             var signatureDocumentName = "Signed Document";
-
-            var assignedToPersonAliasId = this.CurrentPersonAliasId;
-            var signatureDocumentAssignedTo = GetAttributeValue( "SignatureDocumentAssignedTo" );
-            if ( signatureDocumentAssignedTo == "Specific Person" )
-            {
-                var ppAssignedToGuid = PageParameter( "SignatureAssignedToPersonGuid" )?.AsGuidOrNull();
-                if ( ppAssignedToGuid != null )
-                {
-                    assignedToPersonAliasId = new PersonAliasService( rockContext ).Get( ppAssignedToGuid.Value )?.Id;
-                }
-            }
-            else if ( signatureDocumentAssignedTo == "Person being edited" )
-            {
-                assignedToPersonAliasId = _person.PrimaryAliasId;
-            }
 
             // Glue stuff into the signature document
             var signatureDocument = new SignatureDocument();
@@ -2905,7 +2862,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             signatureDocument.EntityTypeId = EntityTypeCache.GetId<Person>();
             signatureDocument.EntityId = _person?.Id;
             signatureDocument.SignedByPersonAliasId = signedByPersonAliasId;
-            signatureDocument.AssignedToPersonAliasId = assignedToPersonAliasId;
+            signatureDocument.AssignedToPersonAliasId = signedByPersonAliasId;
             signatureDocument.AppliesToPersonAliasId = appliesToPersonAliasId;
 
             // From Workflow Entry

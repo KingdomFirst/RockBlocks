@@ -141,28 +141,12 @@
                                         <h3>Signature Document Fields</h3>
                                     </div>
                                     <div class="col-md-4">
-                                        <Rock:RockDropDownList ID="ddlSignedBy" runat="server" Label="Signed By"
-                                            Help="The person that signed the document. Current Person and Person being edited may return the same result in most instances.">
-                                            <asp:ListItem Value="Current Person" Text="Current Person" Selected="True" />
-                                            <asp:ListItem Value="Person being edited" Text="Person being edited" />
-                                            <asp:ListItem Value="Specific Person" Text="Specific Person" />
-                                        </Rock:RockDropDownList>
+                                        <Rock:RockCheckBox ID="cbDisableFormForChildren" runat="server" Label="Disable Form for Children" Text="Yes"
+                                            Help="Should we disable the form if it has a required signature document and the Current Person is a child age classification?" />
                                     </div>
-                                    <div class="col-md-4">
-                                        <Rock:RockDropDownList ID="ddlAppliesTo" runat="server" Label="Applies To"
-                                            Help="The person that the document applies to. Current Person and Person being edited may return the same result in most instances.">
-                                            <asp:ListItem Value="Current Person" Text="Current Person" />
-                                            <asp:ListItem Value="Person being edited" Text="Person being edited" Selected="True" />
-                                            <asp:ListItem Value="Specific Person" Text="Specific Person" />
-                                        </Rock:RockDropDownList>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <Rock:RockDropDownList ID="ddlAssignedTo" runat="server" Label="Assigned To"
-                                            Help="The person that the document is assigned to. This is only needed if the signature will be completed via an email.">
-                                            <asp:ListItem Value="Current Person" Text="Current Person" Selected="True" />
-                                            <asp:ListItem Value="Person being edited" Text="Person being edited" />
-                                            <asp:ListItem Value="Specific Person" Text="Specific Person" />
-                                        </Rock:RockDropDownList>
+                                    <div class="col-md-8">
+                                        <Rock:CodeEditor ID="ceDisableFormWarningText" runat="server" Label="Disable Form Warning Text" EditorMode="Html" EditorTheme="Rock" Height="200"
+                                            Help="The message to display if the form is disabled due to a Signature Document and Age Classification"><p>You are not eligible to fill out this form due to a required signature document and your age classification.</p></Rock:CodeEditor>
                                     </div>
                                 </asp:Panel>
                                 <div class="row">
