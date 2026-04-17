@@ -1012,9 +1012,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         protected void ddlSignatureDocumentTemplate_SelectedIndexChanged( object sender, EventArgs e )
         {
             var selectedTemplate = GetSelectedTemplate( checkIfValid: false );
-            var isNonLegacySelected = selectedTemplate != null && selectedTemplate.IsLegacy != true;
-            var isLegacySelected = selectedTemplate != null && selectedTemplate.IsLegacy == true;
-
             pnlSignatureDocumentFields.Visible = selectedTemplate != null;
         }
 
@@ -2692,11 +2689,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             {
                 person = _person;
             }
-            var selectedId = ddlSignatureDocumentTemplate.SelectedValueAsInt() ?? 0;
-            if ( selectedId == 0 )
-            {
-                selectedId = GetAttributeValue( "SignatureDocumentTemplate" ).AsInteger();
-            }
+            var selectedId = ddlSignatureDocumentTemplate.SelectedValueAsInt() ?? GetAttributeValue( "SignatureDocumentTemplate" ).AsInteger();
 
             SignatureDocumentTemplate retSignatureDocumentTemplate = _SignatureDocumentTemplate;
             if ( retSignatureDocumentTemplate == null || _SignatureDocumentTemplate.Id != selectedId )
@@ -2855,7 +2848,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             // Glue stuff into the signature document
             var signatureDocument = new SignatureDocument();
 
-            // From Workflow Action
             signatureDocument.SignatureDocumentTemplateId = signatureDocumentTemplate.Id;
             signatureDocument.Status = SignatureDocumentStatus.Signed;
             signatureDocument.Name = signatureDocumentName;
@@ -2865,7 +2857,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             signatureDocument.AssignedToPersonAliasId = signedByPersonAliasId;
             signatureDocument.AppliesToPersonAliasId = appliesToPersonAliasId;
 
-            // From Workflow Entry
             signatureDocument.SignedDocumentText = this.SignatureDocumentHtml;
             signatureDocument.LastStatusDate = RockDateTime.Now;
             signatureDocument.SignedDateTime = RockDateTime.Now;
@@ -2924,12 +2915,11 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             rockContext.SaveChanges();
             signatureDocument.BinaryFileId = pdfFile.Id;
 
-            // Save Signature Documen to database
+            // Save Signature Document to database
             var signatureDocumentService = new SignatureDocumentService( rockContext );
             signatureDocumentService.Add( signatureDocument );
             rockContext.SaveChanges();
 
-            // reload with new context to get navigation properties to load. This wil be needed to save values back to Workflow Attributes
             signatureDocument = new SignatureDocumentService( new RockContext() ).Get( signatureDocument.Id );
 
             // Send Communication
@@ -2951,7 +2941,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         /// <summary>
         /// Shows the message.
         /// </summary>
-        /// <param name="type">The type.</param>
+        /// <param name="type">The type of notification box.</param>
         /// <param name="title">The title.</param>
         /// <param name="message">The message.</param>
         /// <param name="hideForm">if set to <c>true</c> [hide form].</param>

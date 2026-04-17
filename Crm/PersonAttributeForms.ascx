@@ -50,8 +50,7 @@
         <%-- View Panel --%>
         <asp:Panel ID="pnlView" runat="server" Visible="false">
 
-            <h1>
-                <asp:Literal ID="lTitle" runat="server" /></h1>
+            <h1><asp:Literal ID="lTitle" runat="server" /></h1>
 
             <asp:Panel ID="pnlProgressBar" runat="server">
                 <div class="progress">
@@ -73,8 +72,6 @@
 
             <%-- Electronic Signature UI --%>
             <asp:Panel ID="pnlElectronicSignature" runat="server" CssClass="js-validation-group" Visible="false">
-
-
                 <%-- Put the signature document html in an Iframe so it doesn't inherit styling from the page --%>
                 <div class="styled-scroll">
                     <asp:Panel ID="pnlIframeSignatureDocumentHTML" class="signaturedocument-container" runat="server">
