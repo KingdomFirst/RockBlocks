@@ -487,452 +487,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             }
         }
 
-        private int? AssignPersonValues( bool saveEachPage, RockContext rockContext, Person person )
-        {
-            var pagePersonFields = new List<PersonFieldType>();
-            if ( saveEachPage && CurrentPageIndex > 0 && CurrentPageIndex <= FormState.Count )
-            {
-                pagePersonFields = FormState[CurrentPageIndex - 1].Fields
-                    .Where( f => f.FieldSource == FormFieldSource.PersonField )
-                    .Select( f => f.PersonFieldType )
-                    .ToList();
-            }
-
-            int? campusId = null;
-            int? locationId = null;
-
-            foreach ( var keyVal in PersonValueState )
-            {
-                if ( CurrentPageIndex >= FormState.Count || !pagePersonFields.Any() || pagePersonFields.Contains( keyVal.Key ) )
-                {
-                    var fieldValue = keyVal.Value;
-
-                    switch ( keyVal.Key )
-                    {
-                        case PersonFieldType.FirstName:
-                            {
-                                var newName = fieldValue.ToString() ?? string.Empty;
-
-                                var updateBoth = false;
-                                if ( person.FirstName == person.NickName || string.IsNullOrWhiteSpace( person.NickName ) )
-                                {
-                                    updateBoth = true;
-                                }
-
-                                person.FirstName = newName;
-
-                                if ( updateBoth )
-                                {
-                                    person.NickName = newName;
-                                }
-
-                                break;
-                            }
-
-                        case PersonFieldType.LastName:
-                            {
-                                var newLastName = fieldValue.ToString() ?? string.Empty;
-                                person.LastName = newLastName;
-                                break;
-                            }
-
-                        case PersonFieldType.MiddleName:
-                            {
-                                person.MiddleName = fieldValue.ToString() ?? string.Empty;
-                                break;
-                            }
-
-                        case PersonFieldType.Campus:
-                            {
-                                if ( fieldValue != null )
-                                {
-                                    campusId = fieldValue.ToString().AsIntegerOrNull();
-                                }
-                                break;
-                            }
-
-                        case PersonFieldType.Address:
-                            {
-                                locationId = fieldValue.ToString().AsIntegerOrNull();
-                                break;
-                            }
-
-                        case PersonFieldType.Birthdate:
-                            {
-                                var birthMonth = person.BirthMonth;
-                                var birthDay = person.BirthDay;
-                                var birthYear = person.BirthYear;
-
-                                person.SetBirthDate( fieldValue.AsDateTime() );
-
-                                break;
-                            }
-
-                        case PersonFieldType.Grade:
-                            {
-                                var newGraduationYear = fieldValue.ToString().AsIntegerOrNull();
-                                person.GraduationYear = newGraduationYear;
-
-                                break;
-                            }
-
-                        case PersonFieldType.Gender:
-                            {
-                                var newGender = fieldValue.ToString().ConvertToEnumOrNull<Gender>() ?? Gender.Unknown;
-                                person.Gender = newGender;
-                                break;
-                            }
-
-                        case PersonFieldType.MaritalStatus:
-                            {
-                                if ( fieldValue != null )
-                                {
-                                    int? newMaritalStatusId = fieldValue.ToString().AsIntegerOrNull();
-                                    person.MaritalStatusValueId = newMaritalStatusId;
-                                }
-                                break;
-                            }
-
-                        case PersonFieldType.AnniversaryDate:
-                            {
-                                person.AnniversaryDate = fieldValue.AsDateTime();
-                                break;
-                            }
-
-                        case PersonFieldType.MobilePhone:
-                            {
-                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() );
-                                break;
-                            }
-
-                        case PersonFieldType.HomePhone:
-                            {
-                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid() );
-                                break;
-                            }
-
-                        case PersonFieldType.WorkPhone:
-                            {
-                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() );
-                                break;
-                            }
-
-                        case PersonFieldType.Email:
-                            {
-                                var newEmail = fieldValue.ToString() ?? string.Empty;
-                                person.Email = newEmail;
-                                break;
-                            }
-
-                        case PersonFieldType.ConnectionStatus:
-                            {
-                                var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT ).Id;
-                                person.ConnectionStatusValueId = newConnectionStatusId;
-                                break;
-                            }
-                    }
-                }
-            }
-
-            if ( saveEachPage )
-            {
-                rockContext.SaveChanges();
-            }
-
-            // Set the family guid for any other registrants that were selected to be in the same family
-            var family = person.GetFamilies( rockContext ).FirstOrDefault();
-            if ( family != null )
-            {
-                if ( campusId.HasValue )
-                {
-                    if ( family.CampusId != campusId )
-                    {
-                        family.CampusId = campusId;
-                    }
-                }
-
-                if ( locationId.HasValue )
-                {
-                    var location = new LocationService( new RockContext() ).Get( ( int ) locationId );
-                    if ( location != null )
-                    {
-                        var homeLocationType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME.AsGuid() );
-                        if ( homeLocationType != null )
-                        {
-                            var familyGroup = new GroupService( rockContext ).Get( family.Id );
-                            if ( familyGroup != null )
-                            {
-                                GroupService.AddNewGroupAddress(
-                                    rockContext,
-                                    familyGroup,
-                                    Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME,
-                                    location.Street1, location.Street2, location.City, location.State, location.PostalCode, location.Country, true );
-
-                                //
-                                // note v7 will automatically make a new home address mailing and mark as mapping
-                                //
-                                {
-                                    var newLocation = familyGroup.GroupLocations.FirstOrDefault( l => l.LocationId == locationId && l.IsMailingLocation == false );
-                                    if ( newLocation != null )
-                                    {
-                                        newLocation.IsMailingLocation = true;
-                                        newLocation.IsMappedLocation = true;
-                                        rockContext.SaveChanges();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            person.LoadAttributes( rockContext );
-
-            var pageAttributeIds = new List<int>();
-
-            if ( saveEachPage && CurrentPageIndex > 0 && ( CurrentPageIndex - 1 ) <= FormState.Count )
-            {
-                pageAttributeIds = FormState[CurrentPageIndex - 1].Fields
-                    .Where( f => f.AttributeId.HasValue )
-                    .Select( f => f.AttributeId.Value )
-                    .ToList();
-            }
-
-            foreach ( var keyVal in AttributeValueState )
-            {
-                var attribute = AttributeCache.Get( keyVal.Key );
-                if ( attribute != null && ( CurrentPageIndex >= FormState.Count || !pageAttributeIds.Any() || pageAttributeIds.Contains( attribute.Id ) ) )
-                {
-                    person.SetAttributeValue( attribute.Key, keyVal.Value );
-                }
-            }
-
-            if ( saveEachPage )
-            {
-                person.SaveAttributeValues( rockContext );
-            }
-
-            return campusId;
-        }
-
-        private bool RunAfterSaveFunctions( RockContext rockContext, Person person, int? campusId )
-        {
-            int? connectionRequestId = null;
-            if ( GetAttributeValue( "AllowConnectionOpportunity" ).AsBoolean() )
-            {
-                var opportunityService = new ConnectionOpportunityService( rockContext );
-                var connectionRequestService = new ConnectionRequestService( rockContext );
-
-                var personCampus = person.GetCampus();
-                if ( personCampus != null )
-                {
-                    campusId = personCampus.Id;
-                }
-
-                var opportunities = RockPage.PageParameter( "OpportunityId" ).SplitDelimitedValues().AsIntegerList();
-                foreach ( var opportunityId in opportunities )
-                {
-                    var opportunity = opportunityService
-                        .Queryable()
-                        .Where( o => o.Id == opportunityId )
-                        .FirstOrDefault();
-
-                    int defaultStatusId = opportunity.ConnectionType.ConnectionStatuses
-                        .Where( s => s.IsDefault )
-                        .Select( s => s.Id )
-                        .FirstOrDefault();
-
-                    // If opportunity is valid and has a default status
-                    if ( opportunity != null && defaultStatusId > 0 )
-                    {
-                        var connectionRequest = new ConnectionRequest();
-                        connectionRequest.PersonAliasId = person.PrimaryAliasId.Value;
-                        connectionRequest.Comments = string.Empty;
-                        connectionRequest.ConnectionOpportunityId = opportunity.Id;
-                        connectionRequest.ConnectionState = ConnectionState.Active;
-                        connectionRequest.ConnectionStatusId = defaultStatusId;
-                        connectionRequest.CampusId = campusId;
-                        connectionRequest.ConnectorPersonAliasId = opportunity.GetDefaultConnectorPersonAliasId( campusId );
-                        if ( campusId.HasValue &&
-                            opportunity != null &&
-                            opportunity.ConnectionOpportunityCampuses != null )
-                        {
-                            var campus = opportunity.ConnectionOpportunityCampuses
-                                .Where( c => c.CampusId == campusId.Value )
-                                .FirstOrDefault();
-                            if ( campus != null )
-                            {
-                                connectionRequest.ConnectorPersonAliasId = campus.DefaultConnectorPersonAliasId;
-                            }
-                        }
-
-                        if ( !connectionRequest.IsValid )
-                        {
-                            // Controls will show warnings
-                            return false;
-                        }
-
-                        connectionRequestService.Add( connectionRequest );
-
-                        rockContext.SaveChanges();
-
-                        // get id for workflow
-                        if ( opportunities.Count == 1 )
-                        {
-                            connectionRequestId = connectionRequest.Id;
-                        }
-                    }
-                }
-            }
-
-            var urlConnectionRequestId = PageParameter( "ConnectionRequestId" ).AsIntegerOrNull();
-            if ( urlConnectionRequestId.HasValue && !connectionRequestId.HasValue )
-            {
-                var request = new ConnectionRequestService( rockContext ).Get( urlConnectionRequestId.Value );
-
-                if ( request != null )
-                {
-                    connectionRequestId = request.Id;
-                }
-            }
-
-            int? groupMemberId = null;
-            if ( GetAttributeValue( "AllowGroupMembership" ).AsBoolean() )
-            {
-                Group group = null;
-                GroupTypeRole defaultGroupRole = null;
-                var groupService = new GroupService( rockContext );
-                bool groupIsFromQryString = true;
-
-                Guid? groupGuid = GetAttributeValue( "Group" ).AsGuidOrNull();
-                if ( groupGuid.HasValue )
-                {
-                    group = groupService.Get( groupGuid.Value );
-                    groupIsFromQryString = false;
-                }
-
-                if ( group == null )
-                {
-                    groupGuid = PageParameter( "GroupGuid" ).AsGuidOrNull();
-                    if ( groupGuid.HasValue )
-                    {
-                        group = groupService.Get( groupGuid.Value );
-                    }
-                }
-
-                if ( group == null && GetAttributeValue( "EnablePassingGroupId" ).AsBoolean() )
-                {
-                    int? groupId = PageParameter( "GroupId" ).AsIntegerOrNull();
-                    if ( groupId.HasValue )
-                    {
-                        group = groupService.Get( groupId.Value );
-                    }
-                }
-
-                if ( group != null )
-                {
-                    var groupTypeGuids = this.GetAttributeValue( "AllowedGroupTypes" ).SplitDelimitedValues().AsGuidList();
-
-                    if ( groupIsFromQryString && groupTypeGuids.Any() && !groupTypeGuids.Contains( group.GroupType.Guid ) )
-                    {
-                        group = null;
-                    }
-                    else
-                    {
-                        defaultGroupRole = group.GroupType.DefaultGroupRole;
-                    }
-
-                    if ( group != null )
-                    {
-                        if ( !group.Members
-                            .Any( m =>
-                                m.PersonId == person.Id &&
-                                m.GroupRoleId == defaultGroupRole.Id ) )
-                        {
-                            var groupMemberService = new GroupMemberService( rockContext );
-                            var groupMember = new GroupMember();
-                            groupMember.PersonId = person.Id;
-                            groupMember.GroupRoleId = defaultGroupRole.Id;
-                            groupMember.GroupMemberStatus = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
-                            groupMember.GroupId = group.Id;
-                            groupMemberService.Add( groupMember );
-                            rockContext.SaveChanges();
-
-                            // get id for workflow
-                            groupMemberId = groupMember.Id;
-                        }
-                        else
-                        {
-                            groupMemberId = group.Members
-                            .FirstOrDefault( m =>
-                                m.PersonId == person.Id &&
-                                m.GroupRoleId == defaultGroupRole.Id )
-                            .Id;
-                        }
-                    }
-                }
-            }
-
-            Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
-            if ( workflowTypeGuid.HasValue )
-            {
-                var workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
-                if ( workflowType != null && ( workflowType.IsActive ?? true ) )
-                {
-                    try
-                    {
-                        var workflowEntity = GetAttributeValue( "WorkflowEntity" );
-
-                        if ( workflowEntity.Equals( "ConnectionRequest" ) && connectionRequestId.HasValue )
-                        {
-                            ConnectionRequest connectionRequest = null;
-                            connectionRequest = new ConnectionRequestService( rockContext ).Get( connectionRequestId.Value );
-                            if ( connectionRequest != null )
-                            {
-                                var workflow = Workflow.Activate( workflowType, person.FullName );
-                                List<string> workflowErrors;
-                                new WorkflowService( rockContext ).Process( workflow, connectionRequest, out workflowErrors );
-                            }
-                        }
-                        else if ( workflowEntity.Equals( "GroupMember" ) && groupMemberId.HasValue )
-                        {
-                            GroupMember groupMember = null;
-                            groupMember = new GroupMemberService( rockContext ).Get( groupMemberId.Value );
-                            if ( groupMember != null )
-                            {
-                                var workflow = Workflow.Activate( workflowType, person.FullName );
-                                List<string> workflowErrors;
-                                new WorkflowService( rockContext ).Process( workflow, groupMember, out workflowErrors );
-                            }
-                        }
-                        else
-                        {
-                            var workflow = Workflow.Activate( workflowType, person.FullName );
-                            List<string> workflowErrors;
-                            new WorkflowService( rockContext ).Process( workflow, person, out workflowErrors );
-                        }
-                    }
-                    catch ( Exception ex )
-                    {
-                        ExceptionLogService.LogException( ex, this.Context );
-                    }
-                }
-            }
-
-            if ( GetAttributeValue( "DonePage" ).AsGuidOrNull().HasValue )
-            {
-                NavigateToLinkedPage( "DonePage" );
-            }
-            else
-            {
-                pnlView.Visible = false;
-                litConfirmationText.Visible = true;
-                litConfirmationText.Text = GetAttributeValue( "ConfirmationText" );
-            }
-
-            return true;
-        }
-
         /// <summary>
         /// Handles the BlockUpdated event of the AttributeForm control.
         /// </summary>
@@ -2303,6 +1857,452 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             decimal currentStep = CurrentPageIndex + 1;
             PercentComplete = ( currentStep / ProgressBarSteps ) * 100.0m;
             pnlProgressBar.Visible = GetAttributeValue( "DisplayProgressBar" ).AsBoolean() && ( FormState.Count > 1 );
+        }
+
+        private int? AssignPersonValues( bool saveEachPage, RockContext rockContext, Person person )
+        {
+            var pagePersonFields = new List<PersonFieldType>();
+            if ( saveEachPage && CurrentPageIndex > 0 && CurrentPageIndex <= FormState.Count )
+            {
+                pagePersonFields = FormState[CurrentPageIndex - 1].Fields
+                    .Where( f => f.FieldSource == FormFieldSource.PersonField )
+                    .Select( f => f.PersonFieldType )
+                    .ToList();
+            }
+
+            int? campusId = null;
+            int? locationId = null;
+
+            foreach ( var keyVal in PersonValueState )
+            {
+                if ( CurrentPageIndex >= FormState.Count || !pagePersonFields.Any() || pagePersonFields.Contains( keyVal.Key ) )
+                {
+                    var fieldValue = keyVal.Value;
+
+                    switch ( keyVal.Key )
+                    {
+                        case PersonFieldType.FirstName:
+                            {
+                                var newName = fieldValue.ToString() ?? string.Empty;
+
+                                var updateBoth = false;
+                                if ( person.FirstName == person.NickName || string.IsNullOrWhiteSpace( person.NickName ) )
+                                {
+                                    updateBoth = true;
+                                }
+
+                                person.FirstName = newName;
+
+                                if ( updateBoth )
+                                {
+                                    person.NickName = newName;
+                                }
+
+                                break;
+                            }
+
+                        case PersonFieldType.LastName:
+                            {
+                                var newLastName = fieldValue.ToString() ?? string.Empty;
+                                person.LastName = newLastName;
+                                break;
+                            }
+
+                        case PersonFieldType.MiddleName:
+                            {
+                                person.MiddleName = fieldValue.ToString() ?? string.Empty;
+                                break;
+                            }
+
+                        case PersonFieldType.Campus:
+                            {
+                                if ( fieldValue != null )
+                                {
+                                    campusId = fieldValue.ToString().AsIntegerOrNull();
+                                }
+                                break;
+                            }
+
+                        case PersonFieldType.Address:
+                            {
+                                locationId = fieldValue.ToString().AsIntegerOrNull();
+                                break;
+                            }
+
+                        case PersonFieldType.Birthdate:
+                            {
+                                var birthMonth = person.BirthMonth;
+                                var birthDay = person.BirthDay;
+                                var birthYear = person.BirthYear;
+
+                                person.SetBirthDate( fieldValue.AsDateTime() );
+
+                                break;
+                            }
+
+                        case PersonFieldType.Grade:
+                            {
+                                var newGraduationYear = fieldValue.ToString().AsIntegerOrNull();
+                                person.GraduationYear = newGraduationYear;
+
+                                break;
+                            }
+
+                        case PersonFieldType.Gender:
+                            {
+                                var newGender = fieldValue.ToString().ConvertToEnumOrNull<Gender>() ?? Gender.Unknown;
+                                person.Gender = newGender;
+                                break;
+                            }
+
+                        case PersonFieldType.MaritalStatus:
+                            {
+                                if ( fieldValue != null )
+                                {
+                                    int? newMaritalStatusId = fieldValue.ToString().AsIntegerOrNull();
+                                    person.MaritalStatusValueId = newMaritalStatusId;
+                                }
+                                break;
+                            }
+
+                        case PersonFieldType.AnniversaryDate:
+                            {
+                                person.AnniversaryDate = fieldValue.AsDateTime();
+                                break;
+                            }
+
+                        case PersonFieldType.MobilePhone:
+                            {
+                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_MOBILE.AsGuid() );
+                                break;
+                            }
+
+                        case PersonFieldType.HomePhone:
+                            {
+                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_HOME.AsGuid() );
+                                break;
+                            }
+
+                        case PersonFieldType.WorkPhone:
+                            {
+                                SavePhone( fieldValue, person, Rock.SystemGuid.DefinedValue.PERSON_PHONE_TYPE_WORK.AsGuid() );
+                                break;
+                            }
+
+                        case PersonFieldType.Email:
+                            {
+                                var newEmail = fieldValue.ToString() ?? string.Empty;
+                                person.Email = newEmail;
+                                break;
+                            }
+
+                        case PersonFieldType.ConnectionStatus:
+                            {
+                                var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT ).Id;
+                                person.ConnectionStatusValueId = newConnectionStatusId;
+                                break;
+                            }
+                    }
+                }
+            }
+
+            if ( saveEachPage )
+            {
+                rockContext.SaveChanges();
+            }
+
+            // Set the family guid for any other registrants that were selected to be in the same family
+            var family = person.GetFamilies( rockContext ).FirstOrDefault();
+            if ( family != null )
+            {
+                if ( campusId.HasValue )
+                {
+                    if ( family.CampusId != campusId )
+                    {
+                        family.CampusId = campusId;
+                    }
+                }
+
+                if ( locationId.HasValue )
+                {
+                    var location = new LocationService( new RockContext() ).Get( ( int ) locationId );
+                    if ( location != null )
+                    {
+                        var homeLocationType = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME.AsGuid() );
+                        if ( homeLocationType != null )
+                        {
+                            var familyGroup = new GroupService( rockContext ).Get( family.Id );
+                            if ( familyGroup != null )
+                            {
+                                GroupService.AddNewGroupAddress(
+                                    rockContext,
+                                    familyGroup,
+                                    Rock.SystemGuid.DefinedValue.GROUP_LOCATION_TYPE_HOME,
+                                    location.Street1, location.Street2, location.City, location.State, location.PostalCode, location.Country, true );
+
+                                //
+                                // note v7 will automatically make a new home address mailing and mark as mapping
+                                //
+                                {
+                                    var newLocation = familyGroup.GroupLocations.FirstOrDefault( l => l.LocationId == locationId && l.IsMailingLocation == false );
+                                    if ( newLocation != null )
+                                    {
+                                        newLocation.IsMailingLocation = true;
+                                        newLocation.IsMappedLocation = true;
+                                        rockContext.SaveChanges();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            person.LoadAttributes( rockContext );
+
+            var pageAttributeIds = new List<int>();
+
+            if ( saveEachPage && CurrentPageIndex > 0 && ( CurrentPageIndex - 1 ) <= FormState.Count )
+            {
+                pageAttributeIds = FormState[CurrentPageIndex - 1].Fields
+                    .Where( f => f.AttributeId.HasValue )
+                    .Select( f => f.AttributeId.Value )
+                    .ToList();
+            }
+
+            foreach ( var keyVal in AttributeValueState )
+            {
+                var attribute = AttributeCache.Get( keyVal.Key );
+                if ( attribute != null && ( CurrentPageIndex >= FormState.Count || !pageAttributeIds.Any() || pageAttributeIds.Contains( attribute.Id ) ) )
+                {
+                    person.SetAttributeValue( attribute.Key, keyVal.Value );
+                }
+            }
+
+            if ( saveEachPage )
+            {
+                person.SaveAttributeValues( rockContext );
+            }
+
+            return campusId;
+        }
+
+        private bool RunAfterSaveFunctions( RockContext rockContext, Person person, int? campusId )
+        {
+            int? connectionRequestId = null;
+            if ( GetAttributeValue( "AllowConnectionOpportunity" ).AsBoolean() )
+            {
+                var opportunityService = new ConnectionOpportunityService( rockContext );
+                var connectionRequestService = new ConnectionRequestService( rockContext );
+
+                var personCampus = person.GetCampus();
+                if ( personCampus != null )
+                {
+                    campusId = personCampus.Id;
+                }
+
+                var opportunities = RockPage.PageParameter( "OpportunityId" ).SplitDelimitedValues().AsIntegerList();
+                foreach ( var opportunityId in opportunities )
+                {
+                    var opportunity = opportunityService
+                        .Queryable()
+                        .Where( o => o.Id == opportunityId )
+                        .FirstOrDefault();
+
+                    int defaultStatusId = opportunity.ConnectionType.ConnectionStatuses
+                        .Where( s => s.IsDefault )
+                        .Select( s => s.Id )
+                        .FirstOrDefault();
+
+                    // If opportunity is valid and has a default status
+                    if ( opportunity != null && defaultStatusId > 0 )
+                    {
+                        var connectionRequest = new ConnectionRequest();
+                        connectionRequest.PersonAliasId = person.PrimaryAliasId.Value;
+                        connectionRequest.Comments = string.Empty;
+                        connectionRequest.ConnectionOpportunityId = opportunity.Id;
+                        connectionRequest.ConnectionState = ConnectionState.Active;
+                        connectionRequest.ConnectionStatusId = defaultStatusId;
+                        connectionRequest.CampusId = campusId;
+                        connectionRequest.ConnectorPersonAliasId = opportunity.GetDefaultConnectorPersonAliasId( campusId );
+                        if ( campusId.HasValue &&
+                            opportunity != null &&
+                            opportunity.ConnectionOpportunityCampuses != null )
+                        {
+                            var campus = opportunity.ConnectionOpportunityCampuses
+                                .Where( c => c.CampusId == campusId.Value )
+                                .FirstOrDefault();
+                            if ( campus != null )
+                            {
+                                connectionRequest.ConnectorPersonAliasId = campus.DefaultConnectorPersonAliasId;
+                            }
+                        }
+
+                        if ( !connectionRequest.IsValid )
+                        {
+                            // Controls will show warnings
+                            return false;
+                        }
+
+                        connectionRequestService.Add( connectionRequest );
+
+                        rockContext.SaveChanges();
+
+                        // get id for workflow
+                        if ( opportunities.Count == 1 )
+                        {
+                            connectionRequestId = connectionRequest.Id;
+                        }
+                    }
+                }
+            }
+
+            var urlConnectionRequestId = PageParameter( "ConnectionRequestId" ).AsIntegerOrNull();
+            if ( urlConnectionRequestId.HasValue && !connectionRequestId.HasValue )
+            {
+                var request = new ConnectionRequestService( rockContext ).Get( urlConnectionRequestId.Value );
+
+                if ( request != null )
+                {
+                    connectionRequestId = request.Id;
+                }
+            }
+
+            int? groupMemberId = null;
+            if ( GetAttributeValue( "AllowGroupMembership" ).AsBoolean() )
+            {
+                Group group = null;
+                GroupTypeRole defaultGroupRole = null;
+                var groupService = new GroupService( rockContext );
+                bool groupIsFromQryString = true;
+
+                Guid? groupGuid = GetAttributeValue( "Group" ).AsGuidOrNull();
+                if ( groupGuid.HasValue )
+                {
+                    group = groupService.Get( groupGuid.Value );
+                    groupIsFromQryString = false;
+                }
+
+                if ( group == null )
+                {
+                    groupGuid = PageParameter( "GroupGuid" ).AsGuidOrNull();
+                    if ( groupGuid.HasValue )
+                    {
+                        group = groupService.Get( groupGuid.Value );
+                    }
+                }
+
+                if ( group == null && GetAttributeValue( "EnablePassingGroupId" ).AsBoolean() )
+                {
+                    int? groupId = PageParameter( "GroupId" ).AsIntegerOrNull();
+                    if ( groupId.HasValue )
+                    {
+                        group = groupService.Get( groupId.Value );
+                    }
+                }
+
+                if ( group != null )
+                {
+                    var groupTypeGuids = this.GetAttributeValue( "AllowedGroupTypes" ).SplitDelimitedValues().AsGuidList();
+
+                    if ( groupIsFromQryString && groupTypeGuids.Any() && !groupTypeGuids.Contains( group.GroupType.Guid ) )
+                    {
+                        group = null;
+                    }
+                    else
+                    {
+                        defaultGroupRole = group.GroupType.DefaultGroupRole;
+                    }
+
+                    if ( group != null )
+                    {
+                        if ( !group.Members
+                            .Any( m =>
+                                m.PersonId == person.Id &&
+                                m.GroupRoleId == defaultGroupRole.Id ) )
+                        {
+                            var groupMemberService = new GroupMemberService( rockContext );
+                            var groupMember = new GroupMember();
+                            groupMember.PersonId = person.Id;
+                            groupMember.GroupRoleId = defaultGroupRole.Id;
+                            groupMember.GroupMemberStatus = ( GroupMemberStatus ) GetAttributeValue( "GroupMemberStatus" ).AsInteger();
+                            groupMember.GroupId = group.Id;
+                            groupMemberService.Add( groupMember );
+                            rockContext.SaveChanges();
+
+                            // get id for workflow
+                            groupMemberId = groupMember.Id;
+                        }
+                        else
+                        {
+                            groupMemberId = group.Members
+                            .FirstOrDefault( m =>
+                                m.PersonId == person.Id &&
+                                m.GroupRoleId == defaultGroupRole.Id )
+                            .Id;
+                        }
+                    }
+                }
+            }
+
+            Guid? workflowTypeGuid = GetAttributeValue( "Workflow" ).AsGuidOrNull();
+            if ( workflowTypeGuid.HasValue )
+            {
+                var workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
+                if ( workflowType != null && ( workflowType.IsActive ?? true ) )
+                {
+                    try
+                    {
+                        var workflowEntity = GetAttributeValue( "WorkflowEntity" );
+
+                        if ( workflowEntity.Equals( "ConnectionRequest" ) && connectionRequestId.HasValue )
+                        {
+                            ConnectionRequest connectionRequest = null;
+                            connectionRequest = new ConnectionRequestService( rockContext ).Get( connectionRequestId.Value );
+                            if ( connectionRequest != null )
+                            {
+                                var workflow = Workflow.Activate( workflowType, person.FullName );
+                                List<string> workflowErrors;
+                                new WorkflowService( rockContext ).Process( workflow, connectionRequest, out workflowErrors );
+                            }
+                        }
+                        else if ( workflowEntity.Equals( "GroupMember" ) && groupMemberId.HasValue )
+                        {
+                            GroupMember groupMember = null;
+                            groupMember = new GroupMemberService( rockContext ).Get( groupMemberId.Value );
+                            if ( groupMember != null )
+                            {
+                                var workflow = Workflow.Activate( workflowType, person.FullName );
+                                List<string> workflowErrors;
+                                new WorkflowService( rockContext ).Process( workflow, groupMember, out workflowErrors );
+                            }
+                        }
+                        else
+                        {
+                            var workflow = Workflow.Activate( workflowType, person.FullName );
+                            List<string> workflowErrors;
+                            new WorkflowService( rockContext ).Process( workflow, person, out workflowErrors );
+                        }
+                    }
+                    catch ( Exception ex )
+                    {
+                        ExceptionLogService.LogException( ex, this.Context );
+                    }
+                }
+            }
+
+            if ( GetAttributeValue( "DonePage" ).AsGuidOrNull().HasValue )
+            {
+                NavigateToLinkedPage( "DonePage" );
+            }
+            else
+            {
+                pnlView.Visible = false;
+                litConfirmationText.Visible = true;
+                litConfirmationText.Text = GetAttributeValue( "ConfirmationText" );
+            }
+
+            return true;
         }
 
         #endregion View Mode
