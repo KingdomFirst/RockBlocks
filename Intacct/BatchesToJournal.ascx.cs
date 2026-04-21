@@ -29,6 +29,7 @@ using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Security;
+using Rock.Utility;
 using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
@@ -238,9 +239,16 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             public const string LogRequest = "LogRequest";
         }
 
+        private static class PreferenceKey
+        {
+            public const string ReceiptAccountType = "receipt-account-type";
+            public const string PaymentMethod = "payment-method";
+            public const string BankAccountId = "bank-account-id";
+        }
+
         #endregion Keys
 
-        #region Global Variables
+        #region Fields
 
         private string _selectedBankAccountId;
         private string _selectedPaymentMethod;
@@ -249,8 +257,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         private int _monthsBack;
         private string _enableDebug;
         private IntacctAuth _intacctAuth = null;
+        private PersonPreferenceCollection _personPreferences => GetBlockPersonPreferences();
 
-        #endregion Global Variables
+        #endregion Fields
+
         #region Base Control Methods
 
         /// <summary>
@@ -289,9 +299,9 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 }
                 else
                 {
-                    _selectedReceiptAccountType = GetBlockUserPreference( "ReceiptAccountType" );
-                    _selectedPaymentMethod = GetBlockUserPreference( "PaymentMethod" );
-                    _selectedBankAccountId = GetBlockUserPreference( "BankAccountId" );
+                    _selectedReceiptAccountType = _personPreferences.GetValue( PreferenceKey.ReceiptAccountType );
+                    _selectedPaymentMethod = _personPreferences.GetValue( PreferenceKey.PaymentMethod );
+                    _selectedBankAccountId = _personPreferences.GetValue( PreferenceKey.BankAccountId );
                     SetupOtherReceipts();
                 }
                 BindFilter();
@@ -630,8 +640,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     // Capture ddl values as user preferences
                     //
 
-                    SetBlockUserPreference( "ReceiptAccountType", ddlReceiptAccountType.SelectedValue ?? "" );
-                    SetBlockUserPreference( "PaymentMethod", ddlPaymentMethods.SelectedValue ?? "" );
+                    _personPreferences.SetValue( PreferenceKey.ReceiptAccountType, ddlReceiptAccountType.SelectedValue ?? "" );
+                    _personPreferences.SetValue( PreferenceKey.PaymentMethod, ddlPaymentMethods.SelectedValue ?? "" );
                 }
 
                 if ( _intacctAuth == null )
@@ -686,7 +696,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         string undepFundAccount = null;
                         if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
                         {
-                            SetBlockUserPreference( "BankAccountId", ddlBankAccounts.SelectedValue ?? "" );
+                            _personPreferences.SetValue( PreferenceKey.BankAccountId, ddlBankAccounts.SelectedValue ?? "" );
                             bankAccountId = ddlBankAccounts.SelectedValue;
                         }
                         else
@@ -696,6 +706,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
                     }
 
+                    _personPreferences.Save();
                     var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
                     var resultXml = endpoint.PostToIntacct( postXml, logRequest );
                     var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
