@@ -261,11 +261,14 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     else if ( personMode == "Family Members" )
                     {
                         var foundCurrentPerson = false;
-                        foreach ( var member in paramPerson.GetFamilyMembers( true ) )
+                        if ( CurrentPerson != null )
                         {
-                            if ( member.PersonId == CurrentPerson.Id )
+                            foreach ( var member in paramPerson.GetFamilyMembers( true ) )
                             {
-                                foundCurrentPerson = true;
+                                if ( member.PersonId == CurrentPerson.Id )
+                                {
+                                    foundCurrentPerson = true;
+                                }
                             }
                         }
                         if ( foundCurrentPerson )
@@ -1011,7 +1014,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void ddlSignatureDocumentTemplate_SelectedIndexChanged( object sender, EventArgs e )
         {
-            var selectedTemplate = GetSelectedTemplate( checkIfValid: false );
+            var selectedTemplate = ddlSignatureDocumentTemplate.SelectedValueAsInt();
             pnlSignatureDocumentFields.Visible = selectedTemplate != null;
         }
 
@@ -1332,7 +1335,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             var disableFormForChildren = GetAttributeValue( "DisableFormforChildren" ).AsBoolean();
 
-            if ( disableFormForChildren && _person != null && GetSelectedTemplate( checkIfValid: false ) != null && _person.AgeClassification == AgeClassification.Child )
+            if ( disableFormForChildren && CurrentPerson != null && GetSelectedTemplate( checkIfValid: false ) != null && CurrentPerson.AgeClassification == AgeClassification.Child )
             {
                 var childrenWarningText = GetAttributeValue( "DisableFormWarningText" );
 

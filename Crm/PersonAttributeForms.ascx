@@ -133,22 +133,26 @@
                                             Help="A document that needs to be signed when this Person Attribute Form is completed." OnSelectedIndexChanged="ddlSignatureDocumentTemplate_SelectedIndexChanged" />
                                     </div>
                                 </div>
-                                <asp:Panel ID="pnlSignatureDocumentFields" runat="server" CssClass="row well" Visible="false">
-                                    <div class="col-xs-12">
-                                        <h3>Signature Document Fields</h3>
+                                <asp:Panel ID="pnlSignatureDocumentFields" runat="server" CssClass="panel panel-section" Visible="false">
+                                    <div class="panel-heading">
+                                        <h4 class="panel-title">Signature Document Fields</h4>
                                     </div>
-                                    <div class="col-md-4">
-                                        <Rock:RockCheckBox ID="cbDisableFormForChildren" runat="server" Label="Disable Form for Children" Text="Yes"
-                                            Help="Should we disable the form if it has a required signature document and the Current Person is a child age classification?" />
-                                    </div>
-                                    <div class="col-md-8">
-                                        <Rock:CodeEditor ID="ceDisableFormWarningText" runat="server" Label="Disable Form Warning Text" EditorMode="Html" EditorTheme="Rock" Height="200"
-                                            Help="The message to display if the form is disabled due to a Signature Document and Age Classification"><p>You are not eligible to fill out this form due to a required signature document and your age classification.</p></Rock:CodeEditor>
+                                    <div class="panel-body">
+                                        <fieldset class="row">
+                                            <div class="col-md-4">
+                                                <Rock:RockCheckBox ID="cbDisableFormForChildren" runat="server" Label="Disable Form for Children" Text="Yes"
+                                                    Help="Should we disable the form if it has a required signature document and the Current Person is a child age classification?" />
+                                            </div>
+                                            <div class="col-md-8">
+                                                <Rock:CodeEditor ID="ceDisableFormWarningText" runat="server" Label="Disable Form Warning Text" EditorMode="Html" EditorTheme="Rock" EditorHeight="100"
+                                                    Help="The message to display if the form is disabled due to a Signature Document and Age Classification"><p>You are not eligible to fill out this form due to a required signature document and your age classification.</p></Rock:CodeEditor>
+                                            </div>
+                                        </fieldset>
                                     </div>
                                 </asp:Panel>
                                 <div class="row">
                                     <div class="col-md-12">
-                                        <Rock:CodeEditor ID="ceConfirmationText" runat="server" Label="Confirmation Text" EditorMode="Html" EditorTheme="Rock" Height="300"
+                                        <Rock:CodeEditor ID="ceConfirmationText" runat="server" Label="Confirmation Text" EditorMode="Html" EditorTheme="Rock" EditorHeight="300"
                                             Help="The message to display after form is completed if Done Page is not set." />
                                     </div>
                                 </div>
