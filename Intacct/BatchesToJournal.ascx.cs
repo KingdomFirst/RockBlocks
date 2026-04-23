@@ -633,7 +633,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
             if ( selectedBatches.Any() )
             {
-                var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
                 if ( _exportMode == "OtherReceipt" )
                 {
                     //
@@ -663,6 +662,12 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         && !exportedBatches.Contains( b.Id )
                       ).ToList();
 
+                var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
+                var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
+                var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
+                var groupingMode = ( GLAccountGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                var message = string.Empty;
+
                 foreach ( var batch in batchesToUpdate )
                 {
                     var changes = new History.HistoryChangeList();
@@ -680,37 +685,9 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     // Create Intacct Journal XML and Post to Intacct
                     //
 
-                    var endpoint = new IntacctEndpoint();
-                    var postXml = new System.Xml.XmlDocument();
-                    var groupingMode = ( GLAccountGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
-
-                    if ( _exportMode == "JournalEntry" )
-                    {
-                        var journal = new IntacctJournal();
-                        postXml = journal.CreateJournalEntryXML( _intacctAuth, batch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode );
-                    }
-                    else   // Export Mode is Other Receipt
-                    {
-                        var otherReceipt = new IntacctOtherReceipt();
-                        string bankAccountId = null;
-                        string undepFundAccount = null;
-                        if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
-                        {
-                            _personPreferences.SetValue( PreferenceKey.BankAccountId, ddlBankAccounts.SelectedValue ?? "" );
-                            bankAccountId = ddlBankAccounts.SelectedValue;
-                        }
-                        else
-                        {
-                            undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
-                        }
-                        postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
-                    }
+                    var success = ProcessIntacctBatch( groupingMode, batch.Id, logRequest, logResponse, debugLava, message );
 
                     _personPreferences.Save();
-                    var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
-                    var resultXml = endpoint.PostToIntacct( postXml, logRequest );
-                    var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
-                    var success = endpoint.ParseEndpointResponse( resultXml, batch.Id, logResponse );
 
                     if ( success )
                     {
@@ -725,7 +702,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                             if ( !batch.IsValid )
                             {
-                                string message = string.Format( "Unable to update status for the selected batches.<br/><br/>{0}", batch.ValidationResults.AsDelimited( "<br/>" ) );
+                                message = string.Format( "Unable to update status for the selected batches.<br/><br/>{0}", batch.ValidationResults.AsDelimited( "<br/>" ) );
                                 maWarningDialog.Show( message, ModalAlertType.Warning );
                                 return;
                             }
@@ -760,15 +737,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     }
                     else
                     {
-                        string message = "There was an error sending your batch to Intacct. This is either an issue with your credentials or malformed data. Please check your settings and try again.";
-                        if ( logResponse )
-                        {
-                            message += "<br /><br />If the issue is data-related, the response from Intacct has been logged to the batch Audit Log.";
-                        }
-                        else
-                        {
-                            message += "<br /><br />If the issue is data-related, enable the 'Log Response' setting and try again to see the response from Intacct.";
-                        }
                         maWarningDialog.Show( message, ModalAlertType.Warning );
                         return;
                     }
@@ -799,6 +767,52 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         }
 
         #endregion
+
+        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, int batchId, bool logRequest, bool logResponse, string debugLava, string message )
+        {
+            var endpoint = new IntacctEndpoint();
+            var postXml = new System.Xml.XmlDocument();
+
+            if ( _exportMode == "JournalEntry" )
+            {
+                var journal = new IntacctJournal();
+                postXml = journal.CreateJournalEntryXML( _intacctAuth, batchId, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode );
+            }
+            else   // Export Mode is Other Receipt
+            {
+                var otherReceipt = new IntacctOtherReceipt();
+                string bankAccountId = null;
+                string undepFundAccount = null;
+                if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
+                {
+                    _personPreferences.SetValue( PreferenceKey.BankAccountId, ddlBankAccounts.SelectedValue ?? "" );
+                    bankAccountId = ddlBankAccounts.SelectedValue;
+                }
+                else
+                {
+                    undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
+                }
+                postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batchId, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+            }
+
+            var resultXml = endpoint.PostToIntacct( postXml, logRequest );
+            var success = endpoint.ParseEndpointResponse( resultXml, batchId, logResponse );
+
+            if ( !success )
+            {
+                message = "There was an error sending your batch to Intacct. This is either an issue with your credentials or malformed data. Please check your settings and try again.";
+                if ( logResponse )
+                {
+                    message += "<br /><br />If the issue is data-related, the response from Intacct has been logged to the batch Audit Log.";
+                }
+                else
+                {
+                    message += "<br /><br />If the issue is data-related, enable the 'Log Response' setting and try again to see the response from Intacct.";
+                }
+            }
+
+            return success;
+        }
 
         #region Classes
 

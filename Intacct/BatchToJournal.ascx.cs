@@ -489,42 +489,19 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     _intacctAuth = GetIntactAuth();
                 }
 
+                var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
+                var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
+                var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
+                var groupingMode = ( GLAccountGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                var message = string.Empty;
+
                 //
                 // Create Intacct Journal XML and Post to Intacct
                 //
 
-                var endpoint = new IntacctEndpoint();
-                var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
-                var postXml = new System.Xml.XmlDocument();
-                var groupingMode = ( GLAccountGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
-
-                if ( GetAttributeValue( AttributeKey.ExportMode ) == "JournalEntry" )
-                {
-                    var journal = new IntacctJournal();
-                    postXml = journal.CreateJournalEntryXML( _intacctAuth, _financialBatch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode );
-                }
-                else   // Export Mode is Other Receipt
-                {
-                    var otherReceipt = new IntacctOtherReceipt();
-                    string bankAccountId = null;
-                    string undepFundAccount = null;
-                    if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
-                    {
-                        _personPreferences.SetValue( PreferenceKey.BankAccountId, ddlBankAccounts.SelectedValue ?? "" );
-                        bankAccountId = ddlBankAccounts.SelectedValue;
-                    }
-                    else
-                    {
-                        undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
-                    }
-                    postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, _financialBatch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
-                }
+                var success = ProcessIntacctBatch( groupingMode, logRequest, logResponse, debugLava, message );
 
                 _personPreferences.Save();
-                var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
-                var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
-                var resultXml = endpoint.PostToIntacct( postXml, logRequest );
-                var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, logResponse );
 
                 if ( success )
                 {
@@ -575,15 +552,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 }
                 else
                 {
-                    string message = "There was an error sending your batch to Intacct. This is either an issue with your credentials or malformed data. Please check your settings and try again.";
-                    if ( logResponse )
-                    {
-                        message += "<br /><br />If the issue is data-related, the response from Intacct has been logged to the batch Audit Log.";
-                    }
-                    else
-                    {
-                        message += "<br /><br />If the issue is data-related, enable the 'Log Response' setting and try again to see the response from Intacct.";
-                    }
                     maWarningDialog.Show( message, ModalAlertType.Warning );
                     return;
                 }
@@ -591,6 +559,52 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             }
 
             Response.Redirect( Request.RawUrl );
+        }
+
+        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, bool logRequest, bool logResponse, string debugLava, string message )
+        {
+            var endpoint = new IntacctEndpoint();
+            var postXml = new System.Xml.XmlDocument();
+
+            if ( GetAttributeValue( AttributeKey.ExportMode ) == "JournalEntry" )
+            {
+                var journal = new IntacctJournal();
+                postXml = journal.CreateJournalEntryXML( _intacctAuth, _financialBatch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode );
+            }
+            else   // Export Mode is Other Receipt
+            {
+                var otherReceipt = new IntacctOtherReceipt();
+                string bankAccountId = null;
+                string undepFundAccount = null;
+                if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
+                {
+                    _personPreferences.SetValue( PreferenceKey.BankAccountId, ddlBankAccounts.SelectedValue ?? "" );
+                    bankAccountId = ddlBankAccounts.SelectedValue;
+                }
+                else
+                {
+                    undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
+                }
+                postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, _financialBatch.Id, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+            }
+
+            var resultXml = endpoint.PostToIntacct( postXml, logRequest );
+            var success = endpoint.ParseEndpointResponse( resultXml, _financialBatch.Id, logResponse );
+
+            if ( !success )
+            {
+                message = "There was an error sending your batch to Intacct. This is either an issue with your credentials or malformed data. Please check your settings and try again.";
+                if ( logResponse )
+                {
+                    message += "<br /><br />If the issue is data-related, the response from Intacct has been logged to the batch Audit Log.";
+                }
+                else
+                {
+                    message += "<br /><br />If the issue is data-related, enable the 'Log Response' setting and try again to see the response from Intacct.";
+                }
+            }
+
+            return success;
         }
 
         private IntacctAuth GetIntactAuth()
