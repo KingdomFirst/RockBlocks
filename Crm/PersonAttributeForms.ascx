@@ -38,7 +38,7 @@
     });
 </script>
 
-<asp:UpdatePanel ID="upnlContent" runat="server" ChildrenAsTriggers="false" UpdateMode="Conditional">
+<asp:UpdatePanel ID="upnlContent" runat="server">
     <ContentTemplate>
 
         <asp:HiddenField ID="hfTriggerScroll" runat="server" Value="" />
@@ -69,6 +69,23 @@
             </asp:Panel>
 
             <asp:PlaceHolder ID="phContent" runat="server" />
+
+            <%-- Electronic Signature UI --%>
+            <asp:Panel ID="pnlElectronicSignature" runat="server" CssClass="js-validation-group" Visible="false">
+                <%-- Put the signature document html in an Iframe so it doesn't inherit styling from the page --%>
+                <div class="styled-scroll">
+                    <asp:Panel ID="pnlIframeSignatureDocumentHTML" class="signaturedocument-container" runat="server">
+                        <iframe id="iframeSignatureDocumentHTML" name="signature-document-html-iframe" class="signaturedocument-iframe js-signaturedocument-iframe" runat="server" src="javascript: window.frameElement.getAttribute('srcdoc');" style="width: 100%"></iframe>
+                    </asp:Panel>
+                </div>
+                <Rock:ElectronicSignatureControl ID="escElectronicSignatureControl" runat="server" OnCompleteSignatureClicked="btnSignSignature_Click" CssClass="well" />
+
+            </asp:Panel>
+            <script type="text/javascript">
+                function resizeIframe(el) {
+                    el.style.height = el.contentWindow.document.documentElement.scrollHeight + 'px';
+                }
+            </script>
 
             <asp:Literal ID="lFooter" runat="server" />
 
@@ -112,9 +129,30 @@
                                     <div class="col-md-4">
                                         <Rock:PagePicker ID="ppDonePage" runat="server" Label="Done Page"
                                             Help="An optional page to redirect user to after they have finished entering information on all the forms." />
+                                        <Rock:RockDropDownList ID="ddlSignatureDocumentTemplate" runat="server" Label="Signature Document" AutoPostBack="true"
+                                            Help="A document that needs to be signed when this Person Attribute Form is completed." OnSelectedIndexChanged="ddlSignatureDocumentTemplate_SelectedIndexChanged" />
                                     </div>
+                                </div>
+                                <asp:Panel ID="pnlSignatureDocumentFields" runat="server" CssClass="panel panel-section" Visible="false">
+                                    <div class="panel-heading">
+                                        <h4 class="panel-title">Signature Document Fields</h4>
+                                    </div>
+                                    <div class="panel-body">
+                                        <fieldset class="row">
+                                            <div class="col-md-4">
+                                                <Rock:RockCheckBox ID="cbDisableFormForChildren" runat="server" Label="Disable Form for Children" Text="Yes"
+                                                    Help="Should we disable the form if it has a required signature document and the Current Person is a child age classification?" />
+                                            </div>
+                                            <div class="col-md-8">
+                                                <Rock:CodeEditor ID="ceDisableFormWarningText" runat="server" Label="Disable Form Warning Text" EditorMode="Html" EditorTheme="Rock" EditorHeight="100"
+                                                    Help="The message to display if the form is disabled due to a Signature Document and Age Classification"><p>You are not eligible to fill out this form due to a required signature document and your age classification.</p></Rock:CodeEditor>
+                                            </div>
+                                        </fieldset>
+                                    </div>
+                                </asp:Panel>
+                                <div class="row">
                                     <div class="col-md-12">
-                                        <Rock:CodeEditor ID="ceConfirmationText" runat="server" Label="Confirmation Text" EditorMode="Html" EditorTheme="Rock" Height="300"
+                                        <Rock:CodeEditor ID="ceConfirmationText" runat="server" Label="Confirmation Text" EditorMode="Html" EditorTheme="Rock" EditorHeight="300"
                                             Help="The message to display after form is completed if Done Page is not set." />
                                     </div>
                                 </div>
