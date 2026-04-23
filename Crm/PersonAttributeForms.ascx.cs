@@ -453,7 +453,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                         {
                             var hasSignatureTemplate = GetSelectedTemplate( rockContext, person ) != null;
 
-                            int? campusId = AssignPersonValues( saveEachPage || ( CurrentPageIndex >= FormState.Count && !hasSignatureTemplate ), rockContext, person );
+                            int? campusId = AssignPersonValues( ( saveEachPage || !hasSignatureTemplate ), rockContext, person );
 
                             if ( CurrentPageIndex >= FormState.Count )
                             {
@@ -469,7 +469,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                         return;
                                     }
                                 }
-                                //upnlContent.Update();
                             }
                             else
                             {
@@ -548,20 +547,15 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             pnlEditModal.Visible = false;
 
             ShowDetail();
-
-            //upnlContent.Update();
         }
 
         protected void btnCancel_Click( object sender, EventArgs e )
         {
             ShowDetail();
-
-            //upnlContent.Update();
         }
 
         private void ddlCountry_indexChanged( object sender, EventArgs e )
         {
-            //upnlContent.Update();
         }
 
         /// <summary>
@@ -1136,8 +1130,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             lbPrev.Visible = CurrentPageIndex > 0;
             lbNext.Visible = CurrentPageIndex < FormState.Count;
             lbNext.Text = ( CurrentPageIndex < FormState.Count() - 1 ) || ( GetSelectedTemplate() != null ) ? "Next" : "Finish";
-
-            //upnlContent.Update();
         }
 
         private void BuildViewControls( bool setValues )
@@ -1197,7 +1189,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                                 fieldVisibilityWrapper.EditValueUpdated += ( object sender, FieldVisibilityWrapper.FieldEventArgs args ) =>
                                 {
                                     FieldVisibilityWrapper.ApplyFieldVisibilityRules( phContent );
-                                    //upnlContent.Update();
                                 };
 
                                 phContent.Controls.Add( fieldVisibilityWrapper );
@@ -1859,10 +1850,10 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             pnlProgressBar.Visible = GetAttributeValue( "DisplayProgressBar" ).AsBoolean() && ( FormState.Count > 1 );
         }
 
-        private int? AssignPersonValues( bool saveEachPage, RockContext rockContext, Person person )
+        private int? AssignPersonValues( bool savePerson, RockContext rockContext, Person person )
         {
             var pagePersonFields = new List<PersonFieldType>();
-            if ( saveEachPage && CurrentPageIndex > 0 && CurrentPageIndex <= FormState.Count )
+            if ( savePerson && CurrentPageIndex > 0 && CurrentPageIndex <= FormState.Count )
             {
                 pagePersonFields = FormState[CurrentPageIndex - 1].Fields
                     .Where( f => f.FieldSource == FormFieldSource.PersonField )
@@ -2006,7 +1997,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 }
             }
 
-            if ( saveEachPage )
+            if ( savePerson )
             {
                 rockContext.SaveChanges();
             }
@@ -2062,7 +2053,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
             var pageAttributeIds = new List<int>();
 
-            if ( saveEachPage && CurrentPageIndex > 0 && ( CurrentPageIndex - 1 ) <= FormState.Count )
+            if ( savePerson && CurrentPageIndex > 0 && ( CurrentPageIndex - 1 ) <= FormState.Count )
             {
                 pageAttributeIds = FormState[CurrentPageIndex - 1].Fields
                     .Where( f => f.AttributeId.HasValue )
@@ -2079,7 +2070,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                 }
             }
 
-            if ( saveEachPage )
+            if ( savePerson )
             {
                 person.SaveAttributeValues( rockContext );
             }
@@ -2370,8 +2361,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
             mdEdit.Show();
 
             _mode = "EDIT";
-
-            //upnlContent.Update();
         }
 
         /// <summary>
@@ -2393,8 +2382,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     BuildFormControl( phForms, setValues, form, activeFormGuid );
                 }
             }
-
-            //upnlContent.Update();
         }
 
         /// <summary>
@@ -2853,11 +2840,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                     var appliesToPersonAliasId = person.PrimaryAliasId;
 
-                    var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, this.CurrentPerson );
-                    mergeFields.Add( "SignatureDocumentTemplate", signatureDocumentTemplate );
-                    mergeFields.Add( "SignedByPerson", signedByPerson );
-                    mergeFields.Add( "AppliesToPerson", person );
-
                     var signatureDocumentName = "Signed Document";
 
                     // Glue stuff into the signature document
@@ -2944,8 +2926,6 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
                     }
 
                     RunAfterSaveFunctions( rockContext, person, campusId );
-
-                    //upnlContent.Update();
                 }
             }
 
