@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="IntacctExcelExport.aspx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Intacct.IntacctExcelExport" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="IntacctCsvExport.aspx.cs" Inherits="RockWeb.Plugins.rocks_kfs.Intacct.IntacctCsvExport" %>
 
 <!DOCTYPE html>
 

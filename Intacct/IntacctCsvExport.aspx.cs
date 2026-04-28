@@ -19,10 +19,9 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     using System;
     using System.IO;
     using System.Text;
-    using OfficeOpenXml;
     using Rock.Utility;
 
-    public partial class IntacctExcelExport : System.Web.UI.Page
+    public partial class IntacctCsvExport : System.Web.UI.Page
     {
         protected void Page_Load( object sender, EventArgs e )
         {
@@ -32,20 +31,18 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 return;
             }
 
-            if ( Session["IntacctExcelExport"] != null && !string.IsNullOrEmpty( Session["IntacctExcelExport"].ToString() ) && Session["IntacctFileId"] != null && !string.IsNullOrEmpty( Session["IntacctFileId"].ToString() ) )
+            if ( Session["IntacctCsvExport"] != null && !string.IsNullOrEmpty( Session["IntacctCsvExport"].ToString() ) && Session["IntacctFileId"] != null && !string.IsNullOrEmpty( Session["IntacctFileId"].ToString() ) )
             {
-                var filename = string.Format( "Intacct_{0}.xlsx", Session["IntacctFileId"] );
-                var excel = Session["IntacctExcelExport"] as ExcelPackage;
-
-                Session["IntacctExcelExport"] = null;
+                var filename = string.Format( "Intacct_{0}.csv", Session["IntacctFileId"] );
+                var output = Session["IntacctCsvExport"].ToString();
+                Session["IntacctCsvExport"] = null;
                 Session["IntacctFileId"] = null;
-
-                Response.Clear();
-                Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-                Response.AppendHeader( "Content-Disposition", "attachment; filename=" + filename );
-                Response.Charset = string.Empty;
-                Response.BinaryWrite( excel.ToByteArray() );
-                Response.Flush();
+                var ms = new MemoryStream( Encoding.ASCII.GetBytes( output ) );
+                Response.ClearContent();
+                Response.ClearHeaders();
+                Response.ContentType = "text/csv";
+                Response.AddHeader( "Content-Disposition", string.Format( "attachment; filename={0}", filename ) );
+                ms.WriteTo( Response.OutputStream );
                 Response.End();
             }
         }
