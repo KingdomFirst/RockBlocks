@@ -54,6 +54,15 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Order = 0,
         Key = AttributeKey.JournalId )]
 
+    [EnumField(
+        "Journal State",
+        Description = "Determines whether to set the exported journal entry's state as Posted or Draft.",
+        IsRequired = true,
+        EnumSourceType = typeof( JournalState ),
+        DefaultEnumValue = ( int ) JournalState.Posted,
+        Order = 1,
+        Key = AttributeKey.JournalState )]
+
     [TextField(
         "Button Text",
         Description = "The text to use in the Export Button.",
@@ -193,6 +202,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         private static class AttributeKey
         {
             public const string JournalId = "JournalId";
+            public const string JournalState = "JournalState";
             public const string ButtonText = "ButtonText";
             public const string CloseBatch = "CloseBatch";
             public const string LogResponse = "LogResponse";
@@ -493,13 +503,14 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
                 var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
                 var groupingMode = ( GLAccountGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                var journalState = ( JournalState ) GetAttributeValue( AttributeKey.JournalState ).AsInteger();
                 var message = string.Empty;
 
                 //
                 // Create Intacct Journal XML and Post to Intacct
                 //
 
-                var success = ProcessIntacctBatch( groupingMode, logRequest, logResponse, debugLava, message );
+                var success = ProcessIntacctBatch( groupingMode, logRequest, logResponse, debugLava, message, journalState );
 
                 _personPreferences.Save();
 
@@ -561,7 +572,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             Response.Redirect( Request.RawUrl );
         }
 
-        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, bool logRequest, bool logResponse, string debugLava, string message )
+        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, bool logRequest, bool logResponse, string debugLava, string message, JournalState journalState )
         {
             var endpoint = new IntacctEndpoint();
             var postXml = new System.Xml.XmlDocument();
@@ -569,7 +580,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             if ( GetAttributeValue( AttributeKey.ExportMode ) == "JournalEntry" )
             {
                 var journal = new IntacctJournal();
-                postXml = journal.CreateJournalEntryXML( _intacctAuth, _financialBatch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode );
+                postXml = journal.CreateJournalEntryXML( _intacctAuth, _financialBatch.Id, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode, journalState );
             }
             else   // Export Mode is Other Receipt
             {

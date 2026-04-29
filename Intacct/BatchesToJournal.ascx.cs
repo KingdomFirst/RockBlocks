@@ -115,6 +115,15 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Order = 6,
         Key = AttributeKey.JournalId )]
 
+    [EnumField(
+        "Journal State",
+        Description = "Determines whether to set the exported journal entry's state as Posted or Draft.",
+        IsRequired = true,
+        EnumSourceType = typeof( JournalState ),
+        DefaultEnumValue = ( int ) JournalState.Posted,
+        Order = 1,
+        Key = AttributeKey.JournalState )]
+
     [TextField(
         "Undeposited Funds Account",
         Description = "The GL AccountId to use when Other Receipt mode is being used with Undeposited Funds option selected.",
@@ -223,6 +232,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             public const string ButtonText = "ButtonText";
             public const string MonthsBack = "MonthsBack";
             public const string JournalId = "JournalId";
+            public const string JournalState = "JournalState";
             public const string CloseBatch = "CloseBatch";
             public const string LogResponse = "LogResponse";
             public const string SenderId = "SenderId";
@@ -666,6 +676,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
                 var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
                 var groupingMode = ( GLAccountGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
+                var journalState = ( JournalState ) GetAttributeValue( AttributeKey.JournalState ).AsInteger();
                 var message = string.Empty;
 
                 foreach ( var batch in batchesToUpdate )
@@ -685,7 +696,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     // Create Intacct Journal XML and Post to Intacct
                     //
 
-                    var success = ProcessIntacctBatch( groupingMode, batch.Id, logRequest, logResponse, debugLava, message );
+                    var success = ProcessIntacctBatch( groupingMode, batch.Id, logRequest, logResponse, debugLava, message, journalState );
 
                     _personPreferences.Save();
 
@@ -768,7 +779,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         #endregion
 
-        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, int batchId, bool logRequest, bool logResponse, string debugLava, string message )
+        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, int batchId, bool logRequest, bool logResponse, string debugLava, string message, JournalState journalState )
         {
             var endpoint = new IntacctEndpoint();
             var postXml = new System.Xml.XmlDocument();
@@ -776,7 +787,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             if ( _exportMode == "JournalEntry" )
             {
                 var journal = new IntacctJournal();
-                postXml = journal.CreateJournalEntryXML( _intacctAuth, batchId, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode );
+                postXml = journal.CreateJournalEntryXML( _intacctAuth, batchId, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode, journalState );
             }
             else   // Export Mode is Other Receipt
             {
