@@ -20,7 +20,6 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Data.Entity;
 using System.Linq;
-using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -358,7 +357,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             ddlStatus.BindToEnum<BatchStatus>();
             ddlStatus.Items.Insert( 0, Rock.Constants.All.ListItem );
-            string statusFilter = gfBatchesToExportFilter.GetUserPreference( "Status" );
+            string statusFilter = gfBatchesToExportFilter.GetFilterPreference( "Status" );
             if ( string.IsNullOrWhiteSpace( statusFilter ) )
             {
                 statusFilter = BatchStatus.Open.ConvertToInt().ToString();
@@ -366,7 +365,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
             ddlStatus.SetValue( statusFilter );
 
-            drpBatchDate.DelimitedValues = gfBatchesToExportFilter.GetUserPreference( "Date Range" );
+            drpBatchDate.DelimitedValues = gfBatchesToExportFilter.GetFilterPreference( "Date Range" );
         }
 
         /// <summary>
@@ -389,7 +388,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     .Where( b => b.BatchStartDateTime >= firstBatchDate )
                     .Where( b => b.ControlAmount == b.Transactions.Sum( t => t.TransactionDetails.Sum( d => d.Amount ) ) );
 
-                string dateRangeValue = gfBatchesToExportFilter.GetUserPreference( "Date Range" );
+                string dateRangeValue = gfBatchesToExportFilter.GetFilterPreference( "Date Range" );
                 if ( !string.IsNullOrWhiteSpace( dateRangeValue ) )
                 {
                     var drp = new DateRangePicker();
@@ -406,7 +405,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     }
                 }
 
-                var status = gfBatchesToExportFilter.GetUserPreference( "Status" ).ConvertToEnumOrNull<BatchStatus>();
+                var status = gfBatchesToExportFilter.GetFilterPreference( "Status" ).ConvertToEnumOrNull<BatchStatus>();
                 if ( status.HasValue )
                 {
                     qry = qry.Where( b => b.Status == status );
@@ -618,8 +617,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void gfBatchesToExportFilter_ApplyFilterClick( object sender, EventArgs e )
         {
-            gfBatchesToExportFilter.SaveUserPreference( "Status", ddlStatus.SelectedValue );
-            gfBatchesToExportFilter.SaveUserPreference( "Date Range", drpBatchDate.DelimitedValues );
+            gfBatchesToExportFilter.SetFilterPreference( "Status", ddlStatus.SelectedValue );
+            gfBatchesToExportFilter.SetFilterPreference( "Date Range", drpBatchDate.DelimitedValues );
 
             BindGrid();
         }
@@ -631,8 +630,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
         protected void gfBatchesToExportFilter_ClearFilterClick( object sender, EventArgs e )
         {
-            gfBatchesToExportFilter.DeleteUserPreferences();
-            gfBatchesToExportFilter.SaveUserPreference( "Status", BatchStatus.Open.ConvertToInt().ToString() );
+            gfBatchesToExportFilter.DeleteFilterPreferences();
+            gfBatchesToExportFilter.SetFilterPreference( "Status", BatchStatus.Open.ConvertToInt().ToString() );
             BindFilter();
             BindGrid();
         }
