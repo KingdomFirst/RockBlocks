@@ -121,7 +121,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = true,
         EnumSourceType = typeof( JournalState ),
         DefaultEnumValue = ( int ) JournalState.Posted,
-        Order = 1,
+        Order = 7,
         Key = AttributeKey.JournalState )]
 
     [TextField(
@@ -130,7 +130,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = false,
         DefaultValue = "",
         Category = "Intacct Settings",
-        Order = 7,
+        Order = 8,
         Key = AttributeKey.UndepositedFundsAccount )]
 
     [LavaField(
@@ -139,8 +139,16 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = true,
         DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
         Category = "Intacct Settings",
-        Order = 8,
+        Order = 9,
         Key = AttributeKey.JournalMemoLava )]
+
+    [CustomDropdownListField(
+        "Export Method",
+        Description = "Choose whether to export batches directy to Intacct (Direct) or to a csv file (File). NOTE: File currently only supports Journal Entries. This setting is ignored if Export Mode setting is set to Other Receipts.",
+        ListSource = "1^Direct,2^File",
+        DefaultValue = "1",
+        Order = 10,
+        Key = AttributeKey.ExportMethod )]
 
     [EncryptedTextField(
         "Sender Id",
@@ -148,7 +156,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = true,
         DefaultValue = "",
         Category = "Intacct Settings",
-        Order = 9,
+        Order = 11,
         Key = AttributeKey.SenderId )]
 
     [EncryptedTextField(
@@ -158,7 +166,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsPassword = true,
         DefaultValue = "",
         Category = "Intacct Settings",
-        Order = 10,
+        Order = 12,
         Key = AttributeKey.SenderPassword )]
 
     [EncryptedTextField(
@@ -167,7 +175,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = true,
         DefaultValue = "",
         Category = "Intacct Settings",
-        Order = 11,
+        Order = 13,
         Key = AttributeKey.CompanyId )]
 
     [EncryptedTextField(
@@ -176,7 +184,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = true,
         DefaultValue = "",
         Category = "Intacct Settings",
-        Order = 12,
+        Order = 14,
         Key = AttributeKey.UserId )]
 
     [EncryptedTextField(
@@ -186,7 +194,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsPassword = true,
         DefaultValue = "",
         Category = "Intacct Settings",
-        Order = 13,
+        Order = 15,
         Key = AttributeKey.UserPassword )]
 
     [EncryptedTextField(
@@ -195,7 +203,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = false,
         DefaultValue = "",
         Category = "Intacct Settings",
-        Order = 14,
+        Order = 16,
         Key = AttributeKey.LocationId )]
 
     [CustomDropdownListField(
@@ -204,7 +212,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         ListSource = "JournalEntry,OtherReceipt",
         DefaultValue = "JournalEntry",
         Category = "Intacct Settings",
-        Order = 15,
+        Order = 17,
         Key = AttributeKey.ExportMode )]
 
     [EnumField(
@@ -214,7 +222,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         EnumSourceType = typeof( GLAccountGroupingMode ),
         DefaultEnumValue = ( int ) GLAccountGroupingMode.DebitAndCreditByFinancialAccount,
         Category = "Intacct Settings",
-        Order = 16,
+        Order = 18,
         Key = AttributeKey.AccountGroupingMode )]
 
     #endregion
@@ -242,6 +250,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             public const string UserPassword = "UserPassword";
             public const string LocationId = "LocationId";
             public const string JournalMemoLava = "JournalMemoLava";
+            public const string ExportMethod = "ExportMethod";
             public const string EnableDebug = "EnableDebug";
             public const string ExportMode = "ExportMode";
             public const string UndepositedFundsAccount = "UndepositedFundsAccount";
@@ -264,6 +273,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         private string _selectedPaymentMethod;
         private string _selectedReceiptAccountType;
         private string _exportMode;
+        private bool _csvExport = false;
         private int _monthsBack;
         private string _enableDebug;
         private IntacctAuth _intacctAuth = null;
@@ -280,6 +290,13 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         protected override void OnInit( EventArgs e )
         {
             base.OnInit( e );
+
+            var exportMethod = GetAttributeValue( AttributeKey.ExportMethod ).AsInteger();
+            _exportMode = GetAttributeValue( AttributeKey.ExportMode );
+
+            _csvExport = exportMethod == 2 && _exportMode == "JournalEntry";
+
+            pnlIntDownload.Visible = _csvExport;
 
             gfBatchesToExportFilter.ApplyFilterClick += gfBatchesToExportFilter_ApplyFilterClick;
             gfBatchesToExportFilter.ClearFilterClick += gfBatchesToExportFilter_ClearFilterClick;
@@ -672,12 +689,15 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         && !exportedBatches.Contains( b.Id )
                       ).ToList();
 
+                var journalId = GetAttributeValue( AttributeKey.JournalId );
                 var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
                 var logResponse = GetAttributeValue( AttributeKey.LogResponse ).AsBoolean();
                 var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
                 var groupingMode = ( GLAccountGroupingMode ) GetAttributeValue( AttributeKey.AccountGroupingMode ).AsInteger();
                 var journalState = ( JournalState ) GetAttributeValue( AttributeKey.JournalState ).AsInteger();
+                var descriptionLava = GetAttributeValue( AttributeKey.JournalMemoLava );
                 var message = string.Empty;
+                var csvItems = new List<IntacctJournal.GLCsvLine>();
 
                 foreach ( var batch in batchesToUpdate )
                 {
@@ -692,13 +712,35 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         return;
                     }
 
-                    //
-                    // Create Intacct Journal XML and Post to Intacct
-                    //
+                    var success = false;
 
-                    var success = ProcessIntacctBatch( groupingMode, batch.Id, logRequest, logResponse, debugLava, message, journalState );
+                    if ( !_csvExport )
+                    {
+                        //
+                        // Create Intacct Journal XML and Post to Intacct
+                        //
 
-                    _personPreferences.Save();
+                        success = ProcessIntacctBatch( groupingMode, journalId, batch.Id, logRequest, logResponse, debugLava, message, descriptionLava, journalState );
+                    }
+                    else
+                    {
+                        //
+                        // Capture GLCsvItems to generate a csv file for download
+                        //
+
+                        var journal = new IntacctJournal();
+                        var items = journal.GetGLCsvLines( batch, journalId, ref debugLava, descriptionLava, groupingMode, journalState );
+                        success = items.Any();
+
+                        if ( success )
+                        {
+                            csvItems.AddRange( items );
+                        }
+                        else
+                        {
+                            message = $"There are no transactions to export for selected batch {batch.Name} [{batch.Id}]. Export was unsuccessful.";
+                        }
+                    }
 
                     if ( success )
                     {
@@ -753,6 +795,24 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     }
                 }
 
+                _personPreferences.Save();
+
+                if ( _csvExport )
+                {
+                    if ( csvItems.Count > 0 )
+                    {
+                        var fileId = batchesToUpdate.Select( b => b.Id.ToString() ).ToList().JoinStrings( "_" );
+                        new IntacctJournal().GLCsvExport( csvItems, fileId );
+                        Session["IntacctDebugLava"] = debugLava;
+                    }
+                    else
+                    {
+                        message = "There were no transactions to export for this batch.";
+                        maWarningDialog.Show( message, ModalAlertType.Warning );
+                        return;
+                    }
+                }
+
                 rockContext.SaveChanges();
                 Session["IntacctDebugLava"] = debugLava;
 
@@ -779,7 +839,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         #endregion
 
-        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, int batchId, bool logRequest, bool logResponse, string debugLava, string message, JournalState journalState )
+        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, string journalId, int batchId, bool logRequest, bool logResponse, string debugLava, string message, string descriptionLava, JournalState journalState )
         {
             var endpoint = new IntacctEndpoint();
             var postXml = new System.Xml.XmlDocument();
@@ -787,7 +847,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             if ( _exportMode == "JournalEntry" )
             {
                 var journal = new IntacctJournal();
-                postXml = journal.CreateJournalEntryXML( _intacctAuth, batchId, GetAttributeValue( AttributeKey.JournalId ), ref debugLava, GetAttributeValue( AttributeKey.JournalMemoLava ), groupingMode, journalState );
+                postXml = journal.CreateJournalEntryXML( _intacctAuth, batchId, journalId, ref debugLava, descriptionLava, groupingMode, journalState );
             }
             else   // Export Mode is Other Receipt
             {
@@ -803,7 +863,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 {
                     undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
                 }
-                postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batchId, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, GetAttributeValue( AttributeKey.JournalMemoLava ) );
+                postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batchId, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, descriptionLava );
             }
 
             var resultXml = endpoint.PostToIntacct( postXml, logRequest );
@@ -823,6 +883,28 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             }
 
             return success;
+        }
+
+        private bool ExportBatchToCsvFile( GLAccountGroupingMode groupingMode, FinancialBatch batch, bool logRequest, bool logResponse, string debugLava, string message, JournalState journalState )
+        {
+            var journal = new IntacctJournal();
+            var journalId = GetAttributeValue( AttributeKey.JournalId );
+            var descriptionLava = GetAttributeValue( AttributeKey.JournalMemoLava );
+
+            var items = journal.GetGLCsvLines( batch, journalId, ref debugLava, descriptionLava, groupingMode, journalState );
+
+            if ( items.Count > 0 )
+            {
+                journal.GLCsvExport( items, batch.Id.ToString() );
+                Session["IntacctDebugLava"] = debugLava;
+
+                return true;
+            }
+            else
+            {
+                message = $"There were no transactions to export for batch {batch.Name} [{batch.Id}].";
+                return false;
+            }
         }
 
         #region Classes

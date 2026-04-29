@@ -34,3 +34,6 @@
         </div>
     </ContentTemplate>
 </asp:UpdatePanel>
+<asp:Panel runat="server" ID="pnlIntDownload" Visible="false">
+    <iframe id="intJournalDownload" src="/Plugins/rocks_kfs/Intacct/IntacctCsvExport.aspx" frameborder="0" width="0" height="0"></iframe>
+</asp:Panel>
