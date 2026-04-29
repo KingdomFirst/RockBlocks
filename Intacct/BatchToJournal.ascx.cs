@@ -68,28 +68,28 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Description = "The text to use in the Export Button.",
         IsRequired = false,
         DefaultValue = "Export to Intacct",
-        Order = 1,
+        Order = 2,
         Key = AttributeKey.ButtonText )]
 
     [BooleanField(
         "Close Batch",
         Description = "Flag indicating if the Financial Batch be closed in Rock when successfully posted to Intacct.",
         DefaultBooleanValue = true,
-        Order = 2,
+        Order = 3,
         Key = AttributeKey.CloseBatch )]
 
     [BooleanField(
         "Log Response",
         Description = "Flag indicating if the Intacct Response should be logged to the Batch Audit Log",
         DefaultBooleanValue = true,
-        Order = 3,
+        Order = 4,
         Key = AttributeKey.LogResponse )]
 
     [BooleanField(
         "Log Request",
         Description = "Flag indicating if the Intacct Request should be logged to the Exception Log",
         DefaultBooleanValue = false,
-        Order = 4,
+        Order = 5,
         Key = AttributeKey.LogRequest )]
 
     [LavaField(
@@ -97,22 +97,22 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Description = "Lava for the journal (or other receipt if configured) memo per line. Default: Batch.Id: Batch.Name",
         IsRequired = true,
         DefaultValue = "{{ Batch.Id }}: {{ Batch.Name }}",
-        Order = 4,
+        Order = 6,
         Key = AttributeKey.JournalMemoLava )]
 
     [BooleanField(
         "Enable Debug",
         Description = "Outputs the object graph to help create your Lava syntax. (Debug data will show after clicking export.)",
         DefaultBooleanValue = false,
-        Order = 5,
+        Order = 7,
         Key = AttributeKey.EnableDebug )]
 
     [CustomDropdownListField(
         "Export Method",
-        Description = "Choose whether to export batches directy to Intacct (Direct) or to a csv file (File). NOTE: File currently only supports Journal Entries. This setting is ignored if Export Mode setting is set to Other Receipts.",
+        Description = "Choose whether to export batches directly to Intacct (Direct) or to a csv file (File). NOTE: File currently only supports Journal Entries. This setting is ignored if Export Mode setting is set to Other Receipts.",
         ListSource = "1^Direct,2^File",
         DefaultValue = "1",
-        Order = 6,
+        Order = 8,
         Key = AttributeKey.ExportMethod )]
 
     [TextField(
@@ -120,7 +120,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Description = "The GL AccountId to use when Other Receipt mode is being used with Undeposited Funds option selected.",
         IsRequired = false,
         DefaultValue = "",
-        Order = 7,
+        Order = 9,
         Key = AttributeKey.UndepositedFundsAccount )]
 
     [EncryptedTextField(
@@ -129,7 +129,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = false,
         DefaultValue = "",
         Category = "Configuration",
-        Order = 8,
+        Order = 10,
         Key = AttributeKey.SenderId )]
 
     [EncryptedTextField(
@@ -139,7 +139,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsPassword = true,
         DefaultValue = "",
         Category = "Configuration",
-        Order = 9,
+        Order = 11,
         Key = AttributeKey.SenderPassword )]
 
     [EncryptedTextField(
@@ -148,7 +148,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = false,
         DefaultValue = "",
         Category = "Configuration",
-        Order = 10,
+        Order = 12,
         Key = AttributeKey.CompanyId )]
 
     [EncryptedTextField(
@@ -157,7 +157,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = false,
         DefaultValue = "",
         Category = "Configuration",
-        Order = 11,
+        Order = 13,
         Key = AttributeKey.UserId )]
 
     [EncryptedTextField(
@@ -167,7 +167,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsPassword = true,
         DefaultValue = "",
         Category = "Configuration",
-        Order = 12,
+        Order = 14,
         Key = AttributeKey.UserPassword )]
 
     [EncryptedTextField(
@@ -176,7 +176,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         IsRequired = false,
         DefaultValue = "",
         Category = "Configuration",
-        Order = 13,
+        Order = 15,
         Key = AttributeKey.LocationId )]
 
     [CustomDropdownListField(
@@ -185,7 +185,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         ListSource = "JournalEntry,OtherReceipt",
         DefaultValue = "JournalEntry",
         Category = "Configuration",
-        Order = 14,
+        Order = 16,
         Key = AttributeKey.ExportMode )]
 
     [EnumField(
@@ -195,7 +195,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         EnumSourceType = typeof( GLAccountGroupingMode ),
         DefaultEnumValue = ( int ) GLAccountGroupingMode.DebitAndCreditByFinancialAccount,
         Category = "Configuration",
-        Order = 15,
+        Order = 17,
         Key = AttributeKey.AccountGroupingMode )]
 
     #endregion
