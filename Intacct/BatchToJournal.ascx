@@ -6,7 +6,7 @@
             <Rock:ModalAlert ID="maWarningDialog" runat="server" />
             <asp:Panel runat="server" ID="pnlExportedDetails" CssClass="col-sm-2" Visible="false">
                 <asp:Literal runat="server" ID="litDateExported" Visible="false"></asp:Literal>
-                <Rock:BootstrapButton runat="server" Visible="false" ID="btnRemoveDate" Text="Remove Date Exported" ValidationGroup="KFSIntacctExport"  OnClick="btnRemoveDateExported_Click" CssClass="btn btn-link" />
+                <Rock:BootstrapButton runat="server" Visible="false" ID="btnRemoveDate" Text="Remove Date Exported" ValidationGroup="KFSIntacctExport" OnClick="btnRemoveDateExported_Click" CssClass="btn btn-link" />
             </asp:Panel>
             <asp:Panel runat="server" ID="pnlOtherReceipt" Visible="false">
                 <div class="col-md-3 col-lg-2">
@@ -34,3 +34,6 @@
         </div>
     </ContentTemplate>
 </asp:UpdatePanel>
+<asp:Panel runat="server" ID="pnlIntDownload" Visible="false">
+    <iframe id="intJournalDownload" src="/Plugins/rocks_kfs/Intacct/IntacctCsvExport.aspx" frameborder="0" width="0" height="0"></iframe>
+</asp:Panel>
