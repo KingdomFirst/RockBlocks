@@ -277,7 +277,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         private string _selectedPaymentMethod;
         private string _selectedReceiptAccountType;
         private string _exportMode;
-        private bool _csvExport = false;
+        private int _exportMethod = 1;
         private int _monthsBack;
         private string _enableDebug;
         private IntacctAuth _intacctAuth = null;
@@ -295,12 +295,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             base.OnInit( e );
 
-            var exportMethod = GetAttributeValue( AttributeKey.ExportMethod ).AsInteger();
+            _exportMethod = GetAttributeValue( AttributeKey.ExportMethod ).AsInteger();
             _exportMode = GetAttributeValue( AttributeKey.ExportMode );
 
-            _csvExport = exportMethod == 2 && _exportMode == "JournalEntry";
-
-            pnlIntDownload.Visible = _csvExport;
+            pnlIntDownload.Visible = _exportMethod == 2;
 
             gfBatchesToExportFilter.ApplyFilterClick += gfBatchesToExportFilter_ApplyFilterClick;
             gfBatchesToExportFilter.ClearFilterClick += gfBatchesToExportFilter_ClearFilterClick;
@@ -735,7 +733,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 var journalState = ( JournalState ) GetAttributeValue( AttributeKey.JournalState ).AsInteger();
                 var descriptionLava = GetAttributeValue( AttributeKey.JournalMemoLava );
                 var message = string.Empty;
-                var csvItems = new List<IntacctJournal.GLCsvLine>();
+                var csvJournalItems = new List<GLJournalCsvLine>();
+                var csvReceiptItems = new List<GLReceiptCsvLine>();
 
                 foreach ( var batch in batchesToUpdate )
                 {
@@ -752,15 +751,15 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                     var success = false;
 
-                    if ( !_csvExport )
+                    if ( _exportMethod == 1 )
                     {
                         //
                         // Create Intacct Journal XML and Post to Intacct
                         //
 
-                        success = ProcessIntacctBatch( groupingMode, journalId, batch.Id, logRequest, logResponse, debugLava, message, descriptionLava, journalState );
+                        success = ProcessIntacctBatch( groupingMode, journalId, batch.Id, logRequest, logResponse, debugLava, ref message, descriptionLava, journalState );
                     }
-                    else
+                    else if ( _exportMode == "JournalEntry" )
                     {
                         //
                         // Capture GLCsvItems to generate a csv file for download
@@ -772,11 +771,38 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                         if ( success )
                         {
-                            csvItems.AddRange( items );
+                            csvJournalItems.AddRange( items );
                         }
                         else
                         {
                             message = $"There are no transactions to export for selected batch {batch.Name} [{batch.Id}]. Export was unsuccessful.";
+                        }
+                    }
+                    else  // Export Mode is Other Receipt
+                    {
+                        var otherReceipt = new IntacctOtherReceipt();
+                        string bankAccountId = null;
+                        string undepFundAccount = null;
+                        if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
+                        {
+                            _personPreferences.SetValue( PreferenceKey.BankAccountIdDVId, dvpBankAccounts.SelectedValue ?? "" );
+                            bankAccountId = dvpBankAccounts.SelectedItem.Text;
+                        }
+                        else
+                        {
+                            undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
+                        }
+
+                        var items = otherReceipt.GetOtherReceiptCsvLines( batch, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount );
+                        success = items.Any();
+
+                        if ( success )
+                        {
+                            csvReceiptItems.AddRange( items );
+                        }
+                        else
+                        {
+                            message = "There were no transactions to export for this batch.";
                         }
                     }
 
@@ -835,13 +861,17 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                 _personPreferences.Save();
 
-                if ( _csvExport )
+                if ( _exportMethod == 2 )
                 {
-                    if ( csvItems.Count > 0 )
+                    var fileId = batchesToUpdate.Select( b => b.Id.ToString() ).ToList().JoinStrings( "_" );
+
+                    if ( csvJournalItems.Count > 0 )
                     {
-                        var fileId = batchesToUpdate.Select( b => b.Id.ToString() ).ToList().JoinStrings( "_" );
-                        new IntacctJournal().GLCsvExport( csvItems, fileId );
-                        Session["IntacctDebugLava"] = debugLava;
+                        new IntacctJournal().GLCsvExport( csvJournalItems, fileId );
+                    }
+                    else if ( csvReceiptItems.Count > 0 )
+                    {
+                        new IntacctOtherReceipt().GLCsvExport( csvReceiptItems, fileId );
                     }
                     else
                     {
@@ -877,7 +907,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         #endregion
 
-        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, string journalId, int batchId, bool logRequest, bool logResponse, string debugLava, string message, string descriptionLava, JournalState journalState )
+        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, string journalId, int batchId, bool logRequest, bool logResponse, string debugLava, ref string message, string descriptionLava, JournalState journalState )
         {
             var endpoint = new IntacctEndpoint();
             var postXml = new System.Xml.XmlDocument();

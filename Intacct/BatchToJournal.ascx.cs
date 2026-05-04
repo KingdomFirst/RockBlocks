@@ -26,11 +26,13 @@ using Rock.Data;
 using Rock.Model;
 using Rock.Security;
 using Rock.Utility;
+using Rock.Web.Cache;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
 
 using rocks.kfs.Intacct;
 using rocks.kfs.Intacct.Enums;
+using KFSConst = rocks.kfs.Intacct.SystemGuid;
 
 namespace RockWeb.Plugins.rocks_kfs.Intacct
 {
@@ -249,7 +251,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         private FinancialBatch _financialBatch = null;
         private IntacctAuth _intacctAuth = null;
         private string _exportMode;
-        private bool _csvExport = false;
+        private int _exportMethod = 1;
         private PersonPreferenceCollection _personPreferences => GetBlockPersonPreferences();
 
         #endregion Fields
@@ -278,12 +280,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             base.OnInit( e );
 
             _batchId = PageParameter( "batchId" ).AsInteger();
-            var exportMethod = GetAttributeValue( AttributeKey.ExportMethod ).AsInteger();
+            _exportMethod = GetAttributeValue( AttributeKey.ExportMethod ).AsInteger();
             _exportMode = GetAttributeValue( AttributeKey.ExportMode );
 
-            _csvExport = exportMethod == 2 && _exportMode == "JournalEntry";
-
-            pnlIntDownload.Visible = _csvExport;
+            pnlIntDownload.Visible = _exportMethod == 2;
         }
 
         /// <summary>
@@ -547,7 +547,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     _personPreferences.SetValue( PreferenceKey.PaymentMethod, ddlPaymentMethods.SelectedValue ?? "" );
                 }
 
-                if ( !_csvExport && _intacctAuth == null )
+                if ( _exportMethod == 1 && _intacctAuth == null )
                 {
                     _intacctAuth = GetIntactAuth();
                 }
@@ -560,7 +560,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 var message = string.Empty;
                 var success = false;
 
-                if ( !_csvExport )
+                if ( _exportMethod == 1 )
                 {
                     //
                     // Create Intacct Journal XML and Post to Intacct
@@ -681,25 +681,56 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         private bool ExportBatchToCsvFile( GLAccountGroupingMode groupingMode, bool logRequest, bool logResponse, string debugLava, string message, JournalState journalState )
         {
-            var rockContext = new RockContext();
-
-            var journal = new IntacctJournal();
-            var journalId = GetAttributeValue( AttributeKey.JournalId );
             var descriptionLava = GetAttributeValue( AttributeKey.JournalMemoLava );
-
-            var items = journal.GetGLCsvLines( _financialBatch, journalId, ref debugLava, descriptionLava, groupingMode, journalState );
-
-            if ( items.Count > 0 )
+            if ( _exportMode == "JournalEntry" )
             {
-                journal.GLCsvExport( items, _financialBatch.Id.ToString() );
-                Session["IntacctDebugLava"] = debugLava;
+                var journal = new IntacctJournal();
+                var journalId = GetAttributeValue( AttributeKey.JournalId );
 
-                return true;
+                var items = journal.GetGLCsvLines( _financialBatch, journalId, ref debugLava, descriptionLava, groupingMode, journalState );
+
+                if ( items.Count > 0 )
+                {
+                    journal.GLCsvExport( items, _financialBatch.Id.ToString() );
+                    Session["IntacctDebugLava"] = debugLava;
+
+                    return true;
+                }
+                else
+                {
+                    message = "There were no transactions to export for this batch.";
+                    return false;
+                }
             }
-            else
+            else   // Export Mode is Other Receipt
             {
-                message = "There were no transactions to export for this batch.";
-                return false;
+                var otherReceipt = new IntacctOtherReceipt();
+                string bankAccountId = null;
+                string undepFundAccount = null;
+                if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
+                {
+                    _personPreferences.SetValue( PreferenceKey.BankAccountIdDVId, dvpBankAccounts.SelectedValue ?? "" );
+                    bankAccountId = dvpBankAccounts.SelectedItem.Text;
+                }
+                else
+                {
+                    undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
+                }
+
+                var items = otherReceipt.GetOtherReceiptCsvLines( _financialBatch, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId,undepFundAccount );
+
+                if ( items.Count > 0 )
+                {
+                    otherReceipt.GLCsvExport( items, _financialBatch.Id.ToString() );
+                    Session["IntacctDebugLava"] = debugLava;
+
+                    return true;
+                }
+                else
+                {
+                    message = "There were no transactions to export for this batch.";
+                    return false;
+                }
             }
         }
 
