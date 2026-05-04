@@ -753,10 +753,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                     if ( _exportMethod == 1 )
                     {
-                        //
-                        // Create Intacct Journal XML and Post to Intacct
-                        //
-
                         success = ProcessIntacctBatch( groupingMode, journalId, batch.Id, logRequest, logResponse, debugLava, ref message, descriptionLava, journalState );
                     }
                     else if ( _exportMode == "JournalEntry" )
@@ -914,11 +910,16 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
             if ( _exportMode == "JournalEntry" )
             {
+
                 var journal = new IntacctJournal();
                 postXml = journal.CreateJournalEntryXML( _intacctAuth, batchId, journalId, ref debugLava, descriptionLava, groupingMode, journalState );
             }
-            else   // Export Mode is Other Receipt
+            else
             {
+                //
+                // Create Intacct Other Receipt XML and Post to Intacct
+                //
+
                 var otherReceipt = new IntacctOtherReceipt();
                 string bankAccountId = null;
                 string undepFundAccount = null;
@@ -951,28 +952,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             }
 
             return success;
-        }
-
-        private bool ExportBatchToCsvFile( GLAccountGroupingMode groupingMode, FinancialBatch batch, bool logRequest, bool logResponse, string debugLava, string message, JournalState journalState )
-        {
-            var journal = new IntacctJournal();
-            var journalId = GetAttributeValue( AttributeKey.JournalId );
-            var descriptionLava = GetAttributeValue( AttributeKey.JournalMemoLava );
-
-            var items = journal.GetGLCsvLines( batch, journalId, ref debugLava, descriptionLava, groupingMode, journalState );
-
-            if ( items.Count > 0 )
-            {
-                journal.GLCsvExport( items, batch.Id.ToString() );
-                Session["IntacctDebugLava"] = debugLava;
-
-                return true;
-            }
-            else
-            {
-                message = $"There were no transactions to export for batch {batch.Name} [{batch.Id}].";
-                return false;
-            }
         }
 
         #region Classes
