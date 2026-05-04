@@ -46,7 +46,7 @@
                         <Rock:RockDropDownList ID="ddlPaymentMethods" runat="server" Label="Payment Method" Required="true" ValidationGroup="KFSIntacctExport" />
                     </div>
                     <asp:Panel runat="server" ID="pnlBankAccounts" CssClass="col-md-3 col-lg-2">
-                        <Rock:RockDropDownList ID="ddlBankAccounts" runat="server" Label="Bank Account" Required="true" ValidationGroup="KFSIntacctExport" />
+                        <Rock:DefinedValuePicker ID="dvpBankAccounts" runat="server" Label="Bank Account" Required="true" ValidationGroup="KFSIntacctExport" />
                     </asp:Panel>
                 </asp:Panel>
                 <div class="col-sm-2">

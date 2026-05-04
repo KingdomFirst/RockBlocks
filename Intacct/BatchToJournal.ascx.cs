@@ -233,7 +233,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             public const string ReceiptAccountType = "receipt-account-type";
             public const string PaymentMethod = "payment-method";
-            public const string BankAccountId = "bank-account-id";
+            public const string BankAccountIdDVId = "bank-account-id-dv-id";
         }
 
         #endregion Keys
@@ -243,6 +243,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         private int _batchId = 0;
         private decimal _variance = 0;
         private string _selectedBankAccountId;
+        private int? _selectedBankAccountIdDVId;
         private string _selectedPaymentMethod;
         private string _selectedReceiptAccountType;
         private FinancialBatch _financialBatch = null;
@@ -265,6 +266,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             _selectedReceiptAccountType = ViewState["ReceiptAccountType"] as string;
             _selectedPaymentMethod = ViewState["PaymentMethod"] as string;
             _selectedBankAccountId = ViewState["BankAccountId"] as string;
+            _selectedBankAccountIdDVId = ViewState["BankAccountIdDVId"] as int?;
         }
 
         /// <summary>
@@ -316,7 +318,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             {
                 _selectedReceiptAccountType = _personPreferences.GetValue( PreferenceKey.ReceiptAccountType );
                 _selectedPaymentMethod = _personPreferences.GetValue( PreferenceKey.PaymentMethod );
-                _selectedBankAccountId = _personPreferences.GetValue( PreferenceKey.BankAccountId );
+                _selectedBankAccountIdDVId = _personPreferences.GetValue( PreferenceKey.BankAccountIdDVId ).AsIntegerOrNull();
+                if ( _selectedBankAccountIdDVId.HasValue )
+                {
+                    _selectedBankAccountId = DefinedValueCache.Get( _selectedBankAccountIdDVId.Value ).Value;
+                }
             }
             ShowDetail( !Page.IsPostBack );
         }
@@ -332,6 +338,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             ViewState["ReceiptAccountType"] = _selectedReceiptAccountType;
             ViewState["PaymentMethod"] = _selectedPaymentMethod;
             ViewState["BankAccountId"] = _selectedBankAccountId;
+            ViewState["BankAccountIdDVId"] = _selectedBankAccountIdDVId;
             return base.SaveViewState();
         }
 
@@ -456,17 +463,20 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             }
             if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
             {
-                if ( ddlBankAccounts.Items.Count == 0 )
+                if ( dvpBankAccounts.Items.Count == 0 )
                 {
-                    var bankAccounts = GetIntacctBankAccountIds();
-                    ddlBankAccounts.DataSource = bankAccounts;
-                    ddlBankAccounts.DataTextField = "BankName";
-                    ddlBankAccounts.DataValueField = "BankAccountId";
-                    ddlBankAccounts.DataBind();
+                    var rockContext = new RockContext();
+                    var bankAccountDT = new DefinedTypeService( rockContext ).Get( KFSConst.DefinedType.INTACCT_OTHER_RECEIPT_BANK_ACCOUNT_DEFINED_TYPE.AsGuid() );
+                    if ( _exportMethod == 1 )
+                    {
+                        LoadIntacctBankAccountIds( rockContext, bankAccountDT );
+                        rockContext.SaveChanges();
+                    }
+                    dvpBankAccounts.DefinedTypeId = bankAccountDT.Id;
                 }
                 if ( setSelectControlValues )
                 {
-                    ddlBankAccounts.SetValue( _selectedBankAccountId );
+                    dvpBankAccounts.SetValue( _selectedBankAccountIdDVId );
                 }
                 pnlBankAccounts.Visible = true;
             }
@@ -476,7 +486,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             }
         }
 
-        private List<CheckingAccount> GetIntacctBankAccountIds()
+        private void LoadIntacctBankAccountIds( RockContext rockContext, DefinedType bankAccountDT )
         {
             if ( _intacctAuth == null )
             {
@@ -487,13 +497,40 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             var accountFields = new List<string>();
             accountFields.Add( "BANKACCOUNTID" );
             accountFields.Add( "BANKNAME" );
+            accountFields.Add( "GLACCOUNTNO" );
             var postXml = checkingAccountList.GetBankAccountsXML( _intacctAuth, _financialBatch.Id, accountFields );
 
             var endpoint = new IntacctEndpoint();
             var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
             var resultXml = endpoint.PostToIntacct( postXml, logRequest );
-            return endpoint.ParseListCheckingAccountsResponse( resultXml, _financialBatch.Id );
+            var apiBankAccounts = endpoint.ParseListCheckingAccountsResponse( resultXml, _financialBatch.Id ).Where( a => !a.GLAccountNo.IsNullOrWhiteSpace() );
 
+            var dVbankAccounts = bankAccountDT.DefinedValues.Select( dv => dv.Value );
+            var accountsToAdd = apiBankAccounts.Where( a => !dVbankAccounts.Contains( a.BankAccountId ) );
+            var accountsToRemove = dVbankAccounts.Where( dv => !apiBankAccounts.Select( a => a.BankAccountId ).Contains( dv ) );
+
+            foreach ( var account in accountsToAdd )
+            {
+                bankAccountDT.DefinedValues.Add( new DefinedValue
+                {
+                    DefinedTypeId = bankAccountDT.Id,
+                    Value = account.BankAccountId,
+                    Description = account.BankName
+                } );
+            }
+
+            if ( accountsToRemove.Any() )
+            {
+                var definedValueService = new DefinedValueService( rockContext );
+                foreach ( var dv in accountsToRemove )
+                {
+                    var definedValue = bankAccountDT.DefinedValues.FirstOrDefault( v => v.Value == dv );
+                    if ( definedValue != null )
+                    {
+                        definedValueService.Delete( definedValue );
+                    }
+                }
+            }
         }
 
         protected void btnExportToIntacct_Click( object sender, EventArgs e )
@@ -613,8 +650,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 string undepFundAccount = null;
                 if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
                 {
-                    _personPreferences.SetValue( PreferenceKey.BankAccountId, ddlBankAccounts.SelectedValue ?? "" );
-                    bankAccountId = ddlBankAccounts.SelectedValue;
+                    _personPreferences.SetValue( PreferenceKey.BankAccountIdDVId, dvpBankAccounts.SelectedValue ?? "" );
+                    bankAccountId = dvpBankAccounts.SelectedItem.Text;
                 }
                 else
                 {
@@ -761,7 +798,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             _selectedPaymentMethod = ddlPaymentMethods.SelectedValue;
             if ( ddlReceiptAccountType.SelectedValue != "BankAccount" )
             {
-                _selectedBankAccountId = ddlBankAccounts.SelectedValue;
+                _selectedBankAccountId = dvpBankAccounts.SelectedItem.Text;
+                _selectedBankAccountIdDVId = dvpBankAccounts.SelectedDefinedValueId;
             }
             SetupOtherReceipts();
             SetExportButtonVisibility();
