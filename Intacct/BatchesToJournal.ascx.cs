@@ -906,7 +906,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         #endregion
 
-                string undepFundAccount = null;
+        string undepFundAccount = null;
         private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, string journalId, int batchId, bool logRequest, bool logResponse, string debugLava, ref string message, string descriptionLava, JournalState journalState, string bankAccountId, string undepFundAccount )
         {
             var endpoint = new IntacctEndpoint();
