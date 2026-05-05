@@ -165,7 +165,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     [EncryptedTextField(
         "Sender Password",
         Description = "The permanent Web Services sender password.",
-        IsRequired = true,
+        IsRequired = false,
         IsPassword = true,
         DefaultValue = "",
         Category = "Intacct Settings",
@@ -193,7 +193,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     [EncryptedTextField(
         "User Password",
         Description = "The Intacct User Password. This is the same information you use when you log into the Sage Intacct UI.",
-        IsRequired = true,
+        IsRequired = false,
         IsPassword = true,
         DefaultValue = "",
         Category = "Intacct Settings",
