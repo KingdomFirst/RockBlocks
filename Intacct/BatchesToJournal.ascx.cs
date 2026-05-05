@@ -146,7 +146,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
     [CustomDropdownListField(
         "Export Method",
-        Description = "Choose whether to export batches directly to Intacct (Direct) or to a csv file (File). NOTE: File currently only supports Journal Entries. This setting is ignored if Export Mode setting is set to Other Receipts.",
+        Description = "Choose whether to export batches directly to Intacct (Direct) or to a csv file (File).",
         ListSource = "1^Direct,2^File",
         DefaultValue = "1",
         Category = "Intacct Settings",
@@ -516,7 +516,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     if ( _exportMethod == 1 )
                     {
                         LoadIntacctBankAccountIds( rockContext, bankAccountDT );
-                        rockContext.SaveChanges();
                     }
                     dvpBankAccounts.DefinedTypeId = bankAccountDT.Id;
                 }
@@ -576,6 +575,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     }
                 }
             }
+            rockContext.SaveChanges();
         }
 
         private IntacctAuth GetIntacctAuth()
@@ -696,14 +696,28 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
             if ( selectedBatches.Any() )
             {
+                string bankAccountId = null;
+                string undepFundAccount = null;
+
                 if ( _exportMode == "OtherReceipt" )
                 {
+
                     //
                     // Capture ddl values as user preferences
                     //
 
                     _personPreferences.SetValue( PreferenceKey.ReceiptAccountType, ddlReceiptAccountType.SelectedValue ?? "" );
                     _personPreferences.SetValue( PreferenceKey.PaymentMethod, ddlPaymentMethods.SelectedValue ?? "" );
+
+                    if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
+                    {
+                        _personPreferences.SetValue( PreferenceKey.BankAccountIdDVId, dvpBankAccounts.SelectedValue ?? "" );
+                        bankAccountId = dvpBankAccounts.SelectedItem.Text;
+                    }
+                    else
+                    {
+                        undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
+                    }
                 }
 
                 if ( _intacctAuth == null )
@@ -753,7 +767,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                     if ( _exportMethod == 1 )
                     {
-                        success = ProcessIntacctBatch( groupingMode, journalId, batch.Id, logRequest, logResponse, debugLava, ref message, descriptionLava, journalState );
+                        success = ProcessIntacctBatch( groupingMode, journalId, batch.Id, logRequest, logResponse, debugLava, ref message, descriptionLava, journalState, bankAccountId, undepFundAccount );
                     }
                     else if ( _exportMode == "JournalEntry" )
                     {
@@ -777,17 +791,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     else  // Export Mode is Other Receipt
                     {
                         var otherReceipt = new IntacctOtherReceipt();
-                        string bankAccountId = null;
-                        string undepFundAccount = null;
-                        if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
-                        {
-                            _personPreferences.SetValue( PreferenceKey.BankAccountIdDVId, dvpBankAccounts.SelectedValue ?? "" );
-                            bankAccountId = dvpBankAccounts.SelectedItem.Text;
-                        }
-                        else
-                        {
-                            undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
-                        }
 
                         var items = otherReceipt.GetOtherReceiptCsvLines( batch, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount );
                         success = items.Any();
@@ -815,8 +818,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                             if ( !batch.IsValid )
                             {
-                                message = string.Format( "Unable to update status for the selected batches.<br/><br/>{0}", batch.ValidationResults.AsDelimited( "<br/>" ) );
-                                maWarningDialog.Show( message, ModalAlertType.Warning );
+                                var batchMessage = string.Format( "Unable to update status for the selected batches.<br/><br/>{0}", batch.ValidationResults.AsDelimited( "<br/>" ) );
+                                maWarningDialog.Show( batchMessage, ModalAlertType.Warning );
                                 return;
                             }
                         }
@@ -903,7 +906,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         #endregion
 
-        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, string journalId, int batchId, bool logRequest, bool logResponse, string debugLava, ref string message, string descriptionLava, JournalState journalState )
+                string undepFundAccount = null;
+        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, string journalId, int batchId, bool logRequest, bool logResponse, string debugLava, ref string message, string descriptionLava, JournalState journalState, string bankAccountId, string undepFundAccount )
         {
             var endpoint = new IntacctEndpoint();
             var postXml = new System.Xml.XmlDocument();
@@ -921,17 +925,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 //
 
                 var otherReceipt = new IntacctOtherReceipt();
-                string bankAccountId = null;
-                string undepFundAccount = null;
-                if ( ddlReceiptAccountType.SelectedValue == "BankAccount" )
-                {
-                    _personPreferences.SetValue( PreferenceKey.BankAccountIdDVId, dvpBankAccounts.SelectedValue ?? "" );
-                    bankAccountId = dvpBankAccounts.SelectedItem.Text;
-                }
-                else
-                {
-                    undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
-                }
                 postXml = otherReceipt.CreateOtherReceiptXML( _intacctAuth, batchId, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount, descriptionLava );
             }
 

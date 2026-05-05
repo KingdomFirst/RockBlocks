@@ -111,7 +111,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
     [CustomDropdownListField(
         "Export Method",
-        Description = "Choose whether to export batches directly to Intacct (Direct) or to a csv file (File). NOTE: File currently only supports Journal Entries. This setting is ignored if Export Mode setting is set to Other Receipts.",
+        Description = "Choose whether to export batches directly to Intacct (Direct) or to a csv file (File).",
         ListSource = "1^Direct,2^File",
         DefaultValue = "1",
         Order = 8,
@@ -470,7 +470,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     if ( _exportMethod == 1 )
                     {
                         LoadIntacctBankAccountIds( rockContext, bankAccountDT );
-                        rockContext.SaveChanges();
                     }
                     dvpBankAccounts.DefinedTypeId = bankAccountDT.Id;
                 }
@@ -531,6 +530,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     }
                 }
             }
+            rockContext.SaveChanges();
         }
 
         protected void btnExportToIntacct_Click( object sender, EventArgs e )
