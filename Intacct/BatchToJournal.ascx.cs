@@ -717,7 +717,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     undepFundAccount = GetAttributeValue( AttributeKey.UndepositedFundsAccount );
                 }
 
-                var items = otherReceipt.GetOtherReceiptCsvLines( _financialBatch, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId,undepFundAccount );
+                var items = otherReceipt.GetOtherReceiptCsvLines( _financialBatch, ref debugLava, ( PaymentMethod ) ddlPaymentMethods.SelectedValue.AsInteger(), groupingMode, bankAccountId, undepFundAccount );
 
                 if ( items.Count > 0 )
                 {

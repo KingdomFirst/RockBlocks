@@ -156,7 +156,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     [EncryptedTextField(
         "Sender Id",
         Description = "The permanent Web Services sender Id.",
-        IsRequired = true,
+        IsRequired = false,
         DefaultValue = "",
         Category = "Intacct Settings",
         Order = 12,
@@ -175,7 +175,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     [EncryptedTextField(
         "Company Id",
         Description = "The Intacct Company Id. This is the same information you use when you log into the Sage Intacct UI.",
-        IsRequired = true,
+        IsRequired = false,
         DefaultValue = "",
         Category = "Intacct Settings",
         Order = 14,
@@ -184,7 +184,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     [EncryptedTextField(
         "User Id",
         Description = "The Intacct User Id. This is the same information you use when you log into the Sage Intacct UI.",
-        IsRequired = true,
+        IsRequired = false,
         DefaultValue = "",
         Category = "Intacct Settings",
         Order = 15,
@@ -798,7 +798,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                         }
                         else
                         {
-                            message = "There were no transactions to export for this batch.";
+                            message = "There are no transactions to export for selected batch {batch.Name} [{batch.Id}]. Export was unsuccessful.";
                         }
                     }
 
@@ -871,7 +871,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     }
                     else
                     {
-                        message = "There were no transactions to export for this batch.";
+                        message = "There were no transactions to export for the selected batches.";
                         maWarningDialog.Show( message, ModalAlertType.Warning );
                         return;
                     }
