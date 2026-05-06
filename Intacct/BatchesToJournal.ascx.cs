@@ -767,7 +767,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                     if ( _exportMethod == 1 )
                     {
-                        success = ProcessIntacctBatch( groupingMode, journalId, batch.Id, logRequest, logResponse, debugLava, ref message, descriptionLava, journalState, bankAccountId, undepFundAccount );
+                        success = ProcessIntacctBatch( groupingMode, journalId, batch.Id, logRequest, logResponse, ref debugLava, ref message, descriptionLava, journalState, bankAccountId, undepFundAccount );
                     }
                     else if ( _exportMode == "JournalEntry" )
                     {
@@ -907,7 +907,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         #endregion
 
         string undepFundAccount = null;
-        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, string journalId, int batchId, bool logRequest, bool logResponse, string debugLava, ref string message, string descriptionLava, JournalState journalState, string bankAccountId, string undepFundAccount )
+        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, string journalId, int batchId, bool logRequest, bool logResponse, ref string debugLava, ref string message, string descriptionLava, JournalState journalState, string bankAccountId, string undepFundAccount )
         {
             var endpoint = new IntacctEndpoint();
             var postXml = new System.Xml.XmlDocument();

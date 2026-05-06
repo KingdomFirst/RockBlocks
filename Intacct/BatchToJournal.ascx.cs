@@ -566,11 +566,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     // Create Intacct Journal XML and Post to Intacct
                     //
 
-                    success = ProcessIntacctBatch( groupingMode, logRequest, logResponse, debugLava, ref message, journalState );
+                    success = ProcessIntacctBatch( groupingMode, logRequest, logResponse, ref debugLava, ref message, journalState );
                 }
                 else
                 {
-                    success = ExportBatchToCsvFile( groupingMode, logRequest, logResponse, debugLava, ref message, journalState );
+                    success = ExportBatchToCsvFile( groupingMode, logRequest, logResponse, ref debugLava, ref message, journalState );
                 }
 
                 _personPreferences.Save();
@@ -633,7 +633,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             Response.Redirect( Request.RawUrl );
         }
 
-        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, bool logRequest, bool logResponse, string debugLava, ref string message, JournalState journalState )
+        private bool ProcessIntacctBatch( GLAccountGroupingMode groupingMode, bool logRequest, bool logResponse, ref string debugLava, ref string message, JournalState journalState )
         {
             var endpoint = new IntacctEndpoint();
             var postXml = new System.Xml.XmlDocument();
@@ -679,7 +679,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             return success;
         }
 
-        private bool ExportBatchToCsvFile( GLAccountGroupingMode groupingMode, bool logRequest, bool logResponse, string debugLava, ref string message, JournalState journalState )
+        private bool ExportBatchToCsvFile( GLAccountGroupingMode groupingMode, bool logRequest, bool logResponse, ref string debugLava, ref string message, JournalState journalState )
         {
             var descriptionLava = GetAttributeValue( AttributeKey.JournalMemoLava );
             if ( _exportMode == "JournalEntry" )
