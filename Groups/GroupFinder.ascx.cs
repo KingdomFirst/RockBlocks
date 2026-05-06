@@ -36,7 +36,7 @@
 // * Added ability to sort how filters are displayed
 // * Added ability to load Group/Sign Up Opportunities into finder
 // * Added a setting to use Abbreviated Attribute Name in the filter control
-// Package Version 1.8.4
+// Package Version 1.8.5
 // </notice>
 //
 using System;
