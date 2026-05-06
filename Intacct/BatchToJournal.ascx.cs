@@ -109,11 +109,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Order = 7,
         Key = AttributeKey.EnableDebug )]
 
-    [CustomDropdownListField(
+    [EnumField(
         "Export Method",
         Description = "Choose whether to export batches directly to Intacct (Direct) or to a csv file (File).",
-        ListSource = "1^Direct,2^File",
-        DefaultValue = "1",
+        EnumSourceType = typeof( ExportMethod ),
+        DefaultEnumValue = ( int ) ExportMethod.Direct,
         Order = 8,
         Key = AttributeKey.ExportMethod )]
 
@@ -251,7 +251,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         private FinancialBatch _financialBatch = null;
         private IntacctAuth _intacctAuth = null;
         private string _exportMode;
-        private int _exportMethod = 1;
+        private ExportMethod _exportMethod = ExportMethod.Direct;
         private PersonPreferenceCollection _personPreferences => GetBlockPersonPreferences();
 
         #endregion Fields
@@ -280,10 +280,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             base.OnInit( e );
 
             _batchId = PageParameter( "batchId" ).AsInteger();
-            _exportMethod = GetAttributeValue( AttributeKey.ExportMethod ).AsInteger();
+            _exportMethod = ( ExportMethod ) GetAttributeValue( AttributeKey.ExportMethod ).AsInteger();
             _exportMode = GetAttributeValue( AttributeKey.ExportMode );
 
-            pnlIntDownload.Visible = _exportMethod == 2;
+            pnlIntDownload.Visible = _exportMethod == ExportMethod.File;
         }
 
         /// <summary>
@@ -423,7 +423,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 {
                     litError.Text = $"<p>The Batch To Intacct block is not configured properly.<br />The <b>Journal Id</b> setting is required when Export Mode is set to Journal Entry.</p>";
                 }
-                else if ( _exportMethod == 1 && ( _intacctAuth.SenderId.IsNullOrWhiteSpace() || _intacctAuth.SenderPassword.IsNullOrWhiteSpace() || _intacctAuth.CompanyId.IsNullOrWhiteSpace() || _intacctAuth.UserId.IsNullOrWhiteSpace() || _intacctAuth.UserPassword.IsNullOrWhiteSpace() ) )
+                else if ( _exportMethod == ExportMethod.Direct && ( _intacctAuth.SenderId.IsNullOrWhiteSpace() || _intacctAuth.SenderPassword.IsNullOrWhiteSpace() || _intacctAuth.CompanyId.IsNullOrWhiteSpace() || _intacctAuth.UserId.IsNullOrWhiteSpace() || _intacctAuth.UserPassword.IsNullOrWhiteSpace() ) )
                 {
                     litError.Text = $"<p>The Batch To Intacct block is not configured properly.<br />The following block settings require valid values when Export Method is set to Direct.</p><ul><li>Sender Id</li><li>Sender Password</li><li>Company Id</li><li>User Id</li><li>User Password</li></ul>";
                 }
@@ -484,7 +484,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 {
                     var rockContext = new RockContext();
                     var bankAccountDT = new DefinedTypeService( rockContext ).Get( KFSConst.DefinedType.INTACCT_OTHER_RECEIPT_BANK_ACCOUNT_DEFINED_TYPE.AsGuid() );
-                    if ( _exportMethod == 1 )
+                    if ( _exportMethod == ExportMethod.Direct )
                     {
                         LoadIntacctBankAccountIds( rockContext, bankAccountDT );
                     }
@@ -564,7 +564,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     _personPreferences.SetValue( PreferenceKey.PaymentMethod, ddlPaymentMethods.SelectedValue ?? "" );
                 }
 
-                if ( _exportMethod == 1 && _intacctAuth == null )
+                if ( _exportMethod == ExportMethod.Direct && _intacctAuth == null )
                 {
                     _intacctAuth = GetIntacctAuth();
                 }
@@ -577,7 +577,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 var message = string.Empty;
                 var success = false;
 
-                if ( _exportMethod == 1 )
+                if ( _exportMethod == ExportMethod.Direct )
                 {
                     //
                     // Create Intacct Journal XML and Post to Intacct

@@ -144,11 +144,11 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         Order = 10,
         Key = AttributeKey.JournalMemoLava )]
 
-    [CustomDropdownListField(
+    [EnumField(
         "Export Method",
         Description = "Choose whether to export batches directly to Intacct (Direct) or to a csv file (File).",
-        ListSource = "1^Direct,2^File",
-        DefaultValue = "1",
+        EnumSourceType = typeof( ExportMethod ),
+        DefaultEnumValue = ( int ) ExportMethod.Direct,
         Category = "Intacct Settings",
         Order = 11,
         Key = AttributeKey.ExportMethod )]
@@ -277,7 +277,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         private string _selectedPaymentMethod;
         private string _selectedReceiptAccountType;
         private string _exportMode;
-        private int _exportMethod = 1;
+        private ExportMethod _exportMethod = ExportMethod.Direct;
         private int _monthsBack;
         private string _enableDebug;
         private IntacctAuth _intacctAuth = null;
@@ -295,10 +295,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             base.OnInit( e );
 
-            _exportMethod = GetAttributeValue( AttributeKey.ExportMethod ).AsInteger();
+            _exportMethod = ( ExportMethod ) GetAttributeValue( AttributeKey.ExportMethod ).AsInteger();
             _exportMode = GetAttributeValue( AttributeKey.ExportMode );
 
-            pnlIntDownload.Visible = _exportMethod == 2;
+            pnlIntDownload.Visible = _exportMethod == ExportMethod.File;
 
             gfBatchesToExportFilter.ApplyFilterClick += gfBatchesToExportFilter_ApplyFilterClick;
             gfBatchesToExportFilter.ClearFilterClick += gfBatchesToExportFilter_ClearFilterClick;
@@ -382,7 +382,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 {
                     litError.Text = $"<p>The Batch To Intacct block is not configured properly.<br />The <b>Journal Id</b> setting is required when Export Mode is set to Journal Entry.</p>";
                 }
-                else if ( _exportMethod == 1 && ( _intacctAuth.SenderId.IsNullOrWhiteSpace() || _intacctAuth.SenderPassword.IsNullOrWhiteSpace() || _intacctAuth.CompanyId.IsNullOrWhiteSpace() || _intacctAuth.UserId.IsNullOrWhiteSpace() || _intacctAuth.UserPassword.IsNullOrWhiteSpace() ) )
+                else if ( _exportMethod == ExportMethod.Direct && ( _intacctAuth.SenderId.IsNullOrWhiteSpace() || _intacctAuth.SenderPassword.IsNullOrWhiteSpace() || _intacctAuth.CompanyId.IsNullOrWhiteSpace() || _intacctAuth.UserId.IsNullOrWhiteSpace() || _intacctAuth.UserPassword.IsNullOrWhiteSpace() ) )
                 {
                     litError.Text = $"<p>The Batch To Intacct block is not configured properly.<br />The following block settings require valid values when Export Method is set to Direct.</p><ul><li>Sender Id</li><li>Sender Password</li><li>Company Id</li><li>User Id</li><li>User Password</li></ul>";
                 }
@@ -547,7 +547,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 {
                     var rockContext = new RockContext();
                     var bankAccountDT = new DefinedTypeService( rockContext ).Get( KFSConst.DefinedType.INTACCT_OTHER_RECEIPT_BANK_ACCOUNT_DEFINED_TYPE.AsGuid() );
-                    if ( _exportMethod == 1 )
+                    if ( _exportMethod == ExportMethod.Direct )
                     {
                         LoadIntacctBankAccountIds( rockContext, bankAccountDT );
                     }
@@ -777,7 +777,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     }
                 }
 
-                if ( _exportMethod == 1 && _intacctAuth == null )
+                if ( _exportMethod == ExportMethod.Direct && _intacctAuth == null )
                 {
                     _intacctAuth = GetIntacctAuth();
                 }
@@ -822,7 +822,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                     var success = false;
 
-                    if ( _exportMethod == 1 )
+                    if ( _exportMethod == ExportMethod.Direct )
                     {
                         success = ProcessIntacctBatch( groupingMode, journalId, batch.Id, logRequest, logResponse, ref debugLava, ref message, descriptionLava, journalState, bankAccountId, undepFundAccount );
                     }
@@ -918,7 +918,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 _personPreferences.Save();
                 Session["IntacctDebugLava"] = debugLava;
 
-                if ( _exportMethod == 2 )
+                if ( _exportMethod == ExportMethod.File )
                 {
                     var fileId = batchesToUpdate.Select( b => b.Id.ToString() ).ToList().JoinStrings( "_" );
 
