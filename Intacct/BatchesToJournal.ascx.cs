@@ -110,7 +110,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
     [TextField(
         "Journal Id",
         Description = "The Intacct Symbol of the Journal that the Entry should be posted to. For example: GJ",
-        IsRequired = true,
+        IsRequired = false,
         DefaultValue = "",
         Category = "Intacct Settings",
         Order = 7,
@@ -118,8 +118,8 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
     [EnumField(
         "Journal State",
-        Description = "Determines whether to set the exported journal entry's state as Posted or Draft.",
-        IsRequired = true,
+        Description = "Determines whether to set the exported journal entries' state as Posted or Draft.",
+        IsRequired = false,
         EnumSourceType = typeof( JournalState ),
         DefaultEnumValue = ( int ) JournalState.Posted,
         Category = "Intacct Settings",
