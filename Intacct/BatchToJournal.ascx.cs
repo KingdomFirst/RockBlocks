@@ -489,7 +489,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         {
             if ( _intacctAuth == null )
             {
-                _intacctAuth = GetIntactAuth();
+                _intacctAuth = GetIntacctAuth();
             }
             var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
             var checkingAccountList = new IntacctCheckingAccountList();
@@ -549,7 +549,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
                 if ( _exportMethod == 1 && _intacctAuth == null )
                 {
-                    _intacctAuth = GetIntactAuth();
+                    _intacctAuth = GetIntacctAuth();
                 }
 
                 var debugLava = GetAttributeValue( AttributeKey.EnableDebug );
@@ -734,7 +734,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             }
         }
 
-        private IntacctAuth GetIntactAuth()
+        private IntacctAuth GetIntacctAuth()
         {
             return new IntacctAuth()
             {
@@ -801,19 +801,19 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         protected bool ValidSettings()
         {
             var settings = false;
+            _intacctAuth = GetIntacctAuth();
 
             if (
                 _financialBatch != null &&
                 (
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderId ) ) ) &&
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.SenderPassword ) ) ) &&
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.CompanyId ) ) ) &&
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.UserId ) ) ) &&
-                !string.IsNullOrWhiteSpace( Encryption.DecryptString( GetAttributeValue( AttributeKey.UserPassword ) ) ) &&
-                !string.IsNullOrWhiteSpace( GetAttributeValue( AttributeKey.JournalId ) ) &&
-                !string.IsNullOrWhiteSpace( GetAttributeValue( AttributeKey.ExportMode ) )
-                )
-             )
+                _intacctAuth.SenderId.IsNotNullOrWhiteSpace() &&
+                _intacctAuth.SenderPassword.IsNotNullOrWhiteSpace() &&
+                _intacctAuth.CompanyId.IsNotNullOrWhiteSpace() &&
+                _intacctAuth.UserId.IsNotNullOrWhiteSpace() &&
+                _intacctAuth.UserPassword.IsNotNullOrWhiteSpace()
+                ) &&
+                ( _exportMode == "OtherReceipt" || GetAttributeValue( AttributeKey.JournalId ).IsNotNullOrWhiteSpace() )
+            )
             {
                 settings = true;
             }

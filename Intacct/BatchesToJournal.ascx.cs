@@ -316,10 +316,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         /// <param name="e">The <see cref="T:System.EventArgs" /> object that contains the event data.</param>
         protected override void OnLoad( EventArgs e )
         {
-            btnExportToIntacct.Text = GetAttributeValue( AttributeKey.ButtonText );
             _monthsBack = GetAttributeValue( AttributeKey.MonthsBack ).AsInteger() * -1;
             _enableDebug = GetAttributeValue( AttributeKey.EnableDebug );
             _exportMode = GetAttributeValue( AttributeKey.ExportMode );
+            
             if ( !Page.IsPostBack )
             {
                 if ( _exportMode == "JournalEntry" )
@@ -335,11 +335,20 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     {
                         _selectedBankAccountId = DefinedValueCache.Get( _selectedBankAccountIdDVId.Value ).Value;
                     }
-                    SetupOtherReceipts();
                 }
                 BindFilter();
                 BindGrid();
+                ShowExportDetail();
             }
+        }
+
+        #endregion
+
+        #region Methods
+
+        protected void ShowExportDetail( bool setSelectControlValues = true )
+        {
+            var rockContext = new RockContext();
 
             if ( _enableDebug.AsBoolean() )
             {
@@ -351,11 +360,23 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     Session["IntacctDebugLava"] = string.Empty;
                 }
             }
+
+            if ( ValidSettings() )
+            {
+                btnExportToIntacct.Text = GetAttributeValue( AttributeKey.ButtonText );
+                pnlExport.Visible = true;
+                pnlError.Visible = false;
+                btnExportToIntacct.Visible = true;
+                if ( _exportMode == "JournalEntry" )
+                {
+                    pnlOtherReceipt.Visible = false;
+                }
+                else
+                {
+                    SetupOtherReceipts( setSelectControlValues );
+                }
+            }
         }
-
-        #endregion
-
-        #region Methods
 
         /// <summary>
         /// Binds the filter.
@@ -578,6 +599,28 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             rockContext.SaveChanges();
         }
 
+        private bool ValidSettings()
+        {
+            var settings = false;
+            _intacctAuth = GetIntacctAuth();
+
+            if (
+                (
+                _intacctAuth.SenderId.IsNotNullOrWhiteSpace() &&
+                _intacctAuth.SenderPassword.IsNotNullOrWhiteSpace() &&
+                _intacctAuth.CompanyId.IsNotNullOrWhiteSpace() &&
+                _intacctAuth.UserId.IsNotNullOrWhiteSpace() &&
+                _intacctAuth.UserPassword.IsNotNullOrWhiteSpace()
+                ) &&
+                ( _exportMode == "OtherReceipt" || GetAttributeValue( AttributeKey.JournalId ).IsNotNullOrWhiteSpace() )
+            )
+            {
+                settings = true;
+            }
+
+            return settings;
+        }
+
         private IntacctAuth GetIntacctAuth()
         {
             return new IntacctAuth()
@@ -613,6 +656,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
         protected void Block_BlockUpdated( object sender, EventArgs e )
         {
             BindGrid();
+            ShowExportDetail();
         }
 
         /// <summary>
@@ -720,7 +764,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     }
                 }
 
-                if ( _intacctAuth == null )
+                if ( _exportMethod == 1 && _intacctAuth == null )
                 {
                     _intacctAuth = GetIntacctAuth();
                 }
@@ -859,6 +903,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 }
 
                 _personPreferences.Save();
+                Session["IntacctDebugLava"] = debugLava;
 
                 if ( _exportMethod == 2 )
                 {
@@ -881,7 +926,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 }
 
                 rockContext.SaveChanges();
-                Session["IntacctDebugLava"] = debugLava;
 
                 NavigateToPage( this.RockPage.Guid, new Dictionary<string, string>() );
             }
