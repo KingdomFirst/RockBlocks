@@ -348,8 +348,6 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
         protected void ShowExportDetail( bool setSelectControlValues = true )
         {
-            var rockContext = new RockContext();
-
             if ( _enableDebug.AsBoolean() )
             {
                 var debugLava = Session["IntacctDebugLava"].ToStringSafe();
@@ -619,11 +617,15 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
 
             if (
                 (
-                _intacctAuth.SenderId.IsNotNullOrWhiteSpace() &&
-                _intacctAuth.SenderPassword.IsNotNullOrWhiteSpace() &&
-                _intacctAuth.CompanyId.IsNotNullOrWhiteSpace() &&
-                _intacctAuth.UserId.IsNotNullOrWhiteSpace() &&
-                _intacctAuth.UserPassword.IsNotNullOrWhiteSpace()
+                _exportMethod == ExportMethod.File ||
+                    (
+                    _exportMethod == ExportMethod.Direct &&
+                    _intacctAuth.SenderId.IsNotNullOrWhiteSpace() &&
+                    _intacctAuth.SenderPassword.IsNotNullOrWhiteSpace() &&
+                    _intacctAuth.CompanyId.IsNotNullOrWhiteSpace() &&
+                    _intacctAuth.UserId.IsNotNullOrWhiteSpace() &&
+                    _intacctAuth.UserPassword.IsNotNullOrWhiteSpace()
+                    )
                 ) &&
                 ( _exportMode == "OtherReceipt" || GetAttributeValue( AttributeKey.JournalId ).IsNotNullOrWhiteSpace() )
             )

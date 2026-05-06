@@ -823,11 +823,15 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             if (
                 _financialBatch != null &&
                 (
-                _intacctAuth.SenderId.IsNotNullOrWhiteSpace() &&
-                _intacctAuth.SenderPassword.IsNotNullOrWhiteSpace() &&
-                _intacctAuth.CompanyId.IsNotNullOrWhiteSpace() &&
-                _intacctAuth.UserId.IsNotNullOrWhiteSpace() &&
-                _intacctAuth.UserPassword.IsNotNullOrWhiteSpace()
+                _exportMethod == ExportMethod.File ||
+                    (
+                    _exportMethod == ExportMethod.Direct &&
+                    _intacctAuth.SenderId.IsNotNullOrWhiteSpace() &&
+                    _intacctAuth.SenderPassword.IsNotNullOrWhiteSpace() &&
+                    _intacctAuth.CompanyId.IsNotNullOrWhiteSpace() &&
+                    _intacctAuth.UserId.IsNotNullOrWhiteSpace() &&
+                    _intacctAuth.UserPassword.IsNotNullOrWhiteSpace()
+                    )
                 ) &&
                 ( _exportMode == "OtherReceipt" || GetAttributeValue( AttributeKey.JournalId ).IsNotNullOrWhiteSpace() )
             )
