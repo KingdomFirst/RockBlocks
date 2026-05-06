@@ -376,6 +376,19 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                     SetupOtherReceipts( setSelectControlValues );
                 }
             }
+            else  // Show error message for missing settings.
+            {
+                if ( _exportMode == "JournalEntry" && GetAttributeValue( AttributeKey.JournalId ).IsNullOrWhiteSpace() )
+                {
+                    litError.Text = $"<p>The Batch To Intacct block is not configured properly.<br />The <b>Journal Id</b> setting is required when Export Mode is set to Journal Entry.</p>";
+                }
+                else if ( _exportMethod == 1 && ( _intacctAuth.SenderId.IsNullOrWhiteSpace() || _intacctAuth.SenderPassword.IsNullOrWhiteSpace() || _intacctAuth.CompanyId.IsNullOrWhiteSpace() || _intacctAuth.UserId.IsNullOrWhiteSpace() || _intacctAuth.UserPassword.IsNullOrWhiteSpace() ) )
+                {
+                    litError.Text = $"<p>The Batch To Intacct block is not configured properly.<br />The following block settings require valid values when Export Method is set to Direct.</p><ul><li>Sender Id</li><li>Sender Password</li><li>Company Id</li><li>User Id</li><li>User Password</li></ul>";
+                }
+                pnlExport.Visible = false;
+                pnlError.Visible = true;
+            }
         }
 
         /// <summary>

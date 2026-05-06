@@ -32,9 +32,10 @@
                         </Rock:Grid>
                     </div>
                 </div>
-            </div>
-
-            <div class="row">
+            </div>            <asp:Panel runat="server" ID="pnlError" CssClass="alert alert-warning" Visible="false">
+                <asp:Literal runat="server" ID="litError"></asp:Literal>
+            </asp:Panel>
+            <asp:Panel runat="server" ID="pnlExport" CssClass="row" Visible="true">
                 <asp:Panel runat="server" ID="pnlOtherReceipt" Visible="false">
                     <div class="col-md-3 col-lg-2">
                         <Rock:RockDropDownList ID="ddlReceiptAccountType" runat="server" Label="Deposit To" Required="true" ValidationGroup="KFSIntacctExport" OnSelectedIndexChanged="ddlReceiptAccountType_SelectedIndexChanged" AutoPostBack="true">
@@ -55,7 +56,7 @@
                         <Rock:BootstrapButton runat="server" ID="btnExportToIntacct" OnClick="btnExportToIntacct_Click" CssClass="btn btn-primary" />
                     </div>
                 </div>
-            </div>
+            </asp:Panel>
             <Rock:NotificationBox ID="nbError" runat="server" Visible="false" Dismissable="true"></Rock:NotificationBox>
             <asp:Literal ID="lDebug" runat="server" Visible="false" />
         </asp:Panel>

@@ -2,7 +2,10 @@
 
 <asp:UpdatePanel ID="upnlSync" runat="server">
     <ContentTemplate>
-        <div class="row">
+        <asp:Panel runat="server" ID="pnlError" CssClass="alert alert-warning" Visible="false">
+            <asp:Literal runat="server" ID="litError"></asp:Literal>
+        </asp:Panel>
+        <asp:Panel runat="server" ID="pnlExport" CssClass="row" Visible="true">
             <Rock:ModalAlert ID="maWarningDialog" runat="server" />
             <asp:Panel runat="server" ID="pnlExportedDetails" CssClass="col-sm-2" Visible="false">
                 <asp:Literal runat="server" ID="litDateExported" Visible="false"></asp:Literal>
@@ -31,7 +34,7 @@
                 </div>
             </div>
             <asp:Literal ID="lDebug" runat="server" Visible="false" />
-        </div>
+        </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>
 <asp:Panel runat="server" ID="pnlIntDownload" Visible="false">
