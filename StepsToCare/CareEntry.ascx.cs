@@ -1514,7 +1514,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var category = DefinedValueCache.Get( categoryId.Value );
                 var categoryFollowUpAfter = category.GetAttributeValue( "FollowUpAfter" ).AsIntegerOrNull();
                 var categoryTimesToRepeat = category.GetAttributeValue( "TimesToRepeat" ).AsIntegerOrNull();
-                if ( categoryFollowUpAfter.HasValue && categoryFollowUpAfter > 0 )
+                CareNeed careNeed = null;
+                if ( !needId.Equals( 0 ) )
+                {
+                    careNeed = new CareNeedService( new RockContext() ).Get( needId );
+                }
+                if ( categoryFollowUpAfter.HasValue && categoryFollowUpAfter > 0 && ( careNeed == null || careNeed != null && categoryId.Value != careNeed.CategoryValueId ) )
                 {
                     cbCustomFollowUp.Checked = true;
                     numbRepeatDays.IntegerValue = categoryFollowUpAfter;
