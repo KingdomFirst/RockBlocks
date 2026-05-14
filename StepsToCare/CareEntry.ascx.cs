@@ -1519,7 +1519,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     careNeed = new CareNeedService( new RockContext() ).Get( needId );
                 }
-                if ( categoryFollowUpAfter.HasValue && categoryFollowUpAfter > 0 && ( careNeed == null || careNeed != null && categoryId.Value != careNeed.CategoryValueId ) )
+                if ( categoryFollowUpAfter.HasValue && categoryFollowUpAfter > 0 && ( careNeed == null || categoryId.Value != careNeed.CategoryValueId ) )
                 {
                     cbCustomFollowUp.Checked = true;
                     numbRepeatDays.IntegerValue = categoryFollowUpAfter;
