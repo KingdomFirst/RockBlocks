@@ -422,7 +422,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 {% for category in Categories %}
     <span class=""badge rounded-0 p-2 mb-2"" style=""background-color: {{ category | Attribute:'Color' }}"">{{ category.Value }}</span>
 {% endfor %}
-<br><span class=""badge rounded-0 p-2 mb-2 text-color"" style=""background-color: oldlace"">Assigned to You</span>
+<br><span class=""badge rounded-0 p-2 mb-2 assigned text-color"">Assigned to You</span>
 </div>";
 
         private const string QuickNoteStatusTemplateDefaultValue = @"<div class=""pull-right""><span class=""label mr-2"" style=""background-color: {{ CareNeed.Category | Attribute:'Color' }}"">{{ CareNeed.Category.Value }}</span><span class=""{{ CareNeed.Status | Attribute:'CssClass' }}"">{{ CareNeed.Status.Value }}</span></div>
