@@ -32,7 +32,6 @@ using Rock.Web.UI.Controls;
 
 using rocks.kfs.Intacct;
 using rocks.kfs.Intacct.Enums;
-using KFSConst = rocks.kfs.Intacct.SystemGuid;
 
 namespace RockWeb.Plugins.rocks_kfs.Intacct
 {
@@ -483,7 +482,7 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
                 if ( dvpBankAccounts.Items.Count == 0 )
                 {
                     var rockContext = new RockContext();
-                    var bankAccountDT = new DefinedTypeService( rockContext ).Get( KFSConst.DefinedType.INTACCT_OTHER_RECEIPT_BANK_ACCOUNT_DEFINED_TYPE.AsGuid() );
+                    var bankAccountDT = new DefinedTypeService( rockContext ).Get( rocks.kfs.Intacct.SystemGuid.DefinedType.INTACCT_OTHER_RECEIPT_BANK_ACCOUNT_DEFINED_TYPE.AsGuid() );
                     if ( _exportMethod == ExportMethod.Direct )
                     {
                         LoadIntacctBankAccountIds( rockContext, bankAccountDT );
@@ -520,6 +519,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
             var resultXml = endpoint.PostToIntacct( postXml, logRequest );
             var apiBankAccounts = endpoint.ParseListCheckingAccountsResponse( resultXml, _financialBatch.Id ).Where( a => !a.GLAccountNo.IsNullOrWhiteSpace() );
+            if ( !apiBankAccounts.Any() )
+            {
+                return;
+            }
 
             var dVbankAccounts = bankAccountDT.DefinedValues.Select( dv => dv.Value );
             var accountsToAdd = apiBankAccounts.Where( a => !dVbankAccounts.Contains( a.BankAccountId ) );
