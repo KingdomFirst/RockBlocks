@@ -520,6 +520,10 @@ namespace RockWeb.Plugins.rocks_kfs.Intacct
             var logRequest = GetAttributeValue( AttributeKey.LogRequest ).AsBoolean();
             var resultXml = endpoint.PostToIntacct( postXml, logRequest );
             var apiBankAccounts = endpoint.ParseListCheckingAccountsResponse( resultXml, _financialBatch.Id ).Where( a => !a.GLAccountNo.IsNullOrWhiteSpace() );
+            if ( !apiBankAccounts.Any() )
+            {
+                return;
+            }
 
             var dVbankAccounts = bankAccountDT.DefinedValues.Select( dv => dv.Value );
             var accountsToAdd = apiBankAccounts.Where( a => !dVbankAccounts.Contains( a.BankAccountId ) );
