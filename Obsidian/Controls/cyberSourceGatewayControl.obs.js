@@ -324,7 +324,24 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
               if (err) {
                 console.error(err);
                 isSaving.value = false;
-                emit(GatewayEmitStrings.Error, err.message);
+                FlexJS.inSubmission = false;
+                if (err.details && err.details.length > 0) {
+                  var fieldLabels = {
+                    number: "Card Number",
+                    securityCode: "Security Code",
+                    expirationMonth: "Expiration Month",
+                    expirationYear: "Expiration Year"
+                  };
+                  emit(GatewayEmitStrings.Validation, err.details.map(detail => {
+                    var _fieldLabels$detail$l;
+                    return {
+                      name: (_fieldLabels$detail$l = fieldLabels[detail.location]) !== null && _fieldLabels$detail$l !== void 0 ? _fieldLabels$detail$l : detail.location,
+                      text: "is invalid or missing."
+                    };
+                  }));
+                } else {
+                  emit(GatewayEmitStrings.Error, err.message);
+                }
               } else {
                 var _JSON$stringify;
                 var addressToken = {
@@ -394,9 +411,8 @@ System.register(['vue', '@Obsidian/Controls/loadingIndicator.obs', '@Obsidian/Co
               "onUpdate:modelValue": _cache[0] || (_cache[0] = $event => address.value = $event),
               disabled: isSaving.value,
               rules: addressRules.value
-            }, null, 8, ["modelValue", "disabled", "rules"])], 512), [[vShow, showAddress.value]]), createElementVNode("div", _hoisted_5, [_hoisted_6, createElementVNode("div", _hoisted_9, [createElementVNode("div", _hoisted_10, [_hoisted_11, createVNode(unref(DatePartsPicker), {
+            }, null, 8, ["modelValue", "disabled", "rules"])], 512), [[vShow, showAddress.value]]), createElementVNode("div", _hoisted_5, [_hoisted_6, createElementVNode("div", _hoisted_9, [createElementVNode("div", _hoisted_10, [_hoisted_11, createCommentVNode(" NOTE: isRequired is not a DatePartsPicker prop, so it never registered any validation, and\r\n                                 rules=\"required\" is not a drop in replacement: it auto-adds a 'datekey' rule, and with\r\n                                 hideDay the day stays 0, so the date key would never validate. A missing expiration is\r\n                                 caught by createToken instead, which rejects the 0 month/year and reports it through the\r\n                                 err.details handler in submitCybersourceMicroFormInfo. "), createVNode(unref(DatePartsPicker), {
               label: "Expiration Date",
-              isRequired: true,
               startYear: unref(nowYear),
               futureYearCount: 15,
               modelValue: unref(ccexpvalue),
