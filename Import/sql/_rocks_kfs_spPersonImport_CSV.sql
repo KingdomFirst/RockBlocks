@@ -26,6 +26,9 @@ Installation:
 Updates:
 - Added GroupTypeId to the GroupMember insert process to support
   new Rock model requirement - GM 2/1/2024
+- Required-column check now verifies Email, First Name and Last Name
+  all exist (either "FirstName"/"First Name", "LastName"/"Last Name").
+  ConnectionStatusId and GroupId are now optional. - GM 7/22/2026 (Assisted by Claude Code)
 
 **************************************************************/
 
@@ -34,11 +37,12 @@ SET XACT_ABORT ON
 BEGIN TRANSACTION
 
 DECLARE @cmd NVARCHAR(MAX)
+DECLARE @message NVARCHAR(400);
 
 /* =================================
 Start Logging Operations
 ==================================== */
-DECLARE @message nvarchar(250) = 'Started people import at ' + CONVERT(VARCHAR(25), CURRENT_TIMESTAMP) + '.';
+SET @message = 'Started people import at ' + CONVERT(VARCHAR(25), CURRENT_TIMESTAMP) + '.';
 RAISERROR(@message, 0, 10) WITH NOWAIT;
 WAITFOR DELAY '00:00:01';
 
@@ -47,27 +51,32 @@ DECLARE @PersonRecordTypeId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value
 DECLARE @ActiveRecordStatusId AS INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Active' AND DefinedTypeId = 2);
 
 /* =================================
-Initial cleanup tasks
+1. Validate schema (aborts on failure)
+- Required: Email, First Name (FirstName | First Name), Last Name
+    (LastName | Last Name). Values may be blank per row; the columns
+    must exist. ConnectionStatusId and GroupId are optional.
 ==================================== */
 RAISERROR('Checking table for consistency...', 0, 10) WITH NOWAIT;
 WAITFOR DELAY '00:00:01';
 
--- First verify schema matches
-SELECT @cmd = '
-DECLARE @Status INT
-SELECT @Status = COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
-WHERE [TABLE_NAME] = ''' + @ImportTable + '''
-   AND COLUMN_NAME = ''Email''
+DECLARE @EmailCol     SYSNAME = ( SELECT TOP 1 [COLUMN_NAME] FROM INFORMATION_SCHEMA.COLUMNS
+                                    WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] = 'Email' );
+DECLARE @FirstNameCol SYSNAME = ( SELECT TOP 1 [COLUMN_NAME] FROM INFORMATION_SCHEMA.COLUMNS
+                                    WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] IN ('FirstName', 'First Name')
+                                    ORDER BY CASE [COLUMN_NAME] WHEN 'FirstName' THEN 0 ELSE 1 END );
+DECLARE @LastNameCol  SYSNAME = ( SELECT TOP 1 [COLUMN_NAME] FROM INFORMATION_SCHEMA.COLUMNS
+                                    WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] IN ('LastName', 'Last Name')
+                                    ORDER BY CASE [COLUMN_NAME] WHEN 'LastName' THEN 0 ELSE 1 END );
 
-IF @Status < 1 
-BEGIN 
-    RAISERROR(''Table does not contain the correct column definitions:'', 0, 10) WITH NOWAIT;
-    RAISERROR(''FirstName,LastName,Email,ConnectionStatusId,GroupId'', 0, 10) WITH NOWAIT;
-    WAITFOR DELAY ''00:00:01'';
+IF @EmailCol IS NULL OR @FirstNameCol IS NULL OR @LastNameCol IS NULL
+BEGIN
+    RAISERROR('Import table is missing one or more required columns. Required: Email, FirstName (or "First Name"), LastName (or "Last Name").', 16, 1);
 END
-';
 
-EXEC(@cmd)
+DECLARE @HasConnectionStatus BIT = CASE WHEN EXISTS ( SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] = 'ConnectionStatusId' ) THEN 1 ELSE 0 END;
+DECLARE @HasGroupId BIT = CASE WHEN EXISTS ( SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] = 'GroupId' ) THEN 1 ELSE 0 END;
 
 
 -- Import to processing table so foreign guid can be created
