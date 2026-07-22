@@ -6,8 +6,8 @@ GO
 
 CREATE PROCEDURE [dbo].[_rocks_kfs_spPersonImport_CSV]
     @ImportTable NVARCHAR(250),
-    @CleanupTable bit = 1
-
+    @CleanupTable bit = 1,
+    @CreateDefinedValues BIT = 0
 AS
 BEGIN
 
@@ -32,6 +32,21 @@ Updates:
   temp table (#peopleCsvTemp) for readability, better plans and
   concurrency safety. Schema validation now aborts instead of
   continuing. - GM 7/22/2026 (Assisted by Claude Code)
+- Added Person AttributeValue import: any column in the uploaded
+  table whose name matches a Person Attribute [Key] is imported as
+  that person's attribute value (upsert). - GM 7/22/2026 (Assisted by Claude Code)
+- Defined Value attribute handling: when a matched attribute's field
+  type is "Defined Value", the raw column text is resolved to the
+  DefinedValue.Guid Rock stores. Integers match DefinedValue.Id (no
+  match => skip + report); strings match DefinedValue.Value, creating a
+  new DefinedValue in the Defined Type when none exists. Multi-value and
+  mis-configured Defined Value attributes are skipped + reported.
+  @CreateDefinedValues (default 0/false) controls whether missing string
+  values are created; when false, non-existent values are reported and
+  the attribute value is skipped rather than created.
+  Note: DefinedValue has no save hook, so new values create no History
+  (consistent with Rock's model layer); a Rock cache clear may be needed
+  before new values appear in pick lists. - GM 7/22/2026 (Assisted by Claude Code)
 - Required-column check now verifies Email, First Name and Last Name
   all exist (either "FirstName"/"First Name", "LastName"/"Last Name").
   ConnectionStatusId and GroupId are now optional. - GM 7/22/2026 (Assisted by Claude Code)
@@ -100,9 +115,9 @@ Reporting:
 
         /* =================================
         2. Tag every source row with a ForeignGuid
-        - Gives each uploaded row a stable key so newly created people and
-            person aliases can all be joined back to
-            the exact source row (no fragile name/email re-matching).
+        - Gives each uploaded row a stable key so newly created people,
+          person aliases and attribute values can all be joined back to
+          the exact source row (no fragile name/email re-matching).
         ==================================== */
         IF NOT EXISTS (
             SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
@@ -256,6 +271,286 @@ Reporting:
 
         SELECT @message = CONCAT(@@ROWCOUNT, ' group member(s) added.');
         RAISERROR(@message, 0, 10) WITH NOWAIT;
+
+        /* =================================
+        9. Import person attribute values
+        - Any uploaded column whose name matches a global Person
+          Attribute [Key] is imported as that person's attribute value.
+        - Reserved import columns are excluded so a person field cannot be
+          mistaken for an attribute.
+        - Upsert (update existing / insert new) keyed on AttributeId +
+          EntityId (= PersonId). IsPersistedValueDirty = 1 tells Rock to
+          recompute the persisted/indexed value columns on next save,
+          matching how Rock's own migrations write AttributeValue rows.
+        ==================================== */
+        RAISERROR('Importing person attribute values...', 0, 10) WITH NOWAIT;
+        WAITFOR DELAY '00:00:01';
+
+        DECLARE @attrSelect NVARCHAR(MAX) = '';
+
+        SELECT @attrSelect = @attrSelect
+            + CASE WHEN @attrSelect = '' THEN '' ELSE ' UNION ALL ' END
+            + 'SELECT t.PersonId, ' + CONVERT(VARCHAR(20), m.AttributeId) + ' AS AttributeId, '
+            + 'CONVERT(NVARCHAR(MAX), it.' + QUOTENAME(m.ColumnName) + ') AS [Value] '
+            + 'FROM ' + @qImportTable + ' it '
+            + 'JOIN #peopleCsvTemp t ON t.ForeignGuid = it.ForeignGuid'
+        FROM (
+            SELECT c.[COLUMN_NAME] AS ColumnName, MIN(a.[Id]) AS AttributeId
+            FROM INFORMATION_SCHEMA.COLUMNS c
+            JOIN Attribute a
+                ON a.[Key] = c.[COLUMN_NAME] COLLATE DATABASE_DEFAULT
+                AND a.[EntityTypeId] = @PersonEntityTypeId
+                AND ISNULL(a.[EntityTypeQualifierColumn], '') = ''
+                AND ISNULL(a.[EntityTypeQualifierValue], '') = ''
+            WHERE c.[TABLE_NAME] = @ImportTable
+              AND c.[COLUMN_NAME] NOT IN ('FirstName', 'First Name', 'LastName', 'Last Name', 'Email', 'ConnectionStatusId', 'GroupId', 'ForeignGuid')
+            GROUP BY c.[COLUMN_NAME]
+        ) m;
+
+        IF NULLIF(@attrSelect, '') IS NOT NULL
+        BEGIN
+            CREATE TABLE #attrImport (PersonId INT, AttributeId INT, [Value] NVARCHAR(MAX));
+
+            SET @cmd = 'INSERT #attrImport (PersonId, AttributeId, [Value]) ' + @attrSelect + ';';
+            EXEC (@cmd);
+
+            -- Drop unmatched people and blank values
+            DELETE FROM #attrImport
+            WHERE PersonId IS NULL
+               OR NULLIF(LTRIM(RTRIM([Value])), '') IS NULL;
+
+            -- Keep a single value per (PersonId, AttributeId) in case the
+            -- upload had duplicate rows resolving to the same person.
+            -- After this, (PersonId, AttributeId) is a unique key for #attrImport.
+            ;WITH ranked AS (
+                SELECT ROW_NUMBER() OVER (PARTITION BY PersonId, AttributeId ORDER BY (SELECT 1)) rn
+                FROM #attrImport
+            )
+            DELETE FROM ranked WHERE rn > 1;
+
+            /* ---------------------------------------------------------------
+            Defined Value resolution
+            - For attributes whose field type is "Defined Value", the raw
+              column text must be converted to the DefinedValue's Guid (that
+              is how Rock stores the value).
+                * Integer  -> match DefinedValue.Id within the attribute's
+                              Defined Type. No match => skip + report.
+                * String   -> match DefinedValue.Value within the Defined
+                              Type. No match => create a new DefinedValue,
+                              then use it.
+            - A "pure digits" value is treated as an integer (Id) lookup even
+              if it overflows INT (which then simply fails to match => skip).
+            - Multi-value ("allowmultiple") and mis-configured (no Defined
+              Type) Defined Value attributes are skipped + reported rather
+              than risk creating bogus values.
+            --------------------------------------------------------------- */
+            CREATE TABLE #attrSkipped (AttributeId INT, [Value] NVARCHAR(MAX), Reason NVARCHAR(200));
+
+            -- Defined Value attributes present in this import
+            CREATE TABLE #dvAttr (AttributeId INT PRIMARY KEY, DefinedTypeId INT, AllowMultiple BIT);
+
+            INSERT #dvAttr (AttributeId, DefinedTypeId, AllowMultiple)
+            SELECT a.[Id],
+                   TRY_CONVERT(INT, aqDt.[Value]),
+                   CASE WHEN LOWER(ISNULL(aqAm.[Value], '')) IN ('1', 'true', 'yes') THEN 1 ELSE 0 END
+            FROM Attribute a
+            JOIN FieldType ft ON ft.[Id] = a.[FieldTypeId] AND ft.[Guid] = '59D5A94C-94A0-4630-B80A-BB25697D74C7'
+            LEFT JOIN AttributeQualifier aqDt ON aqDt.[AttributeId] = a.[Id] AND aqDt.[Key] = 'definedtype'
+            LEFT JOIN AttributeQualifier aqAm ON aqAm.[AttributeId] = a.[Id] AND aqAm.[Key] = 'allowmultiple'
+            WHERE a.[Id] IN (SELECT DISTINCT AttributeId FROM #attrImport);
+
+            IF EXISTS (SELECT 1 FROM #dvAttr)
+            BEGIN
+                -- (a) Skip unsupported Defined Value attributes (multi-value or no Defined Type)
+                INSERT #attrSkipped (AttributeId, [Value], Reason)
+                SELECT ai.AttributeId, ai.[Value],
+                    CASE WHEN d.DefinedTypeId IS NULL
+                         THEN 'Defined Value attribute has no Defined Type configured'
+                         ELSE 'Multi-value Defined Value attributes are not supported' END
+                FROM #attrImport ai
+                JOIN #dvAttr d ON d.AttributeId = ai.AttributeId
+                WHERE d.DefinedTypeId IS NULL OR d.AllowMultiple = 1;
+
+                DELETE ai
+                FROM #attrImport ai
+                JOIN #dvAttr d ON d.AttributeId = ai.AttributeId
+                WHERE d.DefinedTypeId IS NULL OR d.AllowMultiple = 1;
+
+                -- (b) Integer values that do not match a DefinedValue.Id in the Defined Type
+                INSERT #attrSkipped (AttributeId, [Value], Reason)
+                SELECT ai.AttributeId, ai.[Value], 'Integer does not match a DefinedValue.Id in the Defined Type'
+                FROM #attrImport ai
+                JOIN #dvAttr d ON d.AttributeId = ai.AttributeId AND d.DefinedTypeId IS NOT NULL AND d.AllowMultiple = 0
+                WHERE LTRIM(RTRIM(ai.[Value])) NOT LIKE '%[^0-9]%'   -- pure digits => integer intent
+                  AND NOT EXISTS (
+                      SELECT 1 FROM DefinedValue dv
+                      WHERE dv.DefinedTypeId = d.DefinedTypeId
+                        AND dv.[Id] = TRY_CONVERT(INT, LTRIM(RTRIM(ai.[Value])))
+                  );
+
+                DELETE ai
+                FROM #attrImport ai
+                JOIN #dvAttr d ON d.AttributeId = ai.AttributeId AND d.DefinedTypeId IS NOT NULL AND d.AllowMultiple = 0
+                WHERE LTRIM(RTRIM(ai.[Value])) NOT LIKE '%[^0-9]%'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM DefinedValue dv
+                      WHERE dv.DefinedTypeId = d.DefinedTypeId
+                        AND dv.[Id] = TRY_CONVERT(INT, LTRIM(RTRIM(ai.[Value])))
+                  );
+
+                -- (c) String values with no existing DefinedValue.Value in the Defined Type.
+                --     When @CreateDefinedValues = 1 these are created; otherwise they are
+                --     reported and skipped.
+                CREATE TABLE #newDefinedValues (DefinedTypeId INT, ValueText NVARCHAR(MAX));
+
+                INSERT #newDefinedValues (DefinedTypeId, ValueText)
+                SELECT DISTINCT d.DefinedTypeId, LTRIM(RTRIM(ai.[Value]))
+                FROM #attrImport ai
+                JOIN #dvAttr d ON d.AttributeId = ai.AttributeId AND d.DefinedTypeId IS NOT NULL AND d.AllowMultiple = 0
+                WHERE LTRIM(RTRIM(ai.[Value])) LIKE '%[^0-9]%'       -- contains a non-digit => string intent
+                  AND NOT EXISTS (
+                      SELECT 1 FROM DefinedValue dv
+                      WHERE dv.DefinedTypeId = d.DefinedTypeId
+                        AND LTRIM(RTRIM(dv.[Value])) = LTRIM(RTRIM(ai.[Value])) COLLATE DATABASE_DEFAULT
+                  );
+
+                IF @CreateDefinedValues = 1
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM #newDefinedValues)
+                    BEGIN
+                        ;WITH maxOrder AS (
+                            SELECT DefinedTypeId, MAX([Order]) AS MaxOrder
+                            FROM DefinedValue
+                            GROUP BY DefinedTypeId
+                        )
+                        INSERT DefinedValue (IsSystem, DefinedTypeId, [Order], [Value], [Description], IsActive, [Guid], CreatedDateTime, ModifiedDateTime)
+                        SELECT 0, n.DefinedTypeId,
+                            ISNULL(mo.MaxOrder, -1) + ROW_NUMBER() OVER (PARTITION BY n.DefinedTypeId ORDER BY n.ValueText),
+                            n.ValueText, '', 1, NEWID(), @now, @now
+                        FROM #newDefinedValues n
+                        LEFT JOIN maxOrder mo ON mo.DefinedTypeId = n.DefinedTypeId;
+
+                        SELECT @message = CONCAT(@@ROWCOUNT, ' new Defined Value(s) created.');
+                        RAISERROR(@message, 0, 10) WITH NOWAIT;
+                    END
+                END
+                ELSE
+                BEGIN
+                    -- Creation disabled: report + skip string values that do not already exist
+                    INSERT #attrSkipped (AttributeId, [Value], Reason)
+                    SELECT ai.AttributeId, ai.[Value], 'DefinedValue does not exist and creation is disabled'
+                    FROM #attrImport ai
+                    JOIN #dvAttr d ON d.AttributeId = ai.AttributeId AND d.DefinedTypeId IS NOT NULL AND d.AllowMultiple = 0
+                    WHERE LTRIM(RTRIM(ai.[Value])) LIKE '%[^0-9]%'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM DefinedValue dv
+                          WHERE dv.DefinedTypeId = d.DefinedTypeId
+                            AND LTRIM(RTRIM(dv.[Value])) = LTRIM(RTRIM(ai.[Value])) COLLATE DATABASE_DEFAULT
+                      );
+
+                    DELETE ai
+                    FROM #attrImport ai
+                    JOIN #dvAttr d ON d.AttributeId = ai.AttributeId AND d.DefinedTypeId IS NOT NULL AND d.AllowMultiple = 0
+                    WHERE LTRIM(RTRIM(ai.[Value])) LIKE '%[^0-9]%'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM DefinedValue dv
+                          WHERE dv.DefinedTypeId = d.DefinedTypeId
+                            AND LTRIM(RTRIM(dv.[Value])) = LTRIM(RTRIM(ai.[Value])) COLLATE DATABASE_DEFAULT
+                      );
+                END
+
+                -- (d) Resolve every remaining Defined Value row to a DefinedValue.Guid
+                --     using the ORIGINAL value (keyed by PersonId+AttributeId, now unique),
+                --     so the update below can't re-interpret a resolved Guid.
+                CREATE TABLE #dvResolved (PersonId INT, AttributeId INT, ResolvedGuid NVARCHAR(36));
+
+                -- integer intent
+                INSERT #dvResolved (PersonId, AttributeId, ResolvedGuid)
+                SELECT ai.PersonId, ai.AttributeId, LOWER(CONVERT(NVARCHAR(36), dv.[Guid]))
+                FROM #attrImport ai
+                JOIN #dvAttr d ON d.AttributeId = ai.AttributeId AND d.DefinedTypeId IS NOT NULL AND d.AllowMultiple = 0
+                JOIN DefinedValue dv ON dv.DefinedTypeId = d.DefinedTypeId AND dv.[Id] = TRY_CONVERT(INT, LTRIM(RTRIM(ai.[Value])))
+                WHERE LTRIM(RTRIM(ai.[Value])) NOT LIKE '%[^0-9]%';
+
+                -- string intent (existing or just-created; lowest Id wins on duplicate Values)
+                INSERT #dvResolved (PersonId, AttributeId, ResolvedGuid)
+                SELECT ai.PersonId, ai.AttributeId, LOWER(CONVERT(NVARCHAR(36), dv.[Guid]))
+                FROM #attrImport ai
+                JOIN #dvAttr d ON d.AttributeId = ai.AttributeId AND d.DefinedTypeId IS NOT NULL AND d.AllowMultiple = 0
+                CROSS APPLY (
+                    SELECT TOP 1 dv0.[Guid]
+                    FROM DefinedValue dv0
+                    WHERE dv0.DefinedTypeId = d.DefinedTypeId
+                      AND LTRIM(RTRIM(dv0.[Value])) = LTRIM(RTRIM(ai.[Value])) COLLATE DATABASE_DEFAULT
+                    ORDER BY dv0.[Id]
+                ) dv
+                WHERE LTRIM(RTRIM(ai.[Value])) LIKE '%[^0-9]%';
+
+                UPDATE ai
+                SET ai.[Value] = r.ResolvedGuid
+                FROM #attrImport ai
+                JOIN #dvResolved r ON r.PersonId = ai.PersonId AND r.AttributeId = ai.AttributeId;
+
+                -- Safety net: any Defined Value row still unresolved is skipped + reported
+                INSERT #attrSkipped (AttributeId, [Value], Reason)
+                SELECT ai.AttributeId, ai.[Value], 'Could not resolve Defined Value'
+                FROM #attrImport ai
+                JOIN #dvAttr d ON d.AttributeId = ai.AttributeId
+                LEFT JOIN #dvResolved r ON r.PersonId = ai.PersonId AND r.AttributeId = ai.AttributeId
+                WHERE r.PersonId IS NULL;
+
+                DELETE ai
+                FROM #attrImport ai
+                JOIN #dvAttr d ON d.AttributeId = ai.AttributeId
+                LEFT JOIN #dvResolved r ON r.PersonId = ai.PersonId AND r.AttributeId = ai.AttributeId
+                WHERE r.PersonId IS NULL;
+            END
+
+            -- Report any skipped Defined Value entries
+            IF EXISTS (SELECT 1 FROM #attrSkipped)
+            BEGIN
+                DECLARE @skipCount INT = (SELECT COUNT(*) FROM #attrSkipped);
+                DECLARE @skipMsg NVARCHAR(MAX);
+                SELECT @skipMsg = STRING_AGG(CONVERT(NVARCHAR(MAX), CONCAT(a.[Key], '=', LEFT(s.[Value], 50), ' (', s.Reason, ')')), '; ')
+                FROM #attrSkipped s
+                JOIN Attribute a ON a.[Id] = s.AttributeId;
+
+                SET @message = LEFT(CONCAT(@skipCount, ' attribute value(s) skipped: ', @skipMsg), 400);
+                RAISERROR(@message, 0, 10) WITH NOWAIT;
+                WAITFOR DELAY '00:00:01';
+            END
+
+            -- Update existing attribute values
+            UPDATE av
+            SET av.[Value] = ai.[Value],
+                av.[ModifiedDateTime] = @now,
+                av.[IsPersistedValueDirty] = 1
+            FROM AttributeValue av
+            JOIN #attrImport ai
+                ON ai.AttributeId = av.AttributeId
+                AND ai.PersonId = av.EntityId;
+
+            DECLARE @attrUpdated INT = @@ROWCOUNT;
+
+            -- Insert new attribute values
+            INSERT AttributeValue (IsSystem, AttributeId, EntityId, [Value], [Guid], CreatedDateTime, ModifiedDateTime, IsPersistedValueDirty)
+            SELECT 0, ai.AttributeId, ai.PersonId, ai.[Value], NEWID(), @now, @now, 1
+            FROM #attrImport ai
+            WHERE NOT EXISTS (
+                SELECT 1 FROM AttributeValue av
+                WHERE av.AttributeId = ai.AttributeId
+                  AND av.EntityId = ai.PersonId
+            );
+
+            SELECT @message = CONCAT(@@ROWCOUNT + @attrUpdated, ' person attribute value(s) imported.');
+            RAISERROR(@message, 0, 10) WITH NOWAIT;
+            WAITFOR DELAY '00:00:01';
+        END
+        ELSE
+        BEGIN
+            RAISERROR('No uploaded columns matched a Person attribute key.', 0, 10) WITH NOWAIT;
+        END
+
 
         /* =================================
         Cleanup table post processing
