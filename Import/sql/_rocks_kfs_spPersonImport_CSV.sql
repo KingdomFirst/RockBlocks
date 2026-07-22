@@ -1,10 +1,10 @@
-/****** Object:  StoredProcedure [dbo].[_rocks_kfs_spPersonImport_CSV]    Script Date: 1/4/2019 5:09:20 PM ******/
+/****** Object:  StoredProcedure [dbo].[_rocks_kfs_spPersonImport_CSV] ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE PROCEDURE [dbo].[_rocks_kfs_spPersonImport_CSV]
+CREATE OR ALTER PROCEDURE [dbo].[_rocks_kfs_spPersonImport_CSV]
     @ImportTable NVARCHAR(250),
     @CleanupTable BIT = 1,
     @CreateHistory BIT = 1,
@@ -13,7 +13,7 @@ AS
 BEGIN
 
 /**************************************************************
-- Copyright: Kingdom First Solutions 
+- Copyright: Kingdom First Solutions
 - Module: Person Import CSV
 - Author: Trey Hendon (1/4/19)
 - Contact: support@kingdomfirstsolutions.com
@@ -111,20 +111,20 @@ History notes:
         /* =================================
         1. Validate schema (aborts on failure)
         - Required: Email, First Name (FirstName | First Name), Last Name
-            (LastName | Last Name). Values may be blank per row; the columns
-            must exist. ConnectionStatusId and GroupId are optional.
+          (LastName | Last Name). Values may be blank per row; the columns
+          must exist. ConnectionStatusId and GroupId are optional.
         ==================================== */
         RAISERROR('Checking table for consistency...', 0, 10) WITH NOWAIT;
         WAITFOR DELAY '00:00:01';
 
         DECLARE @EmailCol     SYSNAME = ( SELECT TOP 1 [COLUMN_NAME] FROM INFORMATION_SCHEMA.COLUMNS
-                                            WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] = 'Email' );
+                                          WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] = 'Email' );
         DECLARE @FirstNameCol SYSNAME = ( SELECT TOP 1 [COLUMN_NAME] FROM INFORMATION_SCHEMA.COLUMNS
-                                            WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] IN ('FirstName', 'First Name')
-                                            ORDER BY CASE [COLUMN_NAME] WHEN 'FirstName' THEN 0 ELSE 1 END );
+                                          WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] IN ('FirstName', 'First Name')
+                                          ORDER BY CASE [COLUMN_NAME] WHEN 'FirstName' THEN 0 ELSE 1 END );
         DECLARE @LastNameCol  SYSNAME = ( SELECT TOP 1 [COLUMN_NAME] FROM INFORMATION_SCHEMA.COLUMNS
-                                            WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] IN ('LastName', 'Last Name')
-                                            ORDER BY CASE [COLUMN_NAME] WHEN 'LastName' THEN 0 ELSE 1 END );
+                                          WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] IN ('LastName', 'Last Name')
+                                          ORDER BY CASE [COLUMN_NAME] WHEN 'LastName' THEN 0 ELSE 1 END );
 
         IF @EmailCol IS NULL OR @FirstNameCol IS NULL OR @LastNameCol IS NULL
         BEGIN
@@ -157,7 +157,7 @@ History notes:
         /* =================================
         3. Load fixed-shape working set
         - Only this step needs dynamic SQL (the source table/column names
-            vary). Everything after this runs as plain, tunable static SQL.
+          vary). Everything after this runs as plain, tunable static SQL.
         ==================================== */
         CREATE TABLE #peopleCsvTemp (
             FirstName          NVARCHAR(50),
@@ -672,7 +672,6 @@ History notes:
         BEGIN
             RAISERROR('No uploaded columns matched a Person attribute key.', 0, 10) WITH NOWAIT;
         END
-
 
         /* =================================
         Cleanup table post processing
