@@ -6,7 +6,8 @@ GO
 
 CREATE PROCEDURE [dbo].[_rocks_kfs_spPersonImport_CSV]
     @ImportTable NVARCHAR(250),
-    @CleanupTable bit = 1,
+    @CleanupTable BIT = 1,
+    @CreateHistory BIT = 1,
     @CreateDefinedValues BIT = 0
 AS
 BEGIN
@@ -35,6 +36,9 @@ Updates:
 - Added Person AttributeValue import: any column in the uploaded
   table whose name matches a Person Attribute [Key] is imported as
   that person's attribute value (upsert). - GM 7/22/2026 (Assisted by Claude Code)
+- Added Rock History generation (@CreateHistory) that mirrors what
+  Rock's save hooks write to the History timeline when a Person or a
+  GroupMember is created through the UI. - GM 7/22/2026 (Assisted by Claude Code)
 - Defined Value attribute handling: when a matched attribute's field
   type is "Defined Value", the raw column text is resolved to the
   DefinedValue.Guid Rock stores. Integers match DefinedValue.Id (no
@@ -57,16 +61,30 @@ Reporting:
   client. The one-second WAITFOR DELAYs give the async reader time to
   flush each message. Both are intentional and preserved.
 
+History notes:
+- Person (new) -> "Person Demographic Changes" timeline: an ADD/Record
+  summary row plus a MODIFY/Property row for each non-blank field, exactly
+  as Person.SaveHook builds via History.EvaluateChange (only non-blank new
+  values produce a row).
+- GroupMember (new) -> two timelines, matching GroupMember.SaveHook:
+  "Person Group Membership" (on the Person) and "Group Member Changes"
+  (on the GroupMember).
+- PersonAlias creates no History. AttributeValue history is intentionally
+  NOT written here: Rock stores it in the AttributeValueHistorical SCD
+  table (only when Attribute.EnableHistory = 1) with field-type-specific
+  value formatting that cannot be faithfully reproduced in T-SQL.
+- Enum text matches Rock's ConvertToString() (SplitCase), e.g.
+  "Email Allowed", "Recipient Preference", "Push Notification".
 **************************************************************/
 
-    SET NOCOUNT ON
-    SET XACT_ABORT ON
-    BEGIN TRANSACTION
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
 
     DECLARE @cmd NVARCHAR(MAX);
     DECLARE @message NVARCHAR(400);
     DECLARE @qImportTable NVARCHAR(300) = QUOTENAME(@ImportTable);
     DECLARE @now DATETIME = GETDATE();
+    DECLARE @SourceOfChange NVARCHAR(200) = 'Person Import CSV';
 
     -- Rock lookup values (resolved once, then used as static values below)
     DECLARE @PersonRecordTypeId INT = (SELECT [Id] FROM DefinedValue WHERE [Value] = 'Person' AND DefinedTypeId = 1);
@@ -74,6 +92,11 @@ Reporting:
     DECLARE @PersonEntityTypeId INT = (SELECT TOP 1 [Id] FROM EntityType WHERE [Name] = 'Rock.Model.Person');
     DECLARE @GroupEntityTypeId INT = (SELECT TOP 1 [Id] FROM EntityType WHERE [Name] = 'Rock.Model.Group');
     DECLARE @GroupMemberEntityTypeId INT = (SELECT TOP 1 [Id] FROM EntityType WHERE [Name] = 'Rock.Model.GroupMember');
+
+    -- History categories (Rock system GUIDs)
+    DECLARE @CatPersonDemographic INT = (SELECT TOP 1 [Id] FROM Category WHERE [Guid] = '51D3EC5A-D079-45ED-909E-B0AB2FD06835');
+    DECLARE @CatPersonGroupMembership INT = (SELECT TOP 1 [Id] FROM Category WHERE [Guid] = '325278A4-FACA-4F38-A405-9C090B3BAA34');
+    DECLARE @CatGroupChanges INT = (SELECT TOP 1 [Id] FROM Category WHERE [Guid] = '089EB47D-D0EF-493E-B867-DC51BCDEF319');
 
     /* =================================
     Start Logging Operations
@@ -181,7 +204,8 @@ Reporting:
 
         /* =================================
         5. Create unmatched people
-        - Capture the Ids we actually insert
+        - Capture the Ids we actually insert so History (step 9) targets
+          only the newly created people.
         ==================================== */
         CREATE TABLE #newPersonIds (PersonId INT);
 
@@ -240,7 +264,8 @@ Reporting:
 
         /* =================================
         8. Insert to group
-        - Capture inserted GroupMember rows
+        - Capture inserted GroupMember rows so History (step 9) targets
+          only the memberships we actually created.
         ==================================== */
         CREATE TABLE #newGroupMembers (
             GroupMemberId INT,
@@ -273,7 +298,104 @@ Reporting:
         RAISERROR(@message, 0, 10) WITH NOWAIT;
 
         /* =================================
-        9. Import person attribute values
+        9. Rock History (mirrors the UI save hooks)
+        ==================================== */
+        IF @CreateHistory = 1
+        BEGIN
+            RAISERROR('Writing history...', 0, 10) WITH NOWAIT;
+
+            /* --- 9a. Person "Demographic Changes" for newly created people --- */
+            IF @CatPersonDemographic IS NOT NULL AND @PersonEntityTypeId IS NOT NULL
+            BEGIN
+                ;WITH np AS (
+                    SELECT p.Id,
+                        p.RecordTypeValueId, p.RecordStatusValueId, p.ConnectionStatusValueId,
+                        p.FirstName, p.NickName, p.LastName, p.Email, p.Gender, p.IsDeceased,
+                        p.IsEmailActive, p.EmailPreference, p.CommunicationPreference,
+                        LTRIM(RTRIM(ISNULL(p.NickName, ''))) + ' ' + LTRIM(RTRIM(ISNULL(p.LastName, ''))) AS FullName
+                    FROM #newPersonIds n
+                    JOIN Person p ON p.Id = n.PersonId
+                )
+                INSERT History (IsSystem, CategoryId, EntityTypeId, EntityId, Verb, Caption, ChangeType, ValueName, NewValue, OldValue, IsSensitive, SourceOfChange, [Guid], CreatedDateTime)
+                SELECT 0, @CatPersonDemographic, @PersonEntityTypeId, np.Id,
+                    x.Verb, LEFT(np.FullName, 200), x.ChangeType, LEFT(x.ValueName, 250), x.NewValue, NULL, 0, @SourceOfChange, NEWID(), @now
+                FROM np
+                LEFT JOIN DefinedValue dvRT ON dvRT.Id = np.RecordTypeValueId
+                LEFT JOIN DefinedValue dvRS ON dvRS.Id = np.RecordStatusValueId
+                LEFT JOIN DefinedValue dvCS ON dvCS.Id = np.ConnectionStatusValueId
+                CROSS APPLY ( VALUES
+                    ('ADD',    'Record',   'Person',                   np.FullName),
+                    ('MODIFY', 'Property', 'Record Type',              dvRT.[Value]),
+                    ('MODIFY', 'Property', 'Record Status',            dvRS.[Value]),
+                    ('MODIFY', 'Property', 'Connection Status',        dvCS.[Value]),
+                    ('MODIFY', 'Property', 'Deceased',                 CASE WHEN np.IsDeceased = 1 THEN 'True' ELSE 'False' END),
+                    ('MODIFY', 'Property', 'First Name',               np.FirstName),
+                    ('MODIFY', 'Property', 'Nick Name',                np.NickName),
+                    ('MODIFY', 'Property', 'Last Name',                np.LastName),
+                    ('MODIFY', 'Property', 'Gender',                   CASE np.Gender WHEN 1 THEN 'Male' WHEN 2 THEN 'Female' ELSE 'Unknown' END),
+                    ('MODIFY', 'Property', 'Email',                    np.Email),
+                    ('MODIFY', 'Property', 'Email Active',             CASE WHEN np.IsEmailActive = 1 THEN 'True' ELSE 'False' END),
+                    ('MODIFY', 'Property', 'Email Preference',         CASE np.EmailPreference WHEN 0 THEN 'Email Allowed' WHEN 1 THEN 'No Mass Emails' WHEN 2 THEN 'Do Not Email' END),
+                    ('MODIFY', 'Property', 'Communication Preference', CASE np.CommunicationPreference WHEN 0 THEN 'Recipient Preference' WHEN 1 THEN 'Email' WHEN 2 THEN 'SMS' WHEN 3 THEN 'Push Notification' END)
+                ) x (Verb, ChangeType, ValueName, NewValue)
+                -- Record rows are always written; Property rows only when the new value is non-blank (matches History.EvaluateChange)
+                WHERE x.ChangeType = 'Record' OR NULLIF(LTRIM(RTRIM(x.NewValue)), '') IS NOT NULL;
+            END
+
+            /* --- 9b. GroupMember: "Person Group Membership" (on the Person) --- */
+            IF @CatPersonGroupMembership IS NOT NULL AND @PersonEntityTypeId IS NOT NULL
+            BEGIN
+                ;WITH gm AS (
+                    SELECT n.PersonId, n.GroupId, n.GroupRoleId, n.GroupMemberStatus, n.CommunicationPreference,
+                        g.[Name] AS GroupName, gtr.[Name] AS RoleName
+                    FROM #newGroupMembers n
+                    JOIN [Group] g ON g.Id = n.GroupId
+                    LEFT JOIN GroupTypeRole gtr ON gtr.Id = n.GroupRoleId
+                )
+                INSERT History (IsSystem, CategoryId, EntityTypeId, EntityId, Verb, Caption, ChangeType, ValueName, NewValue, OldValue, IsSensitive, SourceOfChange, RelatedEntityTypeId, RelatedEntityId, [Guid], CreatedDateTime)
+                SELECT 0, @CatPersonGroupMembership, @PersonEntityTypeId, gm.PersonId,
+                    x.Verb, LEFT(gm.GroupName, 200), x.ChangeType, LEFT(x.ValueName, 250), x.NewValue, NULL, 0, @SourceOfChange,
+                    @GroupEntityTypeId, gm.GroupId, NEWID(), @now
+                FROM gm
+                CROSS APPLY ( VALUES
+                    ('ADDEDTOGROUP', 'Record',   '''' + gm.GroupName + ''' Group',              CAST(NULL AS NVARCHAR(MAX))),
+                    ('MODIFY',       'Property', gm.GroupName + ' Role',                         gm.RoleName),
+                    ('MODIFY',       'Property', gm.GroupName + ' Status',                       CASE gm.GroupMemberStatus WHEN 0 THEN 'Inactive' WHEN 1 THEN 'Active' WHEN 2 THEN 'Pending' END),
+                    ('MODIFY',       'Property', gm.GroupName + ' Communication Preference',     CASE gm.CommunicationPreference WHEN 0 THEN 'Recipient Preference' WHEN 1 THEN 'Email' WHEN 2 THEN 'SMS' WHEN 3 THEN 'Push Notification' END)
+                ) x (Verb, ChangeType, ValueName, NewValue)
+                WHERE x.ChangeType = 'Record' OR NULLIF(LTRIM(RTRIM(x.NewValue)), '') IS NOT NULL;
+            END
+
+            /* --- 9c. GroupMember: "Group Member Changes" (on the GroupMember) --- */
+            IF @CatGroupChanges IS NOT NULL AND @GroupMemberEntityTypeId IS NOT NULL
+            BEGIN
+                ;WITH gm AS (
+                    SELECT n.GroupMemberId, n.GroupId, n.GroupRoleId, n.GroupMemberStatus, n.CommunicationPreference,
+                        g.[Name] AS GroupName, gtr.[Name] AS RoleName,
+                        LTRIM(RTRIM(ISNULL(p.NickName, ''))) + ' ' + LTRIM(RTRIM(ISNULL(p.LastName, ''))) AS PersonName
+                    FROM #newGroupMembers n
+                    JOIN [Group] g ON g.Id = n.GroupId
+                    JOIN Person p ON p.Id = n.PersonId
+                    LEFT JOIN GroupTypeRole gtr ON gtr.Id = n.GroupRoleId
+                )
+                INSERT History (IsSystem, CategoryId, EntityTypeId, EntityId, Verb, Caption, ChangeType, ValueName, NewValue, OldValue, IsSensitive, SourceOfChange, RelatedEntityTypeId, RelatedEntityId, [Guid], CreatedDateTime)
+                SELECT 0, @CatGroupChanges, @GroupMemberEntityTypeId, gm.GroupMemberId,
+                    x.Verb, LEFT(x.Caption, 200), x.ChangeType, LEFT(x.ValueName, 250), x.NewValue, NULL, 0, @SourceOfChange,
+                    @GroupEntityTypeId, gm.GroupId, NEWID(), @now
+                FROM gm
+                CROSS APPLY ( VALUES
+                    -- summary row: caption is the person's name (SetCaption in the hook)
+                    ('ADDEDTOGROUP', 'Record',   gm.PersonName,                  CAST(NULL AS NVARCHAR(MAX)), gm.PersonName),
+                    ('MODIFY',       'Property', 'Role',                         gm.RoleName,                 gm.GroupName),
+                    ('MODIFY',       'Property', 'Status',                       CASE gm.GroupMemberStatus WHEN 0 THEN 'Inactive' WHEN 1 THEN 'Active' WHEN 2 THEN 'Pending' END, gm.GroupName),
+                    ('MODIFY',       'Property', 'Communication Preference',     CASE gm.CommunicationPreference WHEN 0 THEN 'Recipient Preference' WHEN 1 THEN 'Email' WHEN 2 THEN 'SMS' WHEN 3 THEN 'Push Notification' END, gm.GroupName)
+                ) x (Verb, ChangeType, ValueName, NewValue, Caption)
+                WHERE x.ChangeType = 'Record' OR NULLIF(LTRIM(RTRIM(x.NewValue)), '') IS NOT NULL;
+            END
+        END
+
+        /* =================================
+        10. Import person attribute values
         - Any uploaded column whose name matches a global Person
           Attribute [Key] is imported as that person's attribute value.
         - Reserved import columns are excluded so a person field cannot be
