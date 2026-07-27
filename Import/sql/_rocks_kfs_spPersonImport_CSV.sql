@@ -51,6 +51,10 @@ Updates:
   Note: DefinedValue has no save hook, so new values create no History
   (consistent with Rock's model layer); a Rock cache clear may be needed
   before new values appear in pick lists. - GM 7/22/2026 (Assisted by Claude Code)
+- Optional NickName ("NickName" | "Nick Name") column: used for new
+  people when present; defaults to FirstName when absent/blank, matching
+  Person.SaveHook. The Nick Name demographic History row reflects the
+  value. - GM 7/22/2026 (Assisted by Claude Code)
 - Optional Gender column: "M"/"Male" => Male, "F"/"Female" => Female
   (case-insensitive), anything else => Unknown. Applied to newly created
   people; the Gender demographic History row reflects the value. - GM 7/22/2026 (Assisted by Claude Code)
@@ -149,6 +153,11 @@ History notes:
         DECLARE @GenderCol SYSNAME = ( SELECT TOP 1 [COLUMN_NAME] FROM INFORMATION_SCHEMA.COLUMNS
                                        WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] = 'Gender' );
 
+        -- Optional "NickName" ("NickName" | "Nick Name") column; defaults to FirstName when absent/blank
+        DECLARE @NickNameCol SYSNAME = ( SELECT TOP 1 [COLUMN_NAME] FROM INFORMATION_SCHEMA.COLUMNS
+                                         WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] IN ('NickName', 'Nick Name')
+                                         ORDER BY CASE [COLUMN_NAME] WHEN 'NickName' THEN 0 ELSE 1 END );
+
         /* =================================
         2. Tag every source row with a ForeignGuid
         - Gives each uploaded row a stable key so newly created people,
@@ -174,6 +183,7 @@ History notes:
         ==================================== */
         CREATE TABLE #peopleCsvTemp (
             FirstName          NVARCHAR(50),
+            NickName           NVARCHAR(50),
             LastName           NVARCHAR(50),
             Email              NVARCHAR(75),
             ConnectionStatusId INT,
@@ -184,9 +194,10 @@ History notes:
         );
 
         SET @cmd = '
-        INSERT #peopleCsvTemp (FirstName, LastName, Email, ConnectionStatusId, GroupId, Gender, ForeignGuid)
+        INSERT #peopleCsvTemp (FirstName, NickName, LastName, Email, ConnectionStatusId, GroupId, Gender, ForeignGuid)
         SELECT
             CASE WHEN NULLIF(LTRIM(' + QUOTENAME(@FirstNameCol) + '), '''') IS NULL THEN RIGHT(' + QUOTENAME(@EmailCol) + ', LEN(' + QUOTENAME(@EmailCol) + ') - CHARINDEX(''@'', ' + QUOTENAME(@EmailCol) + ')) ELSE ' + QUOTENAME(@FirstNameCol) + ' END,
+            ' + CASE WHEN @NickNameCol IS NOT NULL THEN QUOTENAME(@NickNameCol) ELSE 'NULL' END + ',
             CASE WHEN NULLIF(LTRIM(' + QUOTENAME(@LastNameCol) + '), '''')  IS NULL THEN LEFT(' + QUOTENAME(@EmailCol) + ',  LEN(' + QUOTENAME(@EmailCol) + ') - CHARINDEX(''@'', ' + QUOTENAME(@EmailCol) + ')) ELSE ' + QUOTENAME(@LastNameCol) + ' END,
             ' + QUOTENAME(@EmailCol) + ',
             ' + CASE WHEN @HasConnectionStatus = 1 THEN 'CONVERT(INT, ConnectionStatusId)' ELSE 'NULL' END + ',
@@ -230,6 +241,8 @@ History notes:
         ;WITH NewPeople AS (
             SELECT
                 LTRIM(RTRIM(fd.[FirstName])) FirstName,
+                -- NickName defaults to FirstName when the column is absent/blank (matches Person.SaveHook)
+                ISNULL(NULLIF(LTRIM(RTRIM(fd.[NickName])), ''), LTRIM(RTRIM(fd.[FirstName]))) NickName,
                 LTRIM(RTRIM(fd.[LastName]))  LastName,
                 fd.Email,
                 fd.ConnectionStatusId,
@@ -244,7 +257,7 @@ History notes:
         )
         INSERT Person (FirstName, NickName, LastName, Email, ForeignGuid, CreatedDateTime, ModifiedDateTime, IsSystem, RecordTypeValueId, RecordStatusValueId, ConnectionStatusValueId, IsDeceased, Gender, IsEmailActive, Guid, EmailPreference, CommunicationPreference)
         OUTPUT INSERTED.Id INTO #newPersonIds (PersonId)
-        SELECT FirstName, FirstName, LastName, Email, ForeignGuid, @now, @now, 0, @PersonRecordTypeId, @ActiveRecordStatusId, ConnectionStatusId, 0, ISNULL(Gender, 0), 1, NEWID(), 0, 1
+        SELECT FirstName, NickName, LastName, Email, ForeignGuid, @now, @now, 0, @PersonRecordTypeId, @ActiveRecordStatusId, ConnectionStatusId, 0, ISNULL(Gender, 0), 1, NEWID(), 0, 1
         FROM NewPeople;
 
         SELECT @message = CONCAT(@@ROWCOUNT, ' new person record(s) created.');
@@ -444,7 +457,7 @@ History notes:
                 AND ISNULL(a.[EntityTypeQualifierColumn], '') = ''
                 AND ISNULL(a.[EntityTypeQualifierValue], '') = ''
             WHERE c.[TABLE_NAME] = @ImportTable
-              AND c.[COLUMN_NAME] NOT IN ('FirstName', 'First Name', 'LastName', 'Last Name', 'Email', 'ConnectionStatusId', 'GroupId', 'Gender', 'ForeignGuid')
+              AND c.[COLUMN_NAME] NOT IN ('FirstName', 'First Name', 'NickName', 'Nick Name', 'LastName', 'Last Name', 'Email', 'ConnectionStatusId', 'GroupId', 'Gender', 'ForeignGuid')
               AND c.[COLUMN_NAME] NOT LIKE '%phone'   -- handled as PhoneNumber records
             GROUP BY c.[COLUMN_NAME]
         ) m;
