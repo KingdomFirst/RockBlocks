@@ -54,6 +54,12 @@ Updates:
 - Optional Gender column: "M"/"Male" => Male, "F"/"Female" => Female
   (case-insensitive), anything else => Unknown. Applied to newly created
   people; the Gender demographic History row reflects the value. - GM 7/22/2026 (Assisted by Claude Code)
+- Optional phone columns: any column name ending in "phone" adds a
+  PhoneNumber; the text before "phone" selects the phone type by matching
+  a Phone Type DefinedValue.Value (bare "phone" => Home). Numbers are
+  stored digits-only with best-effort formatting; added only when the
+  person lacks that type. Mirrors PhoneNumber.SaveHook History (three
+  Person Demographic Changes rows per number). - GM 7/22/2026 (Assisted by Claude Code)
 - Required-column check now verifies Email, First Name and Last Name
   all exist (either "FirstName"/"First Name", "LastName"/"Last Name").
   ConnectionStatusId and GroupId are now optional. - GM 7/22/2026 (Assisted by Claude Code)
@@ -439,6 +445,7 @@ History notes:
                 AND ISNULL(a.[EntityTypeQualifierValue], '') = ''
             WHERE c.[TABLE_NAME] = @ImportTable
               AND c.[COLUMN_NAME] NOT IN ('FirstName', 'First Name', 'LastName', 'Last Name', 'Email', 'ConnectionStatusId', 'GroupId', 'Gender', 'ForeignGuid')
+              AND c.[COLUMN_NAME] NOT LIKE '%phone'   -- handled as PhoneNumber records
             GROUP BY c.[COLUMN_NAME]
         ) m;
 
@@ -684,6 +691,164 @@ History notes:
         ELSE
         BEGIN
             RAISERROR('No uploaded columns matched a Person attribute key.', 0, 10) WITH NOWAIT;
+        END
+
+        /* =================================
+        11. Phone numbers
+        - Any uploaded column whose name ends in "phone" adds a PhoneNumber.
+          The text before "phone" selects the phone type by matching a
+          Phone Type DefinedValue.Value (case-insensitive); a bare "phone"
+          column defaults to Home. Unmatched types are reported + skipped.
+        - Number is stored digits-only; NumberFormatted uses the default
+          country code's standard format for 7/10-digit numbers (Rock's
+          per-country regex formatting cannot be reproduced in T-SQL, so
+          other lengths/countries fall back to the digits). FullNumber =
+          CountryCode + Number, matching PhoneNumber.PreSave.
+        - A number is added only when the person has no phone of that type
+          yet (non-destructive; existing numbers are left untouched).
+        - History mirrors PhoneNumber.SaveHook: three Person "Demographic
+          Changes" rows per added number ("<Type> Phone", "<Type> Phone
+          Unlisted", "<Type> Phone Messaging Enabled").
+        ==================================== */
+        IF EXISTS ( SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE [TABLE_NAME] = @ImportTable AND [COLUMN_NAME] LIKE '%phone' )
+        BEGIN
+            RAISERROR('Importing phone numbers...', 0, 10) WITH NOWAIT;
+
+            DECLARE @PhoneTypeDefinedTypeId INT = (SELECT TOP 1 [Id] FROM DefinedType WHERE [Guid] = '8345DD45-73C6-4F5E-BEBD-B77FC83F18FD');
+            DECLARE @HomePhoneTypeId INT = (SELECT TOP 1 [Id] FROM DefinedValue WHERE [Guid] = 'AA8732FB-2CEA-4C76-8D6D-6AAA2C6A4303');
+            DECLARE @DefaultCountryCode NVARCHAR(3) = ISNULL((
+                SELECT TOP 1 dv.[Value]
+                FROM DefinedValue dv
+                JOIN DefinedType dt ON dt.[Id] = dv.[DefinedTypeId] AND dt.[Guid] = '45E9EF7C-91C7-45AB-92C1-1D6219293847'
+                ORDER BY dv.[Order] ), '1');
+
+            -- Resolve each phone column to a phone-type DefinedValue.Id
+            CREATE TABLE #phoneCols (ColumnName SYSNAME, TypeSubstring NVARCHAR(100), NumberTypeValueId INT);
+
+            INSERT #phoneCols (ColumnName, TypeSubstring)
+            SELECT c.[COLUMN_NAME], LTRIM(RTRIM(LEFT(c.[COLUMN_NAME], LEN(c.[COLUMN_NAME]) - 5)))   -- strip trailing "phone"
+            FROM INFORMATION_SCHEMA.COLUMNS c
+            WHERE c.[TABLE_NAME] = @ImportTable AND c.[COLUMN_NAME] LIKE '%phone';
+
+            UPDATE pc
+            SET pc.NumberTypeValueId = CASE
+                WHEN pc.TypeSubstring = '' THEN @HomePhoneTypeId
+                ELSE (
+                    SELECT TOP 1 dv.[Id]
+                    FROM DefinedValue dv
+                    WHERE dv.[DefinedTypeId] = @PhoneTypeDefinedTypeId
+                      AND LTRIM(RTRIM(dv.[Value])) = pc.TypeSubstring COLLATE DATABASE_DEFAULT
+                    ORDER BY dv.[Id] )
+                END
+            FROM #phoneCols pc;
+
+            -- Report + drop columns whose type could not be resolved
+            IF EXISTS (SELECT 1 FROM #phoneCols WHERE NumberTypeValueId IS NULL)
+            BEGIN
+                SELECT @message = LEFT(CONCAT('Phone column(s) skipped (unknown phone type): ',
+                    STRING_AGG(CONVERT(NVARCHAR(MAX), CONCAT(ColumnName, ' => ', TypeSubstring)), '; ')), 400)
+                FROM #phoneCols WHERE NumberTypeValueId IS NULL;
+                RAISERROR(@message, 0, 10) WITH NOWAIT;
+
+                DELETE FROM #phoneCols WHERE NumberTypeValueId IS NULL;
+            END
+
+            IF EXISTS (SELECT 1 FROM #phoneCols)
+            BEGIN
+                CREATE TABLE #phoneImport (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    PersonId INT,
+                    NumberTypeValueId INT,
+                    RawNumber NVARCHAR(100),
+                    CleanNumber NVARCHAR(20),
+                    NumberFormatted NVARCHAR(50)
+                );
+
+                -- Pull each phone column's value per person (dynamic: column names vary)
+                DECLARE @phoneSelect NVARCHAR(MAX) = '';
+                SELECT @phoneSelect = @phoneSelect
+                    + CASE WHEN @phoneSelect = '' THEN '' ELSE ' UNION ALL ' END
+                    + 'SELECT t.PersonId, ' + CONVERT(VARCHAR(20), pc.NumberTypeValueId) + ', '
+                    + 'CONVERT(NVARCHAR(100), it.' + QUOTENAME(pc.ColumnName) + ') '
+                    + 'FROM ' + @qImportTable + ' it JOIN #peopleCsvTemp t ON t.ForeignGuid = it.ForeignGuid'
+                FROM #phoneCols pc;
+
+                SET @cmd = 'INSERT #phoneImport (PersonId, NumberTypeValueId, RawNumber) ' + @phoneSelect + ';';
+                EXEC (@cmd);
+
+                -- Strip everything but digits (Rock's CleanNumber)
+                ;WITH nums AS (
+                    SELECT TOP (100) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+                    FROM sys.all_objects
+                )
+                UPDATE pi
+                SET CleanNumber = ISNULL(c.v, '')
+                FROM #phoneImport pi
+                OUTER APPLY (
+                    SELECT v = STRING_AGG(SUBSTRING(pi.RawNumber, nums.n, 1), '') WITHIN GROUP (ORDER BY nums.n)
+                    FROM nums
+                    WHERE nums.n <= LEN(pi.RawNumber)
+                      AND SUBSTRING(pi.RawNumber, nums.n, 1) LIKE '[0-9]'
+                ) c;
+
+                -- Drop rows with no usable number, unresolved person, or missing type
+                DELETE FROM #phoneImport
+                WHERE PersonId IS NULL OR NumberTypeValueId IS NULL OR ISNULL(CleanNumber, '') = '';
+
+                -- One number per (person, type); keep the first
+                ;WITH ranked AS (
+                    SELECT ROW_NUMBER() OVER (PARTITION BY PersonId, NumberTypeValueId ORDER BY Id) rn
+                    FROM #phoneImport
+                )
+                DELETE FROM ranked WHERE rn > 1;
+
+                -- Do not add a number the person already has for that type (non-destructive)
+                DELETE pi
+                FROM #phoneImport pi
+                WHERE EXISTS (
+                    SELECT 1 FROM PhoneNumber ph
+                    WHERE ph.PersonId = pi.PersonId AND ph.NumberTypeValueId = pi.NumberTypeValueId
+                );
+
+                -- Best-effort formatted number for the default country code
+                UPDATE #phoneImport
+                SET NumberFormatted = CASE
+                    WHEN @DefaultCountryCode = '1' AND LEN(CleanNumber) = 10
+                        THEN '(' + SUBSTRING(CleanNumber, 1, 3) + ') ' + SUBSTRING(CleanNumber, 4, 3) + '-' + SUBSTRING(CleanNumber, 7, 4)
+                    WHEN @DefaultCountryCode = '1' AND LEN(CleanNumber) = 7
+                        THEN SUBSTRING(CleanNumber, 1, 3) + '-' + SUBSTRING(CleanNumber, 4, 4)
+                    ELSE CleanNumber
+                    END;
+
+                CREATE TABLE #newPhones (PhoneNumberId INT, PersonId INT, NumberTypeValueId INT, NumberFormatted NVARCHAR(50));
+
+                INSERT PhoneNumber (IsSystem, PersonId, CountryCode, Number, NumberFormatted, NumberTypeValueId, IsMessagingEnabled, IsUnlisted, FullNumber, [Guid], CreatedDateTime, ModifiedDateTime)
+                OUTPUT INSERTED.Id, INSERTED.PersonId, INSERTED.NumberTypeValueId, INSERTED.NumberFormatted
+                    INTO #newPhones (PhoneNumberId, PersonId, NumberTypeValueId, NumberFormatted)
+                SELECT 0, pi.PersonId, @DefaultCountryCode, pi.CleanNumber, pi.NumberFormatted, pi.NumberTypeValueId, 0, 0,
+                    LEFT(@DefaultCountryCode + pi.CleanNumber, 23), NEWID(), @now, @now
+                FROM #phoneImport pi;
+
+                SELECT @message = CONCAT(@@ROWCOUNT, ' phone number(s) added.');
+                RAISERROR(@message, 0, 10) WITH NOWAIT;
+
+                -- History: mirror PhoneNumber.SaveHook (Person Demographic Changes, 3 rows per number)
+                IF @CreateHistory = 1 AND @CatPersonDemographic IS NOT NULL AND @PersonEntityTypeId IS NOT NULL
+                BEGIN
+                    INSERT History (IsSystem, CategoryId, EntityTypeId, EntityId, Verb, Caption, ChangeType, ValueName, NewValue, OldValue, IsSensitive, SourceOfChange, [Guid], CreatedDateTime)
+                    SELECT 0, @CatPersonDemographic, @PersonEntityTypeId, ph.PersonId,
+                        'MODIFY', NULL, 'Property', LEFT(CONCAT(dv.[Value], x.Suffix), 250), x.NewValue, NULL, 0, @SourceOfChange, NEWID(), @now
+                    FROM #newPhones ph
+                    JOIN DefinedValue dv ON dv.[Id] = ph.NumberTypeValueId
+                    CROSS APPLY ( VALUES
+                        (' Phone',                   ph.NumberFormatted),
+                        (' Phone Unlisted',          'False'),
+                        (' Phone Messaging Enabled', 'False')
+                    ) x (Suffix, NewValue)
+                    WHERE NULLIF(LTRIM(RTRIM(x.NewValue)), '') IS NOT NULL;
+                END
+            END
         END
 
         /* =================================
