@@ -28,6 +28,11 @@ Installation:
 Updates:
 - Added GroupTypeId to the GroupMember insert process to support
   new Rock model requirement - GM 2/1/2024
+- Single-match rule: a row is only considered matched to an existing
+  person when EXACTLY one Person matches. Zero or multiple matches are
+  treated as unmatched and a new record is created, so related data is
+  never tied to an arbitrarily chosen existing record. Ambiguous
+  (multi-match) rows are reported. - GM 7/22/2026 (Assisted by Claude Code)
 - Refactored: only the read from the uploaded table now uses dynamic
   SQL; the rest of the pipeline runs as static SQL against a session
   temp table (#peopleCsvTemp) for readability, better plans and
@@ -190,7 +195,9 @@ History notes:
             GroupId            INT,
             Gender             INT,
             ForeignGuid        UNIQUEIDENTIFIER,
-            PersonId           INT
+            PersonId           INT,
+            MatchCount         INT,
+            MatchedPersonId    INT
         );
 
         SET @cmd = '
@@ -211,25 +218,51 @@ History notes:
         EXEC (@cmd);
 
         /* =================================
-        4. Output unmatched people
+        3b. Resolve existing-person matches (single match only)
+        - A row is treated as matched to an existing person ONLY when the
+          match criteria find exactly one Person. Zero matches, or more than
+          one (an ambiguous / likely-duplicate situation), are treated as
+          UNMATCHED so a fresh record is created and all related data is tied
+          to it, rather than risk updating the wrong record. Duplicate
+          management is handled by a separate downstream process.
+        ==================================== */
+        ;WITH matches AS (
+            SELECT t.ForeignGuid,
+                   MatchCount = COUNT(p.[Id]),
+                   SingleId   = MIN(p.[Id])
+            FROM #peopleCsvTemp t
+            LEFT JOIN Person p
+                ON p.Email = t.Email
+                AND p.LastName = RTRIM(LTRIM(t.[LastName]))
+                AND (p.FirstName = RTRIM(LTRIM(t.[FirstName])) OR p.NickName = RTRIM(LTRIM(t.[FirstName])))
+            GROUP BY t.ForeignGuid
+        )
+        UPDATE t
+        SET t.MatchCount      = m.MatchCount,
+            t.MatchedPersonId = CASE WHEN m.MatchCount = 1 THEN m.SingleId END
+        FROM #peopleCsvTemp t
+        JOIN matches m ON m.ForeignGuid = t.ForeignGuid;
+
+        /* =================================
+        4. Output people that will be created
         ==================================== */
         DECLARE @Status NVARCHAR(1000);
 
-        ;WITH RockMatch AS (
-            SELECT missingPeople = STUFF((
+        SELECT @Status = ISNULL('Missing Person records will be created: ' + NULLIF(STUFF((
                 SELECT ',' + fd.[FirstName] + ' ' + fd.[LastName]
                 FROM #peopleCsvTemp fd
-                LEFT JOIN Person p
-                    ON p.Email = fd.Email
-                    AND p.LastName = RTRIM(LTRIM(fd.[LastName]))
-                    AND (p.FirstName = RTRIM(LTRIM(fd.[FirstName])) OR p.NickName = RTRIM(LTRIM(fd.[FirstName])))
-                WHERE p.[Id] IS NULL
-                FOR XML PATH('')), 1, 1, '')
-        )
-        SELECT @Status = ISNULL('Missing Person records will be created: ' + NULLIF(missingPeople, ''), 'No unmatched person records...')
-        FROM RockMatch;
+                WHERE fd.MatchedPersonId IS NULL
+                FOR XML PATH('')), 1, 1, ''), ''), 'No unmatched person records...');
 
         RAISERROR(@Status, 0, 10) WITH NOWAIT;
+
+        -- Rows forced to unmatched because more than one existing person matched
+        DECLARE @AmbiguousCount INT = (SELECT COUNT(*) FROM #peopleCsvTemp WHERE MatchCount > 1);
+        IF @AmbiguousCount > 0
+        BEGIN
+            SELECT @message = CONCAT(@AmbiguousCount, ' row(s) matched multiple existing people; new records will be created to avoid updating the wrong person (flagged for duplicate management).');
+            RAISERROR(@message, 0, 10) WITH NOWAIT;
+        END
 
         /* =================================
         5. Create unmatched people
@@ -249,11 +282,7 @@ History notes:
                 fd.Gender,
                 fd.ForeignGuid
             FROM #peopleCsvTemp fd
-            LEFT JOIN Person p
-                ON p.Email = fd.Email
-                AND p.LastName = RTRIM(LTRIM(fd.[LastName]))
-                AND (p.FirstName = RTRIM(LTRIM(fd.[FirstName])) OR p.NickName = RTRIM(LTRIM(fd.[FirstName])))
-            WHERE p.[Id] IS NULL
+            WHERE fd.MatchedPersonId IS NULL   -- no match, or an ambiguous multi-match (step 3b)
         )
         INSERT Person (FirstName, NickName, LastName, Email, ForeignGuid, CreatedDateTime, ModifiedDateTime, IsSystem, RecordTypeValueId, RecordStatusValueId, ConnectionStatusValueId, IsDeceased, Gender, IsEmailActive, Guid, EmailPreference, CommunicationPreference)
         OUTPUT INSERTED.Id INTO #newPersonIds (PersonId)
@@ -284,15 +313,15 @@ History notes:
 
         /* =================================
         7. Resolve PersonId on the working set (existing + new people)
+        - Single-matched rows use the matched person; every other row uses
+          the person just created for it (keyed on its unique ForeignGuid).
+          No natural-key re-match here, so an ambiguous match can never
+          resolve to an arbitrary existing person.
         ==================================== */
         UPDATE t
-        SET t.PersonId = p.Id
+        SET t.PersonId = ISNULL(t.MatchedPersonId, p.Id)
         FROM #peopleCsvTemp t
-        JOIN Person p
-            ON p.ForeignGuid = t.ForeignGuid
-            OR (p.Email = t.Email
-                AND p.LastName = RTRIM(LTRIM(t.[LastName]))
-                AND (p.FirstName = RTRIM(LTRIM(t.[FirstName])) OR p.NickName = RTRIM(LTRIM(t.[FirstName]))));
+        LEFT JOIN Person p ON p.ForeignGuid = t.ForeignGuid;
 
         /* =================================
         8. Insert to group
