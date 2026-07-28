@@ -790,20 +790,24 @@ History notes:
                 SET @cmd = 'INSERT #phoneImport (PersonId, NumberTypeValueId, RawNumber) ' + @phoneSelect + ';';
                 EXEC (@cmd);
 
-                -- Strip everything but digits (Rock's CleanNumber)
+                -- Strip everything but digits (Rock's CleanNumber).
+                -- Uses FOR XML PATH concatenation (not an aggregate) so the per-character
+                -- SUBSTRING may reference both the outer number and the inner tally index
+                -- (a correlated aggregate over both is not allowed by SQL Server).
                 ;WITH nums AS (
                     SELECT TOP (100) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
                     FROM sys.all_objects
                 )
                 UPDATE pi
-                SET CleanNumber = ISNULL(c.v, '')
-                FROM #phoneImport pi
-                OUTER APPLY (
-                    SELECT v = STRING_AGG(SUBSTRING(pi.RawNumber, nums.n, 1), '') WITHIN GROUP (ORDER BY nums.n)
-                    FROM nums
-                    WHERE nums.n <= LEN(pi.RawNumber)
-                      AND SUBSTRING(pi.RawNumber, nums.n, 1) LIKE '[0-9]'
-                ) c;
+                SET CleanNumber = ISNULL((
+                    SELECT SUBSTRING(pi.RawNumber, n.n, 1)
+                    FROM nums n
+                    WHERE n.n <= LEN(pi.RawNumber)
+                      AND SUBSTRING(pi.RawNumber, n.n, 1) LIKE '[0-9]'
+                    ORDER BY n.n
+                    FOR XML PATH(''), TYPE
+                ).value('.', 'NVARCHAR(20)'), '')
+                FROM #phoneImport pi;
 
                 -- Drop rows with no usable number, unresolved person, or missing type
                 DELETE FROM #phoneImport
