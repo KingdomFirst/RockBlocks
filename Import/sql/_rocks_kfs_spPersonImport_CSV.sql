@@ -772,10 +772,7 @@ History notes:
           The text before "phone" selects the phone type by matching a
           Phone Type DefinedValue.Value (case-insensitive); a bare "phone"
           column defaults to Home. Unmatched types are reported + skipped.
-        - Number is stored digits-only; NumberFormatted uses the default
-          country code's standard format for 7/10-digit numbers (Rock's
-          per-country regex formatting cannot be reproduced in T-SQL, so
-          other lengths/countries fall back to the digits). FullNumber =
+        - Number is stored digits-only; FullNumber =
           CountryCode + Number, matching PhoneNumber.PreSave.
         - A number is added only when the person has no phone of that type
           yet (non-destructive; existing numbers are left untouched).
@@ -834,8 +831,7 @@ History notes:
                     PersonId INT,
                     NumberTypeValueId INT,
                     RawNumber NVARCHAR(100),
-                    CleanNumber NVARCHAR(20),
-                    NumberFormatted NVARCHAR(50)
+                    CleanNumber NVARCHAR(20)
                 );
 
                 -- Pull each phone column's value per person (dynamic: column names vary)
@@ -889,22 +885,12 @@ History notes:
                     WHERE ph.PersonId = pi.PersonId AND ph.NumberTypeValueId = pi.NumberTypeValueId
                 );
 
-                -- Best-effort formatted number for the default country code
-                UPDATE #phoneImport
-                SET NumberFormatted = CASE
-                    WHEN @DefaultCountryCode = '1' AND LEN(CleanNumber) = 10
-                        THEN '(' + SUBSTRING(CleanNumber, 1, 3) + ') ' + SUBSTRING(CleanNumber, 4, 3) + '-' + SUBSTRING(CleanNumber, 7, 4)
-                    WHEN @DefaultCountryCode = '1' AND LEN(CleanNumber) = 7
-                        THEN SUBSTRING(CleanNumber, 1, 3) + '-' + SUBSTRING(CleanNumber, 4, 4)
-                    ELSE CleanNumber
-                    END;
+                CREATE TABLE #newPhones (PhoneNumberId INT, PersonId INT, NumberTypeValueId INT, Number NVARCHAR(20));
 
-                CREATE TABLE #newPhones (PhoneNumberId INT, PersonId INT, NumberTypeValueId INT, NumberFormatted NVARCHAR(50));
-
-                INSERT PhoneNumber (IsSystem, PersonId, CountryCode, Number, NumberFormatted, NumberTypeValueId, IsMessagingEnabled, IsUnlisted, FullNumber, [Guid], CreatedDateTime, ModifiedDateTime)
-                OUTPUT INSERTED.Id, INSERTED.PersonId, INSERTED.NumberTypeValueId, INSERTED.NumberFormatted
-                    INTO #newPhones (PhoneNumberId, PersonId, NumberTypeValueId, NumberFormatted)
-                SELECT 0, pi.PersonId, @DefaultCountryCode, pi.CleanNumber, pi.NumberFormatted, pi.NumberTypeValueId, 0, 0,
+                INSERT PhoneNumber (IsSystem, PersonId, CountryCode, Number, NumberTypeValueId, IsMessagingEnabled, IsUnlisted, FullNumber, [Guid], CreatedDateTime, ModifiedDateTime)
+                OUTPUT INSERTED.Id, INSERTED.PersonId, INSERTED.NumberTypeValueId, INSERTED.Number
+                    INTO #newPhones (PhoneNumberId, PersonId, NumberTypeValueId, Number)
+                SELECT 0, pi.PersonId, @DefaultCountryCode, pi.CleanNumber, pi.NumberTypeValueId, 0, 0,
                     LEFT(@DefaultCountryCode + pi.CleanNumber, 23), NEWID(), @now, @now
                 FROM #phoneImport pi;
 
@@ -920,7 +906,13 @@ History notes:
                     FROM #newPhones ph
                     JOIN DefinedValue dv ON dv.[Id] = ph.NumberTypeValueId
                     CROSS APPLY ( VALUES
-                        (' Phone',                   ph.NumberFormatted),
+                        (' Phone',                   CASE
+														WHEN @DefaultCountryCode = '1' AND LEN(ph.Number) = 10
+														THEN '(' + SUBSTRING(ph.Number, 1, 3) + ') ' + SUBSTRING(ph.Number, 4, 3) + '-' + SUBSTRING(ph.Number, 7, 4)
+														WHEN @DefaultCountryCode = '1' AND LEN(ph.Number) = 7
+														THEN SUBSTRING(ph.Number, 1, 3) + '-' + SUBSTRING(ph.Number, 4, 4)
+														ELSE ph.Number
+														END),
                         (' Phone Unlisted',          'False'),
                         (' Phone Messaging Enabled', 'False')
                     ) x (Suffix, NewValue)
