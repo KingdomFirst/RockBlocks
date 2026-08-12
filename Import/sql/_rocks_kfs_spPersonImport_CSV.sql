@@ -786,7 +786,7 @@ History notes:
             RAISERROR('Importing phone numbers...', 0, 10) WITH NOWAIT;
 
             DECLARE @PhoneTypeDefinedTypeId INT = (SELECT TOP 1 [Id] FROM DefinedType WHERE [Guid] = '8345DD45-73C6-4F5E-BEBD-B77FC83F18FD');
-            DECLARE @HomePhoneTypeId INT = (SELECT TOP 1 [Id] FROM DefinedValue WHERE [Guid] = 'AA8732FB-2CEA-4C76-8D6D-6AAA2C6A4303');
+            DECLARE @HomePhoneTypeValueId INT = (SELECT TOP 1 [Id] FROM DefinedValue WHERE [Guid] = 'AA8732FB-2CEA-4C76-8D6D-6AAA2C6A4303');
             DECLARE @DefaultCountryCode NVARCHAR(3) = ISNULL((
                 SELECT TOP 1 dv.[Value]
                 FROM DefinedValue dv
@@ -803,7 +803,7 @@ History notes:
 
             UPDATE pc
             SET pc.NumberTypeValueId = CASE
-                WHEN pc.TypeSubstring = '' THEN @HomePhoneTypeId
+                WHEN pc.TypeSubstring = '' THEN @HomePhoneTypeValueId
                 ELSE (
                     SELECT TOP 1 dv.[Id]
                     FROM DefinedValue dv
