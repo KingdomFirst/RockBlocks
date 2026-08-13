@@ -34,11 +34,13 @@ Updates:
   treated as unmatched and a new record is created, so related data is
   never tied to an arbitrarily chosen existing record. Ambiguous
   (multi-match) rows are reported. - GM 7/22/2026 (Assisted by Claude Code)
-- Protection Profile: matched existing people with Person.AccountProtection
-  Profile >= @ProtectionProfileThreshold (default 2 = High; Low=0, Medium=1,
-  High=2, Extreme=3) are left completely unchanged - no attribute values,
-  phone numbers, or group memberships applied - and are reported. Newly
-  created people are never protected. - GM 7/22/2026 (Assisted by Claude Code)
+- Protection Profile: a single match whose Person.AccountProtectionProfile
+  is >= @ProtectionProfileThreshold (default 2 = High; Low=0, Medium=1,
+  High=2, Extreme=3) is NOT treated as a match. Instead the row is handled
+  as unmatched - a new (duplicate) record is created and all related data
+  is tied to it - so the protected record is never updated. These rows are
+  reported and flagged for the downstream duplicate-management process.
+  - GM 7/22/2026 (Assisted by Claude Code)
 - Refactored: only the read from the uploaded table now uses dynamic
   SQL; the rest of the pipeline runs as static SQL against a session
   temp table (#peopleCsvTemp) for readability, better plans and
@@ -203,8 +205,7 @@ History notes:
             ForeignGuid        UNIQUEIDENTIFIER,
             PersonId           INT,
             MatchCount         INT,
-            MatchedPersonId    INT,
-            IsProtected        BIT
+            MatchedPersonId    INT
         );
 
         SET @cmd = '
@@ -225,18 +226,22 @@ History notes:
         EXEC (@cmd);
 
         /* =================================
-        3b. Resolve existing-person matches (single match only)
+        3b. Resolve existing-person matches (single, unprotected match only)
         - A row is treated as matched to an existing person ONLY when the
-          match criteria find exactly one Person. Zero matches, or more than
-          one (an ambiguous / likely-duplicate situation), are treated as
-          UNMATCHED so a fresh record is created and all related data is tied
-          to it, rather than risk updating the wrong record. Duplicate
+          match criteria find exactly one Person AND that person is not
+          protected (Person.AccountProtectionProfile below
+          @ProtectionProfileThreshold; Low=0, Medium=1, High=2, Extreme=3).
+        - Zero matches, multiple matches (ambiguous / likely duplicate), OR a
+          single match that is protected are all treated as UNMATCHED, so a
+          fresh record is created and all related data is tied to it rather
+          than risk updating the wrong record or a protected record. Duplicate
           management is handled by a separate downstream process.
         ==================================== */
         ;WITH matches AS (
             SELECT t.ForeignGuid,
-                   MatchCount = COUNT(p.[Id]),
-                   SingleId   = MIN(p.[Id])
+                   MatchCount    = COUNT(p.[Id]),
+                   SingleId      = MIN(p.[Id]),
+                   MaxProtection = MAX(p.[AccountProtectionProfile])   -- = the single match's profile when MatchCount = 1
             FROM #peopleCsvTemp t
             LEFT JOIN Person p
                 ON p.Email = t.Email
@@ -246,7 +251,8 @@ History notes:
         )
         UPDATE t
         SET t.MatchCount      = m.MatchCount,
-            t.MatchedPersonId = CASE WHEN m.MatchCount = 1 THEN m.SingleId END
+            -- single match, and only when that match is NOT protected
+            t.MatchedPersonId = CASE WHEN m.MatchCount = 1 AND m.MaxProtection < @ProtectionProfileThreshold THEN m.SingleId END
         FROM #peopleCsvTemp t
         JOIN matches m ON m.ForeignGuid = t.ForeignGuid;
 
@@ -268,6 +274,15 @@ History notes:
         IF @AmbiguousCount > 0
         BEGIN
             SELECT @message = CONCAT(@AmbiguousCount, ' row(s) matched multiple existing people; new records will be created to avoid updating the wrong person (flagged for duplicate management).');
+            RAISERROR(@message, 0, 10) WITH NOWAIT;
+        END
+
+        -- Rows whose single match is a protected record (MatchCount = 1 but no MatchedPersonId set in step 3b)
+        DECLARE @ProtectedMatchCount INT = (SELECT COUNT(*) FROM #peopleCsvTemp WHERE MatchCount = 1 AND MatchedPersonId IS NULL);
+        IF @ProtectedMatchCount > 0
+        BEGIN
+            SELECT @message = CONCAT(@ProtectedMatchCount, ' row(s) matched a single protected person (Account Protection Profile >= ', @ProtectionProfileThreshold,
+                '); a new record will be created instead of updating the protected record (flagged for duplicate management).');
             RAISERROR(@message, 0, 10) WITH NOWAIT;
         END
 
@@ -331,28 +346,6 @@ History notes:
         LEFT JOIN Person p ON p.ForeignGuid = t.ForeignGuid;
 
         /* =================================
-        7b. Flag protected records (Account Protection Profile)
-        - Rock uses Person.AccountProtectionProfile (Low=0, Medium=1, High=2,
-          Extreme=3) to protect important records from undesired updates.
-        - Any EXISTING matched person at or above @ProtectionProfileThreshold
-          is left completely untouched: no attribute values, phone numbers,
-          or group memberships are applied. Newly created people are never
-          protected (they carry the default Low profile).
-        ==================================== */
-        UPDATE t
-        SET t.IsProtected = CASE WHEN p.[AccountProtectionProfile] >= @ProtectionProfileThreshold THEN 1 ELSE 0 END
-        FROM #peopleCsvTemp t
-        JOIN Person p ON p.[Id] = t.MatchedPersonId;   -- matched (existing) rows only
-
-        DECLARE @ProtectedCount INT = (SELECT COUNT(DISTINCT MatchedPersonId) FROM #peopleCsvTemp WHERE ISNULL(IsProtected, 0) = 1);
-        IF @ProtectedCount > 0
-        BEGIN
-            SELECT @message = CONCAT(@ProtectedCount, ' matched person record(s) are protected (Account Protection Profile >= ', @ProtectionProfileThreshold,
-                ') and were left unchanged - no attributes, phone numbers, or group memberships applied.');
-            RAISERROR(@message, 0, 10) WITH NOWAIT;
-        END
-
-        /* =================================
         8. Insert to group
         - Capture inserted GroupMember rows so History (step 9) targets
           only the memberships we actually created.
@@ -377,7 +370,6 @@ History notes:
             JOIN [Group] g ON t.[GroupId] = g.[Id]
             JOIN [GroupType] gt ON g.[GroupTypeId] = gt.[Id]
             WHERE gm.[Id] IS NULL
-              AND ISNULL(t.IsProtected, 0) = 0   -- skip protected records (step 7b)
         )
         INSERT GroupMember (IsSystem, GroupId, GroupTypeId, PersonId, GroupRoleId, GroupMemberStatus, [Guid], CreatedDateTime, ModifiedDateTime, DateTimeAdded, IsNotified, IsArchived)
         OUTPUT INSERTED.Id, INSERTED.PersonId, INSERTED.GroupId, INSERTED.GroupTypeId, INSERTED.GroupRoleId, INSERTED.GroupMemberStatus, INSERTED.CommunicationPreference
@@ -528,11 +520,10 @@ History notes:
             SET @cmd = 'INSERT #attrImport (PersonId, AttributeId, [Value]) ' + @attrSelect + ';';
             EXEC (@cmd);
 
-            -- Drop unmatched people, blank values, and protected records (step 7b)
+            -- Drop unmatched people and blank values
             DELETE FROM #attrImport
             WHERE PersonId IS NULL
-               OR NULLIF(LTRIM(RTRIM([Value])), '') IS NULL
-               OR PersonId IN (SELECT MatchedPersonId FROM #peopleCsvTemp WHERE ISNULL(IsProtected, 0) = 1);
+               OR NULLIF(LTRIM(RTRIM([Value])), '') IS NULL;
 
             -- Keep a single value per (PersonId, AttributeId) in case the
             -- upload had duplicate rows resolving to the same person.
@@ -865,10 +856,9 @@ History notes:
                 ).value('.', 'NVARCHAR(20)'), '')
                 FROM #phoneImport pi;
 
-                -- Drop rows with no usable number, unresolved person, missing type, or protected records (step 7b)
+                -- Drop rows with no usable number, unresolved person, or missing type
                 DELETE FROM #phoneImport
-                WHERE PersonId IS NULL OR NumberTypeValueId IS NULL OR ISNULL(CleanNumber, '') = ''
-                   OR PersonId IN (SELECT MatchedPersonId FROM #peopleCsvTemp WHERE ISNULL(IsProtected, 0) = 1);
+                WHERE PersonId IS NULL OR NumberTypeValueId IS NULL OR ISNULL(CleanNumber, '') = '';
 
                 -- One number per (person, type); keep the first
                 ;WITH ranked AS (
