@@ -60,9 +60,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultBooleanValue = true,
         Key = AttributeKey.AutoAssignWorkerGeofence )]
 
-    [BooleanField( "Auto Assign Worker (load balanced)",
-        Description = "Use intelligent load balancing to auto assign care workers to a care need based on their workload and other parameters?",
-        DefaultBooleanValue = true,
+    [CustomDropdownListField( "Auto Assign Worker (load balanced)",
+        Description = "Use intelligent load balancing to auto assign care workers to a care need based on their workload and other parameters? Choose \"No - but require a worker\" to skip auto assignment while still requiring at least one worker to be assigned before the need can be saved.",
+        ListSource = AutoAssignWorkerValue.ListSource,
+        IsRequired = true,
+        DefaultValue = AutoAssignWorkerValue.Yes,
         Key = AttributeKey.AutoAssignWorker )]
 
     [SystemCommunicationField( "Newly Assigned Need Notification",
@@ -177,6 +179,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string HistoryPage = "CareNeedHistoryPage";
         }
 
+        /// <summary>
+        /// Stored values for the "Auto Assign Worker (load balanced)" setting.
+        /// </summary>
+        /// <remarks>
+        /// Yes and No deliberately keep the "True" and "False" strings the setting used when it was a BooleanField,
+        /// so values already saved on existing blocks keep working without a data migration.
+        /// </remarks>
+        private static class AutoAssignWorkerValue
+        {
+            public const string Yes = "True";
+            public const string No = "False";
+            public const string RequireWorker = "Require";
+
+            /// <summary>
+            /// Rock splits a list source on commas before it splits each entry on the caret, and a comma cannot be
+            /// escaped, so option text must not contain one.
+            /// </summary>
+            public const string ListSource = Yes + "^Yes," + No + "^No," + RequireWorker + "^No - but require a worker";
+        }
+
         private static class PageParameterKey
         {
             public const string PersonId = "PersonId";
@@ -209,6 +231,44 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <value>
         /// The Assigned Person list.
         /// </value>
+        /// <summary>
+        /// Whether workers should be auto assigned using load balancing.
+        /// </summary>
+        private bool AutoAssignWorkerEnabled
+        {
+            get
+            {
+                return GetAttributeValue( AttributeKey.AutoAssignWorker ).Equals( AutoAssignWorkerValue.Yes, StringComparison.OrdinalIgnoreCase );
+            }
+        }
+
+        /// <summary>
+        /// Whether at least one worker must be assigned before a need can be saved. Set independently of auto
+        /// assignment: the "No - but require a worker" option skips auto assignment but still requires a worker.
+        /// </summary>
+        private bool WorkerRequired
+        {
+            get
+            {
+                return GetAttributeValue( AttributeKey.AutoAssignWorker ).Equals( AutoAssignWorkerValue.RequireWorker, StringComparison.OrdinalIgnoreCase );
+            }
+        }
+
+        /// <summary>
+        /// Whether the worker requirement is enforced for the current user.
+        /// </summary>
+        /// <remarks>
+        /// Scoped to administrators because the Assign Workers panel is only shown to them. Enforcing the
+        /// requirement on someone who cannot see that panel would leave them unable to save a need at all.
+        /// </remarks>
+        private bool EnforceWorkerRequired
+        {
+            get
+            {
+                return WorkerRequired && UserCanAdministrate;
+            }
+        }
+
         protected List<AssignedPerson> AssignedPersons
         {
             get
@@ -226,6 +286,35 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             set
             {
                 Session["AssignedPersons"] = value;
+            }
+        }
+
+        /// <summary>
+        /// People the user picked by hand with the Add Worker or Add Person controls.
+        /// </summary>
+        /// <remarks>
+        /// Tracked separately because a partial postback (choosing a category, entering a person) rebuilds
+        /// AssignedPersons from auto assignment and would otherwise discard them. Type alone cannot identify these:
+        /// the Add Worker control produces AssignedType.Worker, which is indistinguishable from a load balanced
+        /// assignment.
+        /// </remarks>
+        protected List<AssignedPerson> ManuallyAssignedPersons
+        {
+            get
+            {
+                var persons = Session["ManuallyAssignedPersons"] as List<AssignedPerson>;
+                if ( persons == null )
+                {
+                    persons = new List<AssignedPerson>();
+                    Session["ManuallyAssignedPersons"] = persons;
+                }
+
+                return persons;
+            }
+
+            set
+            {
+                Session["ManuallyAssignedPersons"] = value;
             }
         }
 
@@ -308,6 +397,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             if ( Page.IsValid )
             {
+                // "No - but require a worker" skips auto assignment, so a worker has to have been assigned by hand
+                // before the need can be saved. Checked before any database work so nothing is written on failure.
+                if ( EnforceWorkerRequired && ( AssignedPersons == null || !AssignedPersons.Any() ) )
+                {
+                    cvCareNeed.IsValid = false;
+                    cvCareNeed.ErrorMessage = "At least one worker must be assigned to this need before it can be saved.";
+                    return;
+                }
+
                 RockContext rockContext = new RockContext();
                 CareNeedService careNeedService = new CareNeedService( rockContext );
                 AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
@@ -492,7 +590,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
                 var newlyAssignedPersons = new List<AssignedPerson>();
                 var assignedPersonHistory = new Dictionary<PersonAlias, string>();
-                if ( careNeed.AssignedPersons != null || ( previewAssignedPeople && dateDifference <= futureThresholdDays ) )
+                // AssignedPersons.Any() covers a new need with workers picked by hand: CareNeed.AssignedPersons
+                // is null until the need is saved, so without this the manual selections were dropped and only the
+                // geofence and group leader assignments made later by AutoAssignWorkers survived.
+                if ( careNeed.AssignedPersons != null || AssignedPersons.Any() || ( previewAssignedPeople && dateDifference <= futureThresholdDays ) )
                 {
                     if ( AssignedPersons.Any() )
                     {
@@ -756,7 +857,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         careNeed.SaveAttributeValues( rockContext );
                     } );
 
-                    var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
+                    var autoAssignWorker = AutoAssignWorkerEnabled;
                     var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
                     var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
                     var leaderRoleGuids = GetAttributeValues( AttributeKey.GroupTypeAndRole ).AsGuidList();
@@ -926,11 +1027,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( removeAll )
             {
                 AssignedPersons.Clear();
+                ManuallyAssignedPersons.Clear();
             }
             else
             {
                 var selectedIds = gAssignedPersons.SelectedKeys.OfType<int>().ToList();
                 AssignedPersons.RemoveAll( a => selectedIds.Contains( a.PersonAliasId.Value ) );
+                ManuallyAssignedPersons.RemoveAll( a => selectedIds.Contains( a.PersonAliasId.Value ) );
             }
 
             BindAssignedPersonsGrid();
@@ -955,6 +1058,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             var remove = this.AssignedPersons.FirstOrDefault( ap => ap.PersonAliasId == e.RowKeyId );
             this.AssignedPersons.Remove( remove );
+            this.ManuallyAssignedPersons.RemoveAll( ap => ap.PersonAliasId == e.RowKeyId );
             BindAssignedPersonsGrid();
         }
 
@@ -978,6 +1082,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         FollowUpWorker = followUpWorkerAssignment == "Show and Assign All"
                     };
                     AssignedPersons.Add( addPerson );
+                    ManuallyAssignedPersons.Add( addPerson );
                     BindAssignedPersonsGrid();
                 }
 
@@ -1007,6 +1112,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     Type = AssignedType.Worker
                 };
                 AssignedPersons.Add( addPerson );
+                ManuallyAssignedPersons.Add( addPerson );
                 BindAssignedPersonsGrid();
             }
 
@@ -1238,6 +1344,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="careNeedId">The care need identifier</param>
         public void ShowDetail( int careNeedId )
         {
+            // Session scoped, so start each need with an empty list. Only runs on a full load, never on the partial
+            // postbacks that re-run auto assignment, so hand picked people survive those.
+            ManuallyAssignedPersons = null;
+
             CareNeed careNeed = null;
             var rockContext = new RockContext();
             CareNeedService careNeedService = new CareNeedService( rockContext );
@@ -1367,7 +1477,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
             else
             {
-                pwAssigned.Visible = false;
+                // Still show the panel when a worker is required, so the requirement can be satisfied. The grid
+                // starts empty and the Add Worker controls above it are used to populate it.
+                pwAssigned.Visible = EnforceWorkerRequired;
+                if ( pwAssigned.Visible )
+                {
+                    AssignedPersons = null;
+                    BindAssignedPersonsGrid( true );
+                }
             }
 
             careNeed.LoadAttributes();
@@ -1524,7 +1641,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
             if ( previewAssignedPeople && categoryId.HasValue && person != null && needId == 0 && dateDifference <= futureThresholdDays )
             {
-                var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
+                var autoAssignWorker = AutoAssignWorkerEnabled;
                 var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
                 var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
@@ -1532,7 +1649,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 CareNeed careNeed = GenerateTempNeed( person, categoryId );
 
-                AssignedPersons = CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople );
+                AssignedPersons = MergeManuallyAssignedPersons( CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople ) );
                 pwAssigned.Visible = UserCanAdministrate;
                 BindAssignedPersonsGrid( true );
             }
@@ -1540,9 +1657,37 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 GenerateTempNeed( null, categoryId );
 
-                pwAssigned.Visible = false;
-                AssignedPersons = null;
+                // Auto assignment did not run, so anything the user picked by hand is all there is to show.
+                AssignedPersons = MergeManuallyAssignedPersons( null );
+
+                // Still show the panel when a worker is required, so the requirement can be satisfied.
+                pwAssigned.Visible = EnforceWorkerRequired;
+                if ( pwAssigned.Visible )
+                {
+                    BindAssignedPersonsGrid( true );
+                }
             }
+        }
+
+        /// <summary>
+        /// Adds the people the user picked by hand back onto an auto assigned list, so a partial postback that
+        /// re-runs auto assignment does not silently drop them.
+        /// </summary>
+        /// <param name="autoAssignedPersons">The auto assigned people, or null when auto assignment did not run.</param>
+        /// <returns>The combined list, with hand picked people winning on a duplicate person.</returns>
+        private List<AssignedPerson> MergeManuallyAssignedPersons( List<AssignedPerson> autoAssignedPersons )
+        {
+            var merged = autoAssignedPersons ?? new List<AssignedPerson>();
+
+            foreach ( var manuallyAssigned in ManuallyAssignedPersons )
+            {
+                // A hand picked person takes precedence, so drop any auto assigned duplicate rather than showing
+                // the same person twice with a different assignment type.
+                merged.RemoveAll( ap => ap.PersonAliasId == manuallyAssigned.PersonAliasId );
+                merged.Add( manuallyAssigned );
+            }
+
+            return merged;
         }
 
         private CareNeed GenerateTempNeed( Person person, int? categoryId = null )
