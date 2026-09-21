@@ -21,7 +21,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using NuGet;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -60,9 +60,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultBooleanValue = true,
         Key = AttributeKey.AutoAssignWorkerGeofence )]
 
-    [BooleanField( "Auto Assign Worker (load balanced)",
-        Description = "Use intelligent load balancing to auto assign care workers to a care need based on their workload and other parameters?",
-        DefaultBooleanValue = true,
+    [CustomDropdownListField( "Auto Assign Worker (load balanced)",
+        Description = "Use intelligent load balancing to auto assign care workers to a care need based on their workload and other parameters? Choose \"No - but require a worker\" to skip auto assignment while still requiring at least one worker to be assigned before the need can be saved.",
+        ListSource = AutoAssignWorkerValue.ListSource,
+        IsRequired = true,
+        DefaultValue = AutoAssignWorkerValue.Yes,
         Key = AttributeKey.AutoAssignWorker )]
 
     [SystemCommunicationField( "Newly Assigned Need Notification",
@@ -137,6 +139,11 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         DefaultValue = "Hide",
         Key = AttributeKey.FollowUpWorkerAssignment )]
 
+    [LinkedPage( "Care Need History Page",
+        Description = "Page used to display history details.",
+        IsRequired = false,
+        Key = AttributeKey.HistoryPage )]
+
     [SecurityAction(
         SecurityActionKey.UpdateStatus,
         "The roles and/or users that have access to update the status of Care Needs." )]
@@ -169,6 +176,27 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             public const string CompleteButtonText = "CompleteButtonText";
             public const string EnableCustomFollowUp = "EnableCustomFollowUp";
             public const string FollowUpWorkerAssignment = "FollowUpWorkerAssignment";
+            public const string HistoryPage = "CareNeedHistoryPage";
+        }
+
+        /// <summary>
+        /// Stored values for the "Auto Assign Worker (load balanced)" setting.
+        /// </summary>
+        /// <remarks>
+        /// Yes and No deliberately keep the "True" and "False" strings the setting used when it was a BooleanField,
+        /// so values already saved on existing blocks keep working without a data migration.
+        /// </remarks>
+        private static class AutoAssignWorkerValue
+        {
+            public const string Yes = "True";
+            public const string No = "False";
+            public const string RequireWorker = "Require";
+
+            /// <summary>
+            /// Rock splits a list source on commas before it splits each entry on the caret, and a comma cannot be
+            /// escaped, so option text must not contain one.
+            /// </summary>
+            public const string ListSource = Yes + "^Yes," + No + "^No," + RequireWorker + "^No - but require a worker";
         }
 
         private static class PageParameterKey
@@ -203,6 +231,44 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <value>
         /// The Assigned Person list.
         /// </value>
+        /// <summary>
+        /// Whether workers should be auto assigned using load balancing.
+        /// </summary>
+        private bool AutoAssignWorkerEnabled
+        {
+            get
+            {
+                return GetAttributeValue( AttributeKey.AutoAssignWorker ).Equals( AutoAssignWorkerValue.Yes, StringComparison.OrdinalIgnoreCase );
+            }
+        }
+
+        /// <summary>
+        /// Whether at least one worker must be assigned before a need can be saved. Set independently of auto
+        /// assignment: the "No - but require a worker" option skips auto assignment but still requires a worker.
+        /// </summary>
+        private bool WorkerRequired
+        {
+            get
+            {
+                return GetAttributeValue( AttributeKey.AutoAssignWorker ).Equals( AutoAssignWorkerValue.RequireWorker, StringComparison.OrdinalIgnoreCase );
+            }
+        }
+
+        /// <summary>
+        /// Whether the worker requirement is enforced for the current user.
+        /// </summary>
+        /// <remarks>
+        /// Scoped to administrators because the Assign Workers panel is only shown to them. Enforcing the
+        /// requirement on someone who cannot see that panel would leave them unable to save a need at all.
+        /// </remarks>
+        private bool EnforceWorkerRequired
+        {
+            get
+            {
+                return WorkerRequired && UserCanAdministrate;
+            }
+        }
+
         protected List<AssignedPerson> AssignedPersons
         {
             get
@@ -220,6 +286,35 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             set
             {
                 Session["AssignedPersons"] = value;
+            }
+        }
+
+        /// <summary>
+        /// People the user picked by hand with the Add Worker or Add Person controls.
+        /// </summary>
+        /// <remarks>
+        /// Tracked separately because a partial postback (choosing a category, entering a person) rebuilds
+        /// AssignedPersons from auto assignment and would otherwise discard them. Type alone cannot identify these:
+        /// the Add Worker control produces AssignedType.Worker, which is indistinguishable from a load balanced
+        /// assignment.
+        /// </remarks>
+        protected List<AssignedPerson> ManuallyAssignedPersons
+        {
+            get
+            {
+                var persons = Session["ManuallyAssignedPersons"] as List<AssignedPerson>;
+                if ( persons == null )
+                {
+                    persons = new List<AssignedPerson>();
+                    Session["ManuallyAssignedPersons"] = persons;
+                }
+
+                return persons;
+            }
+
+            set
+            {
+                Session["ManuallyAssignedPersons"] = value;
             }
         }
 
@@ -302,6 +397,15 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             if ( Page.IsValid )
             {
+                // "No - but require a worker" skips auto assignment, so a worker has to have been assigned by hand
+                // before the need can be saved. Checked before any database work so nothing is written on failure.
+                if ( EnforceWorkerRequired && ( AssignedPersons == null || !AssignedPersons.Any() ) )
+                {
+                    cvCareNeed.IsValid = false;
+                    cvCareNeed.ErrorMessage = "At least one worker must be assigned to this need before it can be saved.";
+                    return;
+                }
+
                 RockContext rockContext = new RockContext();
                 CareNeedService careNeedService = new CareNeedService( rockContext );
                 AssignedPersonService assignedPersonService = new AssignedPersonService( rockContext );
@@ -315,6 +419,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 CareNeed careNeed = null;
                 int careNeedId = hfCareNeedId.ValueAsInt();
                 var isNew = false;
+                var changes = new History.HistoryChangeList();
 
                 if ( !careNeedId.Equals( 0 ) )
                 {
@@ -325,11 +430,21 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     isNew = true;
                     careNeed = new CareNeed { Id = 0 };
+                    changes.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Care Need" );
                 }
 
+                History.EvaluateChange( changes, "Details", careNeed.Details, dtbDetailsText.Text );
                 careNeed.Details = dtbDetailsText.Text;
+
+                var currentCampusName = CampusCache.Get( careNeed.CampusId ?? 0 )?.Name ?? "None";
+                var newCampusName = CampusCache.Get( cpCampus.SelectedCampusId ?? 0 )?.Name ?? "None";
+                History.EvaluateChange( changes, "Campus", careNeed.CampusId == null ? null : currentCampusName, newCampusName );
                 careNeed.CampusId = cpCampus.SelectedCampusId;
 
+                var originalPerson = careNeed.PersonAlias;
+                string originalPersonStr = History.GetValue<PersonAlias>( null, careNeed.PersonAliasId.ToStringSafe().AsIntegerOrNull(), rockContext );
+                string personHistoryChange = History.GetValue<PersonAlias>( null, ppPerson.PersonAliasId, rockContext );
+                History.EvaluateChange( changes, "Person", originalPersonStr, personHistoryChange );
                 careNeed.PersonAliasId = ppPerson.PersonAliasId;
 
                 Person person = null;
@@ -417,6 +532,8 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                             }
                         }
                     }
+                    personHistoryChange = History.GetValue<PersonAlias>( person?.PrimaryAlias, person?.PrimaryAliasId, rockContext );
+                    History.EvaluateChange( changes, "Person", originalPersonStr, personHistoryChange );
                     careNeed.PersonAliasId = person?.PrimaryAliasId;
 
                     if ( careNeed.PersonAliasId == null )
@@ -432,36 +549,51 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     person = new PersonService( rockContext ).Get( ppPerson.PersonId.Value );
                 }
 
+                string originalSubmitter = History.GetValue<PersonAlias>( careNeed.SubmitterPersonAlias, careNeed.SubmitterAliasId.ToStringSafe().AsIntegerOrNull(), rockContext );
+                string submitter = History.GetValue<PersonAlias>( null, ppSubmitter.PersonAliasId, rockContext );
+                History.EvaluateChange( changes, "Submitter", originalSubmitter, submitter );
                 careNeed.SubmitterAliasId = ppSubmitter.PersonAliasId;
 
                 if ( careNeed.StatusValueId != dvpStatus.SelectedDefinedValueId && dvpStatus.SelectedDefinedValueId == snoozedValueId )
                 {
+                    History.EvaluateChange( changes, "Snooze Date", careNeed.SnoozeDate, RockDateTime.Now );
                     careNeed.SnoozeDate = RockDateTime.Now;
                 }
 
+                var newStatusValue = CareUtilities.DefinedValueFromCache( dvpStatus.SelectedDefinedValueId );
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, newStatusValue, newStatusValue.Id );
                 careNeed.StatusValueId = dvpStatus.SelectedDefinedValueId;
 
-                careNeed.CategoryValueId = dvpCategory.SelectedValue.AsIntegerOrNull();
+                var newCategoryValue = CareUtilities.DefinedValueFromCache( dvpCategory.SelectedDefinedValueId );
+                History.EvaluateChange( changes, "Category", careNeed.CategoryValueId, newCategoryValue, newCategoryValue.Id );
+                careNeed.CategoryValueId = dvpCategory.SelectedDefinedValueId;
 
-                if ( dpDate.SelectedDateTime.HasValue )
-                {
-                    careNeed.DateEntered = dpDate.SelectedDateTime.Value;
-                }
+                DateTime? dateEnteredDateTime = dpDate.SelectedDateTimeIsBlank ? null : dpDate.SelectedDateTime;
+                History.EvaluateChange( changes, "Date Entered", careNeed.DateEntered, dateEnteredDateTime );
+                careNeed.DateEntered = dpDate.SelectedDateTime;
 
                 if ( careNeed.DateEntered.HasValue )
                 {
                     dateDifference = ( careNeed.DateEntered.Value - DateTime.Now ).TotalDays;
                 }
 
+                History.EvaluateChange( changes, "Workers Only", careNeed.WorkersOnly, cbWorkersOnly.Checked );
                 careNeed.WorkersOnly = cbWorkersOnly.Checked;
 
+                History.EvaluateChange( changes, "Custom Follow Up", careNeed.CustomFollowUp, cbCustomFollowUp.Checked );
                 careNeed.CustomFollowUp = cbCustomFollowUp.Checked;
+                History.EvaluateChange( changes, "Follow Up After", careNeed.RenewPeriodDays, numbRepeatDays.IntegerValue );
                 careNeed.RenewPeriodDays = numbRepeatDays.IntegerValue;
+                History.EvaluateChange( changes, "Number of Times to Repeat", careNeed.RenewMaxCount, numbRepeatTimes.IntegerValue );
                 careNeed.RenewMaxCount = numbRepeatTimes.IntegerValue;
 
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
                 var newlyAssignedPersons = new List<AssignedPerson>();
-                if ( careNeed.AssignedPersons != null || ( previewAssignedPeople && dateDifference <= futureThresholdDays ) )
+                var assignedPersonHistory = new Dictionary<PersonAlias, string>();
+                // AssignedPersons.Any() covers a new need with workers picked by hand: CareNeed.AssignedPersons
+                // is null until the need is saved, so without this the manual selections were dropped and only the
+                // geofence and group leader assignments made later by AutoAssignWorkers survived.
+                if ( careNeed.AssignedPersons != null || AssignedPersons.Any() || ( previewAssignedPeople && dateDifference <= futureThresholdDays ) )
                 {
                     if ( AssignedPersons.Any() )
                     {
@@ -497,9 +629,17 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 };
                                 careNeed.AssignedPersons.Add( assignedPerson );
                                 newlyAssignedPersons.Add( assignedPerson );
+                                History.EvaluateChange( changes, "Assigned Person", null, assignedPerson.PersonAlias, assignedPerson.PersonAliasId, rockContext );
+                                assignedPersonHistory.AddOrReplace( assignedPerson.PersonAlias, "ASSIGNED" );
                             }
                         }
                         var removePersons = careNeed.AssignedPersons.Where( ap => !assignedPersonsLookup.Select( apl => apl.Id ).ToList().Contains( ap.Id ) ).ToList();
+                        foreach ( var removePerson in removePersons )
+                        {
+                            PersonAlias nullPersonAlias = null;
+                            History.EvaluateChange( changes, "Assigned Person", removePerson.PersonAliasId, nullPersonAlias, null, rockContext );
+                            assignedPersonHistory.AddOrReplace( removePerson.PersonAlias, "UNASSIGNED" );
+                        }
                         assignedPersonService.DeleteRange( removePersons );
                         careNeed.AssignedPersons.RemoveAll( removePersons );
 
@@ -517,6 +657,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                     if ( checkBoxTemplateField != null && checkBoxTemplateField.Visible )
                                     {
                                         CheckBox checkBox = fieldCell.Controls[0] as CheckBox;
+                                        History.EvaluateChange( changes, $"Follow Up Worker on {assignedPerson.PersonAlias?.Person?.FullName}", assignedPerson.FollowUpWorker, checkBox.Checked );
                                         assignedPerson.FollowUpWorker = checkBox.Checked;
                                     }
                                 }
@@ -530,6 +671,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     }
                     else if ( careNeed.AssignedPersons != null && careNeed.AssignedPersons.Any() )
                     {
+                        foreach ( var removePerson in careNeed.AssignedPersons )
+                        {
+                            PersonAlias nullPersonAlias = null;
+                            History.EvaluateChange( changes, "Assigned Person", removePerson.PersonAliasId, nullPersonAlias, null, rockContext );
+                            assignedPersonHistory.AddOrReplace( removePerson.PersonAlias, "UNASSIGNED" );
+                        }
                         assignedPersonService.DeleteRange( careNeed.AssignedPersons );
                         careNeed.AssignedPersons.Clear();
                         if ( enableLogging )
@@ -549,17 +696,71 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                     // get attributes
                     careNeed.LoadAttributes();
+                    var attributeEditControls = Helper.GetAttributeEditControls( phAttributes, careNeed );
+
+                    // get attribute values for history purposes
+                    if ( attributeEditControls != null )
+                    {
+                        foreach ( var attributeEditControl in attributeEditControls )
+                        {
+                            var attribute = attributeEditControl.Key;
+                            var control = attributeEditControl.Value;
+                            if ( control != null )
+                            {
+                                var editValue = attribute.FieldType.Field.GetEditValue( control, attribute.QualifierValues );
+
+                                string originalValue = careNeed.GetAttributeValue( attribute.Key );
+                                string newValue = editValue.ToString();
+
+                                if ( ( originalValue ?? string.Empty ).Trim() != ( newValue ?? string.Empty ).Trim() )
+                                {
+                                    string formattedOriginalValue = string.Empty;
+                                    if ( !string.IsNullOrWhiteSpace( originalValue ) )
+                                    {
+                                        formattedOriginalValue = attribute.FieldType.Field.FormatValue( null, originalValue, attribute.QualifierValues, false );
+                                    }
+
+                                    string formattedNewValue = string.Empty;
+                                    if ( !string.IsNullOrWhiteSpace( newValue ) )
+                                    {
+                                        formattedNewValue = attribute.FieldType.Field.FormatValue( null, newValue, attribute.QualifierValues, false );
+                                    }
+
+                                    History.EvaluateChange( changes, attribute.Name, formattedOriginalValue, formattedNewValue );
+                                }
+                            }
+                        }
+                    }
+
                     Helper.GetEditValues( phAttributes, careNeed );
 
+                    var fmChangesLists = new Dictionary<int?, History.HistoryChangeList>();
                     if ( cbIncludeFamily.Visible && cbIncludeFamily.Checked && ( isNew || ( careNeed.ChildNeeds == null || ( careNeed.ChildNeeds != null && !careNeed.ChildNeeds.Any() ) ) ) )
                     {
+                        History.EvaluateChange( changes, "Include Family", careNeed.ChildNeeds != null && careNeed.ChildNeeds.Any(), cbIncludeFamily.Checked );
+
                         var family = person.GetFamilyMembers( false, rockContext );
                         foreach ( var fm in family )
                         {
+                            var fmChanges = new History.HistoryChangeList();
+
                             var copyNeed = ( CareNeed ) careNeed.Clone();
                             copyNeed.Id = 0;
                             copyNeed.Guid = Guid.NewGuid();
+                            fmChanges.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, "Care Need from Family" );
                             copyNeed.PersonAliasId = fm.Person.PrimaryAliasId;
+                            History.EvaluateChange( fmChanges, "Person", null, fm.Person.PrimaryAlias, fm.Person.PrimaryAliasId, rockContext );
+                            History.EvaluateChange( fmChanges, "Details", null, dtbDetailsText.Text );
+                            History.EvaluateChange( fmChanges, "Campus", null, newCampusName );
+                            History.EvaluateChange( fmChanges, "Submitter", null, submitter );
+                            History.EvaluateChange( fmChanges, "Status", null, newStatusValue, newStatusValue.Id );
+                            History.EvaluateChange( fmChanges, "Category", null, newCategoryValue, newCategoryValue.Id );
+                            History.EvaluateChange( fmChanges, "Date Entered", null, dateEnteredDateTime );
+                            History.EvaluateChange( fmChanges, "Workers Only", null, cbWorkersOnly.Checked );
+                            History.EvaluateChange( fmChanges, "Custom Follow Up", null, cbCustomFollowUp.Checked );
+                            History.EvaluateChange( fmChanges, "Follow Up After", null, numbRepeatDays.IntegerValue );
+                            History.EvaluateChange( fmChanges, "Number of Times to Repeat", null, numbRepeatTimes.IntegerValue );
+
                             if ( copyNeed.Campus != null )
                             {
                                 copyNeed.Campus = null;
@@ -582,17 +783,81 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                                 careNeed.ChildNeeds = new List<CareNeed>();
                             }
                             careNeed.ChildNeeds.Add( copyNeed );
+                            changes.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, $"Child Care Need for {fm.Person.FullName}" );
+                            fmChangesLists.AddOrReplace( fm.Person.PrimaryAliasId, fmChanges );
                         }
                         childNeedsCreated = true;
                     }
 
                     rockContext.WrapTransaction( () =>
                     {
-                        rockContext.SaveChanges();
+                        if ( rockContext.SaveChanges() > 0 )
+                        {
+                            if ( changes.Any() )
+                            {
+                                HistoryService.SaveChanges(
+                                    rockContext,
+                                    typeof( CareNeed ),
+                                    rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                    careNeed.Id,
+                                    changes
+                                );
+                                if ( isNew || originalPersonStr != personHistoryChange )
+                                {
+                                    SavePersonNeedHistory( rockContext, careNeed );
+                                }
+                                if ( originalPersonStr != personHistoryChange && originalPerson != null )
+                                {
+                                    var personNeedHistory = new History.HistoryChangeList();
+                                    History.EvaluateChange( personNeedHistory, "Care Need Person", originalPersonStr, personHistoryChange );
+
+                                    HistoryService.SaveChanges( rockContext,
+                                            typeof( Person ),
+                                            rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_PERSON_STEPS_TO_CARE.AsGuid(),
+                                            originalPerson.PersonId,
+                                            personNeedHistory,
+                                            null,
+                                            typeof( CareNeed ),
+                                            careNeed.Id
+                                        );
+                                }
+                            }
+                            if ( fmChangesLists.Any() )
+                            {
+                                foreach ( var fmChanges in fmChangesLists )
+                                {
+                                    var childNeed = careNeed.ChildNeeds.FirstOrDefault( a => a.PersonAliasId == fmChanges.Key );
+                                    if ( childNeed != null )
+                                    {
+                                        HistoryService.SaveChanges(
+                                            rockContext,
+                                            typeof( CareNeed ),
+                                            rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                            childNeed.Id,
+                                            fmChanges.Value,
+                                            "Parent Care Need " + person.FullName,
+                                             typeof( CareNeed ),
+                                             careNeed.Id,
+                                             true
+                                        );
+                                        SavePersonNeedHistory( rockContext, childNeed );
+
+                                    }
+                                }
+                            }
+                            // Save the assigned persons history after the care need is saved due to wanting the related id to be available
+                            if ( assignedPersonHistory.Any() )
+                            {
+                                foreach ( var assignedPerson in assignedPersonHistory )
+                                {
+                                    CareUtilities.AddPersonHistory( rockContext, careNeed, person, assignedPerson.Key, assignedPerson.Value, commitSave: true );
+                                }
+                            }
+                        }
                         careNeed.SaveAttributeValues( rockContext );
                     } );
 
-                    var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
+                    var autoAssignWorker = AutoAssignWorkerEnabled;
                     var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
                     var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
                     var leaderRoleGuids = GetAttributeValues( AttributeKey.GroupTypeAndRole ).AsGuidList();
@@ -762,11 +1027,13 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             if ( removeAll )
             {
                 AssignedPersons.Clear();
+                ManuallyAssignedPersons.Clear();
             }
             else
             {
                 var selectedIds = gAssignedPersons.SelectedKeys.OfType<int>().ToList();
                 AssignedPersons.RemoveAll( a => selectedIds.Contains( a.PersonAliasId.Value ) );
+                ManuallyAssignedPersons.RemoveAll( a => selectedIds.Contains( a.PersonAliasId.Value ) );
             }
 
             BindAssignedPersonsGrid();
@@ -791,6 +1058,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         {
             var remove = this.AssignedPersons.FirstOrDefault( ap => ap.PersonAliasId == e.RowKeyId );
             this.AssignedPersons.Remove( remove );
+            this.ManuallyAssignedPersons.RemoveAll( ap => ap.PersonAliasId == e.RowKeyId );
             BindAssignedPersonsGrid();
         }
 
@@ -814,6 +1082,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                         FollowUpWorker = followUpWorkerAssignment == "Show and Assign All"
                     };
                     AssignedPersons.Add( addPerson );
+                    ManuallyAssignedPersons.Add( addPerson );
                     BindAssignedPersonsGrid();
                 }
 
@@ -831,7 +1100,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         protected void bddlAddWorker_SelectionChanged( object sender, EventArgs e )
         {
             var selectedVal = bddlAddWorker.SelectedValue.SplitDelimitedValues( "^" );
-            if ( selectedVal.IsNotNull() && selectedVal.Length > 1 && !AssignedPersons.Any( ap => ap.PersonAliasId == selectedVal[0].AsIntegerOrNull() ) )
+            if ( selectedVal != null && selectedVal.Length > 1 && !AssignedPersons.Any( ap => ap.PersonAliasId == selectedVal[0].AsIntegerOrNull() ) )
             {
                 var followUpWorkerAssignment = GetAttributeValue( AttributeKey.FollowUpWorkerAssignment );
                 var addPerson = new AssignedPerson
@@ -843,6 +1112,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     Type = AssignedType.Worker
                 };
                 AssignedPersons.Add( addPerson );
+                ManuallyAssignedPersons.Add( addPerson );
                 BindAssignedPersonsGrid();
             }
 
@@ -985,21 +1255,53 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( careNeed != null )
             {
+                var changes = new History.HistoryChangeList();
                 var completeChildNeeds = GetAttributeValue( AttributeKey.CompleteChildNeeds ).AsBoolean();
-                var completeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED ).Id;
-                careNeed.StatusValueId = completeValueId;
+                var completeValue = CareUtilities.DefinedValueFromCache( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_CLOSED );
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, completeValue, completeValue.Id );
+                careNeed.StatusValueId = completeValue.Id;
 
                 if ( completeChildNeeds && careNeed.ChildNeeds.Any() )
                 {
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
-                        childneed.StatusValueId = completeValueId;
+                        var childNeedChanges = new History.HistoryChangeList();
+                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, completeValue, completeValue.Id );
+                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, completeValue, completeValue.Id );
+                        childneed.StatusValueId = completeValue.Id;
+
+                        if ( childNeedChanges.Any() )
+                        {
+                            HistoryService.SaveChanges(
+                                rockContext,
+                                typeof( CareNeed ),
+                                rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                childneed.Id,
+                                childNeedChanges,
+                                "Parent Care Need " + careNeed.PersonAlias?.Person?.FullName,
+                                typeof( CareNeed ),
+                                careNeed.Id,
+                                false
+                            );
+                        }
                     }
                 }
 
                 rockContext.WrapTransaction( () =>
                 {
-                    rockContext.SaveChanges();
+                    if ( rockContext.SaveChanges() > 0 )
+                    {
+                        if ( changes.Any() )
+                        {
+                            HistoryService.SaveChanges(
+                                rockContext,
+                                typeof( CareNeed ),
+                                rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                careNeed.Id,
+                                changes
+                            );
+                        }
+                    }
                 } );
 
                 createNote( rockContext, careNeedId, GetAttributeValue( AttributeKey.CompleteButtonText ) );
@@ -1024,6 +1326,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
         }
 
+        protected void btnViewHistory_Click( object sender, EventArgs e )
+        {
+            NavigateToLinkedPage( AttributeKey.HistoryPage, new Dictionary<string, string>
+            {
+                { "CareNeedId", hfCareNeedId.Value }
+            } );
+        }
+
         #endregion Events
 
         #region Methods
@@ -1034,6 +1344,10 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
         /// <param name="careNeedId">The care need identifier</param>
         public void ShowDetail( int careNeedId )
         {
+            // Session scoped, so start each need with an empty list. Only runs on a full load, never on the partial
+            // postbacks that re-run auto assignment, so hand picked people survive those.
+            ManuallyAssignedPersons = null;
+
             CareNeed careNeed = null;
             var rockContext = new RockContext();
             CareNeedService careNeedService = new CareNeedService( rockContext );
@@ -1075,6 +1389,9 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             pnlRecurrenceOptions.Visible = cbCustomFollowUp.Checked;
             numbRepeatDays.IntegerValue = careNeed.RenewPeriodDays;
             numbRepeatTimes.IntegerValue = careNeed.RenewMaxCount;
+
+            btnViewHistory.Visible = GetAttributeValue( AttributeKey.HistoryPage ).IsNotNullOrWhiteSpace() && careNeed.Id != 0;
+            btnViewHistoryFtr.Visible = GetAttributeValue( AttributeKey.HistoryPage ).IsNotNullOrWhiteSpace() && careNeed.Id != 0;
 
             var paramCampusId = PageParameter( PageParameterKey.CampusId ).AsIntegerOrNull();
             if ( careNeed.Campus != null )
@@ -1160,7 +1477,14 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
             else
             {
-                pwAssigned.Visible = false;
+                // Still show the panel when a worker is required, so the requirement can be satisfied. The grid
+                // starts empty and the Add Worker controls above it are used to populate it.
+                pwAssigned.Visible = EnforceWorkerRequired;
+                if ( pwAssigned.Visible )
+                {
+                    AssignedPersons = null;
+                    BindAssignedPersonsGrid( true );
+                }
             }
 
             careNeed.LoadAttributes();
@@ -1307,7 +1631,12 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 var category = DefinedValueCache.Get( categoryId.Value );
                 var categoryFollowUpAfter = category.GetAttributeValue( "FollowUpAfter" ).AsIntegerOrNull();
                 var categoryTimesToRepeat = category.GetAttributeValue( "TimesToRepeat" ).AsIntegerOrNull();
-                if ( categoryFollowUpAfter.HasValue && categoryFollowUpAfter > 0 )
+                CareNeed careNeed = null;
+                if ( !needId.Equals( 0 ) )
+                {
+                    careNeed = new CareNeedService( new RockContext() ).Get( needId );
+                }
+                if ( categoryFollowUpAfter.HasValue && categoryFollowUpAfter > 0 && ( careNeed == null || categoryId.Value != careNeed.CategoryValueId ) )
                 {
                     cbCustomFollowUp.Checked = true;
                     numbRepeatDays.IntegerValue = categoryFollowUpAfter;
@@ -1317,7 +1646,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             }
             if ( previewAssignedPeople && categoryId.HasValue && person != null && needId == 0 && dateDifference <= futureThresholdDays )
             {
-                var autoAssignWorker = GetAttributeValue( AttributeKey.AutoAssignWorker ).AsBoolean();
+                var autoAssignWorker = AutoAssignWorkerEnabled;
                 var autoAssignWorkerGeofence = GetAttributeValue( AttributeKey.AutoAssignWorkerGeofence ).AsBoolean();
                 var loadBalanceType = GetAttributeValue( AttributeKey.LoadBalanceWorkersType );
                 var enableLogging = GetAttributeValue( AttributeKey.VerboseLogging ).AsBoolean();
@@ -1325,7 +1654,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 CareNeed careNeed = GenerateTempNeed( person, categoryId );
 
-                AssignedPersons = CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople );
+                AssignedPersons = MergeManuallyAssignedPersons( CareUtilities.AutoAssignWorkers( careNeed, cbWorkersOnly.Checked, autoAssignWorker: autoAssignWorker, autoAssignWorkerGeofence: autoAssignWorkerGeofence, loadBalanceType: loadBalanceType, enableLogging: enableLogging, leaderRoleGuids: leaderRoleGuids, previewAssigned: previewAssignedPeople ) );
                 pwAssigned.Visible = UserCanAdministrate;
                 BindAssignedPersonsGrid( true );
             }
@@ -1333,9 +1662,37 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
             {
                 GenerateTempNeed( null, categoryId );
 
-                pwAssigned.Visible = false;
-                AssignedPersons = null;
+                // Auto assignment did not run, so anything the user picked by hand is all there is to show.
+                AssignedPersons = MergeManuallyAssignedPersons( null );
+
+                // Still show the panel when a worker is required, so the requirement can be satisfied.
+                pwAssigned.Visible = EnforceWorkerRequired;
+                if ( pwAssigned.Visible )
+                {
+                    BindAssignedPersonsGrid( true );
+                }
             }
+        }
+
+        /// <summary>
+        /// Adds the people the user picked by hand back onto an auto assigned list, so a partial postback that
+        /// re-runs auto assignment does not silently drop them.
+        /// </summary>
+        /// <param name="autoAssignedPersons">The auto assigned people, or null when auto assignment did not run.</param>
+        /// <returns>The combined list, with hand picked people winning on a duplicate person.</returns>
+        private List<AssignedPerson> MergeManuallyAssignedPersons( List<AssignedPerson> autoAssignedPersons )
+        {
+            var merged = autoAssignedPersons ?? new List<AssignedPerson>();
+
+            foreach ( var manuallyAssigned in ManuallyAssignedPersons )
+            {
+                // A hand picked person takes precedence, so drop any auto assigned duplicate rather than showing
+                // the same person twice with a different assignment type.
+                merged.RemoveAll( ap => ap.PersonAliasId == manuallyAssigned.PersonAliasId );
+                merged.Add( manuallyAssigned );
+            }
+
+            return merged;
         }
 
         private CareNeed GenerateTempNeed( Person person, int? categoryId = null )
@@ -1390,7 +1747,7 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                     EditedByPersonAliasId = CurrentPersonAliasId,
                     EditedDateTime = RockDateTime.Now,
                     NoteUrl = this.RockBlock()?.CurrentPageReference?.BuildUrl(),
-                    Caption = !countsForTouch ? "Action" : string.Empty
+                    Caption = !countsForTouch ? $"Action - {CurrentPerson.FullName}" : string.Empty
                 };
                 if ( noteType.RequiresApprovals )
                 {
@@ -1441,13 +1798,18 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
             if ( careNeed != null )
             {
-                var snoozeValueId = DefinedValueCache.Get( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED.AsGuid() ).Id;
-                careNeed.StatusValueId = snoozeValueId;
+                var changes = new History.HistoryChangeList();
+                var snoozeValue = CareUtilities.DefinedValueFromCache( rocks.kfs.StepsToCare.SystemGuid.DefinedValue.CARE_NEED_STATUS_SNOOZED );
+                History.EvaluateChange( changes, "Status", careNeed.StatusValueId, snoozeValue, snoozeValue.Id );
+                careNeed.StatusValueId = snoozeValue.Id;
+                History.EvaluateChange( changes, "Snooze Date", careNeed.SnoozeDate, RockDateTime.Now );
                 careNeed.SnoozeDate = RockDateTime.Now;
                 if ( selectedDateTime != null )
                 {
                     var dayDiff = ( selectedDateTime - RockDateTime.Now ).Value.TotalDays;
+                    History.EvaluateChange( changes, "Follow Up After", careNeed.RenewPeriodDays, Math.Ceiling( dayDiff ).ToIntSafe() );
                     careNeed.RenewPeriodDays = Math.Ceiling( dayDiff ).ToIntSafe();
+                    History.EvaluateChange( changes, "Number of Times to Repeat", careNeed.RenewMaxCount, careNeed.RenewCurrentCount );
                     careNeed.RenewMaxCount = careNeed.RenewCurrentCount;
                 }
 
@@ -1457,19 +1819,54 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
                 {
                     foreach ( var childneed in careNeed.ChildNeeds )
                     {
-                        childneed.StatusValueId = snoozeValueId;
-                        childneed.SnoozeDate = RockDateTime.Now;
+                        var childNeedChanges = new History.HistoryChangeList();
+                        History.EvaluateChange( changes, "Child Need Status", childneed.StatusValueId, snoozeValue, snoozeValue.Id );
+                        History.EvaluateChange( childNeedChanges, "Status", childneed.StatusValueId, snoozeValue, snoozeValue.Id );
+                        History.EvaluateChange( childNeedChanges, "Snooze Date", childneed.SnoozeDate, careNeed.SnoozeDate );
+
+                        childneed.StatusValueId = snoozeValue.Id;
+                        childneed.SnoozeDate = careNeed.SnoozeDate;
                         if ( selectedDateTime != null )
                         {
+                            History.EvaluateChange( changes, "Follow Up After", childneed.RenewPeriodDays, careNeed.RenewPeriodDays );
                             childneed.RenewPeriodDays = careNeed.RenewPeriodDays;
+                            History.EvaluateChange( changes, "Number of Times to Repeat", childneed.RenewMaxCount, childneed.RenewCurrentCount );
                             childneed.RenewMaxCount = childneed.RenewCurrentCount;
                         }
+
+                        if ( childNeedChanges.Any() )
+                        {
+                            HistoryService.SaveChanges(
+                                rockContext,
+                                typeof( CareNeed ),
+                                rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                childneed.Id,
+                                childNeedChanges,
+                                "Parent Care Need " + careNeed.PersonAlias?.Person?.FullName,
+                                typeof( CareNeed ),
+                                careNeed.Id,
+                                false
+                            );
+                        }
+
                     }
                 }
 
                 rockContext.WrapTransaction( () =>
                 {
-                    rockContext.SaveChanges();
+                    if ( rockContext.SaveChanges() > 0 )
+                    {
+                        if ( changes.Any() )
+                        {
+                            HistoryService.SaveChanges(
+                                rockContext,
+                                typeof( CareNeed ),
+                                rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_CARE_NEED.AsGuid(),
+                                careNeed.Id,
+                                changes
+                            );
+                        }
+                    }
                 } );
 
                 createNote( rockContext, careNeedId, GetAttributeValue( AttributeKey.SnoozedButtonText ) );
@@ -1492,6 +1889,26 @@ namespace RockWeb.Plugins.rocks_kfs.StepsToCare
 
                 NavigateToParentPage( qryParams );
             }
+        }
+
+        private void SavePersonNeedHistory( RockContext rockContext, CareNeed careNeed )
+        {
+            var personNeedHistory = new History.HistoryChangeList();
+            personNeedHistory.AddChange( History.HistoryVerb.Add, History.HistoryChangeType.Record, $"Care Need [{careNeed.Id}]" );
+
+            if ( careNeed.PersonAlias == null )
+            {
+                careNeed.PersonAlias = new PersonAliasService( rockContext ).Get( careNeed.PersonAliasId ?? 0 );
+            }
+            HistoryService.SaveChanges( rockContext,
+                    typeof( Person ),
+                    rocks.kfs.StepsToCare.SystemGuid.Category.HISTORY_PERSON_STEPS_TO_CARE.AsGuid(),
+                    careNeed.PersonAlias.PersonId,
+                    personNeedHistory,
+                    $"Care Need [{careNeed.Id}]",
+                    typeof( CareNeed ),
+                    careNeed.Id
+                );
         }
 
         #endregion Methods

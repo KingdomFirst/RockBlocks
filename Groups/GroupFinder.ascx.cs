@@ -35,7 +35,8 @@
 // * Added Auto Load Filter capability on value selection
 // * Added ability to sort how filters are displayed
 // * Added ability to load Group/Sign Up Opportunities into finder
-// Package Version 1.8.3
+// * Added a setting to use Abbreviated Attribute Name in the filter control
+// Package Version 1.8.5
 // </notice>
 //
 using System;
@@ -50,8 +51,8 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
-using DotLiquid;
 using RestSharp.Extensions;
+
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -127,6 +128,10 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Description = "Add the merge field GroupOpportunities to the lava result with a custom object for Sign-up Opportunities. See documentation for field properties.",
         DefaultBooleanValue = false,
         Key = AttributeKey.AddGroupOpportunities )]
+    [BooleanField( "Use Abbreviated Attribute Name",
+        Description = "Use the Abbreviated Attribute name when displaying the filter control.",
+        DefaultBooleanValue = false,
+        Key = AttributeKey.UseAbbreviatedAttributeName )]
 
     // Linked Pages
     [LinkedPage( "Group Detail Page",
@@ -297,7 +302,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         )]
     [CodeEditorField( "Map Info",
         EditorMode = CodeEditorMode.Lava,
-        EditorTheme = CodeEditorTheme.Rock,
         EditorHeight = 200,
         IsRequired = false,
         DefaultValue = AttributeDefaultLava.MapInfo,
@@ -311,7 +315,6 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         Key = AttributeKey.ShowLavaOutput )]
     [CodeEditorField( "Lava Output",
         EditorMode = CodeEditorMode.Lava,
-        EditorTheme = CodeEditorTheme.Rock,
         EditorHeight = 200,
         IsRequired = false,
         DefaultValue = "",
@@ -472,6 +475,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             public const string FormattedOutputEnabledLavaCommands = "FormattedOutputEnabledLavaCommands";
             public const string FilterOrder = "FilterOrder";
             public const string AddGroupOpportunities = "AddGroupOpportunities";
+            public const string UseAbbreviatedAttributeName = "UseAbbreviatedAttributeName";
         }
 
         private static class AttributeDefaultLava
@@ -1185,13 +1189,13 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 var groupTypes = gtpGroupType.SelectedValuesAsInt.Select( id => GroupTypeCache.Get( id ) );
 
-                _groupTypeAttributeNames.AddOrIgnore( "filter_dow", "Day of Week" );
-                _groupTypeAttributeNames.AddOrIgnore( "filter_time", "Time of Day" );
-                _groupTypeAttributeNames.AddOrIgnore( "filter_campus", "Campus" );
-                _groupTypeAttributeNames.AddOrIgnore( "filter_address", "Address" );
-                _groupTypeAttributeNames.AddOrIgnore( "filter_postalcode", "Postal Code" );
-                _groupTypeAttributeNames.AddOrIgnore( "filter_keyword", "Keyword" );
-                _groupTypeAttributeNames.AddOrIgnore( "filter_showfullgroups", "Show Full Groups" );
+                _groupTypeAttributeNames.AddOrReplace( "filter_dow", "Day of Week" );
+                _groupTypeAttributeNames.AddOrReplace( "filter_time", "Time of Day" );
+                _groupTypeAttributeNames.AddOrReplace( "filter_campus", "Campus" );
+                _groupTypeAttributeNames.AddOrReplace( "filter_address", "Address" );
+                _groupTypeAttributeNames.AddOrReplace( "filter_postalcode", "Postal Code" );
+                _groupTypeAttributeNames.AddOrReplace( "filter_keyword", "Keyword" );
+                _groupTypeAttributeNames.AddOrReplace( "filter_showfullgroups", "Show Full Groups" );
 
                 var filterOrderIndex = 1;
                 foreach ( var filter in _groupTypeAttributeNames.Where( f => f.Key.Contains( "filter_" ) ) )
@@ -1225,7 +1229,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                                 ddlAttributeSort.Items.Add( new ListItem( attribute.Value.Name + string.Format( " ({0})", groupType.Name ), attribute.Value.Guid.ToString() ) );
 
                                 AddToFilterOrder( filterOrderIndex, attribute.Value.Guid.ToString() );
-                                _groupTypeAttributeNames.AddOrIgnore( attribute.Value.Guid.ToString(), attribute.Value.Name + string.Format( " ({0})", groupType.Name ) );
+                                _groupTypeAttributeNames.AddOrReplace( attribute.Value.Guid.ToString(), attribute.Value.Name + string.Format( " ({0})", groupType.Name ) );
                                 filterOrderIndex++;
 
                                 var configurationValues = attribute.Value.QualifierValues;
@@ -1364,7 +1368,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             }
             else
             {
-                FilterOrder.AddOrIgnore( ( ( maxKey2 > maxKey1 ) ? maxKey2 : maxKey1 ) + 1, filterId );
+                FilterOrder.AddOrReplace( ( ( maxKey2 > maxKey1 ) ? maxKey2 : maxKey1 ) + 1, filterId );
             }
         }
 
@@ -1688,6 +1692,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             {
                 hideAttributeValues();
                 var existingFilters = new HashSet<string>();
+                var useAbbreviatedName = GetAttributeValue( AttributeKey.UseAbbreviatedAttributeName ).AsBoolean();
                 foreach ( var attribute in AttributeFilters )
                 {
                     var filterId = $"filter_{attribute.Key}_{attribute.FieldType.Id}";
@@ -1712,7 +1717,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                             ctrl.Attributes.Add( "data-placeholder", $"Select {attribute.Name}" );
                         }
 
-                        AddFilterControl( control, attribute.Name, attribute.Description, attribute.Guid.ToString() );
+                        AddFilterControl( control, ( useAbbreviatedName ) ? attribute.AbbreviatedName : attribute.Name, attribute.Description, attribute.Guid.ToString() );
                     }
                 }
             }
@@ -1845,7 +1850,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             var defaultOrder = 0;
             foreach ( var kvp in filterOrderKVP )
             {
-                filterOrder.AddOrIgnore( kvp.Key.ToIntSafe( defaultOrder ), kvp.Value.ToString() );
+                filterOrder.AddOrReplace( kvp.Key.ToIntSafe( defaultOrder ), kvp.Value.ToString() );
                 defaultOrder++;
             }
             return filterOrder;
@@ -1973,12 +1978,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 if ( collapsible )
                 {
                     //phFilterControlsCollapsed.Controls.Add( control );
-                    _collapsedControls.AddOrIgnore( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _collapsedControls.Count : controlKey, control );
+                    _collapsedControls.AddOrReplace( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _collapsedControls.Count : controlKey, control );
                 }
                 else
                 {
                     //phFilterControls.Controls.Add( control );
-                    _filterControls.AddOrIgnore( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _filterControls.Count : controlKey, control );
+                    _filterControls.AddOrReplace( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _filterControls.Count : controlKey, control );
                 }
             }
             else
@@ -1990,12 +1995,12 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 if ( collapsible )
                 {
                     //phFilterControlsCollapsed.Controls.Add( wrapper );
-                    _collapsedControls.AddOrIgnore( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _collapsedControls.Count : controlKey, wrapper );
+                    _collapsedControls.AddOrReplace( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _collapsedControls.Count : controlKey, wrapper );
                 }
                 else
                 {
                     //phFilterControls.Controls.Add( wrapper );
-                    _filterControls.AddOrIgnore( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _filterControls.Count : controlKey, wrapper );
+                    _filterControls.AddOrReplace( ( controlPosition.Value.IsNullOrWhiteSpace() ) ? _filterControls.Count : controlKey, wrapper );
                 }
             }
         }
@@ -2467,7 +2472,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         }
                         else
                         {
-                            distances.AddOrIgnore( group.Id, 9999 );
+                            distances.AddOrReplace( group.Id, 9999 );
                         }
                     }
                 }
@@ -2799,22 +2804,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
         private void GenerateGroupMap( List<Group> groups, FinderMapItem personMapItem, List<GroupLocation> groupLocations, List<MapItem> fenceMapItems, List<Opportunity> opportunities = null )
         {
-            Template template = null;
             ILavaTemplate lavaTemplate = null;
 
-            if ( LavaService.RockLiquidIsEnabled )
-            {
-                template = Template.Parse( GetAttributeValue( AttributeKey.MapInfo ) );
+            var parseResult = LavaService.ParseTemplate( GetAttributeValue( AttributeKey.MapInfo ) );
 
-                LavaHelper.VerifyParseTemplateForCurrentEngine( GetAttributeValue( AttributeKey.MapInfo ) );
-            }
-            else
-            {
-                var parseResult = LavaService.ParseTemplate( GetAttributeValue( AttributeKey.MapInfo ) );
-
-                lavaTemplate = parseResult.Template;
-            }
-
+            lavaTemplate = parseResult.Template;
 
             // Add map items for all the remaining valid group locations
             var groupMapItems = new List<MapItem>();
@@ -2862,16 +2856,9 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                     string infoWindow;
 
-                    if ( LavaService.RockLiquidIsEnabled )
-                    {
-                        infoWindow = template.Render( Hash.FromDictionary( mergeFields ) );
-                    }
-                    else
-                    {
-                        var result = LavaService.RenderTemplate( lavaTemplate, mergeFields );
+                    var result = LavaService.RenderTemplate( lavaTemplate, mergeFields );
 
-                        infoWindow = result.Text;
-                    }
+                    infoWindow = result.Text;
 
                     // Add a map item for group
                     var mapItem = new FinderMapItem( gl.Location );

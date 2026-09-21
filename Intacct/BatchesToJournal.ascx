@@ -32,9 +32,10 @@
                         </Rock:Grid>
                     </div>
                 </div>
-            </div>
-
-            <div class="row">
+            </div>            <asp:Panel runat="server" ID="pnlError" CssClass="alert alert-warning" Visible="false">
+                <asp:Literal runat="server" ID="litError"></asp:Literal>
+            </asp:Panel>
+            <asp:Panel runat="server" ID="pnlExport" CssClass="row" Visible="true">
                 <asp:Panel runat="server" ID="pnlOtherReceipt" Visible="false">
                     <div class="col-md-3 col-lg-2">
                         <Rock:RockDropDownList ID="ddlReceiptAccountType" runat="server" Label="Deposit To" Required="true" ValidationGroup="KFSIntacctExport" OnSelectedIndexChanged="ddlReceiptAccountType_SelectedIndexChanged" AutoPostBack="true">
@@ -46,7 +47,7 @@
                         <Rock:RockDropDownList ID="ddlPaymentMethods" runat="server" Label="Payment Method" Required="true" ValidationGroup="KFSIntacctExport" />
                     </div>
                     <asp:Panel runat="server" ID="pnlBankAccounts" CssClass="col-md-3 col-lg-2">
-                        <Rock:RockDropDownList ID="ddlBankAccounts" runat="server" Label="Bank Account" Required="true" ValidationGroup="KFSIntacctExport" />
+                        <Rock:DefinedValuePicker ID="dvpBankAccounts" runat="server" Label="Bank Account" Required="true" ValidationGroup="KFSIntacctExport" />
                     </asp:Panel>
                 </asp:Panel>
                 <div class="col-sm-2">
@@ -55,9 +56,12 @@
                         <Rock:BootstrapButton runat="server" ID="btnExportToIntacct" OnClick="btnExportToIntacct_Click" CssClass="btn btn-primary" />
                     </div>
                 </div>
-            </div>
+            </asp:Panel>
             <Rock:NotificationBox ID="nbError" runat="server" Visible="false" Dismissable="true"></Rock:NotificationBox>
             <asp:Literal ID="lDebug" runat="server" Visible="false" />
         </asp:Panel>
     </ContentTemplate>
 </asp:UpdatePanel>
+<asp:Panel runat="server" ID="pnlIntDownload" Visible="false">
+    <iframe id="intJournalDownload" src="/Plugins/rocks_kfs/Intacct/IntacctCsvExport.aspx" frameborder="0" width="0" height="0"></iframe>
+</asp:Panel>
