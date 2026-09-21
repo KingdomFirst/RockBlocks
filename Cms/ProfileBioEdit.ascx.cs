@@ -116,6 +116,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultValue = "Optional",
         Order = 8 )]
 
+    [TextField(
+        "Title Label",
+        Key = AttributeKey.TitleLabel,
+        Description = "The label text for the Title field.",
+        IsRequired = false,
+        DefaultValue = "Title",
+        Category = AttributeCategory.PersonFields,
+        Order = 8 )]
+
     [CustomDropdownListField(
         "First Name",
         Key = AttributeKey.FirstName,
@@ -124,6 +133,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Required",
+        Order = 9 )]
+
+    [TextField(
+        "First Name Label",
+        Key = AttributeKey.FirstNameLabel,
+        Description = "The label text for the First Name field.",
+        IsRequired = false,
+        DefaultValue = "First Name",
+        Category = AttributeCategory.PersonFields,
         Order = 9 )]
 
     [CustomDropdownListField(
@@ -136,6 +154,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultValue = "Hide",
         Order = 10 )]
 
+    [TextField(
+        "Nick Name Label",
+        Key = AttributeKey.NickNameLabel,
+        Description = "The label text for the Nick Name field.",
+        IsRequired = false,
+        DefaultValue = "Nick Name",
+        Category = AttributeCategory.PersonFields,
+        Order = 10 )]
+
     [CustomDropdownListField(
         "Last Name",
         Key = AttributeKey.LastName,
@@ -144,6 +171,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Required",
+        Order = 11 )]
+
+    [TextField(
+        "Last Name Label",
+        Key = AttributeKey.LastNameLabel,
+        Description = "The label text for the Last Name field.",
+        IsRequired = false,
+        DefaultValue = "Last Name",
+        Category = AttributeCategory.PersonFields,
         Order = 11 )]
 
     [CustomDropdownListField(
@@ -156,6 +192,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultValue = "Optional",
         Order = 12 )]
 
+    [TextField(
+        "Suffix Label",
+        Key = AttributeKey.SuffixLabel,
+        Description = "The label text for the Suffix field.",
+        IsRequired = false,
+        DefaultValue = "Suffix",
+        Category = AttributeCategory.PersonFields,
+        Order = 12 )]
+
     [CustomDropdownListField(
         "Birthday",
         Key = AttributeKey.Birthday,
@@ -164,6 +209,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Required",
+        Order = 13 )]
+
+    [TextField(
+        "Birthday Label",
+        Key = AttributeKey.BirthdayLabel,
+        Description = "The label text for the Birthday field.",
+        IsRequired = false,
+        DefaultValue = "Birthday",
+        Category = AttributeCategory.PersonFields,
         Order = 13 )]
 
     [CustomDropdownListField(
@@ -176,6 +230,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultValue = "Optional",
         Order = 14 )]
 
+    [TextField(
+        "Grade Label",
+        Key = AttributeKey.GradeLabel,
+        Description = "The label text for the Grade field.",
+        IsRequired = false,
+        DefaultValue = "Grade",
+        Category = AttributeCategory.PersonFields,
+        Order = 14 )]
+
     [CustomDropdownListField(
         "Role",
         Key = AttributeKey.Role,
@@ -186,6 +249,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultValue = "Required",
         Order = 15 )]
 
+    [TextField(
+        "Role Label",
+        Key = AttributeKey.RoleLabel,
+        Description = "The label text for the Role field.",
+        IsRequired = false,
+        DefaultValue = "Role",
+        Category = AttributeCategory.PersonFields,
+        Order = 15 )]
+
     [CustomDropdownListField(
         "Gender",
         Key = AttributeKey.Gender,
@@ -194,6 +266,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Required",
+        Order = 16 )]
+
+    [TextField(
+        "Gender Label",
+        Key = AttributeKey.GenderLabel,
+        Description = "The label text for the Gender field.",
+        IsRequired = false,
+        DefaultValue = "Gender",
+        Category = AttributeCategory.PersonFields,
         Order = 16 )]
 
     [CustomDropdownListField(
@@ -224,6 +305,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.PersonFields,
         IsRequired = false,
         DefaultValue = "Optional",
+        Order = 19 )]
+
+    [TextField(
+        "Marital Status Label",
+        Key = AttributeKey.MaritalStatusLabel,
+        Description = "The label text for the Marital Status field.",
+        IsRequired = false,
+        DefaultValue = "Marital Status",
+        Category = AttributeCategory.PersonFields,
         Order = 19 )]
 
     [TextField(
@@ -274,6 +364,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultValue = "Optional",
         Order = 24 )]
 
+    [TextField(
+        "Email Label",
+        Key = AttributeKey.EmailLabel,
+        Description = "The label text for the Email field.",
+        IsRequired = false,
+        DefaultValue = "Email",
+        Category = AttributeCategory.ContactFields,
+        Order = 24 )]
+
     [DefinedValueField(
         "Phone Types",
         Key = AttributeKey.PhoneTypes,
@@ -320,6 +419,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         DefaultValue = "Hide",
         Order = 29 )]
 
+    [TextField(
+        "Email Preference Label",
+        Key = AttributeKey.EmailPreferenceLabel,
+        Description = "The label text for the Email Preference field.",
+        IsRequired = false,
+        DefaultValue = "Email Preference",
+        Category = AttributeCategory.ContactFields,
+        Order = 29 )]
+
     [CustomDropdownListField(
         "Communication Preference",
         Key = AttributeKey.CommunicationPreference,
@@ -328,6 +436,15 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         Category = AttributeCategory.ContactFields,
         IsRequired = false,
         DefaultValue = "Hide",
+        Order = 30 )]
+
+    [TextField(
+        "Communication Preference Label",
+        Key = AttributeKey.CommunicationPreferenceLabel,
+        Description = "The label text for the Communication Preference field.",
+        IsRequired = false,
+        DefaultValue = "Communication Preference",
+        Category = AttributeCategory.ContactFields,
         Order = 30 )]
 
     [TextField(
@@ -409,6 +526,16 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
         AllowMultiple = true,
         Category = AttributeCategory.Campus,
         Order = 38 )]
+
+    [CustomDropdownListField(
+        "Require Campus",
+        Key = AttributeKey.Campus,
+        Description = "Should the Campus be required?",
+        ListSource = "No,Required^Yes",
+        Category = AttributeCategory.Campus,
+        IsRequired = false,
+        DefaultValue = "No",
+        Order = 39 )]
 
     [ValueListField(
         name: "Panel Order",
@@ -496,10 +623,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string FamilyAttributes = "FamilyAttributes";
             public const string PersonAttributesAdults = "PersonAttributesAdults";
             public const string PersonAttributesChildren = "PersonAttributesChildren";
-            public const string CampusSelector = "Campus";
+            public const string CampusSelector = "CampusSelector";
             public const string CampusSelectorLabel = "CampusSelectorLabel";
             public const string CampusTypes = "CampusTypes";
             public const string CampusStatuses = "CampusStatuses";
+            public const string Campus = "Campus";
             public const string PanelOrder = "PanelOrder";
             public const string PersonFieldsOrder = "PersonFieldsOrder";
             public const string ContactFieldsOrder = "ContactFieldsOrder";
@@ -508,6 +636,19 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             public const string MatchPersonFieldsFamilyMember = "MatchPersonFieldsFamilyMember";
             public const string AllowAddingFamilyMembers = "AllowAddingFamilyMembers";
             public const string RedirectPage = "RedirectPage";
+            public const string TitleLabel = "TitleLabel";
+            public const string FirstNameLabel = "FirstNameLabel";
+            public const string LastNameLabel = "LastNameLabel";
+            public const string NickNameLabel = "NickNameLabel";
+            public const string SuffixLabel = "SuffixLabel";
+            public const string BirthdayLabel = "BirthdayLabel";
+            public const string GradeLabel = "GradeLabel";
+            public const string GenderLabel = "GenderLabel";
+            public const string RoleLabel = "RoleLabel";
+            public const string MaritalStatusLabel = "MaritalStatusLabel";
+            public const string EmailLabel = "EmailLabel";
+            public const string EmailPreferenceLabel = "EmailPreferenceLabel";
+            public const string CommunicationPreferenceLabel = "CommunicationPreferenceLabel";
         }
 
         private static class PageParameterKey
@@ -895,7 +1036,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = ddlGrade.Parent as WebControl;
                             if ( parentControl != null )
                             {
-                                parentControl.CssClass = "col-md-6";
+                                parentControl.CssClass = "col-12 col-xs-12 col-sm-6";
                             }
                         }
                         if ( dvpMaritalStatus != null )
@@ -937,7 +1078,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = rblEmailPreference.Parent as WebControl;
                             if ( parentControl != null && rblEmailPreference.Visible )
                             {
-                                parentControl.AddCssClass( "col-md-6" );
+                                parentControl.AddCssClass( "col-12 col-xs-12 col-sm-6" );
                             }
                             else if ( parentControl != null )
                             {
@@ -950,7 +1091,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = rblCommunicationPreference.Parent as WebControl;
                             if ( parentControl != null && rblCommunicationPreference.Visible )
                             {
-                                parentControl.AddCssClass( "col-md-6" );
+                                parentControl.AddCssClass( "col-12 col-xs-12 col-sm-6" );
                             }
                             else if ( parentControl != null )
                             {
@@ -975,7 +1116,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = dvpMaritalStatus.Parent as WebControl;
                             if ( parentControl != null )
                             {
-                                parentControl.CssClass = "col-md-6";
+                                parentControl.CssClass = "col-12 col-xs-12 col-sm-6";
                             }
                         }
                         if ( avcPersonAttributes != null )
@@ -1008,7 +1149,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = rblEmailPreference.Parent as WebControl;
                             if ( parentControl != null && rblEmailPreference.Visible )
                             {
-                                parentControl.AddCssClass( "col-md-6" );
+                                parentControl.AddCssClass( "col-12 col-xs-12 col-sm-6" );
                             }
                             else if ( parentControl != null )
                             {
@@ -1021,7 +1162,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             var parentControl = rblCommunicationPreference.Parent as WebControl;
                             if ( parentControl != null && rblCommunicationPreference.Visible )
                             {
-                                parentControl.AddCssClass( "col-md-6" );
+                                parentControl.AddCssClass( "col-12 col-xs-12 col-sm-6" );
                             }
                             else if ( parentControl != null )
                             {
@@ -1264,19 +1405,19 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             }
 
             var imagePhotoEditor = GenerateControl( "Photo", typeof( ImageEditor ), "" ) as ImageEditor;
-            var dvpTitle = GenerateControl( "Title", typeof( DefinedValuePicker ), "Title", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ).Id, appendToRequiredMessage: appendRequiredMessage ) as DefinedValuePicker;
-            var tbFirstName = GenerateControl( "FirstName", typeof( RockTextBox ), "First Name", appendToRequiredMessage: appendRequiredMessage ) as RockTextBox;
-            var tbNickName = GenerateControl( "NickName", typeof( RockTextBox ), "Nick Name", appendToRequiredMessage: appendRequiredMessage ) as RockTextBox;
-            var tbLastName = GenerateControl( "LastName", typeof( RockTextBox ), "Last Name", appendToRequiredMessage: appendRequiredMessage ) as RockTextBox;
-            var dvpSuffix = GenerateControl( "Suffix", typeof( DefinedValuePicker ), "Suffix", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) ).Id, appendToRequiredMessage: appendRequiredMessage ) as DefinedValuePicker;
-            var bpBirthday = GenerateControl( "Birthday", typeof( BirthdayPicker ), "Birthday", appendToRequiredMessage: appendRequiredMessage ) as BirthdayPicker;
+            var dvpTitle = GenerateControl( "Title", typeof( DefinedValuePicker ), "", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ).Id, appendToRequiredMessage: appendRequiredMessage ) as DefinedValuePicker;
+            var tbFirstName = GenerateControl( "FirstName", typeof( RockTextBox ), appendToRequiredMessage: appendRequiredMessage ) as RockTextBox;
+            var tbNickName = GenerateControl( "NickName", typeof( RockTextBox ), appendToRequiredMessage: appendRequiredMessage ) as RockTextBox;
+            var tbLastName = GenerateControl( "LastName", typeof( RockTextBox ), appendToRequiredMessage: appendRequiredMessage ) as RockTextBox;
+            var dvpSuffix = GenerateControl( "Suffix", typeof( DefinedValuePicker ), "", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) ).Id, appendToRequiredMessage: appendRequiredMessage ) as DefinedValuePicker;
+            var bpBirthday = GenerateControl( "Birthday", typeof( BirthdayPicker ), appendToRequiredMessage: appendRequiredMessage ) as BirthdayPicker;
             var ypGraduation = GenerateControl( "Graduation", typeof( YearPicker ), "", "hide", appendToRequiredMessage: appendRequiredMessage ) as YearPicker;
-            var ddlGrade = GenerateControl( "Grade", typeof( GradePicker ), "Grade", appendToRequiredMessage: appendRequiredMessage ) as GradePicker;
-            var ddlGender = GenerateControl( "Gender", typeof( RockDropDownList ), "Gender", appendToRequiredMessage: appendRequiredMessage ) as RockDropDownList;
-            var rblRole = GenerateControl( "Role", typeof( RockRadioButtonList ), "Role", appendToRequiredMessage: appendRequiredMessage ) as RockRadioButtonList;
+            var ddlGrade = GenerateControl( "Grade", typeof( GradePicker ), appendToRequiredMessage: appendRequiredMessage ) as GradePicker;
+            var ddlGender = GenerateControl( "Gender", typeof( RockDropDownList ), appendToRequiredMessage: appendRequiredMessage ) as RockDropDownList;
+            var rblRole = GenerateControl( "Role", typeof( RockRadioButtonList ), appendToRequiredMessage: appendRequiredMessage ) as RockRadioButtonList;
             var rpRace = GenerateControl( "Race", typeof( RacePicker ), null, appendToRequiredMessage: appendRequiredMessage ) as RacePicker;
             var epEthnicity = GenerateControl( "Ethnicity", typeof( EthnicityPicker ), null, appendToRequiredMessage: appendRequiredMessage ) as EthnicityPicker;
-            var dvpMaritalStatus = GenerateControl( "MaritalStatus", typeof( DefinedValuePicker ), "Marital Status", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS ) ).Id, appendToRequiredMessage: appendRequiredMessage ) as DefinedValuePicker;
+            var dvpMaritalStatus = GenerateControl( "MaritalStatus", typeof( DefinedValuePicker ), "", "input-width-md", DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_MARITAL_STATUS ) ).Id, appendToRequiredMessage: appendRequiredMessage ) as DefinedValuePicker;
             var cpCampus = GenerateControl( "Campus", typeof( CampusPicker ), GetAttributeValue( AttributeKey.CampusSelectorLabel ), appendToRequiredMessage: appendRequiredMessage ) as CampusPicker;
             var avcPersonAttributes = new AttributeValuesContainer { ID = "avcPersonAttributes", NumberOfColumns = 2 };
             var avcChildPersonAttributes = new AttributeValuesContainer { ID = "avcChildPersonAttributes", NumberOfColumns = 2 };
@@ -1493,7 +1634,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                             actualCtrl.Visible = true;
                         }
 
-                        var personFieldCol = new Panel { CssClass = actualCtrl.Visible ? "col-md-6" : "" };
+                        var personFieldCol = new Panel { CssClass = actualCtrl.Visible ? "col-12 col-xs-12 col-sm-6" : "" };
                         if ( actualCtrl.Visible )
                         {
                             visibleControlCount++;
@@ -1521,7 +1662,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                 var parentCtrl = rblRole.Parent as WebControl;
                 if ( parentCtrl != null )
                 {
-                    parentCtrl.RemoveCssClass( "col-md-6" );
+                    parentCtrl.RemoveCssClass( "col-12 col-xs-12 col-sm-6" );
                 }
             }
             if ( pnlFields != null && visibleControlCount < 1 )
@@ -1562,9 +1703,9 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             {
                 appendRequiredMessage = person.FullName;
             }
-            var ebEmail = GenerateControl( "Email", typeof( EmailBox ), "Email", appendToRequiredMessage: appendRequiredMessage ) as EmailBox;
-            var rblCommunicationPreference = GenerateControl( "CommunicationPreference", typeof( RockRadioButtonList ), "Communication Preference" ) as RockRadioButtonList;
-            var rblEmailPreference = GenerateControl( "EmailPreference", typeof( RockRadioButtonList ), "Email Preference" ) as RockRadioButtonList;
+            var ebEmail = GenerateControl( "Email", typeof( EmailBox ), appendToRequiredMessage: appendRequiredMessage ) as EmailBox;
+            var rblCommunicationPreference = GenerateControl( "CommunicationPreference", typeof( RockRadioButtonList ) ) as RockRadioButtonList;
+            var rblEmailPreference = GenerateControl( "EmailPreference", typeof( RockRadioButtonList ) ) as RockRadioButtonList;
 
             var contactFieldsControls = new List<Control> { ebEmail, rblCommunicationPreference, rblEmailPreference, lSpacer };
 
@@ -1705,7 +1846,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     var actualWebCtrl = actualCtrl as WebControl;
                     if ( actualCtrl != null && actualCtrl.Visible )
                     {
-                        var fieldCol = new Panel { CssClass = "col-md-6" };
+                        var fieldCol = new Panel { CssClass = "col-12 col-xs-12 col-sm-6" };
 
                         if ( ( actualCtrl != null && actualWebCtrl == null ) || ( actualWebCtrl != null && !actualWebCtrl.CssClass.Contains( "hide" ) ) )
                         {
@@ -2054,7 +2195,7 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
                     {
                         if ( !person.PhoneNumbers.Any( a => a.IsMessagingEnabled ) )
                         {
-                            nbCommunicationPreferenceWarning.Text = "A phone number with SMS enabled is required when Communication Preference is set to SMS.";
+                            nbCommunicationPreferenceWarning.Text = $"A phone number with SMS enabled is required when {GetAttributeValue(AttributeKey.CommunicationPreferenceLabel)} is set to SMS.";
                             nbCommunicationPreferenceWarning.NotificationBoxType = NotificationBoxType.Warning;
                             nbCommunicationPreferenceWarning.Visible = true;
                             return false;
@@ -2211,6 +2352,11 @@ namespace RockWeb.Plugins.rocks_kfs.Cms
             var ctrl = new Control();
 
             var displayControl = GetAttributeValue( ctrlName );
+
+            if ( labelText.IsNullOrWhiteSpace() )
+            {
+                labelText = GetAttributeValue( $"{ctrlName}Label" );
+            }
 
             if ( fieldType == typeof( RockTextBox ) )
             {
