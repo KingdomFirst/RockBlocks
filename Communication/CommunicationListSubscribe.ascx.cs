@@ -30,7 +30,6 @@ using System.Data.Entity;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using NuGet;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
@@ -375,7 +374,11 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
 
             if ( localPersonCommunicationListsMember != null )
             {
-                personCommunicationListsMember.AddRange( localPersonCommunicationListsMember );
+                foreach ( var kvp in localPersonCommunicationListsMember )
+                {
+                    // overwrite existing entry if present
+                    personCommunicationListsMember[kvp.Key] = kvp.Value;
+                }
             }
 
             nbNoCommunicationLists.Visible = !viewableCommunicationLists.Any();
