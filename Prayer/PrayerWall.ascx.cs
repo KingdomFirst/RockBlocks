@@ -262,8 +262,6 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
                 if ( LavaService.RockLiquidIsEnabled )
                 {
                     template = Template.Parse( GetAttributeValue( "LavaTemplate" ) );
-
-                    LavaHelper.VerifyParseTemplateForCurrentEngine( GetAttributeValue( "LavaTemplate" ) );
                 }
                 else
                 {
@@ -341,7 +339,7 @@ namespace RockWeb.Plugins.rocks_kfs.Prayer
                             var transaction = new Rock.Transactions.LaunchWorkflowsTransaction( workflowTypeGuid.Value, workflowDetails );
                             // NOTE: In v8, the initiator will always be null while using delayed start.
                             //transaction.InitiatorPersonAliasId = CurrentPersonAliasId; // available in v9
-                            Rock.Transactions.RockQueue.TransactionQueue.Enqueue( transaction );
+                            Rock.Transactions.RockQueue.Enqueue( transaction );
                         }
                     }
                 }

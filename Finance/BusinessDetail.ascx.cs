@@ -49,7 +49,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
     [LinkedPage( "Person Profile Page", "The page used to view the details of a business contact", order: 0 )]
     [LinkedPage( "Communication Page", "The communication page to use for when the business email address is clicked. Leave this blank to use the default.", false, "", "", 1 )]
     [BooleanField( "Hide Business Details", "Hide business details and editing of business so you can use this block for Business Contacts only.", false, order: 2 )]
-    public partial class BusinessDetail : Rock.Web.UI.RockBlock, IDetailBlock
+    public partial class BusinessDetail : Rock.Web.UI.RockBlock
     {
         #region Base Control Methods
 

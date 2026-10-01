@@ -1102,7 +1102,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         rockContext.SaveChanges();
 
                         // queue up the transaction
-                        Rock.Transactions.RockQueue.TransactionQueue.Enqueue( transaction );
+                        Rock.Transactions.RockQueue.Enqueue( transaction );
                     }
                 }
 

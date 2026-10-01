@@ -36,6 +36,7 @@ using System.Web.UI.WebControls;
 using Rock;
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Enums.Communication;
 using Rock.Model;
 using Rock.Reporting;
 using Rock.Security;
@@ -49,9 +50,8 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
     [DisplayName( "SMS Conversations" )]
     [Category( "KFS > Communication" )]
     [Description( "Block for having SMS Conversations between an SMS enabled phone and a Rock SMS Phone number that has 'Enable Mobile Conversations' set to false." )]
-    [DefinedValueField( "Allowed SMS Numbers",
+    [SystemPhoneNumberField( "Allowed SMS Numbers",
         Key = AttributeKey.AllowedSMSNumbers,
-        DefinedTypeGuid = Rock.SystemGuid.DefinedType.COMMUNICATION_SMS_FROM,
         Description = "Set the allowed FROM numbers to appear when in SMS mode (if none are selected all numbers will be included). ",
         IsRequired = false,
         AllowMultiple = true,
@@ -66,7 +66,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
 
     [BooleanField( "Hide personal SMS numbers",
         Key = AttributeKey.HidePersonalSmsNumbers,
-        Description = "Only SMS Numbers that are not associated with a person. The numbers without a 'ResponseRecipient' attribute value.",
+        Description = "Only SMS Numbers that are not associated with a person. The numbers without an 'Assigned To' person.",
         DefaultBooleanValue = false,
         Order = 3
          )]
@@ -218,34 +218,39 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         private bool LoadPhoneNumbers()
         {
             // First load up all of the available numbers
-            var smsNumbers = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.COMMUNICATION_SMS_FROM.AsGuid() ).DefinedValues.Where( a => a.IsAuthorized( Rock.Security.Authorization.VIEW, CurrentPerson ) );
+            var smsNumbers = SystemPhoneNumberCache.All( false )
+                .Where( spn => spn.IsAuthorized( Rock.Security.Authorization.VIEW, CurrentPerson ) )
+                .OrderBy( spn => spn.Order )
+                .ThenBy( spn => spn.Name )
+                .ThenBy( spn => spn.Id )
+                .ToList();
 
             var selectedNumberGuids = GetAttributeValue( AttributeKey.AllowedSMSNumbers ).SplitDelimitedValues( true ).AsGuidList();
             if ( selectedNumberGuids.Any() )
             {
-                smsNumbers = smsNumbers.Where( v => selectedNumberGuids.Contains( v.Guid ) ).ToList();
+                smsNumbers = smsNumbers.Where( spn => selectedNumberGuids.Contains( spn.Guid ) ).ToList();
             }
 
-            // filter personal numbers (any that have a response recipient) if the hide personal option is enabled
+            // filter personal numbers (any assigned to a person) if the hide personal option is enabled
             if ( GetAttributeValue( AttributeKey.HidePersonalSmsNumbers ).AsBoolean() )
             {
-                smsNumbers = smsNumbers.Where( v => v.GetAttributeValue( "ResponseRecipient" ).IsNullOrWhiteSpace() ).ToList();
+                smsNumbers = smsNumbers.Where( spn => !spn.AssignedToPersonAliasId.HasValue ).ToList();
             }
 
             // Show only numbers 'tied to the current' individual...unless they have 'Admin rights'.
             if ( GetAttributeValue( AttributeKey.ShowOnlyPersonalSmsNumber ).AsBoolean() && !IsUserAuthorized( Authorization.ADMINISTRATE ) )
             {
-                smsNumbers = smsNumbers.Where( v => CurrentPerson.Aliases.Any( a => a.Guid == v.GetAttributeValue( "ResponseRecipient" ).AsGuid() ) ).ToList();
+                smsNumbers = smsNumbers.Where( spn => CurrentPerson.Aliases.Any( a => a.Id == spn.AssignedToPersonAliasId ) ).ToList();
             }
 
             if ( smsNumbers.Any() )
             {
-                var smsDetails = smsNumbers.Select( v => new
+                var smsDetails = smsNumbers.Select( spn => new
                 {
-                    v.Id,
-                    Description = string.IsNullOrWhiteSpace( v.Description )
-                    ? PhoneNumber.FormattedNumber( string.Empty, v.Value.Replace( "+", string.Empty ) )
-                    : v.Description.LeftWithEllipsis( 25 ),
+                    spn.Id,
+                    Description = string.IsNullOrWhiteSpace( spn.Name )
+                    ? PhoneNumber.FormattedNumber( string.Empty, spn.Number.Replace( "+", string.Empty ) )
+                    : spn.Name.LeftWithEllipsis( 25 ),
                 } );
 
                 ddlSmsNumbers.DataSource = smsDetails;
@@ -256,7 +261,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
 
                 string keyPrefix = string.Format( "sms-conversations-{0}-", this.BlockId );
 
-                string smsNumberUserPref = this.GetUserPreference( keyPrefix + "smsNumber" ) ?? string.Empty;
+                string smsNumberUserPref = this.GetUserPreference( keyPrefix + "smsSystemPhoneNumber" ) ?? string.Empty;
 
                 if ( smsNumberUserPref.IsNotNullOrWhiteSpace() )
                 {
@@ -305,8 +310,8 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
             lbShowImagePicker.Visible = false;
             noteEditor.Visible = false;
 
-            int? smsPhoneDefinedValueId = hfSmsNumber.ValueAsInt();
-            if ( smsPhoneDefinedValueId == default( int ) )
+            int? smsSystemPhoneNumberId = hfSmsNumber.ValueAsInt();
+            if ( smsSystemPhoneNumberId == default( int ) )
             {
                 return;
             }
@@ -326,7 +331,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
 
                     var maxConversations = this.GetAttributeValue( AttributeKey.MaxConversations ).AsIntegerOrNull() ?? 1000;
 
-                    var responseListItems = communicationResponseService.GetCommunicationResponseRecipients( smsPhoneDefinedValueId.Value, startDateTime, showRead, maxConversations, personId );
+                    var responseListItems = communicationResponseService.GetCommunicationAndResponseRecipients( smsSystemPhoneNumberId.Value, startDateTime, maxConversations, showRead ? CommunicationMessageFilter.ShowAllReplies : CommunicationMessageFilter.ShowUnreadReplies, personId );
                     if ( cbShowInbound.Checked )
                     {
                         responseListItems = responseListItems.Where( r => !r.IsOutbound ).ToList();
@@ -367,9 +372,9 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
         /// <returns></returns>
         private string LoadResponsesForRecipientPerson( int recipientPersonId )
         {
-            int? smsPhoneDefinedValueId = hfSmsNumber.ValueAsInt();
+            int? smsSystemPhoneNumberId = hfSmsNumber.ValueAsInt();
 
-            if ( smsPhoneDefinedValueId == default( int ) )
+            if ( smsSystemPhoneNumberId == default( int ) )
             {
                 return string.Empty;
             }
@@ -379,7 +384,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 var rockContext = new RockContext();
                 rockContext.Database.CommandTimeout = GetAttributeValue( AttributeKey.DatabaseTimeoutSeconds ).AsIntegerOrNull() ?? 180;
                 var communicationResponseService = new CommunicationResponseService( rockContext );
-                List<CommunicationRecipientResponse> responses = communicationResponseService.GetCommunicationConversationForPerson( recipientPersonId, smsPhoneDefinedValueId.Value );
+                List<CommunicationRecipientResponse> responses = communicationResponseService.GetCommunicationConversationForPerson( recipientPersonId, SystemPhoneNumberCache.Get( smsSystemPhoneNumberId.Value ) );
 
                 BindConversationRepeater( responses );
 
@@ -478,12 +483,12 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
 
             if ( ddlSmsNumbers.Visible )
             {
-                this.SetUserPreference( keyPrefix + "smsNumber", ddlSmsNumbers.SelectedValue.ToString() );
+                this.SetUserPreference( keyPrefix + "smsSystemPhoneNumber", ddlSmsNumbers.SelectedValue.ToString() );
                 hfSmsNumber.SetValue( ddlSmsNumbers.SelectedValue.AsInteger() );
             }
             else
             {
-                this.SetUserPreference( keyPrefix + "smsNumber", hfSmsNumber.Value.ToString() );
+                this.SetUserPreference( keyPrefix + "smsSystemPhoneNumber", hfSmsNumber.Value.ToString() );
             }
 
             this.SetUserPreference( keyPrefix + "showRead", tglShowRead.Checked.ToString() );
@@ -504,7 +509,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 string fromPersonName = CurrentUser.Person.FullName;
 
                 // The sending phone is the selected one
-                DefinedValueCache fromPhone = DefinedValueCache.Get( hfSmsNumber.ValueAsInt() );
+                SystemPhoneNumberCache fromPhone = SystemPhoneNumberCache.Get( hfSmsNumber.ValueAsInt() );
 
                 string responseCode = Rock.Communication.Medium.Sms.GenerateResponseCode( rockContext );
 
@@ -527,7 +532,7 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 var toPrimaryAliasId = new PersonAliasService( rockContext ).GetPrimaryAliasId( toPersonId );
 
                 // Create and enqueue the communication
-                Rock.Communication.Medium.Sms.CreateCommunicationMobile( CurrentUser.Person, toPrimaryAliasId, message, fromPhone, responseCode, rockContext, photos );
+                Rock.Communication.Medium.Sms.CreateCommunicationMobile( CurrentUser.Person, toPrimaryAliasId, message, fromPhone, responseCode, photos, rockContext );
                 ImageUploaderConversation.BinaryFileId = null;
             }
         }
@@ -782,11 +787,11 @@ namespace RockWeb.Plugins.rocks_kfs.Communication
                 litMessagePart.Text = messagePart;
             }
 
-            int? smsPhoneDefinedValueId = hfSmsNumber.Value.AsIntegerOrNull();
+            int? smsSystemPhoneNumberId = hfSmsNumber.Value.AsIntegerOrNull();
 
-            if ( smsPhoneDefinedValueId.HasValue && recipientPersonAliasId.HasValue )
+            if ( smsSystemPhoneNumberId.HasValue && recipientPersonAliasId.HasValue )
             {
-                new CommunicationResponseService( rockContext ).UpdateReadPropertyByFromPersonId( recipientPerson.Id, smsPhoneDefinedValueId.Value );
+                new CommunicationResponseService( rockContext ).UpdateReadPropertyByFromPersonId( recipientPerson.Id, SystemPhoneNumberCache.Get( smsSystemPhoneNumberId.Value ) );
             }
 
             tbNewMessage.Visible = true;

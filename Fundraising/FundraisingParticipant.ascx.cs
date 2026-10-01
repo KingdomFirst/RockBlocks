@@ -213,7 +213,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
 
                 lProfileTitle.Text = string.Format(
                     "{0} Profile for {1}",
-                    RockFilters.Possessive( groupMember.Person.FullName ),
+                    Rock.Lava.Filters.TemplateFilters.Possessive( groupMember.Person.FullName ),
                     groupMember.Group.GetAttributeValue( "OpportunityTitle" ) );
 
                 var dateRange = DateRangePicker.CalculateDateRangeFromDelimitedValues( groupMember.Group.GetAttributeValue( "OpportunityDateRange" ) );
@@ -505,7 +505,7 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
             }
             else
             {
-                makeDonationButtonText = string.Format( "Contribute to {0} {1}", RockFilters.Possessive( groupMember.Person.NickName ), opportunityType );
+                makeDonationButtonText = string.Format( "Contribute to {0} {1}", Rock.Lava.Filters.TemplateFilters.Possessive( groupMember.Person.NickName ), opportunityType );
             }
 
             mergeFields.Add( "MakeDonationButtonText", makeDonationButtonText );
