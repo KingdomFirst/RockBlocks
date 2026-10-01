@@ -73,8 +73,8 @@ namespace RockWeb.Plugins.rocks_kfs.Security
 
             cpFamilyCampus.Campuses = CampusCache.All().Where( c => c.IsActive == true ).ToList();
 
-            ddlTitle.BindToDefinedType( DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) ), true );
-            ddlSuffix.BindToDefinedType( DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) ), true );
+            ddlTitle.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_TITLE ) )?.Id;
+            ddlSuffix.DefinedTypeId = DefinedTypeCache.Get( new Guid( Rock.SystemGuid.DefinedType.PERSON_SUFFIX ) )?.Id;
             string smsScript = @"
     $('.js-sms-number').click(function () {
         if ($(this).is(':checked')) {

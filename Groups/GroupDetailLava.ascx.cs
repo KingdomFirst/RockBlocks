@@ -494,8 +494,8 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                     if ( scheduleType == ScheduleType.Custom )
                     {
                         iCalendarContent = sbSchedule.iCalendarContent;
-                        var calEvent = ScheduleICalHelper.GetCalendarEvent( iCalendarContent );
-                        if ( calEvent == null || calEvent.DTStart == null )
+                        var calEvent = InetCalendarHelper.CreateCalendarEvent( iCalendarContent );
+                        if ( calEvent == null || calEvent.DtStart == null )
                         {
                             scheduleType = ScheduleType.None;
                         }
@@ -616,7 +616,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
                         if ( groupLocation != null )
                         {
-                            rockContext.GroupLocations.Remove( groupLocation );
+                            new GroupLocationService( rockContext ).Delete( groupLocation );
                         }
                     }
                 }
