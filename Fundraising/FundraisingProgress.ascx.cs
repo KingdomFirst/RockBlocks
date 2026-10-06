@@ -109,6 +109,16 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 int? groupMemberId = this.PageParameter( "GroupMemberId" ).AsIntegerOrNull();
                 Guid? groupGuid = GetAttributeValue( "ShowSpecificGroup" ).AsGuidOrNull();
 
+                // Apply the display settings before ShowView, so it can still hide the group
+                // totals when only a single group member is shown.
+                divTotalRaised.Visible = GetAttributeValue( "ShowTotalAmountRaised" ).AsBoolean();
+                divPanelHeading.Visible = GetAttributeValue( "ShowGroupTitle" ).AsBoolean();
+                pnlHeader.Visible = GetAttributeValue( "ShowGroupTotalGoals" ).AsBoolean();
+                pTotalAmounts.Visible = GetAttributeValue( "ShowGroupTotalGoalsAmount" ).AsBoolean();
+                divTotalProgress.Visible = GetAttributeValue( "ShowGroupTotalGoalsProgressBar" ).AsBoolean();
+                ulGroupMembers.Visible = GetAttributeValue( "ShowGroupMemberGoals" ).AsBoolean();
+                pnlActions.Visible = GetAttributeValue( "ShowExcelExportButton" ).AsBoolean();
+
                 if ( groupId.HasValue || groupMemberId.HasValue || groupGuid.HasValue )
                 {
                     ShowView( groupId, groupMemberId, groupGuid );
@@ -117,14 +127,6 @@ namespace RockWeb.Plugins.rocks_kfs.Fundraising
                 {
                     pnlView.Visible = false;
                 }
-
-                divTotalRaised.Visible = GetAttributeValue( "ShowTotalAmountRaised" ).AsBoolean();
-                divPanelHeading.Visible = GetAttributeValue( "ShowGroupTitle" ).AsBoolean();
-                pnlHeader.Visible = GetAttributeValue( "ShowGroupTotalGoals" ).AsBoolean();
-                pTotalAmounts.Visible = GetAttributeValue( "ShowGroupTotalGoalsAmount" ).AsBoolean();
-                divTotalProgress.Visible = GetAttributeValue( "ShowGroupTotalGoalsProgressBar" ).AsBoolean();
-                ulGroupMembers.Visible = GetAttributeValue( "ShowGroupMemberGoals" ).AsBoolean();
-                pnlActions.Visible = GetAttributeValue( "ShowExcelExportButton" ).AsBoolean();
             }
         }
 
