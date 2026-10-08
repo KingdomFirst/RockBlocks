@@ -31,7 +31,6 @@ using Rock.Data;
 using Rock.Financial;
 using Rock.Lava;
 using Rock.Model;
-using Rock.Tasks;
 using Rock.Utility;
 using Rock.Web.Cache;
 using Rock.Web.UI;
@@ -3487,14 +3486,10 @@ TransactionAccountDetails: [
             Guid? receiptEmail = GetAttributeValue( "ReceiptEmail" ).AsGuidOrNull();
             if ( receiptEmail.HasValue )
             {
-                // Queue a bus message to send receipts
-                var sendPaymentReceiptsTask = new ProcessSendPaymentReceiptEmails.Message
-                {
-                    SystemEmailGuid = receiptEmail.Value,
-                    TransactionId = transactionId
-                };
-
-                sendPaymentReceiptsTask.Send();
+                // Queue a transaction to send receipts
+                var newTransactionIds = new List<int> { transactionId };
+                var sendPaymentReceiptsTxn = new Rock.Transactions.SendPaymentReceipts( receiptEmail.Value, newTransactionIds );
+                Rock.Transactions.RockQueue.TransactionQueue.Enqueue( sendPaymentReceiptsTxn );
             }
         }
 
