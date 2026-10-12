@@ -175,7 +175,7 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn
 
                     rockContext.WrapTransaction( () =>
                     {
-                        rockContext.ContentChannelItems.Add( contentChannelItem );
+                        new ContentChannelItemService( rockContext ).Add( contentChannelItem );
                         rockContext.SaveChanges();
                         contentChannelItem.SaveAttributeValues( rockContext );
                     } );

@@ -1989,7 +1989,7 @@ namespace RockWeb.Plugins.rocks_kfs.Crm
 
                         case PersonFieldType.ConnectionStatus:
                             {
-                                var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_WEB_PROSPECT ).Id;
+                                var newConnectionStatusId = fieldValue.ToString().AsIntegerOrNull() ?? DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.PERSON_CONNECTION_STATUS_PROSPECT ).Id;
                                 person.ConnectionStatusValueId = newConnectionStatusId;
                                 break;
                             }

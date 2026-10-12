@@ -272,7 +272,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 var tempResults = new List<AttendeeResult>();
                 foreach ( var result in allResults )
                 {
-                    if ( result.LastVisit.IsNull() )
+                    if ( result.LastVisit == null )
                     {
                         result.LastVisit = new PersonLastAttendance
                         {
@@ -317,11 +317,11 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     if ( sortProperty.Direction == SortDirection.Descending )
                     {
-                        qryResult = qryResult.OrderByDescending( a => ( a.LastVisit.IsNotNull() ) ? a.LastVisit.StartDateTime : new DateTime() );
+                        qryResult = qryResult.OrderByDescending( a => ( a.LastVisit != null ) ? a.LastVisit.StartDateTime : new DateTime() );
                     }
                     else
                     {
-                        qryResult = qryResult.OrderBy( a => ( a.LastVisit.IsNotNull() ) ? a.LastVisit.StartDateTime : new DateTime() );
+                        qryResult = qryResult.OrderBy( a => ( a.LastVisit != null ) ? a.LastVisit.StartDateTime : new DateTime() );
                     }
                 }
                 else if ( sortProperty.Property == "FirstVisit.StartDateTime" )
@@ -646,7 +646,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
         {
             get
             {
-                return Person.GetAge( Birthdate );
+                return Person.GetAge( Birthdate, null );
             }
         }
 

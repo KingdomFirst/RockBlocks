@@ -297,9 +297,8 @@ namespace RockWeb.Plugins.rocks_kfs.Bulldozer
                                 LogEvent( "Beginning Person Export..." );
 
                                 var personService = new PersonService( rockContext );
-                                var errorMessages = new List<string>();
                                 var paramExpression = personService.ParameterExpression;
-                                var whereExpression = personDataView.GetExpression( personService, paramExpression, out errorMessages );
+                                var whereExpression = personDataView.GetExpression( personService, paramExpression );
 
                                 personList = personService
                                     .Queryable( true, true )
@@ -656,9 +655,8 @@ namespace RockWeb.Plugins.rocks_kfs.Bulldozer
                                 LogEvent( "Beginning Group Export..." );
 
                                 var groupService = new GroupService( rockContext );
-                                var errorMessages = new List<string>();
                                 var paramExpression = groupService.ParameterExpression;
-                                var whereExpression = groupDataView.GetExpression( groupService, paramExpression, out errorMessages );
+                                var whereExpression = groupDataView.GetExpression( groupService, paramExpression );
 
                                 _groupList.AddRange( groupService
                                     .Queryable()
@@ -889,9 +887,8 @@ namespace RockWeb.Plugins.rocks_kfs.Bulldozer
 
                                     if ( ddlAttributeIncludeExlude.SelectedValue == "Exclude" && attributeDataView != null )
                                     {
-                                        var errorMessages = new List<string>();
                                         var paramExpression = attributeService.ParameterExpression;
-                                        var whereExpression = attributeDataView.GetExpression( attributeService, paramExpression, out errorMessages );
+                                        var whereExpression = attributeDataView.GetExpression( attributeService, paramExpression );
 
                                         var excludedAttributeList = attributeService
                                             .Queryable()
@@ -927,9 +924,8 @@ namespace RockWeb.Plugins.rocks_kfs.Bulldozer
                                 }
                                 else
                                 {
-                                    var errorMessages = new List<string>();
                                     var paramExpression = attributeService.ParameterExpression;
-                                    var whereExpression = attributeDataView.GetExpression( attributeService, paramExpression, out errorMessages );
+                                    var whereExpression = attributeDataView.GetExpression( attributeService, paramExpression );
 
                                     attributeList = attributeService
                                         .Queryable()

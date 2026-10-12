@@ -55,7 +55,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
 
     #endregion
 
-    public partial class PledgeDetail : RockBlock, IDetailBlock
+    public partial class PledgeDetail : RockBlock
     {
         /// <summary>
         /// Raises the <see cref="E:System.Web.UI.Control.Load" /> event.
@@ -161,7 +161,7 @@ namespace RockWeb.Plugins.rocks_kfs.Finance
         {
             pnlDetails.Visible = true;
             var frequencyTypeGuid = new Guid( Rock.SystemGuid.DefinedType.FINANCIAL_FREQUENCY );
-            ddlFrequencyType.BindToDefinedType( DefinedTypeCache.Get( frequencyTypeGuid ), true );
+            ddlFrequencyType.DefinedTypeId = DefinedTypeCache.Get( frequencyTypeGuid )?.Id;
 
             var personId = PageParameter( "personId" ).AsIntegerOrNull();
 

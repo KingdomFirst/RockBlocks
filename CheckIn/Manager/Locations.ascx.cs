@@ -2990,5 +2990,261 @@ namespace RockWeb.Plugins.rocks_kfs.CheckIn.Manager
         }
 
         #endregion
+
+        /*
+            10/1/2026 - GEM
+
+            Rock 20 removed the Flot ChartOptions class (Rock.Web.UI.Controls) but kept every
+            class it uses (AxisOptions, SeriesOptions, GridOptions, Legend, CustomSettings,
+            ChartStyle) and the Flot scripts. This is a copy of Rock 17.8's ChartOptions, unchanged except
+            for being private and nested, so the chart serializes to the same JSON on every
+            Rock version we ship. Delete it if this block moves off Flot.
+
+        */
+        private class ChartOptions
+        {
+            /// <summary>
+            /// Sets the chart style.
+            /// </summary>
+            /// <param name="chartStyleDefinedValueGuid">The chart style defined value unique identifier.</param>
+            public void SetChartStyle( Guid? chartStyleDefinedValueGuid )
+            {
+                ChartStyle chartStyle = null;
+                if ( chartStyleDefinedValueGuid.HasValue )
+                {
+                    var definedValue = DefinedValueCache.Get( chartStyleDefinedValueGuid.Value );
+                    if ( definedValue != null )
+                    {
+                        chartStyle = ChartStyle.CreateFromJson( definedValue.Value, definedValue.GetAttributeValue( "ChartStyle" ) );
+                    }
+                }
+
+                SetChartStyle( chartStyle ?? new ChartStyle() );
+            }
+
+            /// <summary>
+            /// Sets the chart style.
+            /// </summary>
+            /// <param name="chartStyle">The chart style.</param>
+            public void SetChartStyle( ChartStyle chartStyle )
+            {
+                if ( chartStyle.SeriesColors != null && chartStyle.SeriesColors.Count() > 0 )
+                {
+                    this.colors = chartStyle.SeriesColors.ToArray();
+                }
+
+                if ( chartStyle.Grid != null )
+                {
+                    this.grid = this.grid ?? new GridOptions();
+                    this.grid.backgroundColor = chartStyle.Grid.BackgroundColorGradient != null ? ToFlotColorGradient( chartStyle.Grid.BackgroundColorGradient ) : chartStyle.Grid.BackgroundColor;
+                    this.grid.color = chartStyle.Grid.ColorGradient != null ? ToFlotColorGradient( chartStyle.Grid.ColorGradient ) : chartStyle.Grid.Color;
+                    this.grid.borderWidth = chartStyle.Grid.BorderWidth;
+                    this.grid.borderColor = chartStyle.Grid.BorderColor;
+                }
+
+                this.xaxis = this.xaxis ?? new AxisOptions();
+                SetFlotAxisStyle( chartStyle.XAxis, this.xaxis );
+                this.yaxis = this.yaxis ?? new AxisOptions();
+                SetFlotAxisStyle( chartStyle.YAxis, this.yaxis );
+
+                this.yaxis.tickFormatter = @"
+    function (val, axis) {
+      // round to at most 2 decimal places
+      var roundedVal = (Math.round(val * 100))/100;
+
+      // show commas 
+      // from http://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+      var formattedValue =  roundedVal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+      return formattedValue;
+    }".Trim();
+
+                this.series = this.series ?? new SeriesOptions( false, true, false );
+
+                SetFlotLinesPointsBarsStyle( chartStyle, this.series.lines );
+                SetFlotLinesPointsBarsStyle( chartStyle, this.series.bars );
+                SetFlotLinesPointsBarsStyle( chartStyle, this.series.points );
+
+                if ( chartStyle.Legend != null )
+                {
+                    this.legend = new Legend();
+                    this.legend.show = chartStyle.Legend.Show ?? true;
+                    this.legend.labelBoxBorderColor = chartStyle.Legend.LabelBoxBorderColor;
+                    this.legend.noColumns = chartStyle.Legend.NoColumns;
+                    this.legend.position = chartStyle.Legend.Position;
+                    this.legend.backgroundColor = chartStyle.Legend.BackgroundColor;
+                    this.legend.backgroundOpacity = chartStyle.Legend.BackgroundOpacity;
+                    this.legend.container = chartStyle.Legend.Container;
+                }
+
+                this.customSettings = this.customSettings ?? new CustomSettings();
+
+                // copy Title styles to Flot custom settings
+                if ( chartStyle.Title != null )
+                {
+                    if ( chartStyle.Title.Font != null )
+                    {
+                        this.customSettings.titleFont = new ChartFont();
+                        this.customSettings.titleFont.color = chartStyle.Title.Font.Color;
+                        this.customSettings.titleFont.family = chartStyle.Title.Font.Family;
+                        this.customSettings.titleFont.size = chartStyle.Title.Font.Size;
+                    }
+
+                    if ( chartStyle.Title.Align != null )
+                    {
+                        this.customSettings.titleAlign = chartStyle.Title.Align;
+                    }
+                }
+
+                // copy SubTitle styles to Flot custom settings
+                if ( chartStyle.Subtitle != null )
+                {
+                    if ( chartStyle.Subtitle.Font != null )
+                    {
+                        this.customSettings.subtitleFont = new ChartFont();
+                        this.customSettings.subtitleFont.color = chartStyle.Subtitle.Font.Color;
+                        this.customSettings.subtitleFont.family = chartStyle.Subtitle.Font.Family;
+                        this.customSettings.subtitleFont.size = chartStyle.Subtitle.Font.Size;
+                    }
+
+                    if ( chartStyle.Subtitle.Align != null )
+                    {
+                        this.customSettings.subtitleAlign = chartStyle.Subtitle.Align;
+                    }
+                }
+
+                // copy Goal Series Color to Flot custom settings
+                this.customSettings.goalSeriesColor = chartStyle.GoalSeriesColor;
+
+                if ( chartStyle.PieLabels != null )
+                {
+                    this.series.pie = this.series.pie ?? new Pie();
+                    this.series.pie.label = new PieLabel();
+                    this.series.pie.label.background = new
+                    {
+                        color = chartStyle.PieLabels.BackgroundColor,
+                        opacity = chartStyle.PieLabels.BackgroundOpacity
+                    };
+                }
+            }
+
+            /// <summary>
+            /// Sets the flot lines points bars style.
+            /// </summary>
+            /// <param name="chartStyle">The chart style.</param>
+            /// <param name="linesPointsBars">The lines points bars.</param>
+            private void SetFlotLinesPointsBarsStyle( ChartStyle chartStyle, LinesPointsBars linesPointsBars )
+            {
+                if ( linesPointsBars != null )
+                {
+                    linesPointsBars.fill = chartStyle.FillOpacity;
+                    linesPointsBars.fillColor = chartStyle.FillColor;
+                }
+            }
+
+            /// <summary>
+            /// Sets the flot axis style.
+            /// </summary>
+            /// <param name="styleAxis">The style axis.</param>
+            /// <param name="flotAxis">The flot axis.</param>
+            private void SetFlotAxisStyle( AxisStyle styleAxis, AxisOptions flotAxis )
+            {
+                if ( styleAxis != null )
+                {
+                    flotAxis.color = styleAxis.Color;
+                    flotAxis.timeformat = styleAxis.DateTimeFormat;
+                    if ( styleAxis.Font != null )
+                    {
+                        flotAxis.font.color = styleAxis.Font.Color;
+                        flotAxis.font.family = styleAxis.Font.Family;
+                        flotAxis.font.size = styleAxis.Font.Size;
+                    }
+                }
+            }
+
+            /// <summary>
+            /// convert a style color gradient to flot color specification for a gradient
+            /// </summary>
+            /// <param name="source">The source.</param>
+            /// <returns></returns>
+            private static dynamic ToFlotColorGradient( string[] source )
+            {
+                dynamic dest = null;
+                if ( source != null && source.Count() > 0 )
+                {
+                    if ( source.Count() > 1 )
+                    {
+                        dest = new
+                        {
+                            colors = source
+                        };
+                    }
+                    else
+                    {
+                        dest = source[0];
+                    }
+                }
+
+                return dest;
+            }
+
+            /// <summary>
+            /// Gets or sets the xaxis.
+            /// </summary>
+            /// <value>
+            /// The xaxis.
+            /// </value>
+            public AxisOptions xaxis { get; set; }
+
+            /// <summary>
+            /// Gets or sets the yaxis.
+            /// </summary>
+            /// <value>
+            /// The yaxis.
+            /// </value>
+            public AxisOptions yaxis { get; set; }
+
+            /// <summary>
+            /// Gets or sets the series.
+            /// </summary>
+            /// <value>
+            /// The series.
+            /// </value>
+            public SeriesOptions series { get; set; }
+
+            /// <summary>
+            /// Gets or sets the grid.
+            /// </summary>
+            /// <value>
+            /// The grid.
+            /// </value>
+            public GridOptions grid { get; set; }
+
+            /// <summary>
+            /// Gets or sets the array of colors to use for each series 
+            /// Series 1 will use colors[0], Series 2 will use colors[1], etc
+            /// Leave null to autogenerate
+            /// </summary>
+            /// <value>
+            /// The colors.
+            /// </value>
+            public string[] colors { get; set; }
+
+            /// <summary>
+            /// Gets or sets the legend.
+            /// </summary>
+            /// <value>
+            /// The legend.
+            /// </value>
+            public Legend legend { get; set; }
+
+            /// <summary>
+            /// Gets or sets the custom settings.
+            /// </summary>
+            /// <value>
+            /// The custom settings.
+            /// </value>
+            public CustomSettings customSettings { get; set; }
+        }
     }
 }
