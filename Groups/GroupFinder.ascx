@@ -170,17 +170,17 @@
                                             <asp:ListItem Text="Single-Select Dropdown" Value="Day" />
                                             <asp:ListItem Text="Multi-Select Checkboxes" Value="Days" />
                                         </Rock:RockRadioButtonList>
-                                        <Rock:RockCheckBox ID="cbFilterTimeOfDay" runat="server" Label="Display Time of Day Filter" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbFilterTimeOfDay" runat="server" Label="Display Time of Day Filter"
                                             Help="Display a Time of Day filter to filter groups with 'Weekly' schedules." ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbFilterCampus" runat="server" Label="Display Campus Filter" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbFilterCampus" runat="server" Label="Display Campus Filter"
                                             Help="Display the campus filter" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbCampusContext" runat="server" Label="Enable Campus Context" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbCampusContext" runat="server" Label="Enable Campus Context"
                                             Help="If the page has a campus context its value will be used as a filter" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbPostalCode" runat="server" Label="Enable Postal Code Search" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbPostalCode" runat="server" Label="Enable Postal Code Search"
                                             Help="Set to true to enable simple Postal code search instead of full address." ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbRequirePostalCode" runat="server" Label="Require Postal Code" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbRequirePostalCode" runat="server" Label="Require Postal Code"
                                             Help="If Postal Code search is enabled, do you want to require a value to search (can be filled out by default with default location or person's location)." ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbKeyword" runat="server" Label="Display Keyword Filter" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbKeyword" runat="server" Label="Display Keyword Filter"
                                             Help="Display the Keyword filter" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockCheckBoxList ID="cblAttributes" runat="server" Label="Display Attribute Filters" RepeatDirection="Horizontal"
                                             Help="The group attributes that should be available for user to filter results by." ValidationGroup="GroupFinderSettings" />
@@ -230,7 +230,7 @@
                             <Rock:PanelWidget ID="wpMap" runat="server" Title="Map">
                                 <div class="row">
                                     <div class="col-md-12">
-                                        <Rock:RockCheckBox ID="cbShowMap" runat="server" Label="Map" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbShowMap" runat="server" Label="Map"
                                             Help="Should a map be displayed that shows the location of each group?" ValidationGroup="GroupFinderSettings" />
                                     </div>
                                     <div class="col-md-6">
@@ -367,7 +367,7 @@
                                         </Rock:RockDropDownList>
                                     </div>
                                     <div class="col-md-12">
-                                        <Rock:CodeEditor ID="ceMapInfo" runat="server" Label="Group Window Contents" EditorMode="Lava" EditorTheme="Rock" Height="300"
+                                        <Rock:CodeEditor ID="ceMapInfo" runat="server" Label="Group Window Contents" EditorMode="Lava" Height="300"
                                             Help="The Lava template to use for formatting the group information that is displayed when user clicks the group marker on the map."
                                             ValidationGroup="GroupFinderSettings" />
                                     </div>
@@ -384,7 +384,7 @@
 
                                 <div runat="server" id="dMapAdditionalSettings" visible="false" class="row">
                                     <div class="col-md-6">
-                                        <Rock:RockCheckBox ID="cbShowFence" runat="server" Label="Show Fence(s)" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbShowFence" runat="server" Label="Show Fence(s)"
                                             Help="If a Geofence group type was selected, should that group's boundary be displayed on the map?" ValidationGroup="GroupFinderSettings" />
                                     </div>
                                     <div class="col-md-6">
@@ -397,7 +397,7 @@
                             <Rock:PanelWidget ID="wpLavaOutput" runat="server" Title="Lava">
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <Rock:RockCheckBox ID="cbShowLavaOutput" runat="server" Label="Show Formatted Output" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbShowLavaOutput" runat="server" Label="Show Formatted Output"
                                             Help="Should the matching groups be merged with a Lava template and displayed to the user as formatted output?" ValidationGroup="GroupFinderSettings" />
                                     </div>
                                     <div class="col-md-6">
@@ -405,7 +405,7 @@
                                 </div>
                                 <div class="row">
                                     <div class="col-md-12">
-                                        <Rock:CodeEditor ID="ceLavaOutput" runat="server" Label="Lava Template" EditorMode="Lava" EditorTheme="Rock" Height="300"
+                                        <Rock:CodeEditor ID="ceLavaOutput" runat="server" Label="Lava Template" EditorMode="Lava" Height="300"
                                             Help="The Lava template to use for formatting the matching groups."
                                             ValidationGroup="GroupFinderSettings" />
                                     </div>
@@ -415,25 +415,25 @@
                             <Rock:PanelWidget ID="wpGrid" runat="server" Title="Grid">
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <Rock:RockCheckBox ID="cbShowGrid" runat="server" Label="Show Grid" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbShowGrid" runat="server" Label="Show Grid"
                                             Help="Should a grid be displayed showing the matching groups?" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbShowSchedule" runat="server" Label="Show Schedule" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbShowSchedule" runat="server" Label="Show Schedule"
                                             Help="Should the schedule for each group be displayed?" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbShowDescription" runat="server" Label="Show Description" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbShowDescription" runat="server" Label="Show Description"
                                             Help="Should the description for each group be displayed?" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbShowCount" runat="server" Label="Show Member Count" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbShowCount" runat="server" Label="Show Member Count"
                                             Help="Should the number of active members in each group be displayed in the result grid?" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbShowAge" runat="server" Label="Show Average Age" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbShowAge" runat="server" Label="Show Average Age"
                                             Help="Should the average active group member age be displayed for each group in the result grid?" ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbIncludePending" runat="server" Label="Include Pending" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbIncludePending" runat="server" Label="Include Pending"
                                             Help="Should Pending members be included in the member count and average age calculations?" ValidationGroup="GroupFinderSettings" />
                                     </div>
                                     <div class="col-md-6">
-                                        <Rock:RockCheckBox ID="cbShowCampus" runat="server" Label="Show Campus" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbShowCampus" runat="server" Label="Show Campus"
                                             Help="Should the campus column be displayed? If selected, the Campus column will still only be displayed if one or more of the groups has a campus." ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbProximity" runat="server" Label="Show Distance" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbProximity" runat="server" Label="Show Distance"
                                             Help="Should the distance to each group be displayed? Using this option will require the user to enter their address or postal code when searching for groups. Note, groups without a location will not be displayed when enabled." ValidationGroup="GroupFinderSettings" />
-                                        <Rock:RockCheckBox ID="cbSortByDistance" runat="server" Label="Sort by Distance" Text="Yes"
+                                        <Rock:RockCheckBox ID="cbSortByDistance" runat="server" Label="Sort by Distance"
                                             Help="Should the results be sorted from closest to furthest distance?" ValidationGroup="GroupFinderSettings" />
                                         <Rock:RockTextBox ID="tbPageSizes" runat="server" Label="Page Sizes" Help="To limit the number of groups displayed and to show a dropdown of page sizes, enter a comma delimited list of page sizes. For example: 10,20 will present a drop down with 10,20,All as options with the default as 10" />
                                         <Rock:RockCheckBoxList ID="cblGridAttributes" runat="server" Label="Show Attribute Columns" RepeatDirection="Horizontal"

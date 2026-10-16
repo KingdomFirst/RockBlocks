@@ -2597,7 +2597,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 string template = GetAttributeValue( AttributeKey.LavaOutput );
                 var enabledCommands = GetAttributeValue( AttributeKey.FormattedOutputEnabledLavaCommands );
 
-                var mergeFields = new Dictionary<string, object>();
+                var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, CurrentPerson );
                 if ( fences != null )
                 {
                     mergeFields.Add( "Fences", fences.Select( f => f.Group ).ToList() );
@@ -2783,7 +2783,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                         IsActive = g.IsActive,
                         GroupRole = string.Empty,
                         DateAdded = DateTime.MinValue,
-                        Schedule = g.Schedule,
+                        Schedule = g.Schedule?.ToFriendlyScheduleText( true ),
                         MemberCount = qryMembers.Count(),
                         AverageAge = Math.Round( qryMembers.Select( m => new { m.Person.BirthDate, m.Person.DeceasedDate } ).ToList().Select( a => Person.GetAge( a.BirthDate, a.DeceasedDate ) ).Average() ?? 0.0D ),
                         Campus = g.Campus != null ? g.Campus.Name : string.Empty,
@@ -2824,7 +2824,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
                 {
                     // Resolve info window lava template
                     var linkedPageParams = new Dictionary<string, string> { { "GroupId", group.Id.ToString() } };
-                    var mergeFields = new Dictionary<string, object>();
+                    var mergeFields = Rock.Lava.LavaHelper.GetCommonMergeFields( this.RockPage, CurrentPerson );
                     mergeFields.Add( "Group", gl.Group );
                     mergeFields.Add( "Location", gl.Location );
                     if ( opportunities != null )
@@ -3109,7 +3109,14 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
             DefinedValueCache dvcMapStyle = DefinedValueCache.Get( GetAttributeValue( AttributeKey.MapStyle ).AsInteger() );
             if ( dvcMapStyle != null )
             {
-                styleCode = dvcMapStyle.GetAttributeValue( "DynamicMapStyle" );
+                // Dynamic Map Style is optional since Rock v17 (a Map Style may only define a Google Map Id),
+                // so keep the "null" default rather than writing an empty value into the map script.
+                var dynamicMapStyle = dvcMapStyle.GetAttributeValue( "DynamicMapStyle" );
+                if ( dynamicMapStyle.IsNotNullOrWhiteSpace() )
+                {
+                    styleCode = dynamicMapStyle;
+                }
+
                 var colorsSetting = dvcMapStyle.GetAttributeValue( "Colors" ) ?? string.Empty;
                 markerColors = colorsSetting.Split( new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries )
                     .ToList();
@@ -3200,7 +3207,7 @@ namespace RockWeb.Plugins.rocks_kfs.Groups
 
             // Display a map on the page
             map = new google.maps.Map(document.getElementById('map_canvas'), mapOptions);
-            google.maps.event.addDomListener(map, 'zoom_changed', function() {{
+            google.maps.event.addListener(map, 'zoom_changed', function() {{
                 var zoomThreshold = {13};
                 var zoomAmount = {14};
 
